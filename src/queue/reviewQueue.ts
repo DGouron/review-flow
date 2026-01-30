@@ -1,6 +1,7 @@
 import PQueue from 'p-queue';
 import type { Logger } from 'pino';
 import { loadConfig } from '../config/loader.js';
+import type { ReviewProgress, ProgressEvent } from '../types/progress.js';
 
 export interface ReviewJob {
   id: string; // Unique identifier: platform:project:mrNumber
@@ -24,7 +25,14 @@ export interface JobStatus {
   startedAt?: Date;
   completedAt?: Date;
   error?: string;
+  progress?: ReviewProgress;
 }
+
+// Progress change callback type
+export type ProgressChangeCallback = (jobId: string, progress: ReviewProgress, event?: ProgressEvent) => void;
+
+// Global progress change listener
+let progressChangeCallback: ProgressChangeCallback | null = null;
 
 const activeJobs = new Map<string, JobStatus>();
 const completedJobs: JobStatus[] = []; // Keep last 20
@@ -206,6 +214,7 @@ export function getJobsStatus(): {
     mrUrl: string;
     status: string;
     startedAt?: string;
+    progress?: ReviewProgress;
   }>;
   recent: Array<{
     id: string;
@@ -216,6 +225,7 @@ export function getJobsStatus(): {
     startedAt?: string;
     completedAt?: string;
     error?: string;
+    progress?: ReviewProgress;
   }>;
 } {
   return {
@@ -226,6 +236,7 @@ export function getJobsStatus(): {
       mrUrl: js.job.mrUrl,
       status: js.status,
       startedAt: js.startedAt?.toISOString(),
+      progress: js.progress,
     })),
     recent: completedJobs.map(js => ({
       id: js.job.id,
@@ -236,6 +247,33 @@ export function getJobsStatus(): {
       startedAt: js.startedAt?.toISOString(),
       completedAt: js.completedAt?.toISOString(),
       error: js.error,
+      progress: js.progress,
     })),
   };
+}
+
+/**
+ * Update job progress
+ */
+export function updateJobProgress(jobId: string, progress: ReviewProgress, event?: ProgressEvent): void {
+  const jobStatus = activeJobs.get(jobId);
+  if (jobStatus) {
+    jobStatus.progress = progress;
+    // Notify listeners
+    progressChangeCallback?.(jobId, progress, event);
+  }
+}
+
+/**
+ * Set the progress change callback
+ */
+export function setProgressChangeCallback(callback: ProgressChangeCallback | null): void {
+  progressChangeCallback = callback;
+}
+
+/**
+ * Get progress for a specific job
+ */
+export function getJobProgress(jobId: string): ReviewProgress | undefined {
+  return activeJobs.get(jobId)?.progress;
 }

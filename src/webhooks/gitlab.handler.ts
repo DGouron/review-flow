@@ -6,6 +6,7 @@ import { findRepositoryByProjectPath } from '../config/loader.js';
 import {
   enqueueReview,
   createJobId,
+  updateJobProgress,
   type ReviewJob,
 } from '../queue/reviewQueue.js';
 import { invokeClaudeReview, sendNotification } from '../claude/invoker.js';
@@ -90,8 +91,10 @@ export async function handleGitLabWebhook(
       logger
     );
 
-    // Invoke Claude
-    const result = await invokeClaudeReview(j, logger);
+    // Invoke Claude with progress tracking
+    const result = await invokeClaudeReview(j, logger, (progress, event) => {
+      updateJobProgress(j.id, progress, event);
+    });
 
     // Send completion notification
     if (result.success) {

@@ -1,160 +1,168 @@
 # Claude Review Automation
 
-Déclenche automatiquement une review Claude Code quand tu es assigné comme reviewer sur une MR GitLab (ou PR GitHub).
+Automated code review system using Claude Code. Receives webhooks from GitHub/GitLab and triggers AI-powered code reviews on merge requests and pull requests.
+
+## Features
+
+- Webhook-driven code reviews for GitHub PRs and GitLab MRs
+- Real-time progress tracking via WebSocket
+- Customizable review skills per project
+- Dashboard for monitoring reviews
+- Support for multiple projects
 
 ---
 
-## Table des matières
+## Table of Contents
 
-1. [Comment ça marche](#comment-ça-marche)
-2. [Lancer l'application](#lancer-lapplication)
-3. [Configurer GitLab](#configurer-gitlab)
-4. [Tester](#tester)
-5. [Configuration avancée](#configuration-avancée)
-6. [Dépannage](#dépannage)
-
----
-
-## Comment ça marche
-
-```
-┌─────────────┐      ┌──────────────────┐      ┌─────────────────┐
-│   GitLab    │      │ Cloudflare Tunnel│      │  Ton PC local   │
-│             │      │                  │      │                 │
-│  Tu es      │ ──►  │  URL publique    │ ──►  │  Serveur Node   │
-│  assigné    │      │  (gratuit)       │      │  (port 3847)    │
-│  reviewer   │      │                  │      │        │        │
-└─────────────┘      └──────────────────┘      │        ▼        │
-                                               │  Claude Code    │
-                                               │  /review-front  │
-                                               │        │        │
-                                               │        ▼        │
-                                               │  Commentaires   │
-                                               │  sur la MR      │
-                                               └─────────────────┘
-```
-
-**En résumé :**
-1. GitLab envoie un webhook quand tu es assigné reviewer
-2. Cloudflare Tunnel redirige vers ton PC (sans ouvrir de ports)
-3. Le serveur local vérifie que c'est bien toi et lance Claude Code
-4. Claude poste ses commentaires directement sur la MR
+1. [Quick Start](#quick-start)
+2. [CLI Setup](#cli-setup)
+3. [Webhook Configuration](#webhook-configuration)
+4. [Project Configuration](#project-configuration)
+5. [Review Skills](#review-skills)
+6. [Dashboard](#dashboard)
+7. [Troubleshooting](#troubleshooting)
 
 ---
 
-## Lancer l'application
+## Quick Start
 
-### Méthode 1 : Icône sur le bureau (recommandé)
-
-Double-clique sur l'icône **Claude Review** sur ton bureau.
-
-Ça fait tout automatiquement :
-- Démarre le serveur si nécessaire
-- Démarre le tunnel Cloudflare
-- Ouvre le dashboard dans ton navigateur
-
-### Méthode 2 : Ligne de commande
+### 1. Install Dependencies
 
 ```bash
-# Démarrer
-~/Documents/Projets/claude-review-automation/scripts/launcher.sh
-
-# Voir le status
-~/Documents/Projets/claude-review-automation/scripts/status.sh
-
-# Arrêter
-~/Documents/Projets/claude-review-automation/scripts/stop.sh
+npm install
 ```
 
-### Méthode 3 : Commandes manuelles
+### 2. Build & Run
 
 ```bash
-cd ~/Documents/Projets/claude-review-automation
+npm run build
+npm start
+```
 
-# Terminal 1 : Serveur
-npm run dev
+The dashboard will be available at `http://localhost:3847`
 
-# Terminal 2 : Tunnel
+### 3. Configure CLI + Webhook
+
+See [CLI Setup](#cli-setup) and [Webhook Configuration](#webhook-configuration) below.
+
+---
+
+## CLI Setup
+
+The review automation uses the official CLI tools to interact with GitHub/GitLab.
+
+### GitLab (glab)
+
+```bash
+# Install glab
+sudo apt install glab
+# or: brew install glab
+
+# Authenticate (interactive)
+glab auth login
+```
+
+This will open a browser for OAuth authentication. Follow the prompts.
+
+### GitHub (gh)
+
+```bash
+# Install gh
+sudo apt install gh
+# or: brew install gh
+
+# Authenticate (interactive)
+gh auth login
+```
+
+This will open a browser for OAuth authentication. Follow the prompts.
+
+> **Note**: No Personal Access Tokens needed! Both CLIs use secure OAuth authentication.
+
+---
+
+## Webhook Configuration
+
+### Using a Tunnel (for local development)
+
+For local development, you need a tunnel to expose your local server:
+
+```bash
+# Using Cloudflare Tunnel (recommended, free)
 cloudflared tunnel --url http://localhost:3847
+
+# Using ngrok
+ngrok http 3847
 ```
+
+The tunnel will give you a public URL like `https://xxx-xxx.trycloudflare.com`
+
+### GitLab Webhook
+
+1. Go to your GitLab project → **Settings** → **Webhooks**
+2. Click **Add new webhook**
+3. Configure:
+
+| Field | Value |
+|-------|-------|
+| **URL** | `https://<your-tunnel-url>/webhooks/gitlab` |
+| **Secret token** | (optional) Set in `.env` as `GITLAB_WEBHOOK_TOKEN` |
+| **Trigger** | ☑ Merge request events |
+| **SSL verification** | ☑ Enable |
+
+4. Click **Add webhook**
+5. Test with **Test** → **Merge request events**
+
+### GitHub Webhook
+
+1. Go to your GitHub repository → **Settings** → **Webhooks**
+2. Click **Add webhook**
+3. Configure:
+
+| Field | Value |
+|-------|-------|
+| **Payload URL** | `https://<your-tunnel-url>/webhooks/github` |
+| **Content type** | `application/json` |
+| **Secret** | (optional) Set in `.env` as `GITHUB_WEBHOOK_SECRET` |
+| **Events** | ☑ Pull requests |
+
+4. Click **Add webhook**
 
 ---
 
-## Configurer GitLab
+## Project Configuration
 
-### Étape 1 : Récupérer l'URL du tunnel
+Each project needs a configuration file to enable reviews.
 
-Après avoir lancé l'application, le tunnel affiche une URL du type :
-```
-https://xxx-xxx-xxx-xxx.trycloudflare.com
-```
+### Create Config File
 
-Tu peux la voir :
-- Dans les logs : `cat /tmp/claude-review/tunnel.log | grep trycloudflare`
-- Ou avec : `~/Documents/Projets/claude-review-automation/scripts/status.sh`
+Create `.claude/reviews/config.json` in your project:
 
-⚠️ **Important** : Cette URL change à chaque redémarrage du tunnel (Quick Tunnel gratuit).
-
-### Étape 2 : Configurer le webhook sur GitLab
-
-1. Va sur ton projet GitLab : `https://gitlab.com/mentor-goal/main-app-v3`
-
-2. Menu **Settings** → **Webhooks**
-
-3. Clique **Add new webhook**
-
-4. Remplis les champs :
-
-| Champ | Valeur |
-|-------|--------|
-| **URL** | `https://xxx-xxx-xxx-xxx.trycloudflare.com/webhooks/gitlab` |
-| **Secret token** | `YOUR_GITLAB_WEBHOOK_TOKEN_HERE` |
-
-5. Dans **Trigger**, coche uniquement :
-   - ☑ **Merge request events**
-
-6. Dans **SSL verification** :
-   - ☑ **Enable SSL verification**
-
-7. Clique **Add webhook**
-
-### Étape 3 : Tester le webhook
-
-1. Sur la page des webhooks, trouve ton webhook dans la liste
-2. Clique sur **Test** → **Merge request events**
-3. Tu devrais voir "Hook executed successfully: HTTP 200"
-
-Si tu vois une erreur, vérifie que :
-- Le serveur tourne (`scripts/status.sh`)
-- Le tunnel tourne
-- L'URL est correcte (avec `/webhooks/gitlab` à la fin)
-
----
-
-## Tester
-
-### Test complet
-
-1. Crée une MR sur le projet configuré
-2. Assigne-toi comme **Reviewer** (pas Assignee, Reviewer !)
-3. Ouvre le dashboard : http://localhost:3847/dashboard/
-4. Tu devrais voir la review apparaître dans "Reviews actives"
-
-### Vérifier les logs
-
-```bash
-# Logs du serveur
-tail -f /tmp/claude-review/server.log
-
-# Logs du tunnel
-tail -f /tmp/claude-review/tunnel.log
+```json
+{
+  "github": false,
+  "gitlab": true,
+  "defaultModel": "opus",
+  "reviewSkill": "review-front",
+  "reviewFollowupSkill": "review-followup"
+}
 ```
 
----
+### Configuration Options
 
-## Configuration avancée
+| Option | Type | Description |
+|--------|------|-------------|
+| `github` | boolean | Enable GitHub integration |
+| `gitlab` | boolean | Enable GitLab integration |
+| `defaultModel` | string | Claude model: `opus` (powerful) or `sonnet` (fast) |
+| `reviewSkill` | string | Skill name for initial reviews |
+| `reviewFollowupSkill` | string | Skill name for follow-up reviews |
 
-### Fichier config.json
+> **Note**: Set either `github: true` OR `gitlab: true`, not both.
+
+### Server Configuration
+
+The main server config is in `config.json`:
 
 ```json
 {
@@ -162,139 +170,187 @@ tail -f /tmp/claude-review/tunnel.log
     "port": 3847
   },
   "user": {
-    "gitlabUsername": "damien",      // Ton username GitLab
-    "githubUsername": "damien"       // Ton username GitHub
+    "gitlabUsername": "your-username",
+    "githubUsername": "your-username"
   },
   "queue": {
-    "maxConcurrent": 2,              // Reviews simultanées max
-    "deduplicationWindowMs": 300000  // 5 min anti-spam
+    "maxConcurrent": 2,
+    "deduplicationWindowMs": 300000
   },
   "repositories": [
     {
       "platform": "gitlab",
-      "remoteUrl": "https://gitlab.com/mentor-goal/main-app-v3",
-      "localPath": "/home/damien/Documents/Gitlab/main-app-v3/frontend",
-      "skill": "review-front",       // Skill Claude à utiliser
+      "remoteUrl": "https://gitlab.com/your-org/your-repo",
+      "localPath": "/path/to/local/clone",
+      "skill": "review-front",
       "enabled": true
     }
   ]
 }
 ```
 
-### Ajouter un nouveau projet
+### Environment Variables
 
-Ajoute une entrée dans `repositories` :
+Create a `.env` file:
 
-```json
-{
-  "platform": "gitlab",
-  "remoteUrl": "https://gitlab.com/ton-org/ton-projet",
-  "localPath": "/chemin/vers/le/repo/local",
-  "skill": "review-front",
-  "enabled": true
-}
-```
-
-Puis configure le webhook sur ce projet GitLab (même procédure).
-
-### Variables d'environnement (.env)
-
-```bash
-# Token secret pour vérifier les webhooks GitLab
-GITLAB_WEBHOOK_TOKEN=YOUR_GITLAB_WEBHOOK_TOKEN_HERE
-
-# Secret HMAC pour GitHub
-GITHUB_WEBHOOK_SECRET=c28ee3fa20341c118118e616dc8ec5d1d26cb987c9612ce02c3f1a4cebaa07a8
-
-# Niveau de log (debug, info, warn, error)
+```env
+GITLAB_WEBHOOK_TOKEN=your-secret-token
+GITHUB_WEBHOOK_SECRET=your-secret-token
 LOG_LEVEL=info
 ```
 
 ---
 
-## Dépannage
+## Review Skills
 
-### Le dashboard affiche "Hors ligne"
+Review skills are Claude Code skills that define how reviews are performed.
 
-Le serveur ne tourne pas.
+### Skill Location
 
-```bash
-# Vérifier
-~/Documents/Projets/claude-review-automation/scripts/status.sh
-
-# Relancer
-~/Documents/Projets/claude-review-automation/scripts/launcher.sh
+Skills must be in your project at:
+```
+.claude/skills/<skill-name>/SKILL.md
 ```
 
-### Le webhook GitLab échoue (erreur 401)
+### Skill Format
 
-Le token est incorrect.
+```markdown
+---
+name: review-front
+description: Code review skill for frontend projects
+---
 
-1. Vérifie le token dans `.env` : `GITLAB_WEBHOOK_TOKEN`
-2. Vérifie que c'est le même dans GitLab → Webhooks → Secret token
+# Review Instructions
 
-### Le webhook GitLab échoue (connexion refusée)
-
-Le tunnel ne tourne pas ou l'URL a changé.
-
-```bash
-# Vérifier l'URL actuelle
-~/Documents/Projets/claude-review-automation/scripts/status.sh
-
-# Mettre à jour l'URL dans GitLab si elle a changé
+[Your review instructions for Claude...]
 ```
 
-### La review ne se lance pas
+### Example Skills
 
-Vérifie dans les logs :
+See the `examples/` directory:
 
-```bash
-tail -20 /tmp/claude-review/server.log
-```
-
-Causes possibles :
-- Tu n'es pas assigné comme **Reviewer** (différent de Assignee)
-- La MR est en draft
-- La MR est déjà merged/closed
-- Le projet n'est pas dans `config.json`
-- Ton username ne correspond pas à `gitlabUsername` dans config.json
-
-### Claude Code échoue
-
-```bash
-# Tester manuellement
-cd /home/damien/Documents/Gitlab/main-app-v3/frontend
-claude --print "/review-front 123"
-```
-
-Vérifie que :
-- Le chemin `localPath` existe
-- La skill `/review-front` est disponible
-- Claude Code a les permissions nécessaires
+- `examples/skills/review-example/` - Basic code review skill
+- `examples/skills/review-followup-example/` - Follow-up review skill
+- `examples/skills/TEMPLATE.md` - Skill template
+- `examples/config.example.json` - Example project config
 
 ---
 
-## Fichiers importants
+## Dashboard
 
-| Fichier | Description |
-|---------|-------------|
-| `config.json` | Configuration des projets et utilisateurs |
-| `.env` | Secrets (tokens webhook) |
-| `scripts/launcher.sh` | Lance tout (serveur + tunnel + dashboard) |
-| `scripts/stop.sh` | Arrête tout |
-| `scripts/status.sh` | Affiche l'état des services |
+Access the dashboard at `http://localhost:3847`
 
-## Logs
+### Features
 
-| Log | Emplacement |
-|-----|-------------|
-| Serveur | `/tmp/claude-review/server.log` |
-| Tunnel | `/tmp/claude-review/tunnel.log` |
+- **Project Loader**: Load and switch between project configurations
+- **CLI Status**: Verify GitHub/GitLab CLI authentication
+- **Queue Monitoring**: View running and queued reviews
+- **Review History**: Browse past review reports
+- **Real-time Updates**: WebSocket-based live progress
 
-## URLs
+### Loading a Project
 
-| URL | Description |
-|-----|-------------|
-| http://localhost:3847/dashboard/ | Dashboard local |
-| http://localhost:3847/status | API JSON du status |
-| http://localhost:3847/health | Health check |
+1. Enter the project path (e.g., `/home/user/my-project`)
+2. Click "Charger"
+3. The dashboard validates:
+   - Config file exists
+   - Required skills exist
+   - Shows active platform (GitHub/GitLab)
+
+---
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Redirect to dashboard |
+| `/dashboard/` | GET | Web dashboard |
+| `/health` | GET | Health check |
+| `/status` | GET | Queue status |
+| `/webhooks/gitlab` | POST | GitLab webhook |
+| `/webhooks/github` | POST | GitHub webhook |
+| `/api/project-config` | GET | Load project config |
+| `/api/gitlab/status` | GET | GitLab CLI status |
+| `/api/github/status` | GET | GitHub CLI status |
+| `/api/reviews` | GET | List reviews |
+| `/ws` | WebSocket | Real-time updates |
+
+---
+
+## Troubleshooting
+
+### Dashboard shows "Hors ligne"
+
+Server is not running.
+
+```bash
+npm run build
+npm start
+```
+
+### CLI not authenticated
+
+Run the authentication command:
+
+```bash
+# GitLab
+glab auth login
+
+# GitHub
+gh auth login
+```
+
+### Webhook fails (401 Unauthorized)
+
+Token mismatch. Check that:
+- `.env` has the correct `GITLAB_WEBHOOK_TOKEN` or `GITHUB_WEBHOOK_SECRET`
+- GitLab/GitHub webhook has the same secret configured
+
+### Webhook fails (Connection refused)
+
+Tunnel is not running or URL changed.
+
+```bash
+# Restart tunnel
+cloudflared tunnel --url http://localhost:3847
+
+# Update webhook URL in GitLab/GitHub
+```
+
+### Review doesn't start
+
+Check the logs and verify:
+- You are assigned as **Reviewer** (not Assignee)
+- MR/PR is not a draft
+- MR/PR is not already merged/closed
+- Project is in `config.json` repositories
+- Your username matches config
+
+### Skills not found
+
+Verify skill paths exist:
+```bash
+ls -la /path/to/project/.claude/skills/review-front/SKILL.md
+ls -la /path/to/project/.claude/skills/review-followup/SKILL.md
+```
+
+---
+
+## Development
+
+```bash
+# Development with hot reload
+npm run dev
+
+# Build
+npm run build
+
+# Type check
+npm run typecheck
+```
+
+---
+
+## License
+
+MIT

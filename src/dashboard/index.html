@@ -4,267 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Claude Review Dashboard</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      color: #e4e4e7;
-      min-height: 100vh;
-      padding: 2rem;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-
-    .logo {
-      width: 48px;
-      height: 48px;
-      background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-    }
-
-    h1 {
-      font-size: 1.75rem;
-      font-weight: 600;
-    }
-
-    .status-indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      border-radius: 9999px;
-      font-size: 0.875rem;
-      font-weight: 500;
-      margin-left: auto;
-    }
-
-    .status-indicator.online {
-      background: rgba(34, 197, 94, 0.2);
-      color: #22c55e;
-    }
-
-    .status-indicator.offline {
-      background: rgba(239, 68, 68, 0.2);
-      color: #ef4444;
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: currentColor;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-
-    .card {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 1.5rem;
-    }
-
-    .card-label {
-      font-size: 0.875rem;
-      color: #a1a1aa;
-      margin-bottom: 0.5rem;
-    }
-
-    .card-value {
-      font-size: 2rem;
-      font-weight: 700;
-    }
-
-    .card-value.running {
-      color: #f59e0b;
-    }
-
-    .card-value.queued {
-      color: #3b82f6;
-    }
-
-    .section {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      margin-bottom: 1.5rem;
-      overflow: hidden;
-    }
-
-    .section-header {
-      padding: 1rem 1.5rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .section-content {
-      padding: 1rem 1.5rem;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 2rem;
-      color: #71717a;
-    }
-
-    .review-item {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 1rem 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .review-item:last-child {
-      border-bottom: none;
-    }
-
-    .review-status {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .review-status.running {
-      background: #f59e0b;
-      animation: pulse 1s infinite;
-    }
-
-    .review-status.queued {
-      background: #3b82f6;
-    }
-
-    .review-status.completed {
-      background: #22c55e;
-    }
-
-    .review-status.failed {
-      background: #ef4444;
-    }
-
-    .review-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .review-title {
-      font-weight: 500;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .review-title a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    .review-title a:hover {
-      color: #f59e0b;
-    }
-
-    .review-meta {
-      font-size: 0.875rem;
-      color: #71717a;
-      margin-top: 0.25rem;
-    }
-
-    .review-time {
-      font-size: 0.875rem;
-      color: #a1a1aa;
-      white-space: nowrap;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 500;
-      text-transform: uppercase;
-    }
-
-    .badge.running {
-      background: rgba(245, 158, 11, 0.2);
-      color: #f59e0b;
-    }
-
-    .badge.queued {
-      background: rgba(59, 130, 246, 0.2);
-      color: #3b82f6;
-    }
-
-    .badge.completed {
-      background: rgba(34, 197, 94, 0.2);
-      color: #22c55e;
-    }
-
-    .badge.failed {
-      background: rgba(239, 68, 68, 0.2);
-      color: #ef4444;
-    }
-
-    .refresh-info {
-      text-align: center;
-      font-size: 0.875rem;
-      color: #71717a;
-      margin-top: 1rem;
-    }
-
-    .error-message {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #fca5a5;
-      padding: 0.5rem 0.75rem;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      margin-top: 0.5rem;
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="container">
     <header>
       <div class="logo">🤖</div>
       <h1>Claude Review</h1>
-      <div id="server-status" class="status-indicator offline">
-        <span class="status-dot"></span>
-        <span>Connexion...</span>
+      <div class="header-actions">
+        <button id="check-claude-btn" class="btn btn-primary" onclick="checkClaudeStatus()">
+          🔍 Vérifier Claude
+        </button>
+        <button id="toggle-logs-btn" class="btn btn-secondary" onclick="toggleLogs()">
+          📋 Logs
+        </button>
+        <div id="server-status" class="status-indicator connecting">
+          <span class="status-dot"></span>
+          <span>Connexion...</span>
+        </div>
       </div>
     </header>
 
@@ -278,8 +35,70 @@
         <div id="queued-count" class="card-value queued">-</div>
       </div>
       <div class="card">
-        <div class="card-label">Terminées (24h)</div>
+        <div class="card-label">Terminées</div>
         <div id="completed-count" class="card-value">-</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Claude CLI</div>
+        <div id="claude-status" class="card-claude checking">
+          <span class="status">Vérification...</span>
+          <span class="version"></span>
+        </div>
+      </div>
+      <div class="card" id="git-cli-card">
+        <div class="card-label" id="git-cli-label">Git CLI</div>
+        <div id="git-cli-status" class="card-claude checking">
+          <span class="status">Charger un projet...</span>
+          <span class="version"></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">Modèle</div>
+        <div class="card-model">
+          <select id="model-select" class="model-select" onchange="changeModel(this.value)">
+            <option value="opus">Opus (puissant)</option>
+            <option value="sonnet">Sonnet (rapide)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="project-loader">
+      <select id="project-select" class="project-input" style="min-width: 350px;" onchange="onProjectSelect(this.value)">
+        <option value="">-- Sélectionner un projet --</option>
+      </select>
+      <input type="text" id="project-path-input" class="project-input" style="min-width: 250px;"
+             placeholder="Ou entrer un nouveau chemin..."
+             value="">
+      <button class="btn btn-primary" onclick="loadProjectConfig()">
+        📂 Charger
+      </button>
+      <button class="btn btn-secondary" onclick="removeCurrentProject()" title="Retirer de la liste">
+        🗑️
+      </button>
+      <span id="config-status" class="config-status hidden"></span>
+    </div>
+    <div id="config-info" class="config-info hidden"></div>
+
+    <div id="claude-login-section" class="login-instructions hidden">
+      <strong>⚠️ Claude n'est pas authentifié</strong>
+      <p style="margin-top: 0.5rem;">Exécutez cette commande dans un terminal :</p>
+      <p style="margin-top: 0.5rem;"><code>claude login</code></p>
+      <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #a1a1aa;">Puis rechargez cette page.</p>
+    </div>
+
+    <div id="git-login-section" class="login-instructions hidden">
+      <strong id="git-login-title">⚠️ CLI non authentifié</strong>
+      <div style="margin-top: 0.75rem;" id="git-login-instructions"></div>
+    </div>
+
+    <div id="logs-section" class="section hidden">
+      <div class="section-header">
+        <span>📋</span> Logs récents
+        <span id="error-count" class="badge-count hidden">0 erreurs</span>
+      </div>
+      <div id="logs-content" class="section-content logs">
+        <div class="empty-state">Aucun log</div>
       </div>
     </div>
 
@@ -302,20 +121,32 @@
     </div>
 
     <div class="refresh-info">
-      Actualisation automatique toutes les 5 secondes
+      <span id="connection-mode">WebSocket temps réel</span> • Fallback polling 5s
     </div>
   </div>
 
   <script>
-    const API_URL = 'http://localhost:3847';
+    const API_URL = window.location.origin;
+    const WS_URL = `ws://${window.location.host}/ws`;
+
+    let ws = null;
+    let wsConnected = false;
+    let reconnectAttempts = 0;
+    let logsVisible = false;
+    const MAX_RECONNECT_ATTEMPTS = 10;
+    const RECONNECT_DELAY = 3000;
+
+    let currentData = { activeReviews: [], recentReviews: [], logs: [], reviewFiles: [] };
+    let loadedReviews = {}; // Cache for loaded review content
+
+    const agentIcons = { pending: '⏳', running: '🔄', completed: '✅', failed: '❌' };
 
     function formatTime(dateStr) {
       if (!dateStr) return '-';
       const date = new Date(dateStr);
       const now = new Date();
       const diff = now - date;
-
-      if (diff < 60000) return 'À l\'instant';
+      if (diff < 60000) return "À l'instant";
       if (diff < 3600000) return `Il y a ${Math.floor(diff / 60000)} min`;
       if (diff < 86400000) return `Il y a ${Math.floor(diff / 3600000)}h`;
       return date.toLocaleDateString('fr-FR');
@@ -326,90 +157,761 @@
       const start = new Date(startStr);
       const end = endStr ? new Date(endStr) : new Date();
       const diff = Math.floor((end - start) / 1000);
-
       if (diff < 60) return `${diff}s`;
       if (diff < 3600) return `${Math.floor(diff / 60)}m ${diff % 60}s`;
       return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
+    }
+
+    function formatPhase(phase) {
+      const labels = {
+        'initializing': 'Initialisation',
+        'agents-running': 'Agents en cours',
+        'synthesizing': 'Synthèse',
+        'publishing': 'Publication',
+        'completed': 'Terminé'
+      };
+      return labels[phase] || phase;
+    }
+
+    function formatLogTime(timestamp) {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString('fr-FR');
+    }
+
+    function renderAgentTimeline(progress) {
+      if (!progress?.agents?.length) return '';
+      const agentsHtml = progress.agents.map(agent => `
+        <div class="agent-box ${agent.status}" title="${agent.displayName}: ${agent.status}">
+          <span class="agent-icon">${agentIcons[agent.status]}</span>
+          <span class="agent-name">${agent.displayName}</span>
+        </div>
+      `).join('');
+      return `<div class="agent-timeline">${agentsHtml}</div>`;
+    }
+
+    function renderProgressBar(progress) {
+      if (!progress) return '';
+      return `
+        <div class="progress-container">
+          <div class="progress-bar-wrapper">
+            <div class="progress-bar">
+              <div class="progress-bar-fill" style="width: ${progress.overallProgress}%"></div>
+            </div>
+            <span class="progress-percent">${progress.overallProgress}%</span>
+          </div>
+          <div class="progress-phase">${formatPhase(progress.currentPhase)}</div>
+        </div>
+      `;
     }
 
     function renderReview(review, isActive) {
       const statusClass = review.status;
       const mrNumber = review.mrNumber;
       const project = review.project.split('/').pop();
+      const mrPrefix = review.id.startsWith('github') ? '#' : '!';
+
+      const progressHtml = isActive && review.progress ? `
+        ${renderAgentTimeline(review.progress)}
+        ${renderProgressBar(review.progress)}
+      ` : '';
 
       return `
-        <div class="review-item">
-          <div class="review-status ${statusClass}"></div>
-          <div class="review-info">
-            <div class="review-title">
-              <a href="${review.mrUrl}" target="_blank">!${mrNumber}</a> - ${project}
+        <div class="review-item" data-job-id="${review.id}">
+          <div class="review-header">
+            <div class="review-status ${statusClass}"></div>
+            <div class="review-info">
+              <div class="review-title">
+                <a href="${review.mrUrl}" target="_blank">${mrPrefix}${mrNumber}</a> - ${project}
+              </div>
+              <div class="review-meta">
+                <span class="badge ${statusClass}">${review.status}</span>
+                ${isActive ? `⏱️ ${formatDuration(review.startedAt)}` : ''}
+              </div>
+              ${review.error ? `<div class="error-message">${review.error}</div>` : ''}
             </div>
-            <div class="review-meta">
-              <span class="badge ${statusClass}">${review.status}</span>
-              ${isActive ? `⏱️ ${formatDuration(review.startedAt)}` : ''}
+            <div class="review-time">
+              ${isActive ? formatTime(review.startedAt) : formatTime(review.completedAt)}
             </div>
-            ${review.error ? `<div class="error-message">${review.error}</div>` : ''}
           </div>
-          <div class="review-time">
-            ${isActive ? formatTime(review.startedAt) : formatTime(review.completedAt)}
+          ${progressHtml}
+        </div>
+      `;
+    }
+
+    function renderLog(log) {
+      const dataStr = log.data ? JSON.stringify(log.data, null, 2) : '';
+      return `
+        <div class="log-entry">
+          <span class="log-time">${formatLogTime(log.timestamp)}</span>
+          <span class="log-level ${log.level}">${log.level.toUpperCase()}</span>
+          <div class="log-message">
+            ${log.message}
+            ${dataStr ? `<div class="log-data">${dataStr}</div>` : ''}
           </div>
         </div>
       `;
     }
 
+    function updateUI() {
+      const running = currentData.activeReviews.filter(r => r.status === 'running').length;
+      const queued = currentData.activeReviews.filter(r => r.status === 'queued').length;
+      document.getElementById('running-count').textContent = running;
+      document.getElementById('queued-count').textContent = queued;
+      document.getElementById('completed-count').textContent = currentData.reviewFiles.length;
+
+      const activeEl = document.getElementById('active-reviews');
+      activeEl.innerHTML = currentData.activeReviews.length === 0
+        ? '<div class="empty-state">Aucune review en cours</div>'
+        : currentData.activeReviews.map(r => renderReview(r, true)).join('');
+
+      // Note: recent-reviews is managed by updateReviewFilesUI() - don't overwrite here
+    }
+
+    function updateLogs() {
+      const logsEl = document.getElementById('logs-content');
+      const errorCount = currentData.logs.filter(l => l.level === 'error' || l.level === 'warn').length;
+      const errorBadge = document.getElementById('error-count');
+
+      if (errorCount > 0) {
+        errorBadge.textContent = `${errorCount} erreurs`;
+        errorBadge.classList.remove('hidden');
+      } else {
+        errorBadge.classList.add('hidden');
+      }
+
+      if (currentData.logs.length === 0) {
+        logsEl.innerHTML = '<div class="empty-state">Aucun log</div>';
+      } else {
+        logsEl.innerHTML = currentData.logs.slice().reverse().map(renderLog).join('');
+      }
+    }
+
+    function updateConnectionStatus(status, text) {
+      const statusEl = document.getElementById('server-status');
+      statusEl.className = `status-indicator ${status}`;
+      statusEl.innerHTML = `<span class="status-dot"></span><span>${text}</span>`;
+
+      const modeEl = document.getElementById('connection-mode');
+      modeEl.textContent = status === 'online' && wsConnected
+        ? 'WebSocket temps réel'
+        : status === 'online' ? 'Mode polling' : 'Déconnecté';
+    }
+
+    // Simple markdown to HTML converter
+    function markdownToHtml(md) {
+      let html = md
+        // Escape HTML
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        // Code blocks
+        .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+        // Inline code
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        // Headers
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+        // Bold
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        // Italic
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        // Links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+        // Blockquotes
+        .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+        // Unordered lists
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        // Ordered lists
+        .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+        // Horizontal rules
+        .replace(/^---$/gm, '<hr>')
+        // Tables (simple)
+        .replace(/^\|(.+)\|$/gm, (match, content) => {
+          const cells = content.split('|').map(c => c.trim());
+          if (cells.every(c => c.match(/^-+$/))) return '';
+          const cellTag = match.includes('---') ? 'th' : 'td';
+          return '<tr>' + cells.map(c => `<${cellTag}>${c}</${cellTag}>`).join('') + '</tr>';
+        })
+        // Wrap consecutive table rows
+        .replace(/(<tr>[\s\S]*?<\/tr>)+/g, '<table>$&</table>')
+        // Wrap consecutive list items
+        .replace(/(<li>[\s\S]*?<\/li>)+/g, '<ul>$&</ul>')
+        // Paragraphs
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+
+      return '<p>' + html + '</p>';
+    }
+
+    function renderReviewFile(review) {
+      const typeLabel = review.type === 'review' ? '📝 Review' : review.type === 'followup' ? '🔄 Followup' : `📄 ${review.type}`;
+      const sizeKb = (review.size / 1024).toFixed(1);
+
+      return `
+        <div class="review-accordion" data-filename="${review.filename}">
+          <div class="review-accordion-header">
+            <div class="review-accordion-toggle" onclick="toggleReviewAccordion('${review.filename}')">▶</div>
+            <div class="review-status completed" onclick="toggleReviewAccordion('${review.filename}')"></div>
+            <div class="review-info" onclick="toggleReviewAccordion('${review.filename}')" style="cursor: pointer;">
+              <div class="review-title">MR ${review.mrNumber}</div>
+              <div class="review-meta">
+                <span class="badge completed">${typeLabel}</span>
+                <span style="margin-left: 0.5rem; color: #71717a;">${sizeKb} KB</span>
+              </div>
+            </div>
+            <div class="review-time" onclick="toggleReviewAccordion('${review.filename}')" style="cursor: pointer;">${review.date}</div>
+            <button class="btn-delete" onclick="deleteReviewFile('${review.filename}')" title="Supprimer">🗑️</button>
+          </div>
+          <div class="review-accordion-content">
+            <div class="markdown-content" id="review-content-${review.filename.replace(/\./g, '-')}">
+              <div class="empty-state">Chargement...</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function toggleReviewAccordion(filename) {
+      const accordion = document.querySelector(`.review-accordion[data-filename="${filename}"]`);
+      const isOpen = accordion.classList.contains('open');
+
+      // Close all other accordions
+      document.querySelectorAll('.review-accordion.open').forEach(el => {
+        if (el !== accordion) el.classList.remove('open');
+      });
+
+      if (isOpen) {
+        accordion.classList.remove('open');
+        return;
+      }
+
+      accordion.classList.add('open');
+      const contentId = `review-content-${filename.replace(/\./g, '-')}`;
+      const contentEl = document.getElementById(contentId);
+
+      // Load content if not cached
+      if (!loadedReviews[filename]) {
+        try {
+          const response = await fetch(`${API_URL}/api/reviews/${filename}`);
+          const data = await response.json();
+          loadedReviews[filename] = data.content;
+        } catch (error) {
+          contentEl.innerHTML = '<div class="empty-state">Erreur de chargement</div>';
+          return;
+        }
+      }
+
+      contentEl.innerHTML = markdownToHtml(loadedReviews[filename]);
+    }
+
+    async function fetchReviewFiles() {
+      try {
+        const response = await fetch(`${API_URL}/api/reviews`);
+        const data = await response.json();
+        currentData.reviewFiles = data.reviews || [];
+        updateReviewFilesUI();
+      } catch (error) {
+        console.error('Error fetching review files:', error);
+      }
+    }
+
+    function updateReviewFilesUI() {
+      const recentEl = document.getElementById('recent-reviews');
+
+      if (currentData.reviewFiles.length === 0) {
+        recentEl.innerHTML = '<div class="empty-state">Aucun fichier de review</div>';
+        return;
+      }
+
+      recentEl.innerHTML = currentData.reviewFiles.map(renderReviewFile).join('');
+    }
+
+    async function deleteReviewFile(filename) {
+      if (!confirm(`Supprimer ${filename} ?`)) return;
+
+      try {
+        const response = await fetch(`${API_URL}/api/reviews/${filename}`, {
+          method: 'DELETE'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          // Remove from cache
+          delete loadedReviews[filename];
+          // Remove from list and update UI
+          currentData.reviewFiles = currentData.reviewFiles.filter(r => r.filename !== filename);
+          updateReviewFilesUI();
+          updateUI(); // Update count
+        } else {
+          alert('Erreur: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error deleting review:', error);
+        alert('Erreur lors de la suppression');
+      }
+    }
+
+    async function checkClaudeStatus() {
+      const claudeEl = document.getElementById('claude-status');
+      const loginSection = document.getElementById('claude-login-section');
+
+      claudeEl.className = 'card-claude checking';
+      claudeEl.innerHTML = '<span class="status">Vérification...</span>';
+
+      try {
+        const response = await fetch(`${API_URL}/api/claude/status`);
+        const data = await response.json();
+
+        if (data.available) {
+          claudeEl.className = 'card-claude available';
+          claudeEl.innerHTML = `
+            <span class="status">✅ Opérationnel</span>
+            <span class="version">${data.version}</span>
+          `;
+          loginSection.classList.add('hidden');
+        } else {
+          claudeEl.className = 'card-claude unavailable';
+          claudeEl.innerHTML = `
+            <span class="status">❌ ${data.message}</span>
+          `;
+          if (data.message.includes('authentifié') || data.message.includes('login')) {
+            loginSection.classList.remove('hidden');
+          }
+        }
+      } catch (error) {
+        claudeEl.className = 'card-claude unavailable';
+        claudeEl.innerHTML = '<span class="status">❌ Erreur de vérification</span>';
+      }
+    }
+
+    // Active platform from config (gitlab or github)
+    let activePlatform = null;
+
+    function updateGitCliUI() {
+      const labelEl = document.getElementById('git-cli-label');
+      const statusEl = document.getElementById('git-cli-status');
+      const loginSection = document.getElementById('git-login-section');
+
+      if (!activePlatform) {
+        labelEl.textContent = 'Git CLI';
+        statusEl.className = 'card-claude checking';
+        statusEl.innerHTML = '<span class="status">Charger un projet...</span>';
+        loginSection.classList.add('hidden');
+        return;
+      }
+
+      const isGitlab = activePlatform === 'gitlab';
+      labelEl.textContent = isGitlab ? 'GitLab CLI' : 'GitHub CLI';
+
+      // Update login section with CLI + Webhook instructions
+      const titleEl = document.getElementById('git-login-title');
+      const instructionsEl = document.getElementById('git-login-instructions');
+
+      if (isGitlab) {
+        titleEl.textContent = '⚠️ GitLab CLI non authentifié';
+        instructionsEl.innerHTML = `
+          <p><strong>1. Installer et authentifier glab :</strong></p>
+          <p style="margin: 0.5rem 0;"><code>sudo apt install glab</code></p>
+          <p style="margin: 0.5rem 0;"><code>glab auth login</code></p>
+          <p style="margin-top: 1rem;"><strong>2. Configurer le webhook GitLab :</strong></p>
+          <p style="margin: 0.5rem 0; font-size: 0.8rem;">Settings → Webhooks → Add webhook</p>
+          <p style="margin: 0.25rem 0; font-size: 0.8rem;">URL: <code>http://&lt;your-server&gt;:3847/webhooks/gitlab</code></p>
+          <p style="margin: 0.25rem 0; font-size: 0.8rem;">Trigger: Merge request events</p>
+          <p style="margin-top: 0.75rem; font-size: 0.75rem; color: #a1a1aa;">Puis rechargez cette page.</p>
+        `;
+      } else {
+        titleEl.textContent = '⚠️ GitHub CLI non authentifié';
+        instructionsEl.innerHTML = `
+          <p><strong>1. Installer et authentifier gh :</strong></p>
+          <p style="margin: 0.5rem 0;"><code>sudo apt install gh</code></p>
+          <p style="margin: 0.5rem 0;"><code>gh auth login</code></p>
+          <p style="margin-top: 1rem;"><strong>2. Configurer le webhook GitHub :</strong></p>
+          <p style="margin: 0.5rem 0; font-size: 0.8rem;">Settings → Webhooks → Add webhook</p>
+          <p style="margin: 0.25rem 0; font-size: 0.8rem;">Payload URL: <code>http://&lt;your-server&gt;:3847/webhooks/github</code></p>
+          <p style="margin: 0.25rem 0; font-size: 0.8rem;">Content type: application/json</p>
+          <p style="margin: 0.25rem 0; font-size: 0.8rem;">Events: Pull requests</p>
+          <p style="margin-top: 0.75rem; font-size: 0.75rem; color: #a1a1aa;">Puis rechargez cette page.</p>
+        `;
+      }
+
+      checkGitCliStatus();
+    }
+
+    async function checkGitCliStatus() {
+      if (!activePlatform) return;
+
+      const statusEl = document.getElementById('git-cli-status');
+      const loginSection = document.getElementById('git-login-section');
+      const isGitlab = activePlatform === 'gitlab';
+      const endpoint = isGitlab ? '/api/gitlab/status' : '/api/github/status';
+
+      statusEl.className = 'card-claude checking';
+      statusEl.innerHTML = '<span class="status">Vérification...</span>';
+
+      try {
+        const response = await fetch(`${API_URL}${endpoint}`);
+        const data = await response.json();
+
+        if (data.available && data.authenticated) {
+          statusEl.className = 'card-claude available';
+          statusEl.innerHTML = `
+            <span class="status">✅ Opérationnel</span>
+            <span class="version">@${data.username}</span>
+          `;
+          loginSection.classList.add('hidden');
+        } else if (data.available && !data.authenticated) {
+          statusEl.className = 'card-claude unavailable';
+          statusEl.innerHTML = `<span class="status">❌ ${data.message}</span>`;
+          loginSection.classList.remove('hidden');
+        } else {
+          statusEl.className = 'card-claude unavailable';
+          statusEl.innerHTML = `<span class="status">❌ ${data.message}</span>`;
+          loginSection.classList.remove('hidden');
+        }
+      } catch (error) {
+        statusEl.className = 'card-claude unavailable';
+        statusEl.innerHTML = '<span class="status">❌ Erreur de vérification</span>';
+      }
+    }
+
+    function toggleLogs() {
+      logsVisible = !logsVisible;
+      const logsSection = document.getElementById('logs-section');
+      const btn = document.getElementById('toggle-logs-btn');
+
+      if (logsVisible) {
+        logsSection.classList.remove('hidden');
+        btn.textContent = '📋 Masquer Logs';
+        fetchLogs();
+      } else {
+        logsSection.classList.add('hidden');
+        btn.textContent = '📋 Logs';
+      }
+    }
+
+    async function fetchLogs() {
+      try {
+        const response = await fetch(`${API_URL}/api/logs`);
+        const data = await response.json();
+        currentData.logs = data.logs || [];
+        updateLogs();
+      } catch (error) {
+        console.error('Error fetching logs:', error);
+      }
+    }
+
+    function handleProgressUpdate(message) {
+      const { jobId, progress } = message;
+      const review = currentData.activeReviews.find(r => r.id === jobId);
+      if (review) {
+        review.progress = progress;
+        updateUI();
+      }
+    }
+
+    function handleLogMessage(log) {
+      currentData.logs.push(log);
+      if (currentData.logs.length > 200) currentData.logs.shift();
+      if (logsVisible) updateLogs();
+    }
+
+    function connectWebSocket() {
+      if (ws?.readyState === WebSocket.OPEN) return;
+
+      updateConnectionStatus('connecting', 'Connexion...');
+
+      try {
+        ws = new WebSocket(WS_URL);
+
+        ws.onopen = () => {
+          wsConnected = true;
+          reconnectAttempts = 0;
+          updateConnectionStatus('online', 'En ligne');
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            switch (message.type) {
+              case 'init':
+                currentData.activeReviews = message.activeReviews || [];
+                currentData.recentReviews = message.recentReviews || [];
+                updateUI();
+                break;
+              case 'progress':
+                handleProgressUpdate(message);
+                break;
+              case 'log':
+                handleLogMessage(message.log);
+                break;
+              case 'pong':
+                break;
+            }
+          } catch (e) {
+            console.error('WebSocket message error:', e);
+          }
+        };
+
+        ws.onclose = () => {
+          wsConnected = false;
+          ws = null;
+          updateConnectionStatus('offline', 'Hors ligne');
+          if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            setTimeout(connectWebSocket, RECONNECT_DELAY);
+          }
+        };
+
+        ws.onerror = (error) => console.error('WebSocket error:', error);
+
+      } catch (error) {
+        console.error('WebSocket creation failed:', error);
+        wsConnected = false;
+      }
+    }
+
+    setInterval(() => {
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping' }));
+      }
+    }, 30000);
+
     async function fetchStatus() {
       try {
         const response = await fetch(`${API_URL}/status`);
         const data = await response.json();
-
-        // Update status indicator
-        const statusEl = document.getElementById('server-status');
-        statusEl.className = 'status-indicator online';
-        statusEl.innerHTML = '<span class="status-dot"></span><span>En ligne</span>';
-
-        // Update counts
-        const running = data.activeReviews.filter(r => r.status === 'running').length;
-        const queued = data.activeReviews.filter(r => r.status === 'queued').length;
-        document.getElementById('running-count').textContent = running;
-        document.getElementById('queued-count').textContent = queued;
-        document.getElementById('completed-count').textContent = data.recentReviews.length;
-
-        // Update active reviews
-        const activeEl = document.getElementById('active-reviews');
-        if (data.activeReviews.length === 0) {
-          activeEl.innerHTML = '<div class="empty-state">Aucune review en cours</div>';
-        } else {
-          activeEl.innerHTML = data.activeReviews.map(r => renderReview(r, true)).join('');
-        }
-
-        // Update recent reviews
-        const recentEl = document.getElementById('recent-reviews');
-        if (data.recentReviews.length === 0) {
-          recentEl.innerHTML = '<div class="empty-state">Aucune review récente</div>';
-        } else {
-          recentEl.innerHTML = data.recentReviews.map(r => renderReview(r, false)).join('');
-        }
-
+        currentData.activeReviews = data.activeReviews || [];
+        currentData.recentReviews = data.recentReviews || [];
+        if (!wsConnected) updateConnectionStatus('online', 'En ligne (polling)');
+        updateUI();
       } catch (error) {
-        const statusEl = document.getElementById('server-status');
-        statusEl.className = 'status-indicator offline';
-        statusEl.innerHTML = '<span class="status-dot"></span><span>Hors ligne</span>';
-
-        document.getElementById('running-count').textContent = '-';
-        document.getElementById('queued-count').textContent = '-';
-        document.getElementById('completed-count').textContent = '-';
-        document.getElementById('active-reviews').innerHTML =
-          '<div class="empty-state">Serveur non accessible</div>';
-        document.getElementById('recent-reviews').innerHTML =
-          '<div class="empty-state">Serveur non accessible</div>';
+        if (!wsConnected) {
+          updateConnectionStatus('offline', 'Hors ligne');
+          document.getElementById('running-count').textContent = '-';
+          document.getElementById('queued-count').textContent = '-';
+          document.getElementById('completed-count').textContent = '-';
+          document.getElementById('active-reviews').innerHTML = '<div class="empty-state">Serveur non accessible</div>';
+          document.getElementById('recent-reviews').innerHTML = '<div class="empty-state">Serveur non accessible</div>';
+        }
       }
     }
 
-    // Initial fetch
-    fetchStatus();
+    async function loadModelSetting() {
+      try {
+        const response = await fetch(`${API_URL}/api/settings/model`);
+        const data = await response.json();
+        const select = document.getElementById('model-select');
+        if (select && data.model) {
+          select.value = data.model;
+        }
+      } catch (error) {
+        console.error('Error loading model setting:', error);
+      }
+    }
 
-    // Refresh every 5 seconds
+    async function changeModel(model) {
+      try {
+        const response = await fetch(`${API_URL}/api/settings/model`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model })
+        });
+        const data = await response.json();
+        if (data.success) {
+          console.log('Model changed to:', model);
+        }
+      } catch (error) {
+        console.error('Error changing model:', error);
+      }
+    }
+
+    // Project config loader with persistence
+    const STORAGE_KEY_PROJECTS = 'claude-review-projects';
+    const STORAGE_KEY_CURRENT = 'claude-review-current-project';
+    let currentProjectConfig = null;
+    let currentProjectPath = null;
+
+    function getStoredProjects() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY_PROJECTS) || '[]');
+      } catch {
+        return [];
+      }
+    }
+
+    function saveProjects(projects) {
+      localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projects));
+    }
+
+    function addProjectToHistory(path) {
+      const projects = getStoredProjects();
+      // Remove if already exists (to move to top)
+      const filtered = projects.filter(p => p !== path);
+      // Add to beginning
+      filtered.unshift(path);
+      // Keep max 10 projects
+      saveProjects(filtered.slice(0, 10));
+      updateProjectSelect();
+    }
+
+    function removeProjectFromHistory(path) {
+      const projects = getStoredProjects().filter(p => p !== path);
+      saveProjects(projects);
+      updateProjectSelect();
+    }
+
+    function updateProjectSelect() {
+      const select = document.getElementById('project-select');
+      const projects = getStoredProjects();
+      const current = localStorage.getItem(STORAGE_KEY_CURRENT) || '';
+
+      select.innerHTML = '<option value="">-- Sélectionner un projet --</option>';
+      for (const path of projects) {
+        const shortName = path.split('/').slice(-2).join('/');
+        const option = document.createElement('option');
+        option.value = path;
+        option.textContent = shortName;
+        option.title = path;
+        if (path === current) option.selected = true;
+        select.appendChild(option);
+      }
+    }
+
+    function onProjectSelect(path) {
+      if (path) {
+        document.getElementById('project-path-input').value = '';
+        loadProjectConfigFromPath(path);
+      }
+    }
+
+    async function loadProjectConfig() {
+      const input = document.getElementById('project-path-input');
+      const select = document.getElementById('project-select');
+      // Prioritize input field, fallback to select
+      const projectPath = input.value.trim() || select.value;
+
+      if (!projectPath) {
+        showConfigStatus('Sélectionnez ou entrez un chemin', 'error');
+        return;
+      }
+
+      await loadProjectConfigFromPath(projectPath);
+    }
+
+    async function loadProjectConfigFromPath(projectPath) {
+      const status = document.getElementById('config-status');
+      const info = document.getElementById('config-info');
+
+      showConfigStatus('Chargement...', 'loading');
+      info.classList.add('hidden');
+
+      try {
+        const response = await fetch(`${API_URL}/api/project-config?path=${encodeURIComponent(projectPath)}`);
+        const data = await response.json();
+
+        if (data.success) {
+          currentProjectConfig = data.config;
+          currentProjectPath = projectPath;
+
+          // Save to history and set as current
+          addProjectToHistory(projectPath);
+          localStorage.setItem(STORAGE_KEY_CURRENT, projectPath);
+
+          // Update select to show current project
+          document.getElementById('project-select').value = projectPath;
+          document.getElementById('project-path-input').value = '';
+
+          const shortName = projectPath.split('/').slice(-2).join('/');
+          showConfigStatus(`✅ ${shortName}`, 'success');
+
+          // Update model selector if defaultModel is set
+          if (data.config.defaultModel) {
+            const modelSelect = document.getElementById('model-select');
+            if (modelSelect) {
+              modelSelect.value = data.config.defaultModel;
+              changeModel(data.config.defaultModel);
+            }
+          }
+
+          // Update active platform and check CLI
+          activePlatform = data.config.gitlab ? 'gitlab' : (data.config.github ? 'github' : null);
+          updateGitCliUI();
+
+          // Display config info (only show active platform)
+          const platformIcon = activePlatform === 'gitlab' ? '🦊 GitLab' : '🐙 GitHub';
+          info.innerHTML = `
+            <span>${platformIcon}</span>
+            <span>🤖 ${data.config.defaultModel || 'non défini'}</span>
+            <span>📝 ${data.config.reviewSkill}</span>
+            <span>🔄 ${data.config.reviewFollowupSkill}</span>
+          `;
+          info.classList.remove('hidden');
+        } else {
+          showConfigStatus('❌ ' + data.error, 'error');
+        }
+      } catch (error) {
+        showConfigStatus('❌ Erreur de chargement', 'error');
+        console.error('Error loading project config:', error);
+      }
+    }
+
+    function showConfigStatus(text, type) {
+      const status = document.getElementById('config-status');
+      status.textContent = text;
+      status.className = `config-status ${type}`;
+      status.classList.remove('hidden');
+    }
+
+    function removeCurrentProject() {
+      const select = document.getElementById('project-select');
+      const path = select.value;
+      if (!path) {
+        showConfigStatus('Aucun projet sélectionné', 'error');
+        return;
+      }
+      if (confirm(`Retirer "${path.split('/').slice(-2).join('/')}" de la liste ?`)) {
+        removeProjectFromHistory(path);
+        localStorage.removeItem(STORAGE_KEY_CURRENT);
+        currentProjectPath = null;
+        currentProjectConfig = null;
+        document.getElementById('config-info').classList.add('hidden');
+        showConfigStatus('Projet retiré', 'success');
+      }
+    }
+
+    function initProjectLoader() {
+      updateProjectSelect();
+      // Auto-load last project
+      const lastProject = localStorage.getItem(STORAGE_KEY_CURRENT);
+      if (lastProject) {
+        loadProjectConfigFromPath(lastProject);
+      }
+    }
+
+    // Init
+    connectWebSocket();
+    fetchStatus();
+    fetchReviewFiles();
+    checkClaudeStatus();
+    loadModelSetting();
+    initProjectLoader(); // Will check git CLI after loading project config
     setInterval(fetchStatus, 5000);
+    setInterval(fetchReviewFiles, 30000); // Refresh review files every 30s
+
+    setInterval(() => {
+      document.querySelectorAll('.review-item').forEach(el => {
+        const jobId = el.dataset.jobId;
+        const review = currentData.activeReviews.find(r => r.id === jobId);
+        if (review?.startedAt) {
+          const metaEl = el.querySelector('.review-meta');
+          if (metaEl) {
+            const badge = metaEl.querySelector('.badge');
+            metaEl.innerHTML = `${badge?.outerHTML || ''} ⏱️ ${formatDuration(review.startedAt)}`;
+          }
+        }
+      });
+    }, 1000);
   </script>
 </body>
 </html>

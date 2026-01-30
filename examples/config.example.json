@@ -1,0 +1,7 @@
+{
+  "github": false,
+  "gitlab": true,
+  "defaultModel": "opus",
+  "reviewSkill": "review-example",
+  "reviewFollowupSkill": "review-followup-example"
+}
