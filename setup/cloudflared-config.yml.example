@@ -1,0 +1,20 @@
+# Cloudflare Tunnel Configuration
+# Copy to ~/.cloudflared/config.yml after tunnel creation
+#
+# Steps to setup:
+# 1. Install cloudflared: curl -L https://pkg.cloudflare.com/cloudflared-linux-amd64.deb -o cloudflared.deb && sudo dpkg -i cloudflared.deb
+# 2. Login: cloudflared tunnel login
+# 3. Create tunnel: cloudflared tunnel create claude-review
+# 4. Copy tunnel ID and credentials file path below
+# 5. Create DNS: cloudflared tunnel route dns claude-review your-subdomain.your-domain.com
+# 6. Copy this file to ~/.cloudflared/config.yml with your values
+
+tunnel: YOUR_TUNNEL_ID
+credentials-file: /home/damien/.cloudflared/YOUR_TUNNEL_ID.json
+
+ingress:
+  # GitLab/GitHub webhooks
+  - hostname: claude-review.your-domain.com
+    service: http://localhost:3847
+  # Catch-all (required)
+  - service: http_status:404

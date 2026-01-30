@@ -1,0 +1,15 @@
+[Unit]
+Description=Cloudflare Tunnel for Claude Review
+After=network.target
+
+[Service]
+Type=simple
+User=damien
+ExecStart=/usr/bin/cloudflared tunnel run
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

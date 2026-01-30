@@ -1,0 +1,18 @@
+[Unit]
+Description=Claude Review Automation Server
+After=network.target
+
+[Service]
+Type=simple
+User=damien
+WorkingDirectory=/home/damien/Documents/Projets/claude-review-automation
+ExecStart=/usr/bin/node dist/server.js
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment=NODE_ENV=production
+EnvironmentFile=/home/damien/Documents/Projets/claude-review-automation/.env
+
+[Install]
+WantedBy=multi-user.target

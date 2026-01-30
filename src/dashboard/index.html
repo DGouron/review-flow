@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Review Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e4e4e7;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .logo {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-left: auto;
+    }
+
+    .status-indicator.online {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+
+    .status-indicator.offline {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card-label {
+      font-size: 0.875rem;
+      color: #a1a1aa;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-value {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .card-value.running {
+      color: #f59e0b;
+    }
+
+    .card-value.queued {
+      color: #3b82f6;
+    }
+
+    .section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .section-content {
+      padding: 1rem 1.5rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: #71717a;
+    }
+
+    .review-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .review-item:last-child {
+      border-bottom: none;
+    }
+
+    .review-status {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .review-status.running {
+      background: #f59e0b;
+      animation: pulse 1s infinite;
+    }
+
+    .review-status.queued {
+      background: #3b82f6;
+    }
+
+    .review-status.completed {
+      background: #22c55e;
+    }
+
+    .review-status.failed {
+      background: #ef4444;
+    }
+
+    .review-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .review-title {
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .review-title a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .review-title a:hover {
+      color: #f59e0b;
+    }
+
+    .review-meta {
+      font-size: 0.875rem;
+      color: #71717a;
+      margin-top: 0.25rem;
+    }
+
+    .review-time {
+      font-size: 0.875rem;
+      color: #a1a1aa;
+      white-space: nowrap;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    .badge.running {
+      background: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+    }
+
+    .badge.queued {
+      background: rgba(59, 130, 246, 0.2);
+      color: #3b82f6;
+    }
+
+    .badge.completed {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+
+    .badge.failed {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .refresh-info {
+      text-align: center;
+      font-size: 0.875rem;
+      color: #71717a;
+      margin-top: 1rem;
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">🤖</div>
+      <h1>Claude Review</h1>
+      <div id="server-status" class="status-indicator offline">
+        <span class="status-dot"></span>
+        <span>Connexion...</span>
+      </div>
+    </header>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">En cours</div>
+        <div id="running-count" class="card-value running">-</div>
+      </div>
+      <div class="card">
+        <div class="card-label">En attente</div>
+        <div id="queued-count" class="card-value queued">-</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Terminées (24h)</div>
+        <div id="completed-count" class="card-value">-</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <span>🔄</span> Reviews actives
+      </div>
+      <div id="active-reviews" class="section-content">
+        <div class="empty-state">Chargement...</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <span>📋</span> Reviews récentes
+      </div>
+      <div id="recent-reviews" class="section-content">
+        <div class="empty-state">Chargement...</div>
+      </div>
+    </div>
+
+    <div class="refresh-info">
+      Actualisation automatique toutes les 5 secondes
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3847';
+
+    function formatTime(dateStr) {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diff = now - date;
+
+      if (diff < 60000) return 'À l\'instant';
+      if (diff < 3600000) return `Il y a ${Math.floor(diff / 60000)} min`;
+      if (diff < 86400000) return `Il y a ${Math.floor(diff / 3600000)}h`;
+      return date.toLocaleDateString('fr-FR');
+    }
+
+    function formatDuration(startStr, endStr) {
+      if (!startStr) return '';
+      const start = new Date(startStr);
+      const end = endStr ? new Date(endStr) : new Date();
+      const diff = Math.floor((end - start) / 1000);
+
+      if (diff < 60) return `${diff}s`;
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ${diff % 60}s`;
+      return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
+    }
+
+    function renderReview(review, isActive) {
+      const statusClass = review.status;
+      const mrNumber = review.mrNumber;
+      const project = review.project.split('/').pop();
+
+      return `
+        <div class="review-item">
+          <div class="review-status ${statusClass}"></div>
+          <div class="review-info">
+            <div class="review-title">
+              <a href="${review.mrUrl}" target="_blank">!${mrNumber}</a> - ${project}
+            </div>
+            <div class="review-meta">
+              <span class="badge ${statusClass}">${review.status}</span>
+              ${isActive ? `⏱️ ${formatDuration(review.startedAt)}` : ''}
+            </div>
+            ${review.error ? `<div class="error-message">${review.error}</div>` : ''}
+          </div>
+          <div class="review-time">
+            ${isActive ? formatTime(review.startedAt) : formatTime(review.completedAt)}
+          </div>
+        </div>
+      `;
+    }
+
+    async function fetchStatus() {
+      try {
+        const response = await fetch(`${API_URL}/status`);
+        const data = await response.json();
+
+        // Update status indicator
+        const statusEl = document.getElementById('server-status');
+        statusEl.className = 'status-indicator online';
+        statusEl.innerHTML = '<span class="status-dot"></span><span>En ligne</span>';
+
+        // Update counts
+        const running = data.activeReviews.filter(r => r.status === 'running').length;
+        const queued = data.activeReviews.filter(r => r.status === 'queued').length;
+        document.getElementById('running-count').textContent = running;
+        document.getElementById('queued-count').textContent = queued;
+        document.getElementById('completed-count').textContent = data.recentReviews.length;
+
+        // Update active reviews
+        const activeEl = document.getElementById('active-reviews');
+        if (data.activeReviews.length === 0) {
+          activeEl.innerHTML = '<div class="empty-state">Aucune review en cours</div>';
+        } else {
+          activeEl.innerHTML = data.activeReviews.map(r => renderReview(r, true)).join('');
+        }
+
+        // Update recent reviews
+        const recentEl = document.getElementById('recent-reviews');
+        if (data.recentReviews.length === 0) {
+          recentEl.innerHTML = '<div class="empty-state">Aucune review récente</div>';
+        } else {
+          recentEl.innerHTML = data.recentReviews.map(r => renderReview(r, false)).join('');
+        }
+
+      } catch (error) {
+        const statusEl = document.getElementById('server-status');
+        statusEl.className = 'status-indicator offline';
+        statusEl.innerHTML = '<span class="status-dot"></span><span>Hors ligne</span>';
+
+        document.getElementById('running-count').textContent = '-';
+        document.getElementById('queued-count').textContent = '-';
+        document.getElementById('completed-count').textContent = '-';
+        document.getElementById('active-reviews').innerHTML =
+          '<div class="empty-state">Serveur non accessible</div>';
+        document.getElementById('recent-reviews').innerHTML =
+          '<div class="empty-state">Serveur non accessible</div>';
+      }
+    }
+
+    // Initial fetch
+    fetchStatus();
+
+    // Refresh every 5 seconds
+    setInterval(fetchStatus, 5000);
+  </script>
+</body>
+</html>
