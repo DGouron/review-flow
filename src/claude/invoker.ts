@@ -9,6 +9,11 @@ import { getProjectAgents } from '../config/projectConfig.js';
 import { addReviewStats } from '../services/statsService.js';
 import { getMrDetails } from '../services/mrTrackingService.js';
 
+// Memory guard configuration
+const MEMORY_LIMIT_GB = 4; // Kill process if RSS exceeds 4GB
+const MEMORY_CHECK_INTERVAL_MS = 5000; // Check every 5 seconds
+const MEMORY_LIMIT_BYTES = MEMORY_LIMIT_GB * 1024 * 1024 * 1024;
+
 export interface InvocationResult {
   success: boolean;
   exitCode: number | null;
@@ -112,6 +117,48 @@ export async function invokeClaudeReview(
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
+    // Memory guard: monitor RSS and kill if exceeds limit
+    let memoryExceeded = false;
+    const memoryCheckInterval = setInterval(() => {
+      const memUsage = process.memoryUsage();
+      const rssMB = Math.round(memUsage.rss / 1024 / 1024);
+
+      if (memUsage.rss > MEMORY_LIMIT_BYTES) {
+        memoryExceeded = true;
+        const errorMessage = `
+╔═══════════════════════════════════════════════════════════════════╗
+║  🚨 MEMORY LIMIT EXCEEDED - REVIEW KILLED                        ║
+╠═══════════════════════════════════════════════════════════════════╣
+║                                                                   ║
+║  Current RSS: ${rssMB} MB (limit: ${MEMORY_LIMIT_GB * 1024} MB)            ║
+║  Job: ${job.id.substring(0, 50).padEnd(50)}    ║
+║                                                                   ║
+║  The review process consumed too much memory.                     ║
+║  This usually happens when running too many sub-agents            ║
+║  in parallel. Consider using sequential execution.                ║
+║                                                                   ║
+╚═══════════════════════════════════════════════════════════════════╝
+`;
+        logger.error({ rssMB, limitMB: MEMORY_LIMIT_GB * 1024, jobId: job.id }, 'Memory limit exceeded, killing process');
+        logError('Memory limit exceeded', {
+          jobId: job.id,
+          rssMB,
+          limitMB: MEMORY_LIMIT_GB * 1024,
+          message: 'Review killed due to excessive memory consumption',
+        });
+
+        // Output error to stderr for visibility
+        stderr += errorMessage;
+
+        // Kill the child process
+        child.kill('SIGKILL');
+        clearInterval(memoryCheckInterval);
+      } else if (rssMB > (MEMORY_LIMIT_GB * 1024 * 0.8)) {
+        // Warn when approaching limit (80%)
+        logger.warn({ rssMB, limitMB: MEMORY_LIMIT_GB * 1024 }, 'Memory usage high, approaching limit');
+      }
+    }, MEMORY_CHECK_INTERVAL_MS);
+
     // Handle cancellation via AbortSignal
     const abortHandler = () => {
       if (!cancelled) {
@@ -166,16 +213,19 @@ export async function invokeClaudeReview(
     });
 
     child.on('close', (code) => {
-      // Cleanup abort listener
+      // Cleanup interval and abort listener
+      clearInterval(memoryCheckInterval);
       if (signal) {
         signal.removeEventListener('abort', abortHandler);
       }
 
       const durationMs = Date.now() - startTime;
-      const success = code === 0 && !cancelled;
+      const success = code === 0 && !cancelled && !memoryExceeded;
 
       // Finalize progress
-      if (cancelled) {
+      if (memoryExceeded) {
+        progressParser.markFailed('Memory limit exceeded - review killed');
+      } else if (cancelled) {
         progressParser.markFailed('Annulée par utilisateur');
       } else if (success) {
         progressParser.markAllCompleted();
@@ -194,13 +244,27 @@ export async function invokeClaudeReview(
           stderrLength: stderr.length,
           finalProgress: finalProgress.overallProgress,
           cancelled,
+          memoryExceeded,
         },
-        cancelled ? 'Claude annulé' : success ? 'Claude terminé avec succès' : 'Claude terminé avec erreur'
+        memoryExceeded
+          ? 'Claude killed - memory limit exceeded'
+          : cancelled
+            ? 'Claude annulé'
+            : success
+              ? 'Claude terminé avec succès'
+              : 'Claude terminé avec erreur'
       );
 
       // Log to dashboard with summary
       const durationMin = Math.round(durationMs / 60000);
-      if (cancelled) {
+      if (memoryExceeded) {
+        logError('Review killed - Memory limit exceeded', {
+          jobId: job.id,
+          mrNumber: job.mrNumber,
+          duration: `${durationMin} min`,
+          limitGB: MEMORY_LIMIT_GB,
+        });
+      } else if (cancelled) {
         logWarn('Review annulée', {
           jobId: job.id,
           mrNumber: job.mrNumber,
@@ -247,12 +311,12 @@ export async function invokeClaudeReview(
 
       resolve({
         success,
-        exitCode: code,
+        exitCode: memoryExceeded ? null : code,
         stdout,
         stderr,
         durationMs,
         finalProgress,
-        cancelled,
+        cancelled: cancelled || memoryExceeded,
       });
     });
   });

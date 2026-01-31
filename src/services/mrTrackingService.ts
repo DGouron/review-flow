@@ -195,7 +195,8 @@ export function trackMrAssignment(
   const existingIndex = data.mrs.findIndex((mr) => mr.id === mrId);
 
   if (existingIndex >= 0) {
-    // MR already tracked, update assignment info
+    // MR already tracked, update assignment info but KEEP existing state
+    // Don't reset state - the MR might be in pending-fix waiting for followup
     const existing = data.mrs[existingIndex];
     existing.title = mrInfo.title;
     existing.assignment = {
@@ -203,7 +204,10 @@ export function trackMrAssignment(
       displayName: assignedBy.displayName,
       assignedAt: new Date().toISOString(),
     };
-    existing.state = 'pending-review';
+    // Only set to pending-review if it's a new MR or was merged/closed
+    if (['merged', 'closed'].includes(existing.state)) {
+      existing.state = 'pending-review';
+    }
     saveMrTracking(projectPath, data);
     return existing;
   }

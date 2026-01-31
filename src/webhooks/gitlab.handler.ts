@@ -61,15 +61,33 @@ export async function handleGitLabWebhook(
   if (!filterResult.shouldProcess) {
     // Check if this is an MR update that might need a followup review
     const updateResult = filterGitLabMrUpdate(event);
+    logger.debug(
+      { updateResult, action: event.object_attributes?.action },
+      'Checking for followup review'
+    );
+
     if (updateResult.shouldProcess && updateResult.isFollowup) {
       // Find repo config to get local path
       const updateRepoConfig = findRepositoryByProjectPath(updateResult.projectPath!);
       if (updateRepoConfig) {
         // Record the push event
         const mr = recordMrPush(updateRepoConfig.localPath, updateResult.mrNumber!, 'gitlab');
+        logger.info(
+          {
+            mrNumber: updateResult.mrNumber,
+            mrFound: !!mr,
+            mrState: mr?.state,
+            lastPushAt: mr?.lastPushAt,
+            lastReviewAt: mr?.lastReviewAt,
+          },
+          'Push event recorded'
+        );
 
         // Check if this MR needs a followup (has open threads and was pushed since last review)
-        if (mr && needsFollowupReview(updateRepoConfig.localPath, updateResult.mrNumber!, 'gitlab')) {
+        const needsFollowup = mr && needsFollowupReview(updateRepoConfig.localPath, updateResult.mrNumber!, 'gitlab');
+        logger.info({ needsFollowup, mrState: mr?.state }, 'Followup check result');
+
+        if (needsFollowup) {
           logger.info(
             { mrNumber: updateResult.mrNumber, project: updateResult.projectPath },
             'Auto-triggering followup review after push'
