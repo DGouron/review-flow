@@ -80,7 +80,7 @@ export async function handleGitHubWebhook(
     targetBranch: filterResult.targetBranch!,
   };
 
-  const enqueued = await enqueueReview(job, async (j) => {
+  const enqueued = await enqueueReview(job, async (j, signal) => {
     // Send start notification
     sendNotification(
       'Review démarrée',
@@ -88,13 +88,19 @@ export async function handleGitHubWebhook(
       logger
     );
 
-    // Invoke Claude with progress tracking
+    // Invoke Claude with progress tracking and cancellation support
     const result = await invokeClaudeReview(j, logger, (progress, event) => {
       updateJobProgress(j.id, progress, event);
-    });
+    }, signal);
 
     // Send completion notification
-    if (result.success) {
+    if (result.cancelled) {
+      sendNotification(
+        'Review annulée',
+        `PR #${j.mrNumber} - ${j.projectPath}`,
+        logger
+      );
+    } else if (result.success) {
       sendNotification(
         'Review terminée',
         `PR #${j.mrNumber} - ${j.projectPath}`,
