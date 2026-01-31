@@ -21,7 +21,8 @@
     "fastify": "^4.26.0",
     "p-queue": "^8.0.0",
     "pino": "^8.18.0",
-    "pino-pretty": "^10.3.0"
+    "pino-pretty": "^10.3.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
