@@ -1,7 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Logger } from 'pino';
 import { verifyGitLabSignature, getGitLabEventType } from '../security/verifier.js';
-import { filterGitLabEvent, type GitLabMergeRequestEvent } from './eventFilter.js';
+import { filterGitLabEvent, filterGitLabMrUpdate, type GitLabMergeRequestEvent } from './eventFilter.js';
 import { findRepositoryByProjectPath } from '../config/loader.js';
 import {
   enqueueReview,
@@ -10,6 +10,14 @@ import {
   type ReviewJob,
 } from '../queue/reviewQueue.js';
 import { invokeClaudeReview, sendNotification } from '../claude/invoker.js';
+import {
+  needsFollowupReview,
+  recordMrPush,
+  trackMrAssignment,
+  recordReviewCompletion,
+} from '../services/mrTrackingService.js';
+import { loadProjectConfig } from '../config/projectConfig.js';
+import { parseReviewOutput } from '../services/statsService.js';
 
 export async function handleGitLabWebhook(
   request: FastifyRequest,
@@ -51,6 +59,93 @@ export async function handleGitLabWebhook(
   );
 
   if (!filterResult.shouldProcess) {
+    // Check if this is an MR update that might need a followup review
+    const updateResult = filterGitLabMrUpdate(event);
+    if (updateResult.shouldProcess && updateResult.isFollowup) {
+      // Find repo config to get local path
+      const updateRepoConfig = findRepositoryByProjectPath(updateResult.projectPath!);
+      if (updateRepoConfig) {
+        // Record the push event
+        const mr = recordMrPush(updateRepoConfig.localPath, updateResult.mrNumber!, 'gitlab');
+
+        // Check if this MR needs a followup (has open threads and was pushed since last review)
+        if (mr && needsFollowupReview(updateRepoConfig.localPath, updateResult.mrNumber!, 'gitlab')) {
+          logger.info(
+            { mrNumber: updateResult.mrNumber, project: updateResult.projectPath },
+            'Auto-triggering followup review after push'
+          );
+
+          const projectConfig = loadProjectConfig(updateRepoConfig.localPath);
+          const skill = projectConfig?.reviewFollowupSkill || 'review-followup';
+
+          const followupJobId = createJobId('gitlab-followup', updateResult.projectPath!, updateResult.mrNumber!);
+          const followupJob: ReviewJob = {
+            id: followupJobId,
+            platform: 'gitlab',
+            projectPath: updateResult.projectPath!,
+            localPath: updateRepoConfig.localPath,
+            mrNumber: updateResult.mrNumber!,
+            skill,
+            mrUrl: updateResult.mrUrl!,
+            sourceBranch: updateResult.sourceBranch!,
+            targetBranch: updateResult.targetBranch!,
+          };
+
+          enqueueReview(followupJob, async (j, signal) => {
+            sendNotification('Review followup démarrée', `MR !${j.mrNumber} - ${j.projectPath}`, logger);
+
+            const result = await invokeClaudeReview(j, logger, (progress, progressEvent) => {
+              updateJobProgress(j.id, progress, progressEvent);
+            }, signal);
+
+            if (result.success) {
+              // Parse review output for stats
+              const parsed = parseReviewOutput(result.stdout);
+
+              // Record followup completion with parsed stats
+              recordReviewCompletion(
+                j.localPath,
+                `gitlab-${j.projectPath}-${j.mrNumber}`,
+                {
+                  type: 'followup',
+                  durationMs: result.durationMs,
+                  score: parsed.score,
+                  blocking: parsed.blocking,
+                  warnings: parsed.warnings,
+                  suggestions: parsed.suggestions,
+                  threadsClosed: parsed.blocking + parsed.warnings > 0 ? 0 : 1, // Assume fixed if no new issues
+                }
+              );
+
+              logger.info(
+                {
+                  mrNumber: j.mrNumber,
+                  score: parsed.score,
+                  blocking: parsed.blocking,
+                  warnings: parsed.warnings,
+                  suggestions: parsed.suggestions,
+                  durationMs: result.durationMs,
+                },
+                'Followup stats recorded'
+              );
+
+              sendNotification('Review followup terminée', `MR !${j.mrNumber} - ${j.projectPath}`, logger);
+            } else if (!result.cancelled) {
+              sendNotification('Review followup échouée', `MR !${j.mrNumber} - Code ${result.exitCode}`, logger);
+              throw new Error(`Followup review failed with exit code ${result.exitCode}`);
+            }
+          });
+
+          reply.status(202).send({
+            status: 'followup-queued',
+            jobId: followupJobId,
+            mrNumber: updateResult.mrNumber,
+          });
+          return;
+        }
+      }
+    }
+
     reply.status(200).send({ status: 'ignored', reason: filterResult.reason });
     return;
   }
@@ -69,7 +164,33 @@ export async function handleGitLabWebhook(
     return;
   }
 
-  // 5. Create and enqueue job
+  // 5. Track MR assignment with user info
+  const mrTitle = event.object_attributes?.title || `MR !${filterResult.mrNumber}`;
+  const assignedBy = {
+    username: event.user?.username || 'unknown',
+    displayName: event.user?.name,
+  };
+
+  trackMrAssignment(
+    repoConfig.localPath,
+    {
+      mrNumber: filterResult.mrNumber!,
+      title: mrTitle,
+      url: filterResult.mrUrl!,
+      project: filterResult.projectPath!,
+      platform: 'gitlab',
+      sourceBranch: filterResult.sourceBranch!,
+      targetBranch: filterResult.targetBranch!,
+    },
+    assignedBy
+  );
+
+  logger.info(
+    { mrNumber: filterResult.mrNumber, assignedBy: assignedBy.username },
+    'MR tracked for review'
+  );
+
+  // 6. Create and enqueue job
   const jobId = createJobId('gitlab', filterResult.projectPath!, filterResult.mrNumber!);
   const job: ReviewJob = {
     id: jobId,
@@ -81,9 +202,13 @@ export async function handleGitLabWebhook(
     mrUrl: filterResult.mrUrl!,
     sourceBranch: filterResult.sourceBranch!,
     targetBranch: filterResult.targetBranch!,
+    // MR metadata for dashboard
+    title: mrTitle,
+    description: event.object_attributes?.description,
+    assignedBy,
   };
 
-  const enqueued = await enqueueReview(job, async (j) => {
+  const enqueued = await enqueueReview(job, async (j, signal) => {
     // Send start notification
     sendNotification(
       'Review démarrée',
@@ -91,13 +216,49 @@ export async function handleGitLabWebhook(
       logger
     );
 
-    // Invoke Claude with progress tracking
-    const result = await invokeClaudeReview(j, logger, (progress, event) => {
-      updateJobProgress(j.id, progress, event);
-    });
+    // Invoke Claude with progress tracking and cancellation support
+    const result = await invokeClaudeReview(j, logger, (progress, progressEvent) => {
+      updateJobProgress(j.id, progress, progressEvent);
+    }, signal);
 
-    // Send completion notification
-    if (result.success) {
+    // Send completion notification and record stats
+    if (result.cancelled) {
+      sendNotification(
+        'Review annulée',
+        `MR !${j.mrNumber} - ${j.projectPath}`,
+        logger
+      );
+    } else if (result.success) {
+      // Parse review output for stats
+      const parsed = parseReviewOutput(result.stdout);
+
+      // Record review completion with parsed stats
+      recordReviewCompletion(
+        j.localPath,
+        `gitlab-${j.projectPath}-${j.mrNumber}`,
+        {
+          type: 'review',
+          durationMs: result.durationMs,
+          score: parsed.score,
+          blocking: parsed.blocking,
+          warnings: parsed.warnings,
+          suggestions: parsed.suggestions,
+          threadsOpened: parsed.blocking + parsed.warnings, // Estimate threads from issues
+        }
+      );
+
+      logger.info(
+        {
+          mrNumber: j.mrNumber,
+          score: parsed.score,
+          blocking: parsed.blocking,
+          warnings: parsed.warnings,
+          suggestions: parsed.suggestions,
+          durationMs: result.durationMs,
+        },
+        'Review stats recorded'
+      );
+
       sendNotification(
         'Review terminée',
         `MR !${j.mrNumber} - ${j.projectPath}`,
@@ -109,6 +270,8 @@ export async function handleGitLabWebhook(
         `MR !${j.mrNumber} - Code ${result.exitCode}`,
         logger
       );
+      // Throw to mark job as failed (allows retry)
+      throw new Error(`Review failed with exit code ${result.exitCode}`);
     }
   });
 

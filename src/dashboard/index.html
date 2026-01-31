@@ -5,18 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Claude Review Dashboard</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
   <div class="container">
     <header>
-      <div class="logo">🤖</div>
+      <div class="logo"><i data-lucide="bot"></i></div>
       <h1>Claude Review</h1>
       <div class="header-actions">
         <button id="check-claude-btn" class="btn btn-primary" onclick="checkClaudeStatus()">
-          🔍 Vérifier Claude
+          <i data-lucide="search"></i> Vérifier Claude
         </button>
         <button id="toggle-logs-btn" class="btn btn-secondary" onclick="toggleLogs()">
-          📋 Logs
+          <i data-lucide="scroll-text"></i> Logs
         </button>
         <div id="server-status" class="status-indicator connecting">
           <span class="status-dot"></span>
@@ -71,30 +72,30 @@
              placeholder="Ou entrer un nouveau chemin..."
              value="">
       <button class="btn btn-primary" onclick="loadProjectConfig()">
-        📂 Charger
+        <i data-lucide="folder-open"></i> Charger
       </button>
       <button class="btn btn-secondary" onclick="removeCurrentProject()" title="Retirer de la liste">
-        🗑️
+        <i data-lucide="trash-2"></i>
       </button>
       <span id="config-status" class="config-status hidden"></span>
     </div>
     <div id="config-info" class="config-info hidden"></div>
 
     <div id="claude-login-section" class="login-instructions hidden">
-      <strong>⚠️ Claude n'est pas authentifié</strong>
+      <strong><i data-lucide="alert-triangle"></i> Claude n'est pas authentifié</strong>
       <p style="margin-top: 0.5rem;">Exécutez cette commande dans un terminal :</p>
       <p style="margin-top: 0.5rem;"><code>claude login</code></p>
       <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #a1a1aa;">Puis rechargez cette page.</p>
     </div>
 
     <div id="git-login-section" class="login-instructions hidden">
-      <strong id="git-login-title">⚠️ CLI non authentifié</strong>
+      <strong id="git-login-title"><i data-lucide="alert-triangle"></i> CLI non authentifié</strong>
       <div style="margin-top: 0.75rem;" id="git-login-instructions"></div>
     </div>
 
     <div id="logs-section" class="section hidden">
       <div class="section-header">
-        <span>📋</span> Logs récents
+        <i data-lucide="scroll-text"></i> Logs récents
         <span id="error-count" class="badge-count hidden">0 erreurs</span>
       </div>
       <div id="logs-content" class="section-content logs">
@@ -102,9 +103,19 @@
       </div>
     </div>
 
+    <div id="stats-section" class="section hidden">
+      <div class="section-header clickable" onclick="toggleStats()">
+        <i data-lucide="bar-chart-3"></i> Statistiques du projet
+        <span id="stats-toggle" class="toggle-icon collapsed"><i data-lucide="chevron-down"></i></span>
+      </div>
+      <div id="project-stats" class="section-content stats-grid hidden">
+        <div class="empty-state">Charger un projet pour voir les stats</div>
+      </div>
+    </div>
+
     <div class="section">
       <div class="section-header">
-        <span>🔄</span> Reviews actives
+        <i data-lucide="loader"></i> Reviews actives
       </div>
       <div id="active-reviews" class="section-content">
         <div class="empty-state">Chargement...</div>
@@ -113,7 +124,27 @@
 
     <div class="section">
       <div class="section-header">
-        <span>📋</span> Reviews récentes
+        <i data-lucide="wrench"></i> En attente de correctif
+        <span id="pending-fix-count" class="badge-count hidden">0</span>
+      </div>
+      <div id="pending-fix-reviews" class="section-content">
+        <div class="empty-state">Charger un projet</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <i data-lucide="circle-check"></i> En attente d'approbation
+        <span id="pending-approval-count" class="badge-count hidden">0</span>
+      </div>
+      <div id="pending-approval-reviews" class="section-content">
+        <div class="empty-state">Charger un projet</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <i data-lucide="file-check"></i> Reviews terminées
       </div>
       <div id="recent-reviews" class="section-content">
         <div class="empty-state">Chargement...</div>
@@ -136,10 +167,13 @@
     const MAX_RECONNECT_ATTEMPTS = 10;
     const RECONNECT_DELAY = 3000;
 
-    let currentData = { activeReviews: [], recentReviews: [], logs: [], reviewFiles: [] };
+    let currentData = { activeReviews: [], recentReviews: [], logs: [], reviewFiles: [], pendingFix: [], pendingApproval: [] };
     let loadedReviews = {}; // Cache for loaded review content
+    let statsCollapsed = true; // Track stats section state (collapsed by default)
 
-    const agentIcons = { pending: '⏳', running: '🔄', completed: '✅', failed: '❌' };
+    // Agent status icons (will be replaced with Lucide icons after render)
+    const agentIconNames = { pending: 'clock', running: 'loader', completed: 'check', failed: 'x' };
+    const getAgentIcon = (status) => `<i data-lucide="${agentIconNames[status] || 'help-circle'}"></i>`;
 
     function formatTime(dateStr) {
       if (!dateStr) return '-';
@@ -152,11 +186,17 @@
       return date.toLocaleDateString('fr-FR');
     }
 
-    function formatDuration(startStr, endStr) {
-      if (!startStr) return '';
-      const start = new Date(startStr);
-      const end = endStr ? new Date(endStr) : new Date();
-      const diff = Math.floor((end - start) / 1000);
+    function formatDuration(startStr, endStr, totalMs) {
+      let diff;
+      if (totalMs !== undefined && totalMs !== null) {
+        diff = Math.floor(totalMs / 1000);
+      } else if (startStr) {
+        const start = new Date(startStr);
+        const end = endStr ? new Date(endStr) : new Date();
+        diff = Math.floor((end - start) / 1000);
+      } else {
+        return '';
+      }
       if (diff < 60) return `${diff}s`;
       if (diff < 3600) return `${Math.floor(diff / 60)}m ${diff % 60}s`;
       return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
@@ -182,7 +222,7 @@
       if (!progress?.agents?.length) return '';
       const agentsHtml = progress.agents.map(agent => `
         <div class="agent-box ${agent.status}" title="${agent.displayName}: ${agent.status}">
-          <span class="agent-icon">${agentIcons[agent.status]}</span>
+          <span class="agent-icon">${getAgentIcon(agent.status)}</span>
           <span class="agent-name">${agent.displayName}</span>
         </div>
       `).join('');
@@ -209,11 +249,32 @@
       const mrNumber = review.mrNumber;
       const project = review.project.split('/').pop();
       const mrPrefix = review.id.startsWith('github') ? '#' : '!';
+      const mrLabel = getMrLabel(review.id.startsWith('github') ? 'github' : 'gitlab');
 
       const progressHtml = isActive && review.progress ? `
         ${renderAgentTimeline(review.progress)}
         ${renderProgressBar(review.progress)}
       ` : '';
+
+      // Assignee info with avatar
+      const assignerUsername = review.assignedBy?.username || 'unknown';
+      const assignerDisplay = review.assignedBy?.displayName || assignerUsername;
+      const assignerInitial = assignerDisplay.charAt(0).toUpperCase();
+
+      // Description accordion (for active reviews)
+      const descriptionHtml = isActive && review.description ? `
+        <div class="review-description-accordion">
+          <div class="review-description-toggle" onclick="toggleReviewDescription('${review.id}')">
+            <i data-lucide="chevron-right"></i> Description
+          </div>
+          <div class="review-description-content" id="review-desc-${review.id.replace(/[^a-zA-Z0-9-]/g, '-')}">
+            <div class="review-description-text">${escapeHtml(review.description)}</div>
+          </div>
+        </div>
+      ` : '';
+
+      // Title: use MR title if available, else fallback to project name
+      const displayTitle = review.title || project;
 
       return `
         <div class="review-item" data-job-id="${review.id}">
@@ -221,21 +282,50 @@
             <div class="review-status ${statusClass}"></div>
             <div class="review-info">
               <div class="review-title">
-                <a href="${review.mrUrl}" target="_blank">${mrPrefix}${mrNumber}</a> - ${project}
+                <a href="${review.mrUrl}" target="_blank">${mrPrefix}${mrNumber}</a> - ${displayTitle}
               </div>
               <div class="review-meta">
                 <span class="badge ${statusClass}">${review.status}</span>
-                ${isActive ? `⏱️ ${formatDuration(review.startedAt)}` : ''}
+                ${isActive ? `<i data-lucide="clock"></i> ${formatDuration(review.startedAt)}` : ''}
               </div>
               ${review.error ? `<div class="error-message">${review.error}</div>` : ''}
             </div>
-            <div class="review-time">
-              ${isActive ? formatTime(review.startedAt) : formatTime(review.completedAt)}
+            <div class="review-assigner">
+              <div class="review-assigner-info">
+                <span class="review-assigner-name">${assignerDisplay}</span>
+                <span class="review-assigner-time">${isActive ? formatTime(review.startedAt) : formatTime(review.completedAt)}</span>
+              </div>
+              <div class="review-avatar" title="${assignerDisplay}">${assignerInitial}</div>
             </div>
           </div>
+          ${descriptionHtml}
           ${progressHtml}
         </div>
       `;
+    }
+
+    function toggleReviewDescription(reviewId) {
+      const safeId = reviewId.replace(/[^a-zA-Z0-9-]/g, '-');
+      const content = document.getElementById(`review-desc-${safeId}`);
+      const toggle = content?.previousElementSibling;
+      if (!content || !toggle) return;
+
+      const isOpen = content.classList.contains('open');
+      if (isOpen) {
+        content.classList.remove('open');
+        toggle.classList.remove('open');
+      } else {
+        content.classList.add('open');
+        toggle.classList.add('open');
+        refreshIcons();
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     function renderLog(log) {
@@ -264,6 +354,7 @@
         ? '<div class="empty-state">Aucune review en cours</div>'
         : currentData.activeReviews.map(r => renderReview(r, true)).join('');
 
+      refreshIcons();
       // Note: recent-reviews is managed by updateReviewFilesUI() - don't overwrite here
     }
 
@@ -345,23 +436,25 @@
     }
 
     function renderReviewFile(review) {
-      const typeLabel = review.type === 'review' ? '📝 Review' : review.type === 'followup' ? '🔄 Followup' : `📄 ${review.type}`;
+      const typeIcon = review.type === 'review' ? 'file-text' : review.type === 'followup' ? 'refresh-cw' : 'file';
+      const typeLabel = review.type === 'review' ? 'Review' : review.type === 'followup' ? 'Followup' : review.type;
       const sizeKb = (review.size / 1024).toFixed(1);
+      const mrLabel = getMrLabel();
 
       return `
         <div class="review-accordion" data-filename="${review.filename}">
           <div class="review-accordion-header">
-            <div class="review-accordion-toggle" onclick="toggleReviewAccordion('${review.filename}')">▶</div>
+            <div class="review-accordion-toggle" onclick="toggleReviewAccordion('${review.filename}')"><i data-lucide="chevron-right"></i></div>
             <div class="review-status completed" onclick="toggleReviewAccordion('${review.filename}')"></div>
             <div class="review-info" onclick="toggleReviewAccordion('${review.filename}')" style="cursor: pointer;">
-              <div class="review-title">MR ${review.mrNumber}</div>
+              <div class="review-title">${mrLabel} ${review.mrNumber}</div>
               <div class="review-meta">
-                <span class="badge completed">${typeLabel}</span>
+                <span class="badge completed"><i data-lucide="${typeIcon}"></i> ${typeLabel}</span>
                 <span style="margin-left: 0.5rem; color: #71717a;">${sizeKb} KB</span>
               </div>
             </div>
             <div class="review-time" onclick="toggleReviewAccordion('${review.filename}')" style="cursor: pointer;">${review.date}</div>
-            <button class="btn-delete" onclick="deleteReviewFile('${review.filename}')" title="Supprimer">🗑️</button>
+            <button class="btn-delete" onclick="deleteReviewFile('${review.filename}')" title="Supprimer"><i data-lucide="trash-2"></i></button>
           </div>
           <div class="review-accordion-content">
             <div class="markdown-content" id="review-content-${review.filename.replace(/\./g, '-')}">
@@ -407,12 +500,68 @@
 
     async function fetchReviewFiles() {
       try {
-        const response = await fetch(`${API_URL}/api/reviews`);
+        // Fetch reviews for current project if loaded, otherwise all
+        const url = currentProjectPath
+          ? `${API_URL}/api/reviews?path=${encodeURIComponent(currentProjectPath)}`
+          : `${API_URL}/api/reviews`;
+        const response = await fetch(url);
         const data = await response.json();
         currentData.reviewFiles = data.reviews || [];
         updateReviewFilesUI();
       } catch (error) {
         console.error('Error fetching review files:', error);
+      }
+    }
+
+    async function fetchProjectStats() {
+      const statsEl = document.getElementById('project-stats');
+
+      if (!currentProjectPath) {
+        statsEl.innerHTML = '<div class="empty-state">Charger un projet pour voir les stats</div>';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/stats?path=${encodeURIComponent(currentProjectPath)}`);
+        const data = await response.json();
+
+        if (data.success && data.summary) {
+          const s = data.summary;
+          const trendIcon = (t) => t === 'up' ? '<i data-lucide="trending-up"></i>' : t === 'down' ? '<i data-lucide="trending-down"></i>' : '<i data-lucide="minus"></i>';
+
+          statsEl.innerHTML = `
+            <div class="stat-card">
+              <div class="stat-value">${s.totalReviews}</div>
+              <div class="stat-label"><i data-lucide="file-search"></i> Reviews</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${s.averageScore}/10 ${trendIcon(s.trend.score)}</div>
+              <div class="stat-label"><i data-lucide="star"></i> Score moyen</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${s.totalTime}</div>
+              <div class="stat-label"><i data-lucide="timer"></i> Temps total</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${s.averageTime}</div>
+              <div class="stat-label"><i data-lucide="clock"></i> Durée moyenne</div>
+            </div>
+            <div class="stat-card warning">
+              <div class="stat-value">${s.totalBlocking} ${trendIcon(s.trend.blocking)}</div>
+              <div class="stat-label"><i data-lucide="octagon-alert"></i> Bloquants</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${s.totalWarnings}</div>
+              <div class="stat-label"><i data-lucide="alert-triangle"></i> Importants</div>
+            </div>
+          `;
+          refreshIcons();
+        } else {
+          statsEl.innerHTML = '<div class="empty-state">Aucune statistique disponible</div>';
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+        statsEl.innerHTML = '<div class="empty-state">Erreur de chargement des stats</div>';
       }
     }
 
@@ -425,6 +574,7 @@
       }
 
       recentEl.innerHTML = currentData.reviewFiles.map(renderReviewFile).join('');
+      refreshIcons();
     }
 
     async function deleteReviewFile(filename) {
@@ -466,22 +616,25 @@
         if (data.available) {
           claudeEl.className = 'card-claude available';
           claudeEl.innerHTML = `
-            <span class="status">✅ Opérationnel</span>
+            <span class="status"><i data-lucide="check-circle"></i> Opérationnel</span>
             <span class="version">${data.version}</span>
           `;
           loginSection.classList.add('hidden');
+          refreshIcons();
         } else {
           claudeEl.className = 'card-claude unavailable';
           claudeEl.innerHTML = `
-            <span class="status">❌ ${data.message}</span>
+            <span class="status"><i data-lucide="x-circle"></i> ${data.message}</span>
           `;
+          refreshIcons();
           if (data.message.includes('authentifié') || data.message.includes('login')) {
             loginSection.classList.remove('hidden');
           }
         }
       } catch (error) {
         claudeEl.className = 'card-claude unavailable';
-        claudeEl.innerHTML = '<span class="status">❌ Erreur de vérification</span>';
+        claudeEl.innerHTML = '<span class="status"><i data-lucide="x-circle"></i> Erreur de vérification</span>';
+        refreshIcons();
       }
     }
 
@@ -509,7 +662,7 @@
       const instructionsEl = document.getElementById('git-login-instructions');
 
       if (isGitlab) {
-        titleEl.textContent = '⚠️ GitLab CLI non authentifié';
+        titleEl.innerHTML = '<i data-lucide="alert-triangle"></i> GitLab CLI non authentifié';
         instructionsEl.innerHTML = `
           <p><strong>1. Installer et authentifier glab :</strong></p>
           <p style="margin: 0.5rem 0;"><code>sudo apt install glab</code></p>
@@ -521,7 +674,7 @@
           <p style="margin-top: 0.75rem; font-size: 0.75rem; color: #a1a1aa;">Puis rechargez cette page.</p>
         `;
       } else {
-        titleEl.textContent = '⚠️ GitHub CLI non authentifié';
+        titleEl.innerHTML = '<i data-lucide="alert-triangle"></i> GitHub CLI non authentifié';
         instructionsEl.innerHTML = `
           <p><strong>1. Installer et authentifier gh :</strong></p>
           <p style="margin: 0.5rem 0;"><code>sudo apt install gh</code></p>
@@ -535,6 +688,7 @@
         `;
       }
 
+      refreshIcons();
       checkGitCliStatus();
     }
 
@@ -556,22 +710,26 @@
         if (data.available && data.authenticated) {
           statusEl.className = 'card-claude available';
           statusEl.innerHTML = `
-            <span class="status">✅ Opérationnel</span>
+            <span class="status"><i data-lucide="check-circle"></i> Opérationnel</span>
             <span class="version">@${data.username}</span>
           `;
           loginSection.classList.add('hidden');
+          refreshIcons();
         } else if (data.available && !data.authenticated) {
           statusEl.className = 'card-claude unavailable';
-          statusEl.innerHTML = `<span class="status">❌ ${data.message}</span>`;
+          statusEl.innerHTML = `<span class="status"><i data-lucide="x-circle"></i> ${data.message}</span>`;
           loginSection.classList.remove('hidden');
+          refreshIcons();
         } else {
           statusEl.className = 'card-claude unavailable';
-          statusEl.innerHTML = `<span class="status">❌ ${data.message}</span>`;
+          statusEl.innerHTML = `<span class="status"><i data-lucide="x-circle"></i> ${data.message}</span>`;
           loginSection.classList.remove('hidden');
+          refreshIcons();
         }
       } catch (error) {
         statusEl.className = 'card-claude unavailable';
-        statusEl.innerHTML = '<span class="status">❌ Erreur de vérification</span>';
+        statusEl.innerHTML = '<span class="status"><i data-lucide="x-circle"></i> Erreur de vérification</span>';
+        refreshIcons();
       }
     }
 
@@ -582,11 +740,239 @@
 
       if (logsVisible) {
         logsSection.classList.remove('hidden');
-        btn.textContent = '📋 Masquer Logs';
+        btn.innerHTML = '<i data-lucide="scroll-text"></i> Masquer Logs';
         fetchLogs();
       } else {
         logsSection.classList.add('hidden');
-        btn.textContent = '📋 Logs';
+        btn.innerHTML = '<i data-lucide="scroll-text"></i> Logs';
+      }
+      refreshIcons();
+    }
+
+    function toggleStats() {
+      statsCollapsed = !statsCollapsed;
+      const content = document.getElementById('project-stats');
+      const toggle = document.getElementById('stats-toggle');
+
+      if (statsCollapsed) {
+        content.classList.add('hidden');
+        toggle.classList.add('collapsed');
+      } else {
+        content.classList.remove('hidden');
+        toggle.classList.remove('collapsed');
+      }
+    }
+
+    function renderMrItem(mr, type) {
+      const mrPrefix = mr.platform === 'github' ? '#' : '!';
+      const threadInfo = type === 'pending-fix'
+        ? `<span class="mr-threads has-open"><i data-lucide="message-circle"></i> ${mr.openThreads} ouvert${mr.openThreads > 1 ? 's' : ''}</span>`
+        : `<span class="mr-threads all-resolved"><i data-lucide="check-circle"></i> Résolus</span>`;
+
+      const openBtn = `<a href="${mr.url}" target="_blank" class="btn-action open"><i data-lucide="external-link"></i> Ouvrir</a>`;
+      const actions = type === 'pending-fix'
+        ? `<button class="btn-action" onclick="triggerFollowup('${mr.id}')"><i data-lucide="refresh-cw"></i> Followup</button>${openBtn}`
+        : openBtn;
+
+      // Stats badges
+      const statsBadges = [];
+      if (mr.totalBlocking > 0) statsBadges.push(`<span class="stat-badge blocking"><i data-lucide="octagon-alert"></i> ${mr.totalBlocking}</span>`);
+      if (mr.totalWarnings > 0) statsBadges.push(`<span class="stat-badge warning"><i data-lucide="alert-triangle"></i> ${mr.totalWarnings}</span>`);
+      if (mr.totalFollowups > 0) statsBadges.push(`<span class="stat-badge followup"><i data-lucide="refresh-cw"></i> ${mr.totalFollowups}</span>`);
+      if (mr.averageScore !== null) statsBadges.push(`<span class="stat-badge score"><i data-lucide="star"></i> ${mr.averageScore.toFixed(1)}/10</span>`);
+
+      const durationFormatted = mr.totalDurationMs ? formatDuration(null, null, mr.totalDurationMs) : '';
+
+      // Assigner info with avatar
+      const assignerUsername = mr.assignment?.username || 'unknown';
+      const assignerDisplay = mr.assignment?.displayName || assignerUsername;
+      const assignerInitial = assignerDisplay.charAt(0).toUpperCase();
+      const assignedAt = mr.assignment?.assignedAt ? formatTime(mr.assignment.assignedAt) : '';
+
+      // Sanitize ID for accordion toggle
+      const accordionId = mr.id.replace(/[^a-zA-Z0-9-]/g, '-');
+
+      return `
+        <div class="mr-item-accordion" data-mr-id="${mr.id}">
+          <div class="mr-item-header" onclick="toggleMrAccordion('${accordionId}')">
+            <div class="review-status ${type === 'pending-fix' ? 'running' : 'completed'}"></div>
+            <div class="mr-info">
+              <div class="mr-title">
+                <a href="${mr.url}" target="_blank" onclick="event.stopPropagation()">${mrPrefix}${mr.mrNumber}</a> - ${mr.title}
+              </div>
+              <div class="mr-meta">
+                ${threadInfo}
+                ${statsBadges.join('')}
+                <span><i data-lucide="clock"></i> ${durationFormatted || '-'}</span>
+              </div>
+            </div>
+            <div class="mr-assigner">
+              <div class="mr-assigner-info">
+                <span class="mr-assigner-name">${assignerDisplay}</span>
+                <span class="mr-assigner-time">${assignedAt}</span>
+              </div>
+              <div class="mr-avatar" title="${assignerDisplay}">${assignerInitial}</div>
+            </div>
+            <div class="mr-toggle"><i data-lucide="chevron-down"></i></div>
+          </div>
+          <div class="mr-item-content" id="mr-content-${accordionId}">
+            <div class="mr-details">
+              <div class="mr-detail-row">
+                <span class="mr-detail-label"><i data-lucide="git-branch"></i> Source:</span>
+                <span class="mr-detail-value">${mr.sourceBranch}</span>
+              </div>
+              <div class="mr-detail-row">
+                <span class="mr-detail-label"><i data-lucide="git-merge"></i> Target:</span>
+                <span class="mr-detail-value">${mr.targetBranch}</span>
+              </div>
+              <div class="mr-detail-row">
+                <span class="mr-detail-label"><i data-lucide="calendar"></i> Créée:</span>
+                <span class="mr-detail-value">${formatTime(mr.createdAt)}</span>
+              </div>
+              ${mr.lastReviewAt ? `
+              <div class="mr-detail-row">
+                <span class="mr-detail-label"><i data-lucide="file-search"></i> Dernière review:</span>
+                <span class="mr-detail-value">${formatTime(mr.lastReviewAt)}</span>
+              </div>
+              ` : ''}
+              ${mr.reviews?.length ? `
+              <div class="mr-reviews-history">
+                <div class="mr-detail-label"><i data-lucide="history"></i> Historique (${mr.reviews.length}):</div>
+                <div class="mr-reviews-list">
+                  ${mr.reviews.slice(-5).reverse().map(r => `
+                    <div class="mr-review-event ${r.type}">
+                      <span class="review-event-type">${r.type === 'review' ? 'Review' : 'Followup'}</span>
+                      <span class="review-event-time">${formatTime(r.timestamp)}</span>
+                      ${r.score !== null ? `<span class="review-event-score">${r.score}/10</span>` : ''}
+                      ${r.blocking > 0 ? `<span class="review-event-blocking">${r.blocking} bloquant${r.blocking > 1 ? 's' : ''}</span>` : ''}
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              ` : ''}
+            </div>
+            <div class="mr-item-actions" onclick="event.stopPropagation()">
+              ${actions}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function toggleMrAccordion(accordionId) {
+      const content = document.getElementById(`mr-content-${accordionId}`);
+      const accordion = content?.closest('.mr-item-accordion');
+      if (!content || !accordion) return;
+
+      const isOpen = accordion.classList.contains('open');
+
+      // Close all other MR accordions
+      document.querySelectorAll('.mr-item-accordion.open').forEach(el => {
+        if (el !== accordion) {
+          el.classList.remove('open');
+        }
+      });
+
+      if (isOpen) {
+        accordion.classList.remove('open');
+      } else {
+        accordion.classList.add('open');
+        refreshIcons();
+      }
+    }
+
+    function updateMrTrackingUI() {
+      const pendingFixEl = document.getElementById('pending-fix-reviews');
+      const pendingApprovalEl = document.getElementById('pending-approval-reviews');
+      const pendingFixCount = document.getElementById('pending-fix-count');
+      const pendingApprovalCount = document.getElementById('pending-approval-count');
+      const mrLabel = getMrLabel();
+
+      // Pending fix
+      if (currentData.pendingFix.length === 0) {
+        pendingFixEl.innerHTML = `<div class="empty-state">Aucune ${mrLabel} en attente de correctif</div>`;
+        pendingFixCount.classList.add('hidden');
+      } else {
+        pendingFixEl.innerHTML = currentData.pendingFix.map(mr => renderMrItem(mr, 'pending-fix')).join('');
+        pendingFixCount.textContent = currentData.pendingFix.length;
+        pendingFixCount.classList.remove('hidden');
+      }
+
+      // Pending approval
+      if (currentData.pendingApproval.length === 0) {
+        pendingApprovalEl.innerHTML = `<div class="empty-state">Aucune ${mrLabel} prête pour approbation</div>`;
+        pendingApprovalCount.classList.add('hidden');
+      } else {
+        pendingApprovalEl.innerHTML = currentData.pendingApproval.map(mr => renderMrItem(mr, 'pending-approval')).join('');
+        pendingApprovalCount.textContent = currentData.pendingApproval.length;
+        pendingApprovalCount.classList.remove('hidden');
+      }
+
+      refreshIcons();
+    }
+
+    async function fetchMrTracking() {
+      if (!currentProjectPath) {
+        currentData.pendingFix = [];
+        currentData.pendingApproval = [];
+        // Update empty states with generic wording when no project loaded
+        document.getElementById('pending-fix-reviews').innerHTML = '<div class="empty-state">Charger un projet</div>';
+        document.getElementById('pending-approval-reviews').innerHTML = '<div class="empty-state">Charger un projet</div>';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/mr-tracking?path=${encodeURIComponent(currentProjectPath)}`);
+        const data = await response.json();
+        if (data.success) {
+          currentData.pendingFix = data.pendingFix || [];
+          currentData.pendingApproval = data.pendingApproval || [];
+        }
+        updateMrTrackingUI();
+      } catch (error) {
+        console.error('Error fetching MR tracking:', error);
+      }
+    }
+
+    async function triggerFollowup(mrId) {
+      try {
+        const response = await fetch(`${API_URL}/api/mr-tracking/followup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mrId, projectPath: currentProjectPath })
+        });
+        const data = await response.json();
+        if (data.success) {
+          console.log('Followup triggered for MR:', mrId);
+        } else {
+          alert('Erreur: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error triggering followup:', error);
+        alert('Erreur lors du déclenchement du followup');
+      }
+    }
+
+    async function approveMr(mrId) {
+      if (!confirm(`Marquer cette ${getMrLabel()} comme approuvée ?`)) return;
+
+      try {
+        const response = await fetch(`${API_URL}/api/mr-tracking/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mrId, projectPath: currentProjectPath })
+        });
+        const data = await response.json();
+        if (data.success) {
+          // Remove from pending approval list
+          currentData.pendingApproval = currentData.pendingApproval.filter(mr => mr.id !== mrId);
+          updateMrTrackingUI();
+        } else {
+          alert('Erreur: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error approving MR:', error);
+        alert('Erreur lors de l\'approbation');
       }
     }
 
@@ -635,9 +1021,14 @@
             const message = JSON.parse(event.data);
             switch (message.type) {
               case 'init':
+              case 'state':
                 currentData.activeReviews = message.activeReviews || [];
                 currentData.recentReviews = message.recentReviews || [];
                 updateUI();
+                // Also refresh MR tracking when state changes
+                if (message.type === 'state') {
+                  fetchMrTracking();
+                }
                 break;
               case 'progress':
                 handleProgressUpdate(message);
@@ -823,7 +1214,8 @@
           document.getElementById('project-path-input').value = '';
 
           const shortName = projectPath.split('/').slice(-2).join('/');
-          showConfigStatus(`✅ ${shortName}`, 'success');
+          showConfigStatus(`<i data-lucide="check-circle"></i> ${shortName}`, 'success');
+          refreshIcons();
 
           // Update model selector if defaultModel is set
           if (data.config.defaultModel) {
@@ -838,29 +1230,41 @@
           activePlatform = data.config.gitlab ? 'gitlab' : (data.config.github ? 'github' : null);
           updateGitCliUI();
 
+          // Reload reviews, stats, and MR tracking for this project
+          fetchReviewFiles();
+          fetchProjectStats();
+          fetchMrTracking();
+
+          // Show stats section when project is loaded
+          document.getElementById('stats-section').classList.remove('hidden');
+
           // Display config info (only show active platform)
-          const platformIcon = activePlatform === 'gitlab' ? '🦊 GitLab' : '🐙 GitHub';
+          const platformIcon = activePlatform === 'gitlab' ? '<i data-lucide="gitlab"></i> GitLab' : '<i data-lucide="github"></i> GitHub';
           info.innerHTML = `
             <span>${platformIcon}</span>
-            <span>🤖 ${data.config.defaultModel || 'non défini'}</span>
-            <span>📝 ${data.config.reviewSkill}</span>
-            <span>🔄 ${data.config.reviewFollowupSkill}</span>
+            <span><i data-lucide="bot"></i> ${data.config.defaultModel || 'non défini'}</span>
+            <span><i data-lucide="file-text"></i> ${data.config.reviewSkill}</span>
+            <span><i data-lucide="refresh-cw"></i> ${data.config.reviewFollowupSkill}</span>
           `;
           info.classList.remove('hidden');
+          refreshIcons();
         } else {
-          showConfigStatus('❌ ' + data.error, 'error');
+          showConfigStatus('<i data-lucide="x-circle"></i> ' + data.error, 'error');
+          refreshIcons();
         }
       } catch (error) {
-        showConfigStatus('❌ Erreur de chargement', 'error');
+        showConfigStatus('<i data-lucide="x-circle"></i> Erreur de chargement', 'error');
+        refreshIcons();
         console.error('Error loading project config:', error);
       }
     }
 
     function showConfigStatus(text, type) {
       const status = document.getElementById('config-status');
-      status.textContent = text;
+      status.innerHTML = text;
       status.className = `config-status ${type}`;
       status.classList.remove('hidden');
+      refreshIcons();
     }
 
     function removeCurrentProject() {
@@ -886,18 +1290,46 @@
       const lastProject = localStorage.getItem(STORAGE_KEY_CURRENT);
       if (lastProject) {
         loadProjectConfigFromPath(lastProject);
+      } else {
+        // No project loaded - show empty state
+        document.getElementById('recent-reviews').innerHTML =
+          '<div class="empty-state">Charger un projet pour voir les reviews</div>';
+        document.getElementById('project-stats').innerHTML =
+          '<div class="empty-state">Charger un projet pour voir les stats</div>';
       }
+    }
+
+    // Lucide icon helper - call after dynamic content is added
+    function refreshIcons() {
+      lucide.createIcons();
+    }
+
+    // Icon helper for dynamic HTML
+    function icon(name, className = '') {
+      return `<i data-lucide="${name}" class="${className}"></i>`;
+    }
+
+    // Platform-aware MR/PR label
+    function getMrLabel(platform = activePlatform) {
+      return platform === 'github' ? 'PR' : 'MR';
     }
 
     // Init
     connectWebSocket();
     fetchStatus();
-    fetchReviewFiles();
     checkClaudeStatus();
     loadModelSetting();
-    initProjectLoader(); // Will check git CLI after loading project config
+    initProjectLoader(); // Will check git CLI and load reviews/stats after loading project config
+
+    // Initialize Lucide icons
+    refreshIcons();
+
     setInterval(fetchStatus, 5000);
-    setInterval(fetchReviewFiles, 30000); // Refresh review files every 30s
+    setInterval(() => {
+      fetchReviewFiles();
+      fetchProjectStats();
+      fetchMrTracking();
+    }, 30000); // Refresh review files, stats and MR tracking every 30s
 
     setInterval(() => {
       document.querySelectorAll('.review-item').forEach(el => {
@@ -907,7 +1339,8 @@
           const metaEl = el.querySelector('.review-meta');
           if (metaEl) {
             const badge = metaEl.querySelector('.badge');
-            metaEl.innerHTML = `${badge?.outerHTML || ''} ⏱️ ${formatDuration(review.startedAt)}`;
+            metaEl.innerHTML = `${badge?.outerHTML || ''} ${icon('clock')} ${formatDuration(review.startedAt)}`;
+            refreshIcons();
           }
         }
       });

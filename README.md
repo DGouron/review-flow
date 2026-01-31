@@ -157,8 +157,60 @@ Create `.claude/reviews/config.json` in your project:
 | `defaultModel` | string | Claude model: `opus` (powerful) or `sonnet` (fast) |
 | `reviewSkill` | string | Skill name for initial reviews |
 | `reviewFollowupSkill` | string | Skill name for follow-up reviews |
+| `agents` | array | (Optional) Custom review agents list |
 
 > **Note**: Set either `github: true` OR `gitlab: true`, not both.
+
+### Review Agents Configuration
+
+The `agents` field is optional. If not provided, default agents will be used. Each agent represents a specialized reviewer that tracks its own progress.
+
+```json
+{
+  "agents": [
+    { "name": "clean-architecture", "displayName": "Clean Archi" },
+    { "name": "ddd", "displayName": "DDD" },
+    { "name": "react-best-practices", "displayName": "React" },
+    { "name": "solid", "displayName": "SOLID" },
+    { "name": "testing", "displayName": "Testing" },
+    { "name": "code-quality", "displayName": "Code Quality" }
+  ]
+}
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `name` | string | Unique identifier (kebab-case). Must match markers emitted by your skill |
+| `displayName` | string | Name displayed in the dashboard |
+
+### Real-time Progress Tracking
+
+For the dashboard to display real-time progress, your review skill must emit progress markers in its output:
+
+**Phase markers:**
+```
+[PHASE:initializing]     # Starting up
+[PHASE:agents-running]   # Agents are running
+[PHASE:synthesizing]     # Synthesizing results
+[PHASE:publishing]       # Publishing to GitLab/GitHub
+[PHASE:completed]        # Done
+```
+
+**Agent markers:**
+```
+[PROGRESS:agent-name:started]       # Agent started
+[PROGRESS:agent-name:completed]     # Agent completed successfully
+[PROGRESS:agent-name:failed:msg]    # Agent failed with error message
+```
+
+**Example:** Add tracking instructions to sub-agent prompts in your `SKILL.md`:
+
+```markdown
+**Tracking**:
+- At START: output `[PROGRESS:clean-architecture:started]`
+- At END: output `[PROGRESS:clean-architecture:completed]`
+- On error: output `[PROGRESS:clean-architecture:failed:description]`
+```
 
 ### Server Configuration
 
@@ -273,6 +325,7 @@ Access the dashboard at `http://localhost:3847`
 | `/api/gitlab/status` | GET | GitLab CLI status |
 | `/api/github/status` | GET | GitHub CLI status |
 | `/api/reviews` | GET | List reviews |
+| `/api/reviews/cancel/:jobId` | POST | Cancel a running review |
 | `/ws` | WebSocket | Real-time updates |
 
 ---

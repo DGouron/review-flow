@@ -13,10 +13,20 @@ export interface ReviewJob {
   mrUrl: string;
   sourceBranch: string;
   targetBranch: string;
+  // Optional MR metadata
+  title?: string;
+  description?: string;
+  assignedBy?: {
+    username: string;
+    displayName?: string;
+  };
 }
 
 // Deduplication tracking
 const recentJobs = new Map<string, number>(); // jobId -> timestamp
+
+// Abort controllers for cancellation
+const jobAbortControllers = new Map<string, AbortController>();
 
 // Active and completed jobs tracking
 export interface JobStatus {
@@ -31,8 +41,14 @@ export interface JobStatus {
 // Progress change callback type
 export type ProgressChangeCallback = (jobId: string, progress: ReviewProgress, event?: ProgressEvent) => void;
 
+// State change callback type - called when jobs are added/started/completed/failed
+export type StateChangeCallback = () => void;
+
 // Global progress change listener
 let progressChangeCallback: ProgressChangeCallback | null = null;
+
+// Global state change listener
+let stateChangeCallback: StateChangeCallback | null = null;
 
 const activeJobs = new Map<string, JobStatus>();
 const completedJobs: JobStatus[] = []; // Keep last 20
@@ -102,6 +118,13 @@ export function markJobProcessed(jobId: string): void {
 }
 
 /**
+ * Clear deduplication entry for a job (allows retry after failure)
+ */
+export function clearJobDeduplication(jobId: string): void {
+  recentJobs.delete(jobId);
+}
+
+/**
  * Create a unique job ID
  */
 export function createJobId(platform: string, projectPath: string, mrNumber: number): string {
@@ -110,22 +133,31 @@ export function createJobId(platform: string, projectPath: string, mrNumber: num
 
 /**
  * Add a review job to the queue
+ * @param job - The review job to add
+ * @param processor - Function to process the job, receives AbortSignal for cancellation
  */
 export async function enqueueReview(
   job: ReviewJob,
-  processor: (job: ReviewJob) => Promise<void>
+  processor: (job: ReviewJob, signal: AbortSignal) => Promise<void>
 ): Promise<boolean> {
   const q = getQueue();
   const log = logger!;
 
-  // Check deduplication
+  // Check deduplication (only blocks if a previous job SUCCEEDED recently)
   if (shouldDeduplicate(job.id)) {
     log.info({ jobId: job.id }, 'Job dédupliqué, ignoré');
     return false;
   }
 
-  // Mark as processing immediately to prevent race conditions
-  markJobProcessed(job.id);
+  // Check if job is already active (prevent concurrent runs of same MR)
+  if (activeJobs.has(job.id)) {
+    log.info({ jobId: job.id }, 'Job déjà en cours, ignoré');
+    return false;
+  }
+
+  // Create abort controller for this job
+  const abortController = new AbortController();
+  jobAbortControllers.set(job.id, abortController);
 
   // Track job status
   const jobStatus: JobStatus = {
@@ -133,6 +165,9 @@ export async function enqueueReview(
     status: 'queued',
   };
   activeJobs.set(job.id, jobStatus);
+
+  // Notify state change (job queued)
+  stateChangeCallback?.();
 
   log.info(
     {
@@ -150,30 +185,65 @@ export async function enqueueReview(
     jobStatus.status = 'running';
     jobStatus.startedAt = new Date();
     log.info({ jobId: job.id }, 'Début du traitement');
+
+    // Notify state change (job started)
+    stateChangeCallback?.();
+
     try {
-      await processor(job);
-      jobStatus.status = 'completed';
+      await processor(job, abortController.signal);
+      jobStatus.status = abortController.signal.aborted ? 'failed' : 'completed';
       jobStatus.completedAt = new Date();
-      log.info({ jobId: job.id }, 'Traitement terminé avec succès');
+      if (abortController.signal.aborted) {
+        jobStatus.error = 'Annulé par utilisateur';
+        // Clear deduplication on cancel to allow retry
+        clearJobDeduplication(job.id);
+        log.info({ jobId: job.id }, 'Traitement annulé');
+      } else {
+        // Only mark as processed on SUCCESS (prevents failed jobs from blocking retries)
+        markJobProcessed(job.id);
+        log.info({ jobId: job.id }, 'Traitement terminé avec succès');
+      }
     } catch (error) {
       jobStatus.status = 'failed';
       jobStatus.completedAt = new Date();
       jobStatus.error = error instanceof Error ? error.message : String(error);
+      // Clear deduplication on failure to allow retry
+      clearJobDeduplication(job.id);
       log.error({ jobId: job.id, error }, 'Erreur pendant le traitement');
       throw error;
     } finally {
+      // Cleanup abort controller
+      jobAbortControllers.delete(job.id);
       // Move to completed jobs
       activeJobs.delete(job.id);
       completedJobs.unshift(jobStatus);
       if (completedJobs.length > MAX_COMPLETED_JOBS) {
         completedJobs.pop();
       }
+
+      // Notify state change (job completed/failed)
+      stateChangeCallback?.();
     }
   }).catch((error) => {
     log.error({ jobId: job.id, error }, 'Job échoué');
   });
 
   return true;
+}
+
+/**
+ * Cancel a running or queued job
+ * @returns true if the job was found and cancelled, false otherwise
+ */
+export function cancelJob(jobId: string): boolean {
+  const abortController = jobAbortControllers.get(jobId);
+  if (abortController) {
+    abortController.abort();
+    logger?.info({ jobId }, 'Job annulation demandée');
+    return true;
+  }
+  logger?.warn({ jobId }, 'Job non trouvé pour annulation');
+  return false;
 }
 
 /**
@@ -215,6 +285,9 @@ export function getJobsStatus(): {
     status: string;
     startedAt?: string;
     progress?: ReviewProgress;
+    title?: string;
+    description?: string;
+    assignedBy?: { username: string; displayName?: string };
   }>;
   recent: Array<{
     id: string;
@@ -226,6 +299,8 @@ export function getJobsStatus(): {
     completedAt?: string;
     error?: string;
     progress?: ReviewProgress;
+    title?: string;
+    assignedBy?: { username: string; displayName?: string };
   }>;
 } {
   return {
@@ -237,6 +312,9 @@ export function getJobsStatus(): {
       status: js.status,
       startedAt: js.startedAt?.toISOString(),
       progress: js.progress,
+      title: js.job.title,
+      description: js.job.description,
+      assignedBy: js.job.assignedBy,
     })),
     recent: completedJobs.map(js => ({
       id: js.job.id,
@@ -248,6 +326,8 @@ export function getJobsStatus(): {
       completedAt: js.completedAt?.toISOString(),
       error: js.error,
       progress: js.progress,
+      title: js.job.title,
+      assignedBy: js.job.assignedBy,
     })),
   };
 }
@@ -269,6 +349,13 @@ export function updateJobProgress(jobId: string, progress: ReviewProgress, event
  */
 export function setProgressChangeCallback(callback: ProgressChangeCallback | null): void {
   progressChangeCallback = callback;
+}
+
+/**
+ * Set the state change callback (called when jobs are added/completed/failed)
+ */
+export function setStateChangeCallback(callback: StateChangeCallback | null): void {
+  stateChangeCallback = callback;
 }
 
 /**

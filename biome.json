@@ -1,0 +1,68 @@
+{
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"suspicious": {
+				"noExplicitAny": "warn",
+				"noArrayIndexKey": "off",
+				"noImplicitAnyLet": "info",
+				"noAssignInExpressions": "off",
+				"noMisleadingCharacterClass": "off",
+				"noConfusingVoidType": "off",
+				"noDuplicateFields": "error",
+				"noControlCharactersInRegex": "warn"
+			},
+			"correctness": {
+				"useExhaustiveDependencies": "off",
+				"useJsxKeyInIterable": "info",
+				"noUnsafeOptionalChaining": "info",
+				"noChildrenProp": "off",
+				"noUnusedImports": "warn",
+				"noUnusedVariables": "warn",
+				"useHookAtTopLevel": "warn"
+			},
+			"complexity": {
+				"noForEach": "off",
+				"noBannedTypes": "off",
+				"noStaticOnlyClass": "off",
+				"useArrowFunction": "off"
+			},
+			"nursery": {
+				"useUniqueElementIds": "info",
+				"noNestedComponentDefinitions": "warn"
+			},
+			"style": {
+				"noNonNullAssertion": "off",
+				"noParameterAssign": "off"
+			},
+			"a11y": {
+				"useKeyWithClickEvents": "off",
+				"noSvgWithoutTitle": "off",
+				"useButtonType": "off",
+				"noAutofocus": "off",
+				"noLabelWithoutControl": "off",
+				"useSemanticElements": "off",
+				"noStaticElementInteractions": "info",
+				"useAriaPropsSupportedByRole": "warn"
+			},
+			"security": {
+				"noDangerouslySetInnerHtml": "info"
+			},
+			"performance": {
+				"noDelete": "off",
+				"noAccumulatingSpread": "info"
+			}
+		}
+	},
+	"javascript": {
+		"jsxRuntime": "reactClassic"
+	}
+}

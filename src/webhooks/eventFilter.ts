@@ -18,6 +18,7 @@ export interface GitLabMergeRequestEvent {
   object_attributes: {
     iid: number;
     title: string;
+    description?: string;
     state: 'opened' | 'closed' | 'merged' | 'locked';
     action: string;
     source_branch: string;
@@ -44,6 +45,7 @@ export interface GitHubPullRequestEvent {
   pull_request: {
     number: number;
     title: string;
+    body?: string;
     state: 'open' | 'closed';
     draft: boolean;
     html_url: string;
@@ -78,6 +80,22 @@ export interface FilterResult {
   mrUrl?: string;
   sourceBranch?: string;
   targetBranch?: string;
+  isFollowup?: boolean;
+}
+
+// GitLab Push Event type
+export interface GitLabPushEvent {
+  object_kind: 'push';
+  ref: string;
+  project: {
+    id: number;
+    path_with_namespace: string;
+    web_url: string;
+  };
+  commits: Array<{
+    id: string;
+    message: string;
+  }>;
 }
 
 /**
@@ -148,6 +166,40 @@ function checkGitLabReviewerAdded(
   }
 
   return false;
+}
+
+/**
+ * Check if a GitLab MR event is an update that might need a followup review
+ * This is called for MRs that are not initial review requests but may have new commits
+ */
+export function filterGitLabMrUpdate(event: GitLabMergeRequestEvent): FilterResult {
+  const mr = event.object_attributes;
+
+  // MR must be open
+  if (mr.state !== 'opened') {
+    return { shouldProcess: false, reason: `MR state is ${mr.state}, not opened` };
+  }
+
+  // Skip draft MRs
+  if (mr.draft) {
+    return { shouldProcess: false, reason: 'MR is a draft' };
+  }
+
+  // Only process "update" action (new commits pushed)
+  if (mr.action !== 'update') {
+    return { shouldProcess: false, reason: `Action is ${mr.action}, not update` };
+  }
+
+  return {
+    shouldProcess: true,
+    reason: 'MR was updated (potential new commits)',
+    mrNumber: mr.iid,
+    projectPath: event.project.path_with_namespace,
+    mrUrl: mr.url,
+    sourceBranch: mr.source_branch,
+    targetBranch: mr.target_branch,
+    isFollowup: true,
+  };
 }
 
 /**
