@@ -145,26 +145,25 @@ export function filterGitLabEvent(event: GitLabMergeRequestEvent): FilterResult 
 }
 
 /**
- * Check if user is a reviewer on this MR
- * Simplified logic: if user is in reviewers list, trigger review
- * Deduplication in the queue prevents multiple reviews for the same MR
+ * Check if user was NEWLY ADDED as a reviewer on this MR
+ * Only triggers when: user is in current reviewers BUT was NOT in previous reviewers
+ * This prevents triggering on MR updates when user is already assigned
  */
 function checkGitLabReviewerAdded(
   event: GitLabMergeRequestEvent,
   username: string
 ): boolean {
-  // If reviewers array exists and user is in it, trigger
-  if (event.reviewers && event.reviewers.length > 0) {
-    const isReviewer = event.reviewers.some(r => r.username === username);
-    if (isReviewer) return true;
+  // STRICT CHECK: Only trigger if changes.reviewers shows user was ADDED
+  if (event.changes?.reviewers) {
+    const wasInPrevious = event.changes.reviewers.previous?.some(r => r.username === username) ?? false;
+    const isInCurrent = event.changes.reviewers.current?.some(r => r.username === username) ?? false;
+
+    // Only trigger if user was ADDED (in current but not in previous)
+    return isInCurrent && !wasInPrevious;
   }
 
-  // Check in changes.reviewers.current if available
-  if (event.changes?.reviewers?.current) {
-    const isInCurrent = event.changes.reviewers.current.some(r => r.username === username);
-    if (isInCurrent) return true;
-  }
-
+  // No changes.reviewers = no reviewer change = don't trigger
+  // This prevents triggering on other MR update events
   return false;
 }
 
