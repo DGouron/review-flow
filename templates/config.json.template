@@ -1,0 +1,15 @@
+{
+  "github": false,
+  "gitlab": true,
+  "defaultModel": "opus",
+  "reviewSkill": "review-front",
+  "reviewFollowupSkill": "review-followup",
+  "agents": [
+    { "name": "clean-architecture", "displayName": "Clean Archi" },
+    { "name": "ddd", "displayName": "DDD" },
+    { "name": "react-best-practices", "displayName": "React" },
+    { "name": "solid", "displayName": "SOLID" },
+    { "name": "testing", "displayName": "Testing" },
+    { "name": "code-quality", "displayName": "Code Quality" }
+  ]
+}

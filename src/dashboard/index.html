@@ -126,6 +126,9 @@
       <div class="section-header">
         <i data-lucide="wrench"></i> En attente de correctif
         <span id="pending-fix-count" class="badge-count hidden">0</span>
+        <button id="sync-threads-btn" class="btn-icon btn-sync" title="Synchroniser les threads GitLab" onclick="syncGitLabThreads()">
+          <i data-lucide="refresh-cw"></i>
+        </button>
       </div>
       <div id="pending-fix-reviews" class="section-content">
         <div class="empty-state">Charger un projet</div>
@@ -973,6 +976,42 @@
       } catch (error) {
         console.error('Error approving MR:', error);
         alert('Erreur lors de l\'approbation');
+      }
+    }
+
+    async function syncGitLabThreads() {
+      if (!currentProjectPath) {
+        alert('Charger un projet d\'abord');
+        return;
+      }
+
+      const btn = document.getElementById('sync-threads-btn');
+      const icon = btn.querySelector('i');
+
+      // Add spinning animation
+      btn.disabled = true;
+      icon.classList.add('spinning');
+
+      try {
+        const response = await fetch(`${API_URL}/api/mr-tracking/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectPath: currentProjectPath })
+        });
+        const data = await response.json();
+        if (data.success) {
+          // Refresh MR tracking data
+          await fetchMrTracking();
+          console.log('Threads synchronized successfully');
+        } else {
+          alert('Erreur: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error syncing threads:', error);
+        alert('Erreur lors de la synchronisation des threads');
+      } finally {
+        btn.disabled = false;
+        icon.classList.remove('spinning');
       }
     }
 

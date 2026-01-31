@@ -5,7 +5,8 @@ import { join, dirname } from 'node:path';
  * Individual review statistics
  */
 export interface ReviewStats {
-  date: string;
+  id: string; // unique identifier (timestamp-based)
+  timestamp: string; // ISO 8601 timestamp
   mrNumber: number;
   duration: number; // milliseconds
   score: number | null; // global score /10, null if not parseable
@@ -95,6 +96,18 @@ function createEmptyStats(): ProjectStats {
 
 /**
  * Parse review output to extract statistics
+ *
+ * Supports two formats:
+ * 1. Summary format (from skill output):
+ *    📊 Score global : X/10
+ *    🚨 Bloquants : X
+ *    ⚠️ Importants : X
+ *
+ * 2. Structured stats line:
+ *    [REVIEW_STATS:blocking=X:warnings=X:suggestions=X:score=X]
+ *
+ * 3. Inline markers (fallback):
+ *    🚨 [BLOQUANT], ⚠️ [IMPORTANT], 💡 [SUGGESTION]
  */
 export function parseReviewOutput(stdout: string): {
   score: number | null;
@@ -107,13 +120,56 @@ export function parseReviewOutput(stdout: string): {
   let warnings = 0;
   let suggestions = 0;
 
-  // Try to extract global score (format: "Score Global : X/10" or "**Score Global : X/10**")
-  const scoreMatch = stdout.match(/Score\s+Global\s*:\s*(\d+(?:\.\d+)?)\s*\/\s*10/i);
+  // Method 1: Parse structured stats line (most reliable)
+  // Format: [REVIEW_STATS:blocking=1:warnings=2:suggestions=3:score=7.5]
+  const statsLineMatch = stdout.match(/\[REVIEW_STATS:([^\]]+)\]/i);
+  if (statsLineMatch) {
+    const statsStr = statsLineMatch[1];
+    const blockingMatch = statsStr.match(/blocking=(\d+)/);
+    const warningsMatch = statsStr.match(/warnings=(\d+)/);
+    const suggestionsMatch = statsStr.match(/suggestions=(\d+)/);
+    const scoreMatch = statsStr.match(/score=(\d+(?:\.\d+)?)/);
+
+    if (blockingMatch) blocking = parseInt(blockingMatch[1], 10);
+    if (warningsMatch) warnings = parseInt(warningsMatch[1], 10);
+    if (suggestionsMatch) suggestions = parseInt(suggestionsMatch[1], 10);
+    if (scoreMatch) score = parseFloat(scoreMatch[1]);
+
+    return { score, blocking, warnings, suggestions };
+  }
+
+  // Method 2: Parse summary format (skill output)
+  // 📊 Score global : X/10
+  const scoreMatch = stdout.match(/Score\s+[Gg]lobal\s*:\s*(\d+(?:\.\d+)?)\s*\/\s*10/i);
   if (scoreMatch) {
     score = parseFloat(scoreMatch[1]);
   }
 
-  // Count blocking issues (🚨 [BLOQUANT] or ## Corrections Bloquantes followed by ### items)
+  // 🚨 Bloquants : X (summary count)
+  const blockingSummary = stdout.match(/🚨\s*Bloquants?\s*:\s*(\d+)/i);
+  if (blockingSummary) {
+    blocking = parseInt(blockingSummary[1], 10);
+  }
+
+  // ⚠️ Importants : X (summary count)
+  const warningsSummary = stdout.match(/⚠️\s*Importants?\s*:\s*(\d+)/i);
+  if (warningsSummary) {
+    warnings = parseInt(warningsSummary[1], 10);
+  }
+
+  // 📝 Améliorations/Suggestions : X (summary count)
+  const suggestionsSummary = stdout.match(/(?:📝|💡)\s*(?:Améliorations?|Suggestions?)[^:]*:\s*(\d+)/i);
+  if (suggestionsSummary) {
+    suggestions = parseInt(suggestionsSummary[1], 10);
+  }
+
+  // If summary format worked, return
+  if (blockingSummary || warningsSummary || suggestionsSummary) {
+    return { score, blocking, warnings, suggestions };
+  }
+
+  // Method 3: Fallback - count inline markers
+  // 🚨 [BLOQUANT] or 🚨 **[BLOQUANT]**
   const blockingMatches = stdout.match(/🚨\s*\*?\*?\[BLOQUANT\]/gi);
   if (blockingMatches) {
     blocking = blockingMatches.length;
@@ -128,7 +184,7 @@ export function parseReviewOutput(stdout: string): {
     }
   }
 
-  // Count warnings (⚠️ [IMPORTANT] or ## Corrections Importantes followed by ### items)
+  // ⚠️ [IMPORTANT] or ⚠️ **[IMPORTANT]**
   const warningMatches = stdout.match(/⚠️\s*\*?\*?\[IMPORTANT\]/gi);
   if (warningMatches) {
     warnings = warningMatches.length;
@@ -143,7 +199,7 @@ export function parseReviewOutput(stdout: string): {
     }
   }
 
-  // Count suggestions (💡 [SUGGESTION] or ## Suggestions followed by ### items)
+  // 💡 [SUGGESTION] or 💡 **[SUGGESTION]**
   const suggestionMatches = stdout.match(/💡\s*\*?\*?\[SUGGESTION\]/gi);
   if (suggestionMatches) {
     suggestions = suggestionMatches.length;
@@ -174,8 +230,10 @@ export function addReviewStats(
   const stats = loadProjectStats(projectPath);
   const parsed = parseReviewOutput(stdout);
 
+  const now = new Date();
   const reviewStats: ReviewStats = {
-    date: new Date().toISOString().split('T')[0],
+    id: `${now.getTime()}-${mrNumber}`,
+    timestamp: now.toISOString(),
     mrNumber,
     duration,
     score: parsed.score,

@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { execSync } from 'node:child_process';
 
 /**
  * Review event - each review or followup on a MR
@@ -530,4 +531,186 @@ export function trackMrAfterReview(
   updateMrThreads(projectPath, mrId, threadCount.open, threadCount.total);
 
   return loadMrTracking(projectPath).mrs.find((m) => m.id === mrId)!;
+}
+
+/**
+ * Sync thread counts from GitLab API for all active MRs
+ */
+export async function syncGitLabThreads(projectPath: string): Promise<void> {
+  const data = loadMrTracking(projectPath);
+  const gitlabMrs = data.mrs.filter(
+    (mr) => mr.platform === 'gitlab' && !['merged', 'closed'].includes(mr.state)
+  );
+
+  for (const mr of gitlabMrs) {
+    try {
+      const threads = fetchGitLabThreads(mr.project, mr.mrNumber);
+      if (threads) {
+        updateMrThreads(projectPath, mr.id, threads.open, threads.total);
+      }
+    } catch {
+      // Silently ignore individual MR sync failures
+    }
+  }
+}
+
+/**
+ * Fetch thread counts from GitLab API using glab CLI
+ */
+function fetchGitLabThreads(
+  project: string,
+  mrNumber: number
+): { open: number; total: number; resolvable: number } | null {
+  try {
+    // URL-encode the project path
+    const encodedProject = encodeURIComponent(project);
+
+    // Fetch discussions from GitLab API
+    const result = execSync(
+      `glab api "projects/${encodedProject}/merge_requests/${mrNumber}/discussions"`,
+      { encoding: 'utf-8', timeout: 10000 }
+    );
+
+    const discussions = JSON.parse(result);
+
+    let total = 0;
+    let open = 0;
+    let resolvable = 0;
+
+    for (const discussion of discussions) {
+      // Skip system notes (not real discussions)
+      if (discussion.individual_note) continue;
+
+      // Count resolvable threads (code review comments)
+      const notes = discussion.notes || [];
+      const firstNote = notes[0];
+
+      if (firstNote?.resolvable) {
+        resolvable++;
+        total++;
+
+        // Check if thread is unresolved
+        if (!firstNote.resolved) {
+          open++;
+        }
+      }
+    }
+
+    return { open, total, resolvable };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sync a single MR's threads from GitLab or GitHub
+ */
+export function syncSingleMrThreads(
+  projectPath: string,
+  mrId: string
+): TrackedMr | null {
+  const data = loadMrTracking(projectPath);
+  const mr = data.mrs.find((m) => m.id === mrId);
+
+  if (!mr) {
+    return null;
+  }
+
+  let threads: { open: number; total: number } | null = null;
+
+  if (mr.platform === 'gitlab') {
+    threads = fetchGitLabThreads(mr.project, mr.mrNumber);
+  } else if (mr.platform === 'github') {
+    threads = fetchGitHubThreads(mr.project, mr.mrNumber);
+  }
+
+  if (threads) {
+    return updateMrThreads(projectPath, mr.id, threads.open, threads.total) || null;
+  }
+
+  return null;
+}
+
+/**
+ * Sync thread counts from GitHub API for all active PRs
+ */
+export async function syncGitHubThreads(projectPath: string): Promise<void> {
+  const data = loadMrTracking(projectPath);
+  const githubPrs = data.mrs.filter(
+    (mr) => mr.platform === 'github' && !['merged', 'closed'].includes(mr.state)
+  );
+
+  for (const pr of githubPrs) {
+    try {
+      const threads = fetchGitHubThreads(pr.project, pr.mrNumber);
+      if (threads) {
+        updateMrThreads(projectPath, pr.id, threads.open, threads.total);
+      }
+    } catch {
+      // Silently ignore individual PR sync failures
+    }
+  }
+}
+
+/**
+ * Fetch thread counts from GitHub API using gh CLI
+ */
+function fetchGitHubThreads(
+  repo: string,
+  prNumber: number
+): { open: number; total: number } | null {
+  try {
+    // Fetch review threads from GitHub API
+    const result = execSync(
+      `gh api "repos/${repo}/pulls/${prNumber}/comments"`,
+      { encoding: 'utf-8', timeout: 10000 }
+    );
+
+    const comments = JSON.parse(result);
+
+    // Group comments by thread (in_reply_to_id)
+    const threadIds = new Set<number>();
+    const resolvedThreads = new Set<number>();
+
+    for (const comment of comments) {
+      // Each top-level comment starts a thread
+      if (!comment.in_reply_to_id) {
+        threadIds.add(comment.id);
+      }
+    }
+
+    // Check review state (approved/changes_requested)
+    try {
+      const reviewsResult = execSync(
+        `gh api "repos/${repo}/pulls/${prNumber}/reviews"`,
+        { encoding: 'utf-8', timeout: 10000 }
+      );
+      const reviews = JSON.parse(reviewsResult);
+
+      // Count pending review threads (not approved yet)
+      let pendingReviews = 0;
+      for (const review of reviews) {
+        if (review.state === 'CHANGES_REQUESTED' || review.state === 'COMMENTED') {
+          pendingReviews++;
+        }
+      }
+    } catch {
+      // Ignore review fetch errors
+    }
+
+    const total = threadIds.size;
+    const open = total - resolvedThreads.size;
+
+    return { open, total };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sync all platforms' threads
+ */
+export async function syncAllThreads(projectPath: string): Promise<void> {
+  await syncGitLabThreads(projectPath);
+  await syncGitHubThreads(projectPath);
 }
