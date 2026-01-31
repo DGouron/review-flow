@@ -1,14 +1,16 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Logger } from 'pino';
 import { verifyGitHubSignature, getGitHubEventType } from '../security/verifier.js';
-import { filterGitHubEvent, type GitHubPullRequestEvent } from './eventFilter.js';
+import { filterGitHubEvent, filterGitHubPrClose, type GitHubPullRequestEvent } from './eventFilter.js';
 import { findRepositoryByRemoteUrl } from '../config/loader.js';
 import {
   enqueueReview,
   createJobId,
   updateJobProgress,
+  cancelJob,
   type ReviewJob,
 } from '../queue/reviewQueue.js';
+import { archiveMr } from '../services/mrTrackingService.js';
 import { invokeClaudeReview, sendNotification } from '../claude/invoker.js';
 
 export async function handleGitHubWebhook(
@@ -32,8 +34,52 @@ export async function handleGitHubWebhook(
     return;
   }
 
-  // 3. Parse and filter event
+  // 3. Parse event
   const event = request.body as GitHubPullRequestEvent;
+
+  // 3a. Check if PR was closed - clean up tracking and cancel any running job
+  const closeResult = filterGitHubPrClose(event);
+  if (closeResult.shouldProcess) {
+    const projectPath = closeResult.projectPath!;
+    const prNumber = closeResult.mrNumber!;
+    const mrId = `github-${projectPath}-${prNumber}`;
+
+    // Find repo config
+    const repoConfig = findRepositoryByRemoteUrl(event.repository.clone_url);
+    if (repoConfig) {
+      // Cancel any running job for this PR
+      const jobId = createJobId('github', projectPath, prNumber);
+      const cancelled = cancelJob(jobId);
+
+      // Archive the PR from tracking
+      const archived = archiveMr(repoConfig.localPath, mrId);
+
+      logger.info(
+        {
+          prNumber,
+          repo: projectPath,
+          jobCancelled: cancelled,
+          trackingArchived: archived,
+        },
+        'PR closed - cleaned up tracking and cancelled job'
+      );
+
+      reply.status(200).send({
+        status: 'cleaned',
+        prNumber,
+        jobCancelled: cancelled,
+        trackingArchived: archived,
+      });
+      return;
+    }
+
+    // No repo config, just acknowledge
+    logger.info({ prNumber, repo: projectPath }, 'PR closed but repo not configured');
+    reply.status(200).send({ status: 'ignored', reason: 'PR closed, repo not configured' });
+    return;
+  }
+
+  // 3b. Filter for review request
   const filterResult = filterGitHubEvent(event);
 
   logger.info(

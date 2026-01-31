@@ -1,12 +1,13 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Logger } from 'pino';
 import { verifyGitLabSignature, getGitLabEventType } from '../security/verifier.js';
-import { filterGitLabEvent, filterGitLabMrUpdate, type GitLabMergeRequestEvent } from './eventFilter.js';
+import { filterGitLabEvent, filterGitLabMrUpdate, filterGitLabMrClose, type GitLabMergeRequestEvent } from './eventFilter.js';
 import { findRepositoryByProjectPath } from '../config/loader.js';
 import {
   enqueueReview,
   createJobId,
   updateJobProgress,
+  cancelJob,
   type ReviewJob,
 } from '../queue/reviewQueue.js';
 import { invokeClaudeReview, sendNotification } from '../claude/invoker.js';
@@ -16,6 +17,7 @@ import {
   trackMrAssignment,
   recordReviewCompletion,
   syncSingleMrThreads,
+  archiveMr,
 } from '../services/mrTrackingService.js';
 import { loadProjectConfig } from '../config/projectConfig.js';
 import { parseReviewOutput } from '../services/statsService.js';
@@ -41,8 +43,52 @@ export async function handleGitLabWebhook(
     return;
   }
 
-  // 3. Parse and filter event
+  // 3. Parse event
   const event = request.body as GitLabMergeRequestEvent;
+
+  // 3a. Check if MR was closed - clean up tracking and cancel any running job
+  const closeResult = filterGitLabMrClose(event);
+  if (closeResult.shouldProcess) {
+    const projectPath = closeResult.projectPath!;
+    const mrNumber = closeResult.mrNumber!;
+    const mrId = `gitlab-${projectPath}-${mrNumber}`;
+
+    // Find repo config
+    const repoConfig = findRepositoryByProjectPath(projectPath);
+    if (repoConfig) {
+      // Cancel any running job for this MR
+      const jobId = createJobId('gitlab', projectPath, mrNumber);
+      const cancelled = cancelJob(jobId);
+
+      // Archive the MR from tracking
+      const archived = archiveMr(repoConfig.localPath, mrId);
+
+      logger.info(
+        {
+          mrNumber,
+          project: projectPath,
+          jobCancelled: cancelled,
+          trackingArchived: archived,
+        },
+        'MR closed - cleaned up tracking and cancelled job'
+      );
+
+      reply.status(200).send({
+        status: 'cleaned',
+        mrNumber,
+        jobCancelled: cancelled,
+        trackingArchived: archived,
+      });
+      return;
+    }
+
+    // No repo config, just acknowledge
+    logger.info({ mrNumber, project: projectPath }, 'MR closed but repo not configured');
+    reply.status(200).send({ status: 'ignored', reason: 'MR closed, repo not configured' });
+    return;
+  }
+
+  // 3b. Filter for review assignment
   const filterResult = filterGitLabEvent(event);
 
   // Debug: log reviewers data
