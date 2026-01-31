@@ -8,7 +8,11 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc && cp -r src/dashboard dist/",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:ci": "vitest --run --coverage",
+    "coverage": "vitest --coverage"
   },
   "dependencies": {
     "@fastify/static": "^7.0.4",
@@ -22,8 +26,11 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/ws": "^8.18.1",
+    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/ui": "^4.0.18",
     "tsx": "^4.7.0",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "vitest": "^4.0.18"
   },
   "engines": {
     "node": ">=20.0.0"
