@@ -36,9 +36,17 @@ export interface ProgressEvent {
 }
 
 /**
- * Default agents for code review
+ * Agent definition from project config
  */
-export const DEFAULT_AGENTS: Array<{ name: string; displayName: string }> = [
+export interface AgentDefinition {
+  name: string;
+  displayName: string;
+}
+
+/**
+ * Default agents for code review (fallback when no project config)
+ */
+export const DEFAULT_AGENTS: AgentDefinition[] = [
   { name: 'clean-architecture', displayName: 'Clean Archi' },
   { name: 'ddd', displayName: 'DDD' },
   { name: 'react', displayName: 'React' },
@@ -49,10 +57,12 @@ export const DEFAULT_AGENTS: Array<{ name: string; displayName: string }> = [
 
 /**
  * Create initial progress state with all agents pending
+ * @param customAgents - Optional custom agents from project config (uses DEFAULT_AGENTS if not provided)
  */
-export function createInitialProgress(): ReviewProgress {
+export function createInitialProgress(customAgents?: AgentDefinition[]): ReviewProgress {
+  const agents = customAgents ?? DEFAULT_AGENTS;
   return {
-    agents: DEFAULT_AGENTS.map(agent => ({
+    agents: agents.map(agent => ({
       name: agent.name,
       displayName: agent.displayName,
       status: 'pending' as AgentStatus,

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@fastify/static": "^7.0.4",
+    "@fastify/websocket": "^8.3.1",
     "dotenv": "^16.4.0",
     "fastify": "^4.26.0",
     "p-queue": "^8.0.0",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/ws": "^8.18.1",
     "tsx": "^4.7.0",
     "typescript": "^5.8.0"
   },

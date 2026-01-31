@@ -8,12 +8,18 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import type { WebSocket } from 'ws';
 import { loadConfig, loadEnvSecrets } from './config/loader.js';
-import { initQueue, getQueueStats, getJobsStatus, setProgressChangeCallback } from './queue/reviewQueue.js';
+import { initQueue, getQueueStats, getJobsStatus, setProgressChangeCallback, setStateChangeCallback, cancelJob } from './queue/reviewQueue.js';
 import { handleGitLabWebhook } from './webhooks/gitlab.handler.js';
 import { handleGitHubWebhook } from './webhooks/github.handler.js';
 import type { ReviewProgress, ProgressEvent } from './types/progress.js';
 import { getLogs, getErrorLogs, onLog, logInfo, logWarn, logError, type LogEntry } from './services/logService.js';
 import { getModel, setModel, getSettings, type ClaudeModel } from './services/runtimeSettings.js';
+import { loadProjectStats, getStatsSummary } from './services/statsService.js';
+import {
+  getPendingFixMrs,
+  getPendingApprovalMrs,
+  approveMr,
+} from './services/mrTrackingService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -98,12 +104,36 @@ async function main() {
   // Subscribe to log service for broadcasting
   onLog(broadcastLogEntry);
 
+  /**
+   * Broadcast state change (jobs list update) to all connected WebSocket clients
+   */
+  function broadcastStateChange(): void {
+    const jobs = getJobsStatus();
+    const message = JSON.stringify({
+      type: 'state',
+      activeReviews: jobs.active,
+      recentReviews: jobs.recent,
+      timestamp: new Date().toISOString(),
+    });
+
+    for (const client of wsClients) {
+      if (client.readyState === 1) {
+        client.send(message);
+      }
+    }
+  }
+
   // Add initial startup log
   logInfo('Serveur démarré', { port: config.server.port });
 
   // Set up progress change callback to broadcast to WebSocket clients
   setProgressChangeCallback((jobId, progress, event) => {
     broadcastProgress(jobId, progress, event);
+  });
+
+  // Set up state change callback to broadcast queue state changes
+  setStateChangeCallback(() => {
+    broadcastStateChange();
   });
 
   // Serve dashboard static files
@@ -222,8 +252,11 @@ async function main() {
     return { success: true, model, message: `Modèle changé pour ${model}` };
   });
 
-  // Review files endpoint - list all review files from configured repositories
-  server.get('/api/reviews', async () => {
+  // Review files endpoint - list review files (optionally filtered by project path)
+  server.get('/api/reviews', async (request) => {
+    const query = request.query as { path?: string };
+    const projectPath = query.path?.trim();
+
     const reviews: Array<{
       filename: string;
       path: string;
@@ -234,10 +267,25 @@ async function main() {
       mtime: string;
     }> = [];
 
-    for (const repo of config.repositories) {
-      if (!repo.enabled) continue;
-      const reviewsDir = join(repo.localPath, '.claude', 'reviews');
+    // If project path specified, only look in that project
+    const dirsToSearch: string[] = [];
 
+    if (projectPath) {
+      // Security check
+      if (!projectPath.startsWith('/') || projectPath.includes('..')) {
+        return { reviews: [], count: 0, error: 'Invalid path' };
+      }
+      dirsToSearch.push(join(projectPath, '.claude', 'reviews'));
+    } else {
+      // Fall back to all configured repositories
+      for (const repo of config.repositories) {
+        if (repo.enabled) {
+          dirsToSearch.push(join(repo.localPath, '.claude', 'reviews'));
+        }
+      }
+    }
+
+    for (const reviewsDir of dirsToSearch) {
       try {
         const files = await readdir(reviewsDir);
         for (const filename of files) {
@@ -326,6 +374,198 @@ async function main() {
     return { success: false, error: 'Review not found' };
   });
 
+  // Cancel a running review job
+  server.post('/api/reviews/cancel/:jobId', async (request, reply) => {
+    const { jobId } = request.params as { jobId: string };
+
+    if (!jobId || jobId.length === 0) {
+      reply.code(400);
+      return { success: false, error: 'Job ID requis' };
+    }
+
+    const cancelled = cancelJob(jobId);
+
+    if (cancelled) {
+      logInfo('Annulation demandée', { jobId });
+      return { success: true, jobId, message: 'Annulation en cours' };
+    } else {
+      reply.code(404);
+      return { success: false, error: 'Job non trouvé ou déjà terminé' };
+    }
+  });
+
+  // Project stats endpoint - get review statistics for a project
+  server.get('/api/stats', async (request, reply) => {
+    const query = request.query as { path?: string };
+    const projectPath = query.path?.trim();
+
+    if (!projectPath) {
+      reply.code(400);
+      return { success: false, error: 'Chemin du projet requis' };
+    }
+
+    // Security check
+    if (!projectPath.startsWith('/') || projectPath.includes('..')) {
+      reply.code(400);
+      return { success: false, error: 'Chemin invalide' };
+    }
+
+    try {
+      const stats = loadProjectStats(projectPath);
+      const summary = getStatsSummary(stats);
+      return {
+        success: true,
+        stats,
+        summary,
+      };
+    } catch (error) {
+      const err = error as Error;
+      logError('Erreur lecture stats', { projectPath, error: err.message });
+      return { success: false, error: err.message };
+    }
+  });
+
+  // MR tracking endpoint - get tracked MRs for a project
+  server.get('/api/mr-tracking', async (request, reply) => {
+    const query = request.query as { path?: string };
+    const projectPath = query.path?.trim();
+
+    if (!projectPath) {
+      reply.code(400);
+      return { success: false, error: 'Chemin du projet requis' };
+    }
+
+    if (!projectPath.startsWith('/') || projectPath.includes('..')) {
+      reply.code(400);
+      return { success: false, error: 'Chemin invalide' };
+    }
+
+    try {
+      const pendingFix = getPendingFixMrs(projectPath);
+      const pendingApproval = getPendingApprovalMrs(projectPath);
+      return {
+        success: true,
+        pendingFix,
+        pendingApproval,
+      };
+    } catch (error) {
+      const err = error as Error;
+      logError('Erreur lecture MR tracking', { projectPath, error: err.message });
+      return { success: false, error: err.message };
+    }
+  });
+
+  // Trigger followup review for a MR
+  server.post('/api/mr-tracking/followup', async (request, reply) => {
+    const body = request.body as { mrId?: string; projectPath?: string };
+    const { mrId, projectPath } = body;
+
+    if (!mrId || !projectPath) {
+      reply.code(400);
+      return { success: false, error: 'mrId et projectPath requis' };
+    }
+
+    if (!projectPath.startsWith('/') || projectPath.includes('..')) {
+      reply.code(400);
+      return { success: false, error: 'Chemin invalide' };
+    }
+
+    // Parse mrId to get platform, project, and mrNumber
+    const match = mrId.match(/^(gitlab|github)-(.+)-(\d+)$/);
+    if (!match) {
+      reply.code(400);
+      return { success: false, error: 'Format mrId invalide' };
+    }
+
+    const [, platform, , mrNumberStr] = match;
+    const mrNumber = parseInt(mrNumberStr, 10);
+
+    // Find matching repository config
+    const repo = config.repositories.find((r) => r.localPath === projectPath && r.enabled);
+    if (!repo) {
+      reply.code(404);
+      return { success: false, error: 'Repository non configuré' };
+    }
+
+    // Import and use the queue to add a followup job
+    const { enqueueReview, createJobId, updateJobProgress } = await import('./queue/reviewQueue.js');
+    const { loadProjectConfig } = await import('./config/projectConfig.js');
+    const { invokeClaudeReview, sendNotification } = await import('./claude/invoker.js');
+
+    const projectConfig = loadProjectConfig(projectPath);
+    const skill = projectConfig?.reviewFollowupSkill || 'review-followup';
+
+    // Extract project path from remoteUrl
+    const gitProjectPath = repo.remoteUrl
+      .replace(/^https?:\/\/[^/]+\//, '')
+      .replace(/\.git$/, '');
+
+    const jobId = createJobId(`${platform}-followup`, gitProjectPath, mrNumber);
+
+    // Build MR URL based on platform
+    const mrUrl = platform === 'gitlab'
+      ? `${repo.remoteUrl.replace(/\.git$/, '')}/-/merge_requests/${mrNumber}`
+      : `${repo.remoteUrl.replace(/\.git$/, '')}/pull/${mrNumber}`;
+
+    const enqueued = await enqueueReview({
+      id: jobId,
+      platform: platform as 'gitlab' | 'github',
+      projectPath: gitProjectPath,
+      localPath: repo.localPath,
+      mrNumber,
+      mrUrl,
+      skill,
+      sourceBranch: 'unknown',
+      targetBranch: 'unknown',
+    }, async (job, signal) => {
+      sendNotification('Review followup démarrée', `MR !${job.mrNumber}`, logger);
+
+      const result = await invokeClaudeReview(job, logger, (progress, event) => {
+        updateJobProgress(job.id, progress, event);
+      }, signal);
+
+      if (result.success) {
+        sendNotification('Review followup terminée', `MR !${job.mrNumber}`, logger);
+      } else if (!result.cancelled) {
+        sendNotification('Review followup échouée', `MR !${job.mrNumber}`, logger);
+      }
+    });
+
+    if (!enqueued) {
+      return { success: false, error: 'Review déjà en cours ou récemment effectuée' };
+    }
+
+    logInfo('Followup déclenché manuellement', { mrId, mrNumber, skill });
+
+    return { success: true, jobId, message: 'Followup review en cours' };
+  });
+
+  // Approve a MR (mark as ready for merge)
+  server.post('/api/mr-tracking/approve', async (request, reply) => {
+    const body = request.body as { mrId?: string; projectPath?: string };
+    const { mrId, projectPath } = body;
+
+    if (!mrId || !projectPath) {
+      reply.code(400);
+      return { success: false, error: 'mrId et projectPath requis' };
+    }
+
+    if (!projectPath.startsWith('/') || projectPath.includes('..')) {
+      reply.code(400);
+      return { success: false, error: 'Chemin invalide' };
+    }
+
+    const approved = approveMr(projectPath, mrId);
+
+    if (approved) {
+      logInfo('MR approuvée', { mrId });
+      return { success: true, mrId, message: 'MR marquée comme approuvée' };
+    } else {
+      reply.code(404);
+      return { success: false, error: 'MR non trouvée' };
+    }
+  });
+
   // Project config endpoint - load config from project's .claude/reviews/config.json
   server.get('/api/project-config', async (request, reply) => {
     const query = request.query as { path?: string };
@@ -353,6 +593,28 @@ async function main() {
       const missingFields = requiredFields.filter(field => !(field in config));
       if (missingFields.length > 0) {
         return { success: false, error: `Champs manquants: ${missingFields.join(', ')}` };
+      }
+
+      // Validate agents array if present
+      if ('agents' in config && config.agents !== undefined) {
+        if (!Array.isArray(config.agents)) {
+          return { success: false, error: 'Le champ "agents" doit être un tableau' };
+        }
+        for (const agent of config.agents) {
+          if (
+            !agent ||
+            typeof agent !== 'object' ||
+            typeof agent.name !== 'string' ||
+            typeof agent.displayName !== 'string' ||
+            agent.name.length === 0 ||
+            agent.displayName.length === 0
+          ) {
+            return {
+              success: false,
+              error: 'Format agents invalide: chaque agent doit avoir { name: string, displayName: string }',
+            };
+          }
+        }
       }
 
       // Validate skills exist

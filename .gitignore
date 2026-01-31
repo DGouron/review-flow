@@ -32,3 +32,5 @@ logs/
 .worktrees/
 .security-key
 logs/security/
+.claude/skills
+CLAUDE.md

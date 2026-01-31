@@ -14,6 +14,7 @@ import type {
   ReviewProgress,
   ProgressEvent,
   ProgressEventType,
+  AgentDefinition,
 } from '../types/progress.js';
 import { createInitialProgress, calculateOverallProgress } from '../types/progress.js';
 
@@ -36,9 +37,14 @@ export class ProgressParser {
   private jobId: string;
   private callback?: ProgressCallback;
 
-  constructor(jobId: string, callback?: ProgressCallback) {
+  /**
+   * @param jobId - Unique job identifier
+   * @param callback - Optional callback for progress events
+   * @param customAgents - Optional custom agents from project config
+   */
+  constructor(jobId: string, callback?: ProgressCallback, customAgents?: AgentDefinition[]) {
     this.jobId = jobId;
-    this.progress = createInitialProgress();
+    this.progress = createInitialProgress(customAgents);
     this.callback = callback;
   }
 

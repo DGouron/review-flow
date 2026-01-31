@@ -5,6 +5,9 @@ import type { ReviewProgress, ProgressEvent } from '../types/progress.js';
 import { ProgressParser } from './progressParser.js';
 import { logInfo, logWarn, logError } from '../services/logService.js';
 import { getModel } from '../services/runtimeSettings.js';
+import { getProjectAgents } from '../config/projectConfig.js';
+import { addReviewStats } from '../services/statsService.js';
+import { getMrDetails } from '../services/mrTrackingService.js';
 
 export interface InvocationResult {
   success: boolean;
@@ -13,17 +16,23 @@ export interface InvocationResult {
   stderr: string;
   durationMs: number;
   finalProgress?: ReviewProgress;
+  cancelled?: boolean;
 }
 
 export type ProgressCallback = (progress: ReviewProgress, event?: ProgressEvent) => void;
 
 /**
  * Invoke Claude Code CLI for a review job
+ * @param job - The review job to execute
+ * @param logger - Pino logger instance
+ * @param onProgress - Optional callback for progress updates
+ * @param signal - Optional AbortSignal to cancel the review
  */
 export async function invokeClaudeReview(
   job: ReviewJob,
   logger: Logger,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  signal?: AbortSignal
 ): Promise<InvocationResult> {
   const startTime = Date.now();
 
@@ -51,6 +60,9 @@ export async function invokeClaudeReview(
     'Invocation Claude CLI'
   );
 
+  // Load project-specific agents configuration
+  const projectAgents = getProjectAgents(job.localPath);
+
   // Log to dashboard
   logInfo('Démarrage review Claude', {
     jobId: job.id,
@@ -58,20 +70,36 @@ export async function invokeClaudeReview(
     skill: job.skill,
     project: job.projectPath,
     model,
+    customAgents: projectAgents?.length ?? 'default',
   });
 
-  // Initialize progress parser
+  // Initialize progress parser with project agents (or defaults)
   const progressParser = new ProgressParser(job.id, (event, progress) => {
     logger.debug({ event, progress: progress.overallProgress }, 'Progress update');
     onProgress?.(progress, event);
-  });
+  }, projectAgents);
 
   // Emit initial progress
   onProgress?.(progressParser.getProgress());
 
+  // Check if already cancelled
+  if (signal?.aborted) {
+    logWarn('Review annulée avant démarrage', { jobId: job.id });
+    return {
+      success: false,
+      exitCode: null,
+      stdout: '',
+      stderr: 'Review cancelled before start',
+      durationMs: Date.now() - startTime,
+      finalProgress: progressParser.getProgress(),
+      cancelled: true,
+    };
+  }
+
   return new Promise((resolve) => {
     let stdout = '';
     let stderr = '';
+    let cancelled = false;
 
     const child = spawn('claude', args, {
       cwd: job.localPath,
@@ -83,6 +111,26 @@ export async function invokeClaudeReview(
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+
+    // Handle cancellation via AbortSignal
+    const abortHandler = () => {
+      if (!cancelled) {
+        cancelled = true;
+        logger.info({ jobId: job.id }, 'Review annulée par utilisateur');
+        logWarn('Review annulée', { jobId: job.id });
+        child.kill('SIGTERM');
+        // Give it time to cleanup, then force kill
+        setTimeout(() => {
+          if (!child.killed) {
+            child.kill('SIGKILL');
+          }
+        }, 5000);
+      }
+    };
+
+    if (signal) {
+      signal.addEventListener('abort', abortHandler, { once: true });
+    }
 
     child.stdout.on('data', (data: Buffer) => {
       const chunk = data.toString();
@@ -118,11 +166,18 @@ export async function invokeClaudeReview(
     });
 
     child.on('close', (code) => {
+      // Cleanup abort listener
+      if (signal) {
+        signal.removeEventListener('abort', abortHandler);
+      }
+
       const durationMs = Date.now() - startTime;
-      const success = code === 0;
+      const success = code === 0 && !cancelled;
 
       // Finalize progress
-      if (success) {
+      if (cancelled) {
+        progressParser.markFailed('Annulée par utilisateur');
+      } else if (success) {
         progressParser.markAllCompleted();
       } else {
         progressParser.markFailed(`Exit code: ${code}`);
@@ -138,19 +193,39 @@ export async function invokeClaudeReview(
           stdoutLength: stdout.length,
           stderrLength: stderr.length,
           finalProgress: finalProgress.overallProgress,
+          cancelled,
         },
-        success ? 'Claude terminé avec succès' : 'Claude terminé avec erreur'
+        cancelled ? 'Claude annulé' : success ? 'Claude terminé avec succès' : 'Claude terminé avec erreur'
       );
 
       // Log to dashboard with summary
       const durationMin = Math.round(durationMs / 60000);
-      if (success) {
+      if (cancelled) {
+        logWarn('Review annulée', {
+          jobId: job.id,
+          mrNumber: job.mrNumber,
+          duration: `${durationMin} min`,
+        });
+      } else if (success) {
         logInfo('Review terminée', {
           jobId: job.id,
           mrNumber: job.mrNumber,
           duration: `${durationMin} min`,
           outputLength: stdout.length,
         });
+
+        // Save review statistics
+        try {
+          // Look up assignor from MR tracking
+          const mrId = `${job.platform}-${job.projectPath}-${job.mrNumber}`;
+          const mrDetails = getMrDetails(job.localPath, mrId);
+          const assignedBy = mrDetails?.assignment?.username;
+
+          const reviewStats = addReviewStats(job.localPath, job.mrNumber, durationMs, stdout, assignedBy);
+          logger.info({ reviewStats }, 'Stats de review enregistrées');
+        } catch (statsError) {
+          logger.warn({ error: statsError }, 'Erreur lors de l\'enregistrement des stats');
+        }
         // Log stdout preview for debugging
         if (stdout.length > 0) {
           logInfo('Claude output preview', {
@@ -177,6 +252,7 @@ export async function invokeClaudeReview(
         stderr,
         durationMs,
         finalProgress,
+        cancelled,
       });
     });
   });
