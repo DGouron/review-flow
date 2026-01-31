@@ -5,7 +5,7 @@ import type { ReviewProgress, ProgressEvent } from '../types/progress.js';
 import { ProgressParser } from './progressParser.js';
 import { logInfo, logWarn, logError } from '../services/logService.js';
 import { getModel } from '../services/runtimeSettings.js';
-import { getProjectAgents } from '../config/projectConfig.js';
+import { getProjectAgents, getFollowupAgents } from '../config/projectConfig.js';
 import { addReviewStats } from '../services/statsService.js';
 import { getMrDetails } from '../services/mrTrackingService.js';
 
@@ -65,16 +65,20 @@ export async function invokeClaudeReview(
     'Invocation Claude CLI'
   );
 
-  // Load project-specific agents configuration
-  const projectAgents = getProjectAgents(job.localPath);
+  // Load project-specific agents configuration (use followup agents for followup jobs)
+  const isFollowup = job.jobType === 'followup';
+  const projectAgents = isFollowup
+    ? getFollowupAgents(job.localPath)
+    : getProjectAgents(job.localPath);
 
   // Log to dashboard
-  logInfo('Démarrage review Claude', {
+  logInfo(isFollowup ? 'Démarrage followup Claude' : 'Démarrage review Claude', {
     jobId: job.id,
     mrNumber: job.mrNumber,
     skill: job.skill,
     project: job.projectPath,
     model,
+    jobType: job.jobType || 'review',
     customAgents: projectAgents?.length ?? 'default',
   });
 

@@ -13,6 +13,8 @@ export interface ReviewJob {
   mrUrl: string;
   sourceBranch: string;
   targetBranch: string;
+  // Job type: review or followup
+  jobType?: 'review' | 'followup';
   // Optional MR metadata
   title?: string;
   description?: string;
@@ -288,6 +290,7 @@ export function getJobsStatus(): {
     title?: string;
     description?: string;
     assignedBy?: { username: string; displayName?: string };
+    jobType?: 'review' | 'followup';
   }>;
   recent: Array<{
     id: string;
@@ -301,6 +304,7 @@ export function getJobsStatus(): {
     progress?: ReviewProgress;
     title?: string;
     assignedBy?: { username: string; displayName?: string };
+    jobType?: 'review' | 'followup';
   }>;
 } {
   return {
@@ -315,6 +319,7 @@ export function getJobsStatus(): {
       title: js.job.title,
       description: js.job.description,
       assignedBy: js.job.assignedBy,
+      jobType: js.job.jobType || 'review',
     })),
     recent: completedJobs.map(js => ({
       id: js.job.id,
@@ -328,6 +333,7 @@ export function getJobsStatus(): {
       progress: js.progress,
       title: js.job.title,
       assignedBy: js.job.assignedBy,
+      jobType: js.job.jobType || 'review',
     })),
   };
 }

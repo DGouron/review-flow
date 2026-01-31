@@ -107,6 +107,7 @@ export async function handleGitLabWebhook(
             mrUrl: updateResult.mrUrl!,
             sourceBranch: updateResult.sourceBranch!,
             targetBranch: updateResult.targetBranch!,
+            jobType: 'followup',
           };
 
           enqueueReview(followupJob, async (j, signal) => {
@@ -220,6 +221,7 @@ export async function handleGitLabWebhook(
     mrUrl: filterResult.mrUrl!,
     sourceBranch: filterResult.sourceBranch!,
     targetBranch: filterResult.targetBranch!,
+    jobType: 'review',
     // MR metadata for dashboard
     title: mrTitle,
     description: event.object_attributes?.description,

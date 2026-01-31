@@ -113,16 +113,27 @@
       </div>
     </div>
 
-    <div class="section">
+    <div class="section" id="active-reviews-section">
       <div class="section-header">
-        <i data-lucide="loader"></i> Reviews actives
+        <i data-lucide="file-search"></i> Reviews actives
+        <span id="active-reviews-count" class="badge-count hidden">0</span>
       </div>
       <div id="active-reviews" class="section-content">
-        <div class="empty-state">Chargement...</div>
+        <div class="empty-state">Aucune review en cours</div>
       </div>
     </div>
 
-    <div class="section">
+    <div class="section hidden" id="active-followups-section">
+      <div class="section-header">
+        <i data-lucide="refresh-cw"></i> Followups actifs
+        <span id="active-followups-count" class="badge-count hidden">0</span>
+      </div>
+      <div id="active-followups" class="section-content">
+        <div class="empty-state">Aucun followup en cours</div>
+      </div>
+    </div>
+
+    <div class="section hidden" id="pending-fix-section">
       <div class="section-header">
         <i data-lucide="wrench"></i> En attente de correctif
         <span id="pending-fix-count" class="badge-count hidden">0</span>
@@ -131,17 +142,17 @@
         </button>
       </div>
       <div id="pending-fix-reviews" class="section-content">
-        <div class="empty-state">Charger un projet</div>
+        <div class="empty-state">Aucune MR en attente de correctif</div>
       </div>
     </div>
 
-    <div class="section">
+    <div class="section hidden" id="pending-approval-section">
       <div class="section-header">
         <i data-lucide="circle-check"></i> En attente d'approbation
         <span id="pending-approval-count" class="badge-count hidden">0</span>
       </div>
       <div id="pending-approval-reviews" class="section-content">
-        <div class="empty-state">Charger un projet</div>
+        <div class="empty-state">Aucune MR en attente d'approbation</div>
       </div>
     </div>
 
@@ -346,16 +357,43 @@
     }
 
     function updateUI() {
+      // Separate reviews and followups
+      const reviews = currentData.activeReviews.filter(r => r.jobType !== 'followup');
+      const followups = currentData.activeReviews.filter(r => r.jobType === 'followup');
+
       const running = currentData.activeReviews.filter(r => r.status === 'running').length;
       const queued = currentData.activeReviews.filter(r => r.status === 'queued').length;
       document.getElementById('running-count').textContent = running;
       document.getElementById('queued-count').textContent = queued;
       document.getElementById('completed-count').textContent = currentData.reviewFiles.length;
 
-      const activeEl = document.getElementById('active-reviews');
-      activeEl.innerHTML = currentData.activeReviews.length === 0
-        ? '<div class="empty-state">Aucune review en cours</div>'
-        : currentData.activeReviews.map(r => renderReview(r, true)).join('');
+      // Update Reviews section
+      const activeReviewsSection = document.getElementById('active-reviews-section');
+      const activeReviewsEl = document.getElementById('active-reviews');
+      const activeReviewsCount = document.getElementById('active-reviews-count');
+
+      if (reviews.length === 0) {
+        activeReviewsSection.classList.add('hidden');
+      } else {
+        activeReviewsSection.classList.remove('hidden');
+        activeReviewsEl.innerHTML = reviews.map(r => renderReview(r, true)).join('');
+        activeReviewsCount.textContent = reviews.length;
+        activeReviewsCount.classList.remove('hidden');
+      }
+
+      // Update Followups section
+      const activeFollowupsSection = document.getElementById('active-followups-section');
+      const activeFollowupsEl = document.getElementById('active-followups');
+      const activeFollowupsCount = document.getElementById('active-followups-count');
+
+      if (followups.length === 0) {
+        activeFollowupsSection.classList.add('hidden');
+      } else {
+        activeFollowupsSection.classList.remove('hidden');
+        activeFollowupsEl.innerHTML = followups.map(r => renderReview(r, true)).join('');
+        activeFollowupsCount.textContent = followups.length;
+        activeFollowupsCount.classList.remove('hidden');
+      }
 
       refreshIcons();
       // Note: recent-reviews is managed by updateReviewFilesUI() - don't overwrite here
@@ -885,27 +923,31 @@
     }
 
     function updateMrTrackingUI() {
+      const pendingFixSection = document.getElementById('pending-fix-section');
       const pendingFixEl = document.getElementById('pending-fix-reviews');
+      const pendingApprovalSection = document.getElementById('pending-approval-section');
       const pendingApprovalEl = document.getElementById('pending-approval-reviews');
       const pendingFixCount = document.getElementById('pending-fix-count');
       const pendingApprovalCount = document.getElementById('pending-approval-count');
       const mrLabel = getMrLabel();
 
-      // Pending fix
+      // Pending fix - show/hide section dynamically
       if (currentData.pendingFix.length === 0) {
-        pendingFixEl.innerHTML = `<div class="empty-state">Aucune ${mrLabel} en attente de correctif</div>`;
+        pendingFixSection.classList.add('hidden');
         pendingFixCount.classList.add('hidden');
       } else {
+        pendingFixSection.classList.remove('hidden');
         pendingFixEl.innerHTML = currentData.pendingFix.map(mr => renderMrItem(mr, 'pending-fix')).join('');
         pendingFixCount.textContent = currentData.pendingFix.length;
         pendingFixCount.classList.remove('hidden');
       }
 
-      // Pending approval
+      // Pending approval - show/hide section dynamically
       if (currentData.pendingApproval.length === 0) {
-        pendingApprovalEl.innerHTML = `<div class="empty-state">Aucune ${mrLabel} prête pour approbation</div>`;
+        pendingApprovalSection.classList.add('hidden');
         pendingApprovalCount.classList.add('hidden');
       } else {
+        pendingApprovalSection.classList.remove('hidden');
         pendingApprovalEl.innerHTML = currentData.pendingApproval.map(mr => renderMrItem(mr, 'pending-approval')).join('');
         pendingApprovalCount.textContent = currentData.pendingApproval.length;
         pendingApprovalCount.classList.remove('hidden');
@@ -918,9 +960,9 @@
       if (!currentProjectPath) {
         currentData.pendingFix = [];
         currentData.pendingApproval = [];
-        // Update empty states with generic wording when no project loaded
-        document.getElementById('pending-fix-reviews').innerHTML = '<div class="empty-state">Charger un projet</div>';
-        document.getElementById('pending-approval-reviews').innerHTML = '<div class="empty-state">Charger un projet</div>';
+        // Hide sections when no project loaded
+        document.getElementById('pending-fix-section').classList.add('hidden');
+        document.getElementById('pending-approval-section').classList.add('hidden');
         return;
       }
 

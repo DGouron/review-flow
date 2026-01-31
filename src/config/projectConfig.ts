@@ -13,6 +13,7 @@ export interface ProjectConfig {
   reviewSkill: string;
   reviewFollowupSkill: string;
   agents?: AgentDefinition[];
+  followupAgents?: AgentDefinition[];
 }
 
 /**
@@ -72,6 +73,15 @@ export function loadProjectConfig(localPath: string): ProjectConfig | undefined 
     }
   }
 
+  // Validate followupAgents if present
+  if ('followupAgents' in parsed && parsed.followupAgents !== undefined) {
+    if (!validateAgents(parsed.followupAgents)) {
+      throw new Error(
+        'Invalid followupAgents format: must be array of { name: string, displayName: string }'
+      );
+    }
+  }
+
   return {
     github: Boolean(parsed.github),
     gitlab: Boolean(parsed.gitlab),
@@ -79,6 +89,7 @@ export function loadProjectConfig(localPath: string): ProjectConfig | undefined 
     reviewSkill: String(parsed.reviewSkill),
     reviewFollowupSkill: String(parsed.reviewFollowupSkill),
     agents: parsed.agents as AgentDefinition[] | undefined,
+    followupAgents: parsed.followupAgents as AgentDefinition[] | undefined,
   };
 }
 
@@ -89,6 +100,18 @@ export function getProjectAgents(localPath: string): AgentDefinition[] | undefin
   try {
     const config = loadProjectConfig(localPath);
     return config?.agents;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Get followup agents from project config or undefined for defaults
+ */
+export function getFollowupAgents(localPath: string): AgentDefinition[] | undefined {
+  try {
+    const config = loadProjectConfig(localPath);
+    return config?.followupAgents;
   } catch {
     return undefined;
   }
