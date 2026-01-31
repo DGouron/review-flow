@@ -211,11 +211,44 @@ h1 { font-size: 1.75rem; font-weight: 600; }
 }
 
 .section-header .badge-count {
-  margin-left: auto;
   background: rgba(239, 68, 68, 0.2);
   color: #ef4444;
   padding: 0.125rem 0.5rem;
   border-radius: 9999px;
+}
+
+.section-header .btn-sync {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #a1a1aa;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section-header .btn-sync:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #e4e4e7;
+}
+
+.section-header .btn-sync:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.section-header .btn-sync [data-lucide] {
+  width: 14px;
+  height: 14px;
+}
+
+.section-header .btn-sync .spinning {
+  animation: spin 1s linear infinite;
   font-size: 0.75rem;
 }
 

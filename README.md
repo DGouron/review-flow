@@ -277,14 +277,42 @@ description: Code review skill for frontend projects
 [Your review instructions for Claude...]
 ```
 
-### Example Skills
+### Templates
 
-See the `examples/` directory:
+See the `templates/` directory for ready-to-use templates:
 
-- `examples/skills/review-example/` - Basic code review skill
-- `examples/skills/review-followup-example/` - Follow-up review skill
-- `examples/skills/TEMPLATE.md` - Skill template
-- `examples/config.example.json` - Example project config
+| File | Description |
+|------|-------------|
+| `config.json.template` | Project configuration with agents |
+| `SKILL.md.template` | Review skill template with all markers |
+| `SETUP.md` | Complete setup instructions |
+
+#### Quick Setup
+
+```bash
+# 1. Copy config template
+cp templates/config.json.template /path/to/project/.claude/reviews/config.json
+
+# 2. Copy skill template
+mkdir -p /path/to/project/.claude/skills/review-front
+cp templates/SKILL.md.template /path/to/project/.claude/skills/review-front/SKILL.md
+
+# 3. Customize both files
+```
+
+### Stats Parsing
+
+For accurate review statistics, your skill must emit a stats line:
+
+```
+[REVIEW_STATS:blocking=1:warnings=2:suggestions=3:score=7.5]
+```
+
+This ensures the dashboard correctly tracks:
+- Number of blocking issues
+- Number of warnings/important issues
+- Number of suggestions
+- Global review score
 
 ---
 

@@ -566,6 +566,49 @@ async function main() {
     }
   });
 
+  // Sync threads from GitLab for all active MRs
+  server.post('/api/mr-tracking/sync', async (request, reply) => {
+    const body = request.body as { projectPath?: string; mrId?: string };
+    const { projectPath, mrId } = body;
+
+    if (!projectPath) {
+      reply.code(400);
+      return { success: false, error: 'projectPath requis' };
+    }
+
+    if (!projectPath.startsWith('/') || projectPath.includes('..')) {
+      reply.code(400);
+      return { success: false, error: 'Chemin invalide' };
+    }
+
+    try {
+      const { syncAllThreads, syncSingleMrThreads, loadMrTracking } = await import('./services/mrTrackingService.js');
+
+      if (mrId) {
+        // Sync single MR/PR
+        const mr = syncSingleMrThreads(projectPath, mrId);
+        if (mr) {
+          logInfo('MR/PR synced', { mrId, openThreads: mr.openThreads, state: mr.state });
+          return { success: true, mr };
+        } else {
+          reply.code(404);
+          return { success: false, error: 'MR/PR non trouvée' };
+        }
+      } else {
+        // Sync all active MRs/PRs (both GitLab and GitHub)
+        await syncAllThreads(projectPath);
+        const data = loadMrTracking(projectPath);
+        logInfo('All MRs/PRs synced', { count: data.mrs.length });
+        return { success: true, mrs: data.mrs };
+      }
+    } catch (err) {
+      const error = err as Error;
+      logError('Sync failed', error);
+      reply.code(500);
+      return { success: false, error: error.message };
+    }
+  });
+
   // Project config endpoint - load config from project's .claude/reviews/config.json
   server.get('/api/project-config', async (request, reply) => {
     const query = request.query as { path?: string };
