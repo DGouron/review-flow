@@ -22,6 +22,9 @@ Thumbs.db
 *.log
 logs/
 
+# Test coverage
+coverage/
+
 # Auto Claude data directory
 .auto-claude/
 
@@ -33,4 +36,6 @@ logs/
 .security-key
 logs/security/
 .claude/skills
+.claude/memory
+.claude/backlog
 CLAUDE.md
