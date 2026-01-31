@@ -15,6 +15,7 @@ import {
   recordMrPush,
   trackMrAssignment,
   recordReviewCompletion,
+  syncSingleMrThreads,
 } from '../services/mrTrackingService.js';
 import { loadProjectConfig } from '../config/projectConfig.js';
 import { parseReviewOutput } from '../services/statsService.js';
@@ -136,6 +137,9 @@ export async function handleGitLabWebhook(
                 }
               );
 
+              // Sync threads from GitLab to get real state after followup closes threads
+              const mrId = `gitlab-${j.projectPath}-${j.mrNumber}`;
+              const updatedMr = syncSingleMrThreads(j.localPath, mrId);
               logger.info(
                 {
                   mrNumber: j.mrNumber,
@@ -144,8 +148,10 @@ export async function handleGitLabWebhook(
                   warnings: parsed.warnings,
                   suggestions: parsed.suggestions,
                   durationMs: result.durationMs,
+                  openThreads: updatedMr?.openThreads,
+                  state: updatedMr?.state,
                 },
-                'Followup stats recorded'
+                'Followup stats recorded and threads synced'
               );
 
               sendNotification('Review followup terminée', `MR !${j.mrNumber} - ${j.projectPath}`, logger);
