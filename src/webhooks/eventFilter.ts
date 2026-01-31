@@ -202,6 +202,34 @@ export function filterGitLabMrUpdate(event: GitLabMergeRequestEvent): FilterResu
 }
 
 /**
+ * Check if a GitLab MR was closed (not merged)
+ * Returns info to clean up tracking
+ */
+export function filterGitLabMrClose(event: GitLabMergeRequestEvent): FilterResult {
+  const mr = event.object_attributes;
+
+  // Check if action is "close" (MR closed without merging)
+  if (mr.action !== 'close') {
+    return { shouldProcess: false, reason: `Action is ${mr.action}, not close` };
+  }
+
+  // Verify state is closed
+  if (mr.state !== 'closed') {
+    return { shouldProcess: false, reason: `State is ${mr.state}, not closed` };
+  }
+
+  return {
+    shouldProcess: true,
+    reason: 'MR was closed',
+    mrNumber: mr.iid,
+    projectPath: event.project.path_with_namespace,
+    mrUrl: mr.url,
+    sourceBranch: mr.source_branch,
+    targetBranch: mr.target_branch,
+  };
+}
+
+/**
  * Filter GitHub PR events
  * Returns true if we should trigger a review
  */
@@ -239,6 +267,34 @@ export function filterGitHubEvent(event: GitHubPullRequestEvent): FilterResult {
   return {
     shouldProcess: true,
     reason: `${myUsername} was requested as reviewer`,
+    mrNumber: pr.number,
+    projectPath: event.repository.full_name,
+    mrUrl: pr.html_url,
+    sourceBranch: pr.head.ref,
+    targetBranch: pr.base.ref,
+  };
+}
+
+/**
+ * Check if a GitHub PR was closed (not merged)
+ * Returns info to clean up tracking
+ */
+export function filterGitHubPrClose(event: GitHubPullRequestEvent): FilterResult {
+  const pr = event.pull_request;
+
+  // Check if action is "closed"
+  if (event.action !== 'closed') {
+    return { shouldProcess: false, reason: `Action is ${event.action}, not closed` };
+  }
+
+  // Verify state is closed
+  if (pr.state !== 'closed') {
+    return { shouldProcess: false, reason: `State is ${pr.state}, not closed` };
+  }
+
+  return {
+    shouldProcess: true,
+    reason: 'PR was closed',
     mrNumber: pr.number,
     projectPath: event.repository.full_name,
     mrUrl: pr.html_url,

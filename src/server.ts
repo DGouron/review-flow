@@ -603,7 +603,7 @@ async function main() {
       }
     } catch (err) {
       const error = err as Error;
-      logError('Sync failed', error);
+      logError('Sync failed', { error: error.message });
       reply.code(500);
       return { success: false, error: error.message };
     }
