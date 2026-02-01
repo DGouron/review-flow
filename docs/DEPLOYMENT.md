@@ -12,7 +12,7 @@ URL temporaire qui change à chaque redémarrage.
 
 ```bash
 # Terminal 1 : Serveur
-cd ~/Documents/Projets/claude-review-automation
+cd ~/claude-review-automation
 npm run build
 npm start
 
@@ -38,7 +38,7 @@ cloudflared tunnel create claude-review
 
 ```bash
 # Créer l'entrée DNS
-cloudflared tunnel route dns claude-review review.ton-domaine.com
+cloudflared tunnel route dns claude-review review.your-domain.com
 ```
 
 ### 3. Configuration cloudflared
@@ -47,11 +47,11 @@ Créer `~/.cloudflared/config.yml` :
 
 ```yaml
 tunnel: <TUNNEL_ID>
-credentials-file: /home/damien/.cloudflared/<TUNNEL_ID>.json
+credentials-file: /home/YOUR_USER/.cloudflared/<TUNNEL_ID>.json
 
 ingress:
-  - hostname: review.ton-domaine.com
-    service: http://localhost:3847
+  - hostname: review.your-domain.com
+    service: http://localhost:3000
   - service: http_status:404
 ```
 
@@ -82,7 +82,7 @@ journalctl -u claude-review-server -f
 journalctl -u cloudflared-tunnel -f
 
 # Test endpoint
-curl https://review.ton-domaine.com/health
+curl https://review.your-domain.com/health
 ```
 
 ## Mise à jour
@@ -92,7 +92,7 @@ curl https://review.ton-domaine.com/health
 sudo systemctl stop claude-review-server
 
 # Mettre à jour
-cd ~/Documents/Projets/claude-review-automation
+cd ~/claude-review-automation
 git pull
 npm install
 npm run build

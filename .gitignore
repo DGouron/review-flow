@@ -43,6 +43,8 @@ CLAUDE.md
 # Personal configuration (use *.example.* as templates)
 config.json
 setup/
+scripts/
+claude-review.desktop
 
 # Private keys and certificates
 *.pem

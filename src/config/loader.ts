@@ -167,12 +167,12 @@ export function findRepositoryByRemoteUrl(remoteUrl: string): RepositoryConfig |
 export function findRepositoryByProjectPath(projectPath: string): RepositoryConfig | undefined {
   const config = loadConfig();
 
-  // GitLab sends project path like "mentor-goal/main-app-v3"
+  // GitLab sends project path like "org-name/project-name"
   const normalizedPath = projectPath.toLowerCase();
 
   return config.repositories.find(repo => {
     if (!repo.enabled) return false;
-    // Extract path from URL: https://gitlab.com/mentor-goal/main-app-v3 -> mentor-goal/main-app-v3
+    // Extract path from URL: https://gitlab.com/org-name/project-name -> org-name/project-name
     const urlPath = repo.remoteUrl
       .replace(/^https?:\/\/[^/]+\//, '')
       .replace(/\.git$/, '')
