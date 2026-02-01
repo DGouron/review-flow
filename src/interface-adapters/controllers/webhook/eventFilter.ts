@@ -1,4 +1,7 @@
 import { loadConfig } from '../../../config/loader.js';
+import type { GitHubPullRequestEvent } from '../../../entities/github/githubPullRequestEvent.guard.js';
+
+export type { GitHubPullRequestEvent };
 
 // GitLab MR Event types
 export interface GitLabMergeRequestEvent {
@@ -38,55 +41,20 @@ export interface GitLabMergeRequestEvent {
   };
 }
 
-// GitHub PR Event types
-export interface GitHubPullRequestEvent {
-  action: string;
-  number: number;
-  pull_request: {
-    number: number;
-    title: string;
-    body?: string;
-    state: 'open' | 'closed';
-    draft: boolean;
-    html_url: string;
-    head: {
-      ref: string;
-    };
-    base: {
-      ref: string;
-    };
-    requested_reviewers: Array<{
-      login: string;
-    }>;
-  };
-  requested_reviewer?: {
-    login: string;
-  };
-  label?: {
-    name: string;
-  };
-  repository: {
-    full_name: string;
-    html_url: string;
-    clone_url: string;
-  };
-  sender: {
-    login: string;
-  };
-}
-
 export const REVIEW_TRIGGER_LABEL = 'needs-review';
 
-export interface FilterResult {
-  shouldProcess: boolean;
-  reason: string;
-  mrNumber?: number;
-  projectPath?: string;
-  mrUrl?: string;
-  sourceBranch?: string;
-  targetBranch?: string;
-  isFollowup?: boolean;
-}
+export type FilterResult =
+  | { shouldProcess: false; reason: string }
+  | {
+      shouldProcess: true;
+      reason: string;
+      mergeRequestNumber: number;
+      projectPath: string;
+      mergeRequestUrl: string;
+      sourceBranch: string;
+      targetBranch: string;
+      isFollowup?: boolean;
+    };
 
 // GitLab Push Event type
 export interface GitLabPushEvent {
@@ -141,9 +109,9 @@ export function filterGitLabEvent(event: GitLabMergeRequestEvent): FilterResult 
   return {
     shouldProcess: true,
     reason: `${myUsername} was assigned as reviewer`,
-    mrNumber: mr.iid,
+    mergeRequestNumber: mr.iid,
     projectPath: event.project.path_with_namespace,
-    mrUrl: mr.url,
+    mergeRequestUrl: mr.url,
     sourceBranch: mr.source_branch,
     targetBranch: mr.target_branch,
   };
@@ -197,9 +165,9 @@ export function filterGitLabMrUpdate(event: GitLabMergeRequestEvent): FilterResu
   return {
     shouldProcess: true,
     reason: 'MR was updated (potential new commits)',
-    mrNumber: mr.iid,
+    mergeRequestNumber: mr.iid,
     projectPath: event.project.path_with_namespace,
-    mrUrl: mr.url,
+    mergeRequestUrl: mr.url,
     sourceBranch: mr.source_branch,
     targetBranch: mr.target_branch,
     isFollowup: true,
@@ -226,9 +194,9 @@ export function filterGitLabMrClose(event: GitLabMergeRequestEvent): FilterResul
   return {
     shouldProcess: true,
     reason: 'MR was closed',
-    mrNumber: mr.iid,
+    mergeRequestNumber: mr.iid,
     projectPath: event.project.path_with_namespace,
-    mrUrl: mr.url,
+    mergeRequestUrl: mr.url,
     sourceBranch: mr.source_branch,
     targetBranch: mr.target_branch,
   };
@@ -272,9 +240,9 @@ export function filterGitHubEvent(event: GitHubPullRequestEvent): FilterResult {
   return {
     shouldProcess: true,
     reason: `${myUsername} was requested as reviewer`,
-    mrNumber: pr.number,
+    mergeRequestNumber: pr.number,
     projectPath: event.repository.full_name,
-    mrUrl: pr.html_url,
+    mergeRequestUrl: pr.html_url,
     sourceBranch: pr.head.ref,
     targetBranch: pr.base.ref,
   };
@@ -300,9 +268,9 @@ export function filterGitHubPrClose(event: GitHubPullRequestEvent): FilterResult
   return {
     shouldProcess: true,
     reason: 'PR was closed',
-    mrNumber: pr.number,
+    mergeRequestNumber: pr.number,
     projectPath: event.repository.full_name,
-    mrUrl: pr.html_url,
+    mergeRequestUrl: pr.html_url,
     sourceBranch: pr.head.ref,
     targetBranch: pr.base.ref,
   };
@@ -341,9 +309,9 @@ export function filterGitHubLabelEvent(event: GitHubPullRequestEvent): FilterRes
   return {
     shouldProcess: true,
     reason: `Label "${REVIEW_TRIGGER_LABEL}" was added`,
-    mrNumber: pr.number,
+    mergeRequestNumber: pr.number,
     projectPath: event.repository.full_name,
-    mrUrl: pr.html_url,
+    mergeRequestUrl: pr.html_url,
     sourceBranch: pr.head.ref,
     targetBranch: pr.base.ref,
   };
