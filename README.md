@@ -128,6 +128,15 @@ The tunnel will give you a public URL like `https://xxx-xxx.trycloudflare.com`
 
 4. Click **Add webhook**
 
+### Triggering Reviews on GitHub
+
+Reviews are triggered when:
+
+1. **Someone requests you as a reviewer** - The standard way
+2. **The `needs-review` label is added** - Useful for solo projects (GitHub doesn't allow self-review requests)
+
+> **Tip for solo projects**: Since you can't request yourself as a reviewer on your own PRs, use the `needs-review` label to trigger reviews.
+
 ---
 
 ## Project Configuration
@@ -401,7 +410,8 @@ cloudflared tunnel --url http://localhost:3847
 ### Review doesn't start
 
 Check the logs and verify:
-- You are assigned as **Reviewer** (not Assignee)
+- **GitLab**: You are assigned as **Reviewer** (not Assignee)
+- **GitHub**: Either you are requested as reviewer, OR the `needs-review` label is added
 - MR/PR is not a draft
 - MR/PR is not already merged/closed
 - Project is in `config.json` repositories

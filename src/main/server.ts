@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyWebsocket from '@fastify/websocket';
 import { loadConfig, type Config } from '../config/loader.js';
-import { createDependencies } from './dependencies.js';
+import { createDependencies, type Dependencies } from './dependencies.js';
 import { registerRoutes } from './routes.js';
 import { setupWebSocketCallbacks } from './websocket.js';
 import { initQueue } from '../queue/reviewQueue.js';
@@ -26,19 +26,21 @@ function addRawBodyParser(app: FastifyInstance): void {
   );
 }
 
-export async function createServer(options: ServerOptions = {}): Promise<FastifyInstance> {
-  const config = options.config ?? loadConfig();
-  const deps = createDependencies(config);
-
-  const app = Fastify({
-    logger: false,
-  });
+async function buildServer(deps: Dependencies): Promise<FastifyInstance> {
+  const app = Fastify({ logger: false });
 
   addRawBodyParser(app);
   await app.register(fastifyWebsocket);
   await registerRoutes(app, deps);
 
   return app;
+}
+
+export async function createServer(options: ServerOptions = {}): Promise<FastifyInstance> {
+  const config = options.config ?? loadConfig();
+  const deps = createDependencies(config);
+
+  return buildServer(deps);
 }
 
 export async function startServer(options: ServerOptions = {}): Promise<FastifyInstance> {
@@ -48,13 +50,7 @@ export async function startServer(options: ServerOptions = {}): Promise<FastifyI
   initQueue(deps.logger);
   setupWebSocketCallbacks();
 
-  const app = Fastify({
-    logger: false,
-  });
-
-  addRawBodyParser(app);
-  await app.register(fastifyWebsocket);
-  await registerRoutes(app, deps);
+  const app = await buildServer(deps);
 
   await app.listen({
     port: config.server.port,
