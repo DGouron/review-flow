@@ -216,6 +216,7 @@ export async function handleGitHubWebhook(
       }
 
       // Record review completion with parsed stats
+      // Only blocking issues count as open threads - warnings are informational
       recordReviewCompletion(
         j.localPath,
         `github-${j.projectPath}-${j.mrNumber}`,
@@ -226,7 +227,7 @@ export async function handleGitHubWebhook(
           blocking: parsed.blocking,
           warnings: parsed.warnings,
           suggestions: parsed.suggestions,
-          threadsOpened: parsed.blocking + parsed.warnings,
+          threadsOpened: parsed.blocking, // Only blocking issues open threads
         }
       );
 

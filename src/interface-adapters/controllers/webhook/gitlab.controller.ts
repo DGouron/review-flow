@@ -190,10 +190,15 @@ export async function handleGitLabWebhook(
                 );
               }
 
+              // Sync threads from GitLab FIRST to get real state after followup resolves threads
+              const mrId = `gitlab-${j.projectPath}-${j.mrNumber}`;
+              const updatedMr = syncSingleMrThreads(j.localPath, mrId);
+
               // Record followup completion with parsed stats
+              // Use actual thread counts from GitLab sync, not estimates
               recordReviewCompletion(
                 j.localPath,
-                `gitlab-${j.projectPath}-${j.mrNumber}`,
+                mrId,
                 {
                   type: 'followup',
                   durationMs: result.durationMs,
@@ -201,13 +206,11 @@ export async function handleGitLabWebhook(
                   blocking: parsed.blocking,
                   warnings: parsed.warnings,
                   suggestions: parsed.suggestions,
-                  threadsClosed: parsed.blocking + parsed.warnings > 0 ? 0 : 1, // Assume fixed if no new issues
+                  // Don't estimate threads - syncSingleMrThreads already updated the real count
+                  threadsOpened: 0,
+                  threadsClosed: 0,
                 }
               );
-
-              // Sync threads from GitLab to get real state after followup closes threads
-              const mrId = `gitlab-${j.projectPath}-${j.mrNumber}`;
-              const updatedMr = syncSingleMrThreads(j.localPath, mrId);
               logger.info(
                 {
                   mrNumber: j.mrNumber,
@@ -347,6 +350,7 @@ export async function handleGitLabWebhook(
       }
 
       // Record review completion with parsed stats
+      // Only blocking issues count as open threads - warnings are informational
       recordReviewCompletion(
         j.localPath,
         `gitlab-${j.projectPath}-${j.mrNumber}`,
@@ -357,7 +361,7 @@ export async function handleGitLabWebhook(
           blocking: parsed.blocking,
           warnings: parsed.warnings,
           suggestions: parsed.suggestions,
-          threadsOpened: parsed.blocking + parsed.warnings, // Estimate threads from issues
+          threadsOpened: parsed.blocking, // Only blocking issues open threads
         }
       );
 
