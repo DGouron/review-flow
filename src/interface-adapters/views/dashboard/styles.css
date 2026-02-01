@@ -506,9 +506,9 @@ h1 { font-size: 1.75rem; font-weight: 600; }
 .model-select:hover { border-color: rgba(255, 255, 255, 0.4); }
 .model-select:focus { outline: none; border-color: #f59e0b; }
 .model-select option { background: #1a1a2e; color: #e4e4e7; }
-.card-model { display: flex; flex-direction: column; gap: 0.5rem; min-width: 180px; }
+.card-model { display: flex; flex-direction: column; gap: 0.5rem; }
 .model-label { font-size: 0.75rem; color: #a1a1aa; }
-.model-select { min-width: 165px; }
+.model-select { width: 100%; box-sizing: border-box; }
 
 /* Project config loader */
 .project-loader {
@@ -544,10 +544,16 @@ h1 { font-size: 1.75rem; font-weight: 600; }
 .config-status.loading { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
 .config-info {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   font-size: 0.75rem;
   color: #a1a1aa;
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
 }
 .config-info span { display: flex; align-items: center; gap: 0.25rem; }
 
