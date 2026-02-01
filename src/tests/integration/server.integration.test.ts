@@ -45,4 +45,38 @@ describe('Server Integration', () => {
     expect(body).toHaveProperty('reviews');
     expect(body).toHaveProperty('count');
   });
+
+  it('should respond to logs endpoint', async () => {
+    const response = await server.inject({
+      method: 'GET',
+      url: '/api/logs',
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body);
+    expect(body).toHaveProperty('logs');
+    expect(body).toHaveProperty('count');
+  });
+
+  it('should respond to API info endpoint', async () => {
+    const response = await server.inject({
+      method: 'GET',
+      url: '/api',
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body);
+    expect(body.name).toBe('claude-review-automation');
+    expect(body).toHaveProperty('endpoints');
+  });
+
+  it('should redirect root to dashboard', async () => {
+    const response = await server.inject({
+      method: 'GET',
+      url: '/',
+    });
+
+    expect(response.statusCode).toBe(302);
+    expect(response.headers.location).toBe('/dashboard/');
+  });
 });
