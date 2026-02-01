@@ -62,6 +62,9 @@ export interface GitHubPullRequestEvent {
   requested_reviewer?: {
     login: string;
   };
+  label?: {
+    name: string;
+  };
   repository: {
     full_name: string;
     html_url: string;
@@ -71,6 +74,8 @@ export interface GitHubPullRequestEvent {
     login: string;
   };
 }
+
+export const REVIEW_TRIGGER_LABEL = 'needs-review';
 
 export interface FilterResult {
   shouldProcess: boolean;
@@ -295,6 +300,47 @@ export function filterGitHubPrClose(event: GitHubPullRequestEvent): FilterResult
   return {
     shouldProcess: true,
     reason: 'PR was closed',
+    mrNumber: pr.number,
+    projectPath: event.repository.full_name,
+    mrUrl: pr.html_url,
+    sourceBranch: pr.head.ref,
+    targetBranch: pr.base.ref,
+  };
+}
+
+/**
+ * Filter GitHub PR label events
+ * Returns true if the "needs-review" label was added
+ */
+export function filterGitHubLabelEvent(event: GitHubPullRequestEvent): FilterResult {
+  // Check event action
+  if (event.action !== 'labeled') {
+    return { shouldProcess: false, reason: `Action is ${event.action}, not labeled` };
+  }
+
+  const pr = event.pull_request;
+
+  // PR must be open
+  if (pr.state !== 'open') {
+    return { shouldProcess: false, reason: `PR state is ${pr.state}, not open` };
+  }
+
+  // Skip draft PRs
+  if (pr.draft) {
+    return { shouldProcess: false, reason: 'PR is a draft' };
+  }
+
+  // Check if the added label is our trigger label
+  if (event.label?.name !== REVIEW_TRIGGER_LABEL) {
+    return {
+      shouldProcess: false,
+      reason: `Label "${event.label?.name}" is not "${REVIEW_TRIGGER_LABEL}"`,
+    };
+  }
+
+  return {
+    shouldProcess: true,
+    reason: `Label "${REVIEW_TRIGGER_LABEL}" was added`,
     mrNumber: pr.number,
     projectPath: event.repository.full_name,
     mrUrl: pr.html_url,
