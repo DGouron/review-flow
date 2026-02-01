@@ -1103,6 +1103,7 @@
             switch (message.type) {
               case 'init':
               case 'state':
+                console.log(`[WS] ${message.type}: ${message.activeReviews?.length || 0} active reviews`, message.activeReviews);
                 currentData.activeReviews = message.activeReviews || [];
                 currentData.recentReviews = message.recentReviews || [];
                 updateUI();
@@ -1153,8 +1154,8 @@
       try {
         const response = await fetch(`${API_URL}/status`);
         const data = await response.json();
-        currentData.activeReviews = data.activeReviews || [];
-        currentData.recentReviews = data.recentReviews || [];
+        currentData.activeReviews = data.jobs?.active || [];
+        currentData.recentReviews = data.jobs?.recent || [];
         if (!wsConnected) updateConnectionStatus('online', 'En ligne (polling)');
         updateUI();
       } catch (error) {
