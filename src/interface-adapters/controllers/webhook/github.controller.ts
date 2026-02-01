@@ -10,7 +10,12 @@ import {
   cancelJob,
   type ReviewJob,
 } from '../../../queue/reviewQueue.js';
-import { archiveMr } from '../../../services/mrTrackingService.js';
+import {
+  trackMrAssignment,
+  recordReviewCompletion,
+  archiveMr,
+} from '../../../services/mrTrackingService.js';
+import { parseReviewOutput } from '../../../services/statsService.js';
 import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js';
 
 export async function handleGitHubWebhook(
@@ -117,7 +122,33 @@ export async function handleGitHubWebhook(
     return;
   }
 
-  // 5. Create and enqueue job
+  // 5. Track PR assignment with user info
+  const prTitle = event.pull_request?.title || `PR #${filterResult.mrNumber}`;
+  const assignedBy = {
+    username: event.sender?.login || 'unknown',
+    displayName: event.sender?.login,
+  };
+
+  trackMrAssignment(
+    repoConfig.localPath,
+    {
+      mrNumber: filterResult.mrNumber!,
+      title: prTitle,
+      url: filterResult.mrUrl!,
+      project: filterResult.projectPath!,
+      platform: 'github',
+      sourceBranch: filterResult.sourceBranch!,
+      targetBranch: filterResult.targetBranch!,
+    },
+    assignedBy
+  );
+
+  logger.info(
+    { prNumber: filterResult.mrNumber, assignedBy: assignedBy.username },
+    'PR tracked for review'
+  );
+
+  // 6. Create and enqueue job
   const jobId = createJobId('github', filterResult.projectPath!, filterResult.mrNumber!);
   const job: ReviewJob = {
     id: jobId,
@@ -144,7 +175,7 @@ export async function handleGitHubWebhook(
       updateJobProgress(j.id, progress, event);
     }, signal);
 
-    // Send completion notification
+    // Send completion notification and record stats
     if (result.cancelled) {
       sendNotification(
         'Review annulée',
@@ -152,6 +183,36 @@ export async function handleGitHubWebhook(
         logger
       );
     } else if (result.success) {
+      // Parse review output for stats
+      const parsed = parseReviewOutput(result.stdout);
+
+      // Record review completion with parsed stats
+      recordReviewCompletion(
+        j.localPath,
+        `github-${j.projectPath}-${j.mrNumber}`,
+        {
+          type: 'review',
+          durationMs: result.durationMs,
+          score: parsed.score,
+          blocking: parsed.blocking,
+          warnings: parsed.warnings,
+          suggestions: parsed.suggestions,
+          threadsOpened: parsed.blocking + parsed.warnings,
+        }
+      );
+
+      logger.info(
+        {
+          prNumber: j.mrNumber,
+          score: parsed.score,
+          blocking: parsed.blocking,
+          warnings: parsed.warnings,
+          suggestions: parsed.suggestions,
+          durationMs: result.durationMs,
+        },
+        'Review stats recorded'
+      );
+
       sendNotification(
         'Review terminée',
         `PR #${j.mrNumber} - ${j.projectPath}`,
