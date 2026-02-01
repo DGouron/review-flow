@@ -24,6 +24,7 @@ nohup yarn dev > "$LOG_FILE" 2>&1 &
 # Wait for server to be ready
 echo "Starting server..."
 for i in {1..30}; do
+
     if curl -s "http://localhost:$PORT/health" > /dev/null 2>&1; then
         break
     fi

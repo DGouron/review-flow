@@ -488,7 +488,7 @@
             <div class="review-accordion-toggle" onclick="toggleReviewAccordion('${review.filename}')"><i data-lucide="chevron-right"></i></div>
             <div class="review-status completed" onclick="toggleReviewAccordion('${review.filename}')"></div>
             <div class="review-info" onclick="toggleReviewAccordion('${review.filename}')" style="cursor: pointer;">
-              <div class="review-title">${mrLabel} ${review.mrNumber}</div>
+              <div class="review-title">${mrLabel} ${review.mrNumber}${review.title ? ` - ${review.title}` : ''}</div>
               <div class="review-meta">
                 <span class="badge completed"><i data-lucide="${typeIcon}"></i> ${typeLabel}</span>
                 <span style="margin-left: 0.5rem; color: #71717a;">${sizeKb} KB</span>
@@ -566,7 +566,7 @@
         const response = await fetch(`${API_URL}/api/stats?path=${encodeURIComponent(currentProjectPath)}`);
         const data = await response.json();
 
-        if (data.success && data.summary) {
+        if (data.summary) {
           const s = data.summary;
           const trendIcon = (t) => t === 'up' ? '<i data-lucide="trending-up"></i>' : t === 'down' ? '<i data-lucide="trending-down"></i>' : '<i data-lucide="minus"></i>';
 

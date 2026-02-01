@@ -14,11 +14,15 @@ export class FileSystemReviewFileGateway implements ReviewFileGateway {
         if (!filename.endsWith('.md')) continue;
 
         const filePath = join(reviewsDir, filename);
-        const match = filename.match(/^(\d{4}-\d{2}-\d{2})-MR-([^-]+)-(.+)\.md$/);
+        const match = filename.match(/^(\d{4}-\d{2}-\d{2})-(?:MR|PR)-([^-]+)-(.+)\.md$/);
 
         if (match) {
           try {
-            const fileStat = await stat(filePath);
+            const [fileStat, content] = await Promise.all([
+              stat(filePath),
+              readFile(filePath, 'utf-8'),
+            ]);
+            const title = this.extractTitle(content);
             reviews.push({
               filename,
               path: filePath,
@@ -27,9 +31,10 @@ export class FileSystemReviewFileGateway implements ReviewFileGateway {
               type: match[3],
               size: fileStat.size,
               mtime: fileStat.mtime.toISOString(),
+              title,
             });
           } catch {
-            // Skip files we can't stat
+            // Skip files we can't stat or read
           }
         }
       }
@@ -38,6 +43,12 @@ export class FileSystemReviewFileGateway implements ReviewFileGateway {
     }
 
     return reviews.sort((a, b) => b.mtime.localeCompare(a.mtime));
+  }
+
+  private extractTitle(content: string): string | undefined {
+    const firstLine = content.split('\n')[0];
+    const match = firstLine.match(/^# Code Review - (?:MR|PR) [#!]\d+ \((.+)\)$/);
+    return match?.[1];
   }
 
   async readReview(projectPath: string, filename: string): Promise<string | null> {

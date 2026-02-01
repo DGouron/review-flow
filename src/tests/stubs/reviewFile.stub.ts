@@ -12,8 +12,9 @@ export class InMemoryReviewFileGateway implements ReviewFileGateway {
       if (!path.startsWith(prefix)) continue;
 
       const filename = path.slice(prefix.length);
-      const match = filename.match(/^(\d{4}-\d{2}-\d{2})-MR-([^-]+)-(.+)\.md$/);
+      const match = filename.match(/^(\d{4}-\d{2}-\d{2})-(?:MR|PR)-([^-]+)-(.+)\.md$/);
       if (match) {
+        const title = this.extractTitle(content);
         reviews.push({
           filename,
           path,
@@ -22,6 +23,7 @@ export class InMemoryReviewFileGateway implements ReviewFileGateway {
           type: match[3],
           size: content.length,
           mtime: new Date().toISOString(),
+          title,
         });
       }
     }
@@ -55,5 +57,11 @@ export class InMemoryReviewFileGateway implements ReviewFileGateway {
 
   clear(): void {
     this.files.clear();
+  }
+
+  private extractTitle(content: string): string | undefined {
+    const firstLine = content.split('\n')[0];
+    const match = firstLine.match(/^# Code Review - (?:MR|PR) [#!]\d+ \((.+)\)$/);
+    return match?.[1];
   }
 }

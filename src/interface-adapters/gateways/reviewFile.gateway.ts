@@ -6,6 +6,7 @@ export interface ReviewFileInfo {
   type: string;
   size: number;
   mtime: string;
+  title?: string;
 }
 
 export interface ReviewFileGateway {

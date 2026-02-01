@@ -1,7 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Logger } from 'pino';
 import { verifyGitHubSignature, getGitHubEventType } from '../../../security/verifier.js';
-import { filterGitHubEvent, filterGitHubPrClose, type GitHubPullRequestEvent } from './eventFilter.js';
+import { filterGitHubEvent, filterGitHubLabelEvent, filterGitHubPrClose, type GitHubPullRequestEvent } from './eventFilter.js';
 import { findRepositoryByRemoteUrl } from '../../../config/loader.js';
 import {
   enqueueReview,
@@ -79,8 +79,13 @@ export async function handleGitHubWebhook(
     return;
   }
 
-  // 3b. Filter for review request
-  const filterResult = filterGitHubEvent(event);
+  // 3b. Filter for review request OR label trigger
+  let filterResult = filterGitHubEvent(event);
+
+  // If not a review request, check for label trigger
+  if (!filterResult.shouldProcess) {
+    filterResult = filterGitHubLabelEvent(event);
+  }
 
   logger.info(
     {
