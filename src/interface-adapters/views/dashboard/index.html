@@ -566,7 +566,7 @@
         const response = await fetch(`${API_URL}/api/stats?path=${encodeURIComponent(currentProjectPath)}`);
         const data = await response.json();
 
-        if (data.success && data.summary) {
+        if (data.summary) {
           const s = data.summary;
           const trendIcon = (t) => t === 'up' ? '<i data-lucide="trending-up"></i>' : t === 'down' ? '<i data-lucide="trending-down"></i>' : '<i data-lucide="minus"></i>';
 
