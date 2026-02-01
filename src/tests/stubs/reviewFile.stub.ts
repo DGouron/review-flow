@@ -12,7 +12,7 @@ export class InMemoryReviewFileGateway implements ReviewFileGateway {
       if (!path.startsWith(prefix)) continue;
 
       const filename = path.slice(prefix.length);
-      const match = filename.match(/^(\d{4}-\d{2}-\d{2})-MR-([^-]+)-(.+)\.md$/);
+      const match = filename.match(/^(\d{4}-\d{2}-\d{2})-(?:MR|PR)-([^-]+)-(.+)\.md$/);
       if (match) {
         reviews.push({
           filename,

@@ -46,6 +46,37 @@ describe('Server Integration', () => {
     expect(body).toHaveProperty('count');
   });
 
+  describe('reviews filename validation', () => {
+    it('should accept MR review filename format (GitLab)', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/api/reviews/2024-01-15-MR-42-review.md',
+      });
+
+      expect(response.statusCode).not.toBe(400);
+    });
+
+    it('should accept PR review filename format (GitHub)', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/api/reviews/2024-01-15-PR-123-review.md',
+      });
+
+      expect(response.statusCode).not.toBe(400);
+    });
+
+    it('should reject invalid filename format', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/api/reviews/invalid-filename.md',
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = JSON.parse(response.body);
+      expect(body.error).toContain('Invalid filename');
+    });
+  });
+
   it('should respond to logs endpoint', async () => {
     const response = await server.inject({
       method: 'GET',

@@ -14,7 +14,7 @@ export class FileSystemReviewFileGateway implements ReviewFileGateway {
         if (!filename.endsWith('.md')) continue;
 
         const filePath = join(reviewsDir, filename);
-        const match = filename.match(/^(\d{4}-\d{2}-\d{2})-MR-([^-]+)-(.+)\.md$/);
+        const match = filename.match(/^(\d{4}-\d{2}-\d{2})-(?:MR|PR)-([^-]+)-(.+)\.md$/);
 
         if (match) {
           try {

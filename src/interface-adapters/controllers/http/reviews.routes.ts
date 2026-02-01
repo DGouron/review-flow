@@ -7,7 +7,7 @@ interface ReviewRoutesOptions {
   getRepositories: () => Array<{ localPath: string; enabled: boolean }>;
 }
 
-const FILENAME_REGEX = /^\d{4}-\d{2}-\d{2}-MR-[^/\\]+\.md$/;
+const FILENAME_REGEX = /^\d{4}-\d{2}-\d{2}-(?:MR|PR)-[^/\\]+\.md$/;
 
 export const reviewRoutes: FastifyPluginAsync<ReviewRoutesOptions> = async (
   fastify,
