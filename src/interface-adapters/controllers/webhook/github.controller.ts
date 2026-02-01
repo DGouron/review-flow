@@ -17,6 +17,8 @@ import {
   archiveMr,
 } from '../../../services/mrTrackingService.js';
 import { parseReviewOutput } from '../../../services/statsService.js';
+import { parseThreadActions } from '../../../services/threadActionsParser.js';
+import { executeThreadActions, defaultCommandExecutor } from '../../../services/threadActionsExecutor.js';
 import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js';
 
 export async function handleGitHubWebhook(
@@ -192,6 +194,26 @@ export async function handleGitHubWebhook(
     } else if (result.success) {
       // Parse review output for stats
       const parsed = parseReviewOutput(result.stdout);
+
+      // Execute thread actions from markers
+      const threadActions = parseThreadActions(result.stdout);
+      if (threadActions.length > 0) {
+        const actionResult = await executeThreadActions(
+          threadActions,
+          {
+            platform: 'github',
+            projectPath: j.projectPath,
+            mrNumber: j.mrNumber,
+            localPath: j.localPath,
+          },
+          logger,
+          defaultCommandExecutor
+        );
+        logger.info(
+          { ...actionResult, prNumber: j.mrNumber },
+          'Thread actions executed for review'
+        );
+      }
 
       // Record review completion with parsed stats
       recordReviewCompletion(
