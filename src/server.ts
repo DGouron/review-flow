@@ -138,7 +138,7 @@ async function main() {
 
   // Serve dashboard static files
   await server.register(fastifyStatic, {
-    root: join(__dirname, 'dashboard'),
+    root: join(__dirname, 'interface-adapters', 'views', 'dashboard'),
     prefix: '/dashboard/',
   });
 

@@ -1,11 +1,20 @@
 import { readFileSync, existsSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { join } from 'node:path';
 import { config as loadEnv } from 'dotenv';
 
 loadEnv();
 
-// Types
+// Types for simplified config input
+interface RepositoryInput {
+  name: string;
+  localPath: string;
+  enabled: boolean;
+}
+
+// Types for enriched config
 export interface RepositoryConfig {
+  name: string;
   platform: 'gitlab' | 'github';
   remoteUrl: string;
   localPath: string;
@@ -39,8 +48,66 @@ export interface EnvSecrets {
   githubWebhookSecret: string;
 }
 
-// Validation
-function validateConfig(data: unknown): Config {
+interface ProjectConfig {
+  github?: boolean;
+  gitlab?: boolean;
+  reviewSkill?: string;
+}
+
+function loadProjectConfig(localPath: string): ProjectConfig | null {
+  const configPath = join(localPath, '.claude', 'reviews', 'config.json');
+  if (!existsSync(configPath)) {
+    return null;
+  }
+  try {
+    const content = readFileSync(configPath, 'utf-8');
+    return JSON.parse(content) as ProjectConfig;
+  } catch {
+    return null;
+  }
+}
+
+function getGitRemoteUrl(localPath: string): string | null {
+  try {
+    const result = execSync('git remote get-url origin', {
+      cwd: localPath,
+      encoding: 'utf-8',
+      timeout: 5000,
+    });
+    return result.trim().replace(/\.git$/, '');
+  } catch {
+    return null;
+  }
+}
+
+function enrichRepository(input: RepositoryInput): RepositoryConfig | null {
+  const projectConfig = loadProjectConfig(input.localPath);
+  const remoteUrl = getGitRemoteUrl(input.localPath);
+
+  if (!projectConfig) {
+    console.warn(`[config] Pas de config projet pour ${input.name} (${input.localPath})`);
+    return null;
+  }
+
+  if (!remoteUrl) {
+    console.warn(`[config] Pas de remote git pour ${input.name} (${input.localPath})`);
+    return null;
+  }
+
+  const platform: 'gitlab' | 'github' = projectConfig.gitlab ? 'gitlab' : 'github';
+  const skill = projectConfig.reviewSkill || 'review-code';
+
+  return {
+    name: input.name,
+    platform,
+    remoteUrl,
+    localPath: input.localPath,
+    skill,
+    enabled: input.enabled,
+  };
+}
+
+function validateAndEnrichConfig(data: unknown): Config {
   if (!data || typeof data !== 'object') {
     throw new Error('Configuration invalide : objet attendu');
   }
@@ -80,34 +147,53 @@ function validateConfig(data: unknown): Config {
     throw new Error('Configuration invalide : deduplicationWindowMs invalide');
   }
 
-  // Validate repositories
+  // Validate and enrich repositories
   if (!Array.isArray(config.repositories)) {
     throw new Error('Configuration invalide : repositories doit être un tableau');
   }
+
+  const enrichedRepositories: RepositoryConfig[] = [];
 
   for (const repo of config.repositories) {
     if (!repo || typeof repo !== 'object') {
       throw new Error('Configuration invalide : repository invalide');
     }
     const r = repo as Record<string, unknown>;
-    if (r.platform !== 'gitlab' && r.platform !== 'github') {
-      throw new Error(`Configuration invalide : platform "${r.platform}" non supportée`);
-    }
-    if (typeof r.remoteUrl !== 'string' || !r.remoteUrl) {
-      throw new Error('Configuration invalide : remoteUrl manquant');
+
+    if (typeof r.name !== 'string' || !r.name) {
+      throw new Error('Configuration invalide : name manquant');
     }
     if (typeof r.localPath !== 'string' || !r.localPath) {
       throw new Error('Configuration invalide : localPath manquant');
     }
-    if (typeof r.skill !== 'string' || !r.skill) {
-      throw new Error('Configuration invalide : skill manquant');
-    }
     if (typeof r.enabled !== 'boolean') {
       throw new Error('Configuration invalide : enabled doit être un booléen');
     }
+
+    const input: RepositoryInput = {
+      name: r.name as string,
+      localPath: r.localPath as string,
+      enabled: r.enabled as boolean,
+    };
+
+    const enriched = enrichRepository(input);
+    if (enriched) {
+      enrichedRepositories.push(enriched);
+    }
   }
 
-  return config as unknown as Config;
+  return {
+    server: { port: server.port as number },
+    user: {
+      gitlabUsername: user.gitlabUsername as string,
+      githubUsername: user.githubUsername as string,
+    },
+    queue: {
+      maxConcurrent: queue.maxConcurrent as number,
+      deduplicationWindowMs: queue.deduplicationWindowMs as number,
+    },
+    repositories: enrichedRepositories,
+  };
 }
 
 function loadSecrets(): EnvSecrets {
@@ -139,7 +225,7 @@ export function loadConfig(): Config {
 
   const rawContent = readFileSync(configPath, 'utf-8');
   const parsed = JSON.parse(rawContent);
-  cachedConfig = validateConfig(parsed);
+  cachedConfig = validateAndEnrichConfig(parsed);
 
   return cachedConfig;
 }
@@ -153,7 +239,6 @@ export function loadEnvSecrets(): EnvSecrets {
 export function findRepositoryByRemoteUrl(remoteUrl: string): RepositoryConfig | undefined {
   const config = loadConfig();
 
-  // Normalize URL for comparison (remove .git suffix, trailing slashes)
   const normalizeUrl = (url: string) =>
     url.replace(/\.git$/, '').replace(/\/$/, '').toLowerCase();
 
@@ -167,12 +252,10 @@ export function findRepositoryByRemoteUrl(remoteUrl: string): RepositoryConfig |
 export function findRepositoryByProjectPath(projectPath: string): RepositoryConfig | undefined {
   const config = loadConfig();
 
-  // GitLab sends project path like "org-name/project-name"
   const normalizedPath = projectPath.toLowerCase();
 
   return config.repositories.find(repo => {
     if (!repo.enabled) return false;
-    // Extract path from URL: https://gitlab.com/org-name/project-name -> org-name/project-name
     const urlPath = repo.remoteUrl
       .replace(/^https?:\/\/[^/]+\//, '')
       .replace(/\.git$/, '')
