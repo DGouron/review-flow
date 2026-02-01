@@ -1,4 +1,4 @@
-import type { StatsGateway } from '../../gateways/stats.gateway.js';
+import type { StatsGateway } from '../../interface-adapters/gateways/stats.gateway.js';
 import type { ProjectStats } from '../../services/statsService.js';
 
 export class InMemoryStatsGateway implements StatsGateway {

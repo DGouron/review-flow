@@ -1,8 +1,8 @@
 import { GitLabMergeRequestAdapter } from './gitlabMergeRequest.adapter.js';
 import { GitHubPullRequestAdapter } from './githubPullRequest.adapter.js';
 import type { GitLabMergeRequestEvent, GitHubPullRequestEvent } from '../../webhooks/eventFilter.js';
-import type { ReviewRequest } from '../../domain/reviewRequest/reviewRequest.entity.js';
-import { parseReviewRequest } from '../../domain/reviewRequest/reviewRequest.guard.js';
+import type { ReviewRequest } from '../../entities/reviewRequest/reviewRequest.entity.js';
+import { parseReviewRequest } from '../../entities/reviewRequest/reviewRequest.guard.js';
 
 export class PlatformAdapter {
   private gitlabAdapter = new GitLabMergeRequestAdapter();

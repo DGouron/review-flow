@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { InMemoryStatsGateway } from '../../stubs/stats.stub.js';
-import { ProjectStatsFactory, ReviewStatsFactory } from '../../factories/projectStats.factory.js';
+import { InMemoryStatsGateway } from '../../../stubs/stats.stub.js';
+import { ProjectStatsFactory, ReviewStatsFactory } from '../../../factories/projectStats.factory.js';
 
 describe('StatsGateway', () => {
   describe('loadProjectStats', () => {

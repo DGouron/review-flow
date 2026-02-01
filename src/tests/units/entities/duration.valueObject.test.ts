@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Duration } from '../../../domain/shared/duration.valueObject.js';
+import { Duration } from '../../../entities/shared/duration.valueObject.js';
 
 describe('Duration', () => {
   describe('factory methods', () => {

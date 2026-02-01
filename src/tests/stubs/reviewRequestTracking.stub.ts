@@ -1,7 +1,7 @@
 import type {
   ReviewRequestTrackingGateway,
   Platform,
-} from '../../gateways/reviewRequestTracking.gateway.js';
+} from '../../interface-adapters/gateways/reviewRequestTracking.gateway.js';
 import type { MrTrackingData, TrackedMr, ReviewEvent } from '../../services/mrTrackingService.js';
 
 export class InMemoryReviewRequestTrackingGateway implements ReviewRequestTrackingGateway {

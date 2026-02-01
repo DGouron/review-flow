@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { InMemoryReviewRequestTrackingGateway } from '../../stubs/reviewRequestTracking.stub.js';
+import { InMemoryReviewRequestTrackingGateway } from '../../../stubs/reviewRequestTracking.stub.js';
 import {
   TrackedMrFactory,
   MrTrackingDataFactory,
-} from '../../factories/trackedMr.factory.js';
+} from '../../../factories/trackedMr.factory.js';
 
 describe('ReviewRequestTrackingGateway', () => {
   describe('loadTracking', () => {
