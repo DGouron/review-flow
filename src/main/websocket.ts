@@ -42,6 +42,9 @@ function broadcastLogEntry(log: LogEntry): void {
 
 function broadcastStateChange(): void {
   const jobs = getJobsStatus();
+  const clientCount = Array.from(wsClients).filter(c => c.readyState === 1).length;
+  console.log(`[WS Broadcast] state: ${jobs.active.length} active reviews to ${clientCount} clients`);
+
   const message = JSON.stringify({
     type: 'state',
     activeReviews: jobs.active,
@@ -76,6 +79,7 @@ export async function registerWebSocketRoutes(
     wsClients.add(socket);
 
     const jobs = getJobsStatus();
+    logger.info({ activeCount: jobs.active.length, recentCount: jobs.recent.length }, 'Sending init to new WebSocket client');
     socket.send(JSON.stringify({
       type: 'init',
       activeReviews: jobs.active,

@@ -1,7 +1,8 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Logger } from 'pino';
 import { verifyGitHubSignature, getGitHubEventType } from '../../../security/verifier.js';
-import { filterGitHubEvent, filterGitHubLabelEvent, filterGitHubPrClose, type GitHubPullRequestEvent } from './eventFilter.js';
+import { filterGitHubEvent, filterGitHubLabelEvent, filterGitHubPrClose } from './eventFilter.js';
+import { gitHubPullRequestEventGuard } from '../../../entities/github/githubPullRequestEvent.guard.js';
 import { findRepositoryByRemoteUrl } from '../../../config/loader.js';
 import {
   enqueueReview,
@@ -10,7 +11,12 @@ import {
   cancelJob,
   type ReviewJob,
 } from '../../../queue/reviewQueue.js';
-import { archiveMr } from '../../../services/mrTrackingService.js';
+import {
+  trackMrAssignment,
+  recordReviewCompletion,
+  archiveMr,
+} from '../../../services/mrTrackingService.js';
+import { parseReviewOutput } from '../../../services/statsService.js';
 import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js';
 
 export async function handleGitHubWebhook(
@@ -34,14 +40,20 @@ export async function handleGitHubWebhook(
     return;
   }
 
-  // 3. Parse event
-  const event = request.body as GitHubPullRequestEvent;
+  // 3. Parse and validate event payload
+  const parseResult = gitHubPullRequestEventGuard.safeParse(request.body);
+  if (!parseResult.success) {
+    logger.warn({ errors: parseResult.error }, 'Invalid GitHub webhook payload');
+    reply.status(400).send({ error: 'Invalid webhook payload' });
+    return;
+  }
+  const event = parseResult.data;
 
   // 3a. Check if PR was closed - clean up tracking and cancel any running job
   const closeResult = filterGitHubPrClose(event);
   if (closeResult.shouldProcess) {
-    const projectPath = closeResult.projectPath!;
-    const prNumber = closeResult.mrNumber!;
+    const projectPath = closeResult.projectPath;
+    const prNumber = closeResult.mergeRequestNumber;
     const mrId = `github-${projectPath}-${prNumber}`;
 
     // Find repo config
@@ -117,18 +129,44 @@ export async function handleGitHubWebhook(
     return;
   }
 
-  // 5. Create and enqueue job
-  const jobId = createJobId('github', filterResult.projectPath!, filterResult.mrNumber!);
+  // 5. Track PR assignment with user info
+  const prTitle = event.pull_request?.title || `PR #${filterResult.mergeRequestNumber}`;
+  const assignedBy = {
+    username: event.sender?.login || 'unknown',
+    displayName: event.sender?.login,
+  };
+
+  trackMrAssignment(
+    repoConfig.localPath,
+    {
+      mrNumber: filterResult.mergeRequestNumber,
+      title: prTitle,
+      url: filterResult.mergeRequestUrl,
+      project: filterResult.projectPath,
+      platform: 'github',
+      sourceBranch: filterResult.sourceBranch,
+      targetBranch: filterResult.targetBranch,
+    },
+    assignedBy
+  );
+
+  logger.info(
+    { prNumber: filterResult.mergeRequestNumber, assignedBy: assignedBy.username },
+    'PR tracked for review'
+  );
+
+  // 6. Create and enqueue job
+  const jobId = createJobId('github', filterResult.projectPath, filterResult.mergeRequestNumber);
   const job: ReviewJob = {
     id: jobId,
     platform: 'github',
-    projectPath: filterResult.projectPath!,
+    projectPath: filterResult.projectPath,
     localPath: repoConfig.localPath,
-    mrNumber: filterResult.mrNumber!,
+    mrNumber: filterResult.mergeRequestNumber,
     skill: repoConfig.skill,
-    mrUrl: filterResult.mrUrl!,
-    sourceBranch: filterResult.sourceBranch!,
-    targetBranch: filterResult.targetBranch!,
+    mrUrl: filterResult.mergeRequestUrl,
+    sourceBranch: filterResult.sourceBranch,
+    targetBranch: filterResult.targetBranch,
   };
 
   const enqueued = await enqueueReview(job, async (j, signal) => {
@@ -144,7 +182,7 @@ export async function handleGitHubWebhook(
       updateJobProgress(j.id, progress, event);
     }, signal);
 
-    // Send completion notification
+    // Send completion notification and record stats
     if (result.cancelled) {
       sendNotification(
         'Review annulée',
@@ -152,6 +190,36 @@ export async function handleGitHubWebhook(
         logger
       );
     } else if (result.success) {
+      // Parse review output for stats
+      const parsed = parseReviewOutput(result.stdout);
+
+      // Record review completion with parsed stats
+      recordReviewCompletion(
+        j.localPath,
+        `github-${j.projectPath}-${j.mrNumber}`,
+        {
+          type: 'review',
+          durationMs: result.durationMs,
+          score: parsed.score,
+          blocking: parsed.blocking,
+          warnings: parsed.warnings,
+          suggestions: parsed.suggestions,
+          threadsOpened: parsed.blocking + parsed.warnings,
+        }
+      );
+
+      logger.info(
+        {
+          prNumber: j.mrNumber,
+          score: parsed.score,
+          blocking: parsed.blocking,
+          warnings: parsed.warnings,
+          suggestions: parsed.suggestions,
+          durationMs: result.durationMs,
+        },
+        'Review stats recorded'
+      );
+
       sendNotification(
         'Review terminée',
         `PR #${j.mrNumber} - ${j.projectPath}`,
@@ -170,7 +238,7 @@ export async function handleGitHubWebhook(
     reply.status(202).send({
       status: 'queued',
       jobId,
-      prNumber: filterResult.mrNumber,
+      prNumber: filterResult.mergeRequestNumber,
     });
   } else {
     reply.status(200).send({

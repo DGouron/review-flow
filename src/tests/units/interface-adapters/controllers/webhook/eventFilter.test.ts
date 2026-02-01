@@ -30,8 +30,10 @@ describe('filterGitLabEvent', () => {
 
       expect(result.shouldProcess).toBe(true)
       expect(result.reason).toContain('claude-reviewer')
-      expect(result.mrNumber).toBe(42)
-      expect(result.projectPath).toBe('test-org/test-project')
+      if (result.shouldProcess) {
+        expect(result.mergeRequestNumber).toBe(42)
+        expect(result.projectPath).toBe('test-org/test-project')
+      }
     })
   })
 
@@ -137,7 +139,9 @@ describe('filterGitLabMrUpdate', () => {
       const result = filterGitLabMrUpdate(event)
 
       expect(result.shouldProcess).toBe(true)
-      expect(result.isFollowup).toBe(true)
+      if (result.shouldProcess) {
+        expect(result.isFollowup).toBe(true)
+      }
       expect(result.reason).toContain('updated')
     })
   })
@@ -197,7 +201,9 @@ describe('filterGitLabMrClose', () => {
 
       expect(result.shouldProcess).toBe(true)
       expect(result.reason).toContain('closed')
-      expect(result.mrNumber).toBe(42)
+      if (result.shouldProcess) {
+        expect(result.mergeRequestNumber).toBe(42)
+      }
     })
   })
 
@@ -238,8 +244,10 @@ describe('filterGitHubEvent', () => {
 
       expect(result.shouldProcess).toBe(true)
       expect(result.reason).toContain('claude-reviewer')
-      expect(result.mrNumber).toBe(123)
-      expect(result.projectPath).toBe('test-owner/test-repo')
+      if (result.shouldProcess) {
+        expect(result.mergeRequestNumber).toBe(123)
+        expect(result.projectPath).toBe('test-owner/test-repo')
+      }
     })
   })
 
@@ -305,7 +313,9 @@ describe('filterGitHubPrClose', () => {
 
       expect(result.shouldProcess).toBe(true)
       expect(result.reason).toContain('closed')
-      expect(result.mrNumber).toBe(123)
+      if (result.shouldProcess) {
+        expect(result.mergeRequestNumber).toBe(123)
+      }
     })
   })
 
@@ -342,8 +352,10 @@ describe('filterGitHubLabelEvent', () => {
 
       expect(result.shouldProcess).toBe(true)
       expect(result.reason).toContain(REVIEW_TRIGGER_LABEL)
-      expect(result.mrNumber).toBe(123)
-      expect(result.projectPath).toBe('test-owner/test-repo')
+      if (result.shouldProcess) {
+        expect(result.mergeRequestNumber).toBe(123)
+        expect(result.projectPath).toBe('test-owner/test-repo')
+      }
     })
   })
 
@@ -392,5 +404,21 @@ describe('filterGitHubLabelEvent', () => {
       expect(result.shouldProcess).toBe(false)
       expect(result.reason).toContain('closed')
     })
+  })
+})
+
+describe('FilterResult type narrowing', () => {
+  it('should have all required fields when shouldProcess is true', () => {
+    const event = GitHubEventFactory.createReviewRequestedPr('claude-reviewer')
+
+    const result = filterGitHubEvent(event)
+
+    if (result.shouldProcess) {
+      expect(result.mergeRequestNumber).toBe(123)
+      expect(result.projectPath).toBe('test-owner/test-repo')
+      expect(result.mergeRequestUrl).toBeDefined()
+      expect(result.sourceBranch).toBeDefined()
+      expect(result.targetBranch).toBeDefined()
+    }
   })
 })
