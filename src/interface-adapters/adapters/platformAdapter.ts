@@ -1,6 +1,6 @@
 import { GitLabMergeRequestAdapter } from './gitlabMergeRequest.adapter.js';
 import { GitHubPullRequestAdapter } from './githubPullRequest.adapter.js';
-import type { GitLabMergeRequestEvent, GitHubPullRequestEvent } from '../../webhooks/eventFilter.js';
+import type { GitLabMergeRequestEvent, GitHubPullRequestEvent } from '../controllers/webhook/eventFilter.js';
 import type { ReviewRequest } from '../../entities/reviewRequest/reviewRequest.entity.js';
 import { parseReviewRequest } from '../../entities/reviewRequest/reviewRequest.guard.js';
 

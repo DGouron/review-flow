@@ -1,4 +1,4 @@
-import { loadConfig } from '../config/loader.js';
+import { loadConfig } from '../../../config/loader.js';
 
 // GitLab MR Event types
 export interface GitLabMergeRequestEvent {

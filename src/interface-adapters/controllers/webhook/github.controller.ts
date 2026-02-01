@@ -1,17 +1,17 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Logger } from 'pino';
-import { verifyGitHubSignature, getGitHubEventType } from '../security/verifier.js';
+import { verifyGitHubSignature, getGitHubEventType } from '../../../security/verifier.js';
 import { filterGitHubEvent, filterGitHubPrClose, type GitHubPullRequestEvent } from './eventFilter.js';
-import { findRepositoryByRemoteUrl } from '../config/loader.js';
+import { findRepositoryByRemoteUrl } from '../../../config/loader.js';
 import {
   enqueueReview,
   createJobId,
   updateJobProgress,
   cancelJob,
   type ReviewJob,
-} from '../queue/reviewQueue.js';
-import { archiveMr } from '../services/mrTrackingService.js';
-import { invokeClaudeReview, sendNotification } from '../claude/invoker.js';
+} from '../../../queue/reviewQueue.js';
+import { archiveMr } from '../../../services/mrTrackingService.js';
+import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js';
 
 export async function handleGitHubWebhook(
   request: FastifyRequest,

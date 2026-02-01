@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import type { ReviewFileGateway } from '../gateways/reviewFile.gateway.js';
+import type { ReviewFileGateway } from '../interface-adapters/gateways/reviewFile.gateway.js';
 import { cancelJob } from '../queue/reviewQueue.js';
 
 interface ReviewRoutesOptions {

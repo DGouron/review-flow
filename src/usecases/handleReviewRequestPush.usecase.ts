@@ -1,5 +1,5 @@
 import type { Logger } from 'pino';
-import type { ReviewRequestTrackingGateway, Platform } from '../gateways/reviewRequestTracking.gateway.js';
+import type { ReviewRequestTrackingGateway, Platform } from '../interface-adapters/gateways/reviewRequestTracking.gateway.js';
 import type { ReviewQueuePort, TriggerReviewParams } from './triggerReview.usecase.js';
 import { triggerReview } from './triggerReview.usecase.js';
 

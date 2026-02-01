@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import type { StatsGateway } from '../gateways/stats.gateway.js';
+import type { StatsGateway } from '../interface-adapters/gateways/stats.gateway.js';
 import { getStatsSummary } from '../services/statsService.js';
 
 interface StatsRoutesOptions {

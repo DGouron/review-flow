@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import type { ReviewRequestTrackingGateway } from '../gateways/reviewRequestTracking.gateway.js';
+import type { ReviewRequestTrackingGateway } from '../interface-adapters/gateways/reviewRequestTracking.gateway.js';
 import {
   getPendingFixMrs,
   getPendingApprovalMrs,
@@ -26,7 +26,7 @@ function validateProjectPath(path: string | undefined): { valid: false; error: s
 
 export const mrTrackingRoutes: FastifyPluginAsync<MrTrackingRoutesOptions> = async (
   fastify,
-  opts
+  _opts
 ) => {
   fastify.get('/api/mr-tracking', async (request, reply) => {
     const query = request.query as { path?: string };

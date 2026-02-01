@@ -1,4 +1,4 @@
-import type { GitLabMergeRequestEvent, GitLabPushEvent } from '../../webhooks/eventFilter.js'
+import type { GitLabMergeRequestEvent, GitLabPushEvent } from '../../interface-adapters/controllers/webhook/eventFilter.js'
 
 type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P]

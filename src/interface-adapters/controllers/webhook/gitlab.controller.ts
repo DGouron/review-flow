@@ -1,16 +1,16 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Logger } from 'pino';
-import { verifyGitLabSignature, getGitLabEventType } from '../security/verifier.js';
+import { verifyGitLabSignature, getGitLabEventType } from '../../../security/verifier.js';
 import { filterGitLabEvent, filterGitLabMrUpdate, filterGitLabMrClose, type GitLabMergeRequestEvent } from './eventFilter.js';
-import { findRepositoryByProjectPath } from '../config/loader.js';
+import { findRepositoryByProjectPath } from '../../../config/loader.js';
 import {
   enqueueReview,
   createJobId,
   updateJobProgress,
   cancelJob,
   type ReviewJob,
-} from '../queue/reviewQueue.js';
-import { invokeClaudeReview, sendNotification } from '../claude/invoker.js';
+} from '../../../queue/reviewQueue.js';
+import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js';
 import {
   needsFollowupReview,
   recordMrPush,
@@ -18,9 +18,9 @@ import {
   recordReviewCompletion,
   syncSingleMrThreads,
   archiveMr,
-} from '../services/mrTrackingService.js';
-import { loadProjectConfig } from '../config/projectConfig.js';
-import { parseReviewOutput } from '../services/statsService.js';
+} from '../../../services/mrTrackingService.js';
+import { loadProjectConfig } from '../../../config/projectConfig.js';
+import { parseReviewOutput } from '../../../services/statsService.js';
 
 export async function handleGitLabWebhook(
   request: FastifyRequest,

@@ -7,18 +7,6 @@ function getStatsPath(projectPath: string): string {
   return join(projectPath, '.claude', 'reviews', 'stats.json');
 }
 
-function createEmptyStats(): ProjectStats {
-  return {
-    totalReviews: 0,
-    totalDuration: 0,
-    averageScore: null,
-    averageDuration: 0,
-    totalBlocking: 0,
-    totalWarnings: 0,
-    reviews: [],
-    lastUpdated: new Date().toISOString(),
-  };
-}
 
 export class FileSystemStatsGateway implements StatsGateway {
   loadProjectStats(projectPath: string): ProjectStats | null {

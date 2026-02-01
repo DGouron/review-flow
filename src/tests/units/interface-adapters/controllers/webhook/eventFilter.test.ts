@@ -1,8 +1,8 @@
-import { vi, beforeEach } from 'vitest'
-import { GitLabEventFactory } from '../../factories/gitLabEvent.factory.js'
-import { GitHubEventFactory } from '../../factories/gitHubEvent.factory.js'
+import { vi } from 'vitest'
+import { GitLabEventFactory } from '../../../../factories/gitLabEvent.factory.js'
+import { GitHubEventFactory } from '../../../../factories/gitHubEvent.factory.js'
 
-vi.mock('../../../config/loader.js', () => ({
+vi.mock('../../../../../config/loader.js', () => ({
   loadConfig: vi.fn(() => ({
     user: {
       gitlabUsername: 'claude-reviewer',
@@ -17,7 +17,7 @@ import {
   filterGitLabMrClose,
   filterGitHubEvent,
   filterGitHubPrClose,
-} from '../../../webhooks/eventFilter.js'
+} from '../../../../../interface-adapters/controllers/webhook/eventFilter.js'
 
 describe('filterGitLabEvent', () => {
   describe('when MR is opened with reviewer assigned', () => {

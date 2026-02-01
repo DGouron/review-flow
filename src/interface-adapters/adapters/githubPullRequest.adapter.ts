@@ -1,4 +1,4 @@
-import type { GitHubPullRequestEvent } from '../../webhooks/eventFilter.js';
+import type { GitHubPullRequestEvent } from '../controllers/webhook/eventFilter.js';
 import type { ReviewRequest, ReviewRequestState } from '../../entities/reviewRequest/reviewRequest.entity.js';
 
 function mapGitHubState(state: string, merged?: boolean): ReviewRequestState {
