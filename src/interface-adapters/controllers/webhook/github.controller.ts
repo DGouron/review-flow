@@ -1,7 +1,8 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Logger } from 'pino';
 import { verifyGitHubSignature, getGitHubEventType } from '../../../security/verifier.js';
-import { filterGitHubEvent, filterGitHubLabelEvent, filterGitHubPrClose, type GitHubPullRequestEvent } from './eventFilter.js';
+import { filterGitHubEvent, filterGitHubLabelEvent, filterGitHubPrClose } from './eventFilter.js';
+import { gitHubPullRequestEventGuard } from '../../../entities/github/githubPullRequestEvent.guard.js';
 import { findRepositoryByRemoteUrl } from '../../../config/loader.js';
 import {
   enqueueReview,
@@ -39,14 +40,20 @@ export async function handleGitHubWebhook(
     return;
   }
 
-  // 3. Parse event
-  const event = request.body as GitHubPullRequestEvent;
+  // 3. Parse and validate event payload
+  const parseResult = gitHubPullRequestEventGuard.safeParse(request.body);
+  if (!parseResult.success) {
+    logger.warn({ errors: parseResult.error }, 'Invalid GitHub webhook payload');
+    reply.status(400).send({ error: 'Invalid webhook payload' });
+    return;
+  }
+  const event = parseResult.data;
 
   // 3a. Check if PR was closed - clean up tracking and cancel any running job
   const closeResult = filterGitHubPrClose(event);
   if (closeResult.shouldProcess) {
-    const projectPath = closeResult.projectPath!;
-    const prNumber = closeResult.mrNumber!;
+    const projectPath = closeResult.projectPath;
+    const prNumber = closeResult.mergeRequestNumber;
     const mrId = `github-${projectPath}-${prNumber}`;
 
     // Find repo config
@@ -123,7 +130,7 @@ export async function handleGitHubWebhook(
   }
 
   // 5. Track PR assignment with user info
-  const prTitle = event.pull_request?.title || `PR #${filterResult.mrNumber}`;
+  const prTitle = event.pull_request?.title || `PR #${filterResult.mergeRequestNumber}`;
   const assignedBy = {
     username: event.sender?.login || 'unknown',
     displayName: event.sender?.login,
@@ -132,34 +139,34 @@ export async function handleGitHubWebhook(
   trackMrAssignment(
     repoConfig.localPath,
     {
-      mrNumber: filterResult.mrNumber!,
+      mrNumber: filterResult.mergeRequestNumber,
       title: prTitle,
-      url: filterResult.mrUrl!,
-      project: filterResult.projectPath!,
+      url: filterResult.mergeRequestUrl,
+      project: filterResult.projectPath,
       platform: 'github',
-      sourceBranch: filterResult.sourceBranch!,
-      targetBranch: filterResult.targetBranch!,
+      sourceBranch: filterResult.sourceBranch,
+      targetBranch: filterResult.targetBranch,
     },
     assignedBy
   );
 
   logger.info(
-    { prNumber: filterResult.mrNumber, assignedBy: assignedBy.username },
+    { prNumber: filterResult.mergeRequestNumber, assignedBy: assignedBy.username },
     'PR tracked for review'
   );
 
   // 6. Create and enqueue job
-  const jobId = createJobId('github', filterResult.projectPath!, filterResult.mrNumber!);
+  const jobId = createJobId('github', filterResult.projectPath, filterResult.mergeRequestNumber);
   const job: ReviewJob = {
     id: jobId,
     platform: 'github',
-    projectPath: filterResult.projectPath!,
+    projectPath: filterResult.projectPath,
     localPath: repoConfig.localPath,
-    mrNumber: filterResult.mrNumber!,
+    mrNumber: filterResult.mergeRequestNumber,
     skill: repoConfig.skill,
-    mrUrl: filterResult.mrUrl!,
-    sourceBranch: filterResult.sourceBranch!,
-    targetBranch: filterResult.targetBranch!,
+    mrUrl: filterResult.mergeRequestUrl,
+    sourceBranch: filterResult.sourceBranch,
+    targetBranch: filterResult.targetBranch,
   };
 
   const enqueued = await enqueueReview(job, async (j, signal) => {
@@ -231,7 +238,7 @@ export async function handleGitHubWebhook(
     reply.status(202).send({
       status: 'queued',
       jobId,
-      prNumber: filterResult.mrNumber,
+      prNumber: filterResult.mergeRequestNumber,
     });
   } else {
     reply.status(200).send({
