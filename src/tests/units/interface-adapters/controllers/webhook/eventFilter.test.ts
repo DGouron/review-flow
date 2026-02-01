@@ -16,7 +16,9 @@ import {
   filterGitLabMrUpdate,
   filterGitLabMrClose,
   filterGitHubEvent,
+  filterGitHubLabelEvent,
   filterGitHubPrClose,
+  REVIEW_TRIGGER_LABEL,
 } from '../../../../../interface-adapters/controllers/webhook/eventFilter.js'
 
 describe('filterGitLabEvent', () => {
@@ -327,6 +329,68 @@ describe('filterGitHubPrClose', () => {
       const result = filterGitHubPrClose(event)
 
       expect(result.shouldProcess).toBe(false)
+    })
+  })
+})
+
+describe('filterGitHubLabelEvent', () => {
+  describe('when needs-review label is added', () => {
+    it('should process when needs-review label is added', () => {
+      const event = GitHubEventFactory.createLabeledPr(REVIEW_TRIGGER_LABEL)
+
+      const result = filterGitHubLabelEvent(event)
+
+      expect(result.shouldProcess).toBe(true)
+      expect(result.reason).toContain(REVIEW_TRIGGER_LABEL)
+      expect(result.mrNumber).toBe(123)
+      expect(result.projectPath).toBe('test-owner/test-repo')
+    })
+  })
+
+  describe('when different label is added', () => {
+    it('should not process other labels', () => {
+      const event = GitHubEventFactory.createLabeledPr('bug')
+
+      const result = filterGitHubLabelEvent(event)
+
+      expect(result.shouldProcess).toBe(false)
+      expect(result.reason).toContain('bug')
+      expect(result.reason).toContain(REVIEW_TRIGGER_LABEL)
+    })
+  })
+
+  describe('when action is not labeled', () => {
+    it('should not process non-labeled actions', () => {
+      const event = GitHubEventFactory.createPullRequestEvent({ action: 'opened' })
+
+      const result = filterGitHubLabelEvent(event)
+
+      expect(result.shouldProcess).toBe(false)
+      expect(result.reason).toContain('opened')
+    })
+  })
+
+  describe('when PR is draft', () => {
+    it('should not process draft PRs', () => {
+      const event = GitHubEventFactory.createLabeledPr(REVIEW_TRIGGER_LABEL)
+      event.pull_request.draft = true
+
+      const result = filterGitHubLabelEvent(event)
+
+      expect(result.shouldProcess).toBe(false)
+      expect(result.reason).toContain('draft')
+    })
+  })
+
+  describe('when PR is closed', () => {
+    it('should not process closed PRs', () => {
+      const event = GitHubEventFactory.createLabeledPr(REVIEW_TRIGGER_LABEL)
+      event.pull_request.state = 'closed'
+
+      const result = filterGitHubLabelEvent(event)
+
+      expect(result.shouldProcess).toBe(false)
+      expect(result.reason).toContain('closed')
     })
   })
 })

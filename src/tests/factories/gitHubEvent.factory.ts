@@ -98,4 +98,10 @@ export class GitHubEventFactory {
       },
     })
   }
+
+  static createLabeledPr(labelName: string): GitHubPullRequestEvent {
+    const event = this.createPullRequestEvent({ action: 'labeled' })
+    event.label = { name: labelName }
+    return event
+  }
 }
