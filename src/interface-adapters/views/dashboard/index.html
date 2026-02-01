@@ -1152,7 +1152,7 @@
 
     async function fetchStatus() {
       try {
-        const response = await fetch(`${API_URL}/status`);
+        const response = await fetch(`${API_URL}/api/status`);
         const data = await response.json();
         currentData.activeReviews = data.jobs?.active || [];
         currentData.recentReviews = data.jobs?.recent || [];
