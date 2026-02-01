@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import type { ReviewFileGateway, ReviewFileInfo } from '../../gateways/reviewFile.gateway.js';
+import type { ReviewFileGateway, ReviewFileInfo } from '../../interface-adapters/gateways/reviewFile.gateway.js';
 
 export class InMemoryReviewFileGateway implements ReviewFileGateway {
   private files = new Map<string, string>();

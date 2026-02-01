@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ReviewScore } from '../../../domain/review/reviewScore.valueObject.js';
+import { ReviewScore } from '../../../entities/review/reviewScore.valueObject.js';
 
 describe('ReviewScore', () => {
   describe('create', () => {
