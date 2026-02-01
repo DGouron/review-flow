@@ -57,6 +57,8 @@ import { handleGitHubWebhook } from '../../../../../interface-adapters/controlle
 import { GitHubEventFactory } from '../../../../factories/gitHubEvent.factory.js';
 import { createStubLogger } from '../../../../stubs/logger.stub.js';
 import * as mrTrackingService from '../../../../../services/mrTrackingService.js';
+import { enqueueReview } from '../../../../../queue/reviewQueue.js';
+import { invokeClaudeReview } from '../../../../../claude/invoker.js';
 
 describe('handleGitHubWebhook', () => {
   let mockReply: FastifyReply;
@@ -119,6 +121,93 @@ describe('handleGitHubWebhook', () => {
         }),
         expect.any(Object)
       );
+    });
+  });
+
+  describe('review completion callback', () => {
+    it('should record review stats after successful review', async () => {
+      const mockResult = {
+        success: true,
+        cancelled: false,
+        stdout: '[REVIEW_STATS:blocking=2:warnings=3:suggestions=1:score=7.5]',
+        durationMs: 120000,
+        exitCode: 0,
+        stderr: '',
+      };
+
+      vi.mocked(enqueueReview).mockImplementation(async (job, callback) => {
+        await callback(job, new AbortController().signal);
+        return true;
+      });
+
+      vi.mocked(invokeClaudeReview).mockResolvedValue(mockResult);
+
+      const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
+      const request = { body: event, headers: {} } as unknown as FastifyRequest;
+
+      await handleGitHubWebhook(request, mockReply, logger);
+
+      expect(mrTrackingService.recordReviewCompletion).toHaveBeenCalledWith(
+        '/home/user/projects/test-repo',
+        'github-test-owner/test-repo-123',
+        expect.objectContaining({
+          type: 'review',
+          score: 7.5,
+          blocking: 2,
+          warnings: 3,
+          suggestions: 1,
+        })
+      );
+    });
+
+    it('should not record stats when review is cancelled', async () => {
+      const mockResult = {
+        success: false,
+        cancelled: true,
+        stdout: '',
+        durationMs: 5000,
+        exitCode: 1,
+        stderr: '',
+      };
+
+      vi.mocked(enqueueReview).mockImplementation(async (job, callback) => {
+        await callback(job, new AbortController().signal);
+        return true;
+      });
+
+      vi.mocked(invokeClaudeReview).mockResolvedValue(mockResult);
+
+      const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
+      const request = { body: event, headers: {} } as unknown as FastifyRequest;
+
+      await handleGitHubWebhook(request, mockReply, logger);
+
+      expect(mrTrackingService.recordReviewCompletion).not.toHaveBeenCalled();
+    });
+
+    it('should not record stats when review fails', async () => {
+      const mockResult = {
+        success: false,
+        cancelled: false,
+        stdout: 'Error occurred',
+        durationMs: 10000,
+        exitCode: 1,
+        stderr: '',
+      };
+
+      vi.mocked(enqueueReview).mockImplementation(async (job, callback) => {
+        await callback(job, new AbortController().signal);
+        return true;
+      });
+
+      vi.mocked(invokeClaudeReview).mockResolvedValue(mockResult);
+
+      const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
+      const request = { body: event, headers: {} } as unknown as FastifyRequest;
+
+      await handleGitHubWebhook(request, mockReply, logger);
+
+      expect(mrTrackingService.recordReviewCompletion).not.toHaveBeenCalled();
     });
   });
 });

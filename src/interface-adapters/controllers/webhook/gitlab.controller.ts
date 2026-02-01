@@ -49,8 +49,8 @@ export async function handleGitLabWebhook(
   // 3a. Check if MR was closed - clean up tracking and cancel any running job
   const closeResult = filterGitLabMrClose(event);
   if (closeResult.shouldProcess) {
-    const projectPath = closeResult.projectPath!;
-    const mrNumber = closeResult.mrNumber!;
+    const projectPath = closeResult.projectPath;
+    const mrNumber = closeResult.mergeRequestNumber;
     const mrId = `gitlab-${projectPath}-${mrNumber}`;
 
     // Find repo config
@@ -115,13 +115,13 @@ export async function handleGitLabWebhook(
 
     if (updateResult.shouldProcess && updateResult.isFollowup) {
       // Find repo config to get local path
-      const updateRepoConfig = findRepositoryByProjectPath(updateResult.projectPath!);
+      const updateRepoConfig = findRepositoryByProjectPath(updateResult.projectPath);
       if (updateRepoConfig) {
         // Record the push event
-        const mr = recordMrPush(updateRepoConfig.localPath, updateResult.mrNumber!, 'gitlab');
+        const mr = recordMrPush(updateRepoConfig.localPath, updateResult.mergeRequestNumber, 'gitlab');
         logger.info(
           {
-            mrNumber: updateResult.mrNumber,
+            mrNumber: updateResult.mergeRequestNumber,
             mrFound: !!mr,
             mrState: mr?.state,
             lastPushAt: mr?.lastPushAt,
@@ -131,29 +131,29 @@ export async function handleGitLabWebhook(
         );
 
         // Check if this MR needs a followup (has open threads and was pushed since last review)
-        const needsFollowup = mr && needsFollowupReview(updateRepoConfig.localPath, updateResult.mrNumber!, 'gitlab');
+        const needsFollowup = mr && needsFollowupReview(updateRepoConfig.localPath, updateResult.mergeRequestNumber, 'gitlab');
         logger.info({ needsFollowup, mrState: mr?.state }, 'Followup check result');
 
         if (needsFollowup) {
           logger.info(
-            { mrNumber: updateResult.mrNumber, project: updateResult.projectPath },
+            { mrNumber: updateResult.mergeRequestNumber, project: updateResult.projectPath },
             'Auto-triggering followup review after push'
           );
 
           const projectConfig = loadProjectConfig(updateRepoConfig.localPath);
           const skill = projectConfig?.reviewFollowupSkill || 'review-followup';
 
-          const followupJobId = createJobId('gitlab-followup', updateResult.projectPath!, updateResult.mrNumber!);
+          const followupJobId = createJobId('gitlab-followup', updateResult.projectPath, updateResult.mergeRequestNumber);
           const followupJob: ReviewJob = {
             id: followupJobId,
             platform: 'gitlab',
-            projectPath: updateResult.projectPath!,
+            projectPath: updateResult.projectPath,
             localPath: updateRepoConfig.localPath,
-            mrNumber: updateResult.mrNumber!,
+            mrNumber: updateResult.mergeRequestNumber,
             skill,
-            mrUrl: updateResult.mrUrl!,
-            sourceBranch: updateResult.sourceBranch!,
-            targetBranch: updateResult.targetBranch!,
+            mrUrl: updateResult.mergeRequestUrl,
+            sourceBranch: updateResult.sourceBranch,
+            targetBranch: updateResult.targetBranch,
             jobType: 'followup',
           };
 
@@ -210,7 +210,7 @@ export async function handleGitLabWebhook(
           reply.status(202).send({
             status: 'followup-queued',
             jobId: followupJobId,
-            mrNumber: updateResult.mrNumber,
+            mrNumber: updateResult.mergeRequestNumber,
           });
           return;
         }
@@ -222,7 +222,7 @@ export async function handleGitLabWebhook(
   }
 
   // 4. Find repository configuration
-  const repoConfig = findRepositoryByProjectPath(filterResult.projectPath!);
+  const repoConfig = findRepositoryByProjectPath(filterResult.projectPath);
   if (!repoConfig) {
     logger.warn(
       { projectPath: filterResult.projectPath },
@@ -236,7 +236,7 @@ export async function handleGitLabWebhook(
   }
 
   // 5. Track MR assignment with user info
-  const mrTitle = event.object_attributes?.title || `MR !${filterResult.mrNumber}`;
+  const mrTitle = event.object_attributes?.title || `MR !${filterResult.mergeRequestNumber}`;
   const assignedBy = {
     username: event.user?.username || 'unknown',
     displayName: event.user?.name,
@@ -245,34 +245,34 @@ export async function handleGitLabWebhook(
   trackMrAssignment(
     repoConfig.localPath,
     {
-      mrNumber: filterResult.mrNumber!,
+      mrNumber: filterResult.mergeRequestNumber,
       title: mrTitle,
-      url: filterResult.mrUrl!,
-      project: filterResult.projectPath!,
+      url: filterResult.mergeRequestUrl,
+      project: filterResult.projectPath,
       platform: 'gitlab',
-      sourceBranch: filterResult.sourceBranch!,
-      targetBranch: filterResult.targetBranch!,
+      sourceBranch: filterResult.sourceBranch,
+      targetBranch: filterResult.targetBranch,
     },
     assignedBy
   );
 
   logger.info(
-    { mrNumber: filterResult.mrNumber, assignedBy: assignedBy.username },
+    { mrNumber: filterResult.mergeRequestNumber, assignedBy: assignedBy.username },
     'MR tracked for review'
   );
 
   // 6. Create and enqueue job
-  const jobId = createJobId('gitlab', filterResult.projectPath!, filterResult.mrNumber!);
+  const jobId = createJobId('gitlab', filterResult.projectPath, filterResult.mergeRequestNumber);
   const job: ReviewJob = {
     id: jobId,
     platform: 'gitlab',
-    projectPath: filterResult.projectPath!,
+    projectPath: filterResult.projectPath,
     localPath: repoConfig.localPath,
-    mrNumber: filterResult.mrNumber!,
+    mrNumber: filterResult.mergeRequestNumber,
     skill: repoConfig.skill,
-    mrUrl: filterResult.mrUrl!,
-    sourceBranch: filterResult.sourceBranch!,
-    targetBranch: filterResult.targetBranch!,
+    mrUrl: filterResult.mergeRequestUrl,
+    sourceBranch: filterResult.sourceBranch,
+    targetBranch: filterResult.targetBranch,
     jobType: 'review',
     // MR metadata for dashboard
     title: mrTitle,
@@ -351,7 +351,7 @@ export async function handleGitLabWebhook(
     reply.status(202).send({
       status: 'queued',
       jobId,
-      mrNumber: filterResult.mrNumber,
+      mrNumber: filterResult.mergeRequestNumber,
     });
   } else {
     reply.status(200).send({
