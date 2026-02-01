@@ -506,9 +506,9 @@ h1 { font-size: 1.75rem; font-weight: 600; }
 .model-select:hover { border-color: rgba(255, 255, 255, 0.4); }
 .model-select:focus { outline: none; border-color: #f59e0b; }
 .model-select option { background: #1a1a2e; color: #e4e4e7; }
-.card-model { display: flex; flex-direction: column; gap: 0.5rem; min-width: 160px; }
+.card-model { display: flex; flex-direction: column; gap: 0.5rem; min-width: 180px; }
 .model-label { font-size: 0.75rem; color: #a1a1aa; }
-.model-select { min-width: 140px; }
+.model-select { min-width: 165px; }
 
 /* Project config loader */
 .project-loader {
