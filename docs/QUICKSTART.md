@@ -1,49 +1,154 @@
-# Quick Start - 5 minutes
+# Quick Start
 
-## 1. Lancer l'application
+Get Claude Review Automation running in 5 minutes.
 
-Double-clique sur l'icône **Claude Review** sur le bureau.
+## Prerequisites
 
-Ou en terminal :
-```bash
-~/Documents/Projets/claude-review-automation/scripts/launcher.sh
-```
+- Node.js 20+
+- A GitLab or GitHub account with webhook access
+- [Claude Code CLI](https://claude.ai/claude-code) installed and authenticated
 
-## 2. Récupérer l'URL du tunnel
-
-```bash
-~/Documents/Projets/claude-review-automation/scripts/status.sh
-```
-
-Note l'URL affichée (ex: `https://xxx-xxx.trycloudflare.com`)
-
-## 3. Configurer GitLab
-
-1. **GitLab** → **Settings** → **Webhooks** → **Add webhook**
-
-2. Remplis :
-   - **URL** : `https://xxx-xxx.trycloudflare.com/webhooks/gitlab`
-   - **Secret token** : `YOUR_GITLAB_WEBHOOK_TOKEN_HERE`
-   - **Trigger** : ☑ Merge request events
-
-3. Clique **Add webhook**
-
-## 4. Tester
-
-1. Crée ou ouvre une MR
-2. Assigne-toi comme **Reviewer**
-3. Ouvre http://localhost:3847/dashboard/
-4. La review apparaît !
-
-## Commandes utiles
+## 1. Installation
 
 ```bash
-# Status
-~/Documents/Projets/claude-review-automation/scripts/status.sh
+# Clone the repository
+git clone https://github.com/YOUR_USERNAME/claude-review-automation.git
+cd claude-review-automation
 
-# Arrêter
-~/Documents/Projets/claude-review-automation/scripts/stop.sh
+# Install dependencies
+yarn install
 
-# Logs
-tail -f /tmp/claude-review/server.log
+# Build
+yarn build
 ```
+
+## 2. Configuration
+
+### Environment variables
+
+```bash
+# Copy the example
+cp .env.example .env
+
+# Edit with your webhook secrets
+# Generate tokens with: openssl rand -hex 32
+nano .env
+```
+
+```bash
+# .env
+GITLAB_WEBHOOK_TOKEN=your_generated_token_here
+GITHUB_WEBHOOK_SECRET=your_generated_token_here
+```
+
+### Application config
+
+```bash
+# Copy the example
+cp config.example.json config.json
+
+# Edit with your settings
+nano config.json
+```
+
+```json
+{
+  "server": { "port": 3000 },
+  "user": {
+    "gitlabUsername": "YOUR_GITLAB_USERNAME",
+    "githubUsername": "YOUR_GITHUB_USERNAME"
+  },
+  "repositories": [
+    {
+      "platform": "gitlab",
+      "remoteUrl": "https://gitlab.com/your-org/your-project",
+      "localPath": "/path/to/your/local/clone",
+      "skill": "review-code",
+      "enabled": true
+    }
+  ]
+}
+```
+
+## 3. Start the server
+
+```bash
+# Development mode (with hot reload)
+yarn dev
+
+# Or production mode
+yarn start
+```
+
+The server runs at `http://localhost:3000` (or your configured port).
+
+## 4. Expose for webhooks
+
+GitLab/GitHub need to reach your server. Options:
+
+### Option A: Cloudflare Tunnel (recommended)
+
+```bash
+cloudflared tunnel --url http://localhost:3000
+```
+
+Copy the generated URL (e.g., `https://xxx-xxx.trycloudflare.com`).
+
+### Option B: ngrok
+
+```bash
+ngrok http 3000
+```
+
+## 5. Configure webhook
+
+### GitLab
+
+1. Go to your project → **Settings** → **Webhooks**
+2. Add webhook:
+   - **URL**: `https://YOUR_TUNNEL_URL/webhooks/gitlab`
+   - **Secret token**: (same as `GITLAB_WEBHOOK_TOKEN` in your `.env`)
+   - **Trigger**: ☑ Merge request events
+3. Click **Add webhook**
+
+### GitHub
+
+1. Go to your repo → **Settings** → **Webhooks**
+2. Add webhook:
+   - **Payload URL**: `https://YOUR_TUNNEL_URL/webhooks/github`
+   - **Content type**: `application/json`
+   - **Secret**: (same as `GITHUB_WEBHOOK_SECRET` in your `.env`)
+   - **Events**: ☑ Pull requests
+3. Click **Add webhook**
+
+## 6. Test it!
+
+1. Create or open a Merge Request / Pull Request
+2. Assign yourself as **Reviewer**
+3. Open `http://localhost:3000/dashboard/`
+4. Watch the review appear! 🎉
+
+## Next steps
+
+- [Project Configuration](./PROJECT_CONFIG.md) - Configure review skills per project
+- [Deployment Guide](./deployment/README.md) - Run in production with systemd
+- [Architecture](./ARCHITECTURE.md) - Understand the codebase
+
+## Troubleshooting
+
+### Webhook returns 401
+
+- Verify your webhook token matches the one in `.env`
+- Check server logs: `yarn dev` shows all requests
+
+### Review doesn't start
+
+1. Check the repository is in `config.json` with `enabled: true`
+2. Verify your username matches the one in `config.json`
+3. Ensure the MR/PR is not a draft
+
+### Claude Code fails
+
+- Verify the local path exists and is a git repository
+- Check Claude Code is authenticated: `claude --version`
+- Verify the skill exists in the target project

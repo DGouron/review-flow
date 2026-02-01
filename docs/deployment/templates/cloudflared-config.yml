@@ -1,0 +1,25 @@
+# Cloudflare Tunnel configuration
+#
+# Location: ~/.cloudflared/config.yml
+#
+# Prerequisites:
+#   1. cloudflared tunnel login
+#   2. cloudflared tunnel create claude-review
+#   3. Note the tunnel ID from the output
+#   4. cloudflared tunnel route dns claude-review review.your-domain.com
+#
+# Replace:
+#   - YOUR_TUNNEL_ID: The ID from step 2 (e.g., a1b2c3d4-e5f6-...)
+#   - YOUR_USER: Your system username
+#   - review.your-domain.com: Your actual domain
+
+tunnel: YOUR_TUNNEL_ID
+credentials-file: /home/YOUR_USER/.cloudflared/YOUR_TUNNEL_ID.json
+
+ingress:
+  # Route your domain to the local server
+  - hostname: review.your-domain.com
+    service: http://localhost:3000
+
+  # Catch-all for unmatched requests
+  - service: http_status:404
