@@ -1,0 +1,29 @@
+{
+  "server": {
+    "port": 3000
+  },
+  "user": {
+    "gitlabUsername": "YOUR_GITLAB_USERNAME",
+    "githubUsername": "YOUR_GITHUB_USERNAME"
+  },
+  "queue": {
+    "maxConcurrent": 2,
+    "deduplicationWindowMs": 300000
+  },
+  "repositories": [
+    {
+      "platform": "gitlab",
+      "remoteUrl": "https://gitlab.com/your-org/your-project",
+      "localPath": "/path/to/your/local/clone",
+      "skill": "review-code",
+      "enabled": true
+    },
+    {
+      "platform": "github",
+      "remoteUrl": "https://github.com/your-org/your-project",
+      "localPath": "/path/to/your/local/clone",
+      "skill": "review-code",
+      "enabled": false
+    }
+  ]
+}

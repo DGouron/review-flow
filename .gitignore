@@ -39,3 +39,13 @@ logs/security/
 .claude/memory
 .claude/backlog
 CLAUDE.md
+
+# Personal configuration (use *.example.* as templates)
+config.json
+setup/
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
