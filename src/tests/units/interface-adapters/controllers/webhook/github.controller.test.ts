@@ -160,6 +160,39 @@ describe('handleGitHubWebhook', () => {
       );
     });
 
+    it('should count only blocking issues as open threads, not warnings', async () => {
+      const mockResult = {
+        success: true,
+        cancelled: false,
+        stdout: '[REVIEW_STATS:blocking=1:warnings=5:suggestions=2:score=6]',
+        durationMs: 90000,
+        exitCode: 0,
+        stderr: '',
+      };
+
+      vi.mocked(enqueueReview).mockImplementation(async (job, callback) => {
+        await callback(job, new AbortController().signal);
+        return true;
+      });
+
+      vi.mocked(invokeClaudeReview).mockResolvedValue(mockResult);
+
+      const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
+      const request = { body: event, headers: {} } as unknown as FastifyRequest;
+
+      await handleGitHubWebhook(request, mockReply, logger);
+
+      expect(mrTrackingService.recordReviewCompletion).toHaveBeenCalledWith(
+        '/home/user/projects/test-repo',
+        'github-test-owner/test-repo-123',
+        expect.objectContaining({
+          blocking: 1,
+          warnings: 5,
+          threadsOpened: 1, // Only blocking count, not blocking + warnings (6)
+        })
+      );
+    });
+
     it('should not record stats when review is cancelled', async () => {
       const mockResult = {
         success: false,
