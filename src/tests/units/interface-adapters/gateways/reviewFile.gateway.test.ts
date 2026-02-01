@@ -48,6 +48,46 @@ describe('ReviewFileGateway', () => {
       expect(mrNumbers).toContain('123');
     });
 
+    it('should extract title from review file content', async () => {
+      const gateway = new InMemoryReviewFileGateway();
+      const content = `# Code Review - PR #123 (feat: add new feature)
+
+**Date**: 2024-01-15
+**Reviewer**: Claude Code`;
+      gateway.addReview('/my/project', '2024-01-15-PR-123-review.md', content);
+
+      const result = await gateway.listReviews('/my/project');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe('feat: add new feature');
+    });
+
+    it('should handle MR title format (GitLab)', async () => {
+      const gateway = new InMemoryReviewFileGateway();
+      const content = `# Code Review - MR !42 (fix: resolve bug in login)
+
+**Date**: 2024-01-15`;
+      gateway.addReview('/my/project', '2024-01-15-MR-42-review.md', content);
+
+      const result = await gateway.listReviews('/my/project');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe('fix: resolve bug in login');
+    });
+
+    it('should return undefined title when format not matched', async () => {
+      const gateway = new InMemoryReviewFileGateway();
+      const content = `# Some other format
+
+No title here`;
+      gateway.addReview('/my/project', '2024-01-15-PR-123-review.md', content);
+
+      const result = await gateway.listReviews('/my/project');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBeUndefined();
+    });
+
     it('should only list reviews for specified project', async () => {
       const gateway = new InMemoryReviewFileGateway();
       gateway.addReview('/project-a', '2024-01-15-MR-1-review.md', 'Review A');
