@@ -6,7 +6,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc && cp -r src/dashboard dist/",
+    "build": "tsc && mkdir -p dist/interface-adapters/views && cp -r src/interface-adapters/views/dashboard dist/interface-adapters/views/",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
