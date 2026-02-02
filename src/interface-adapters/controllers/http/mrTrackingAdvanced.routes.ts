@@ -16,6 +16,7 @@ import { executeThreadActions, defaultCommandExecutor } from '../../../services/
 import { ReviewContextFileSystemGateway } from '../../gateways/reviewContext.fileSystem.gateway.js';
 import { GitHubThreadFetchGateway, defaultGitHubExecutor } from '../../gateways/threadFetch.github.gateway.js';
 import { GitLabThreadFetchGateway, defaultGitLabExecutor } from '../../gateways/threadFetch.gitlab.gateway.js';
+import { startWatchingReviewContext, stopWatchingReviewContext } from '../../../main/websocket.js';
 import type { Logger } from 'pino';
 
 interface MrTrackingAdvancedRoutesOptions {
@@ -120,6 +121,9 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
           { mrNumber: job.mrNumber, threadsCount: threads.length },
           'Review context file created with threads for manual followup'
         );
+
+        startWatchingReviewContext(job.id, job.localPath, mrId);
+        logger.info({ mrNumber: job.mrNumber }, 'Started watching review context for live progress');
       } catch (error) {
         logger.warn(
           { mrNumber: job.mrNumber, error: error instanceof Error ? error.message : String(error) },
@@ -130,6 +134,8 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
       const result = await invokeClaudeReview(job, logger, (progress, event) => {
         updateJobProgress(job.id, progress, event);
       }, signal);
+
+      stopWatchingReviewContext(mrId);
 
       if (result.success) {
         // Parse review output for stats

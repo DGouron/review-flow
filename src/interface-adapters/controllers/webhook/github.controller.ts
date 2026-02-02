@@ -23,6 +23,7 @@ import { executeActionsFromContext } from '../../../services/contextActionsExecu
 import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js';
 import { ReviewContextFileSystemGateway } from '../../gateways/reviewContext.fileSystem.gateway.js';
 import { GitHubThreadFetchGateway, defaultGitHubExecutor } from '../../gateways/threadFetch.github.gateway.js';
+import { startWatchingReviewContext, stopWatchingReviewContext } from '../../../main/websocket.js';
 
 export async function handleGitHubWebhook(
   request: FastifyRequest,
@@ -210,6 +211,9 @@ export async function handleGitHubWebhook(
         { prNumber: j.mrNumber, threadsCount: threads.length },
         'Review context file created with threads'
       );
+
+      startWatchingReviewContext(j.id, j.localPath, mergeRequestId);
+      logger.info({ prNumber: j.mrNumber }, 'Started watching review context for live progress');
     } catch (error) {
       logger.warn(
         { prNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },
@@ -221,6 +225,9 @@ export async function handleGitHubWebhook(
     const result = await invokeClaudeReview(j, logger, (progress, event) => {
       updateJobProgress(j.id, progress, event);
     }, signal);
+
+    // Stop watching context file (auto-stops on completion, but explicit stop for error cases)
+    stopWatchingReviewContext(mergeRequestId);
 
     // Send completion notification and record stats
     if (result.cancelled) {
