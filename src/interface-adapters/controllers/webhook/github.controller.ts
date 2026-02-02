@@ -20,6 +20,8 @@ import { parseReviewOutput } from '../../../services/statsService.js';
 import { parseThreadActions } from '../../../services/threadActionsParser.js';
 import { executeThreadActions, defaultCommandExecutor } from '../../../services/threadActionsExecutor.js';
 import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js';
+import { ReviewContextFileSystemGateway } from '../../gateways/reviewContext.fileSystem.gateway.js';
+import { GitHubThreadFetchGateway, defaultGitHubExecutor } from '../../gateways/threadFetch.github.gateway.js';
 
 export async function handleGitHubWebhook(
   request: FastifyRequest,
@@ -68,14 +70,19 @@ export async function handleGitHubWebhook(
       // Archive the PR from tracking
       const archived = archiveMr(repoConfig.localPath, mrId);
 
+      // Delete review context file
+      const contextGateway = new ReviewContextFileSystemGateway();
+      const contextDeleted = contextGateway.delete(repoConfig.localPath, mrId);
+
       logger.info(
         {
           prNumber,
           repo: projectPath,
           jobCancelled: cancelled,
           trackingArchived: archived,
+          contextDeleted: contextDeleted.deleted,
         },
-        'PR closed - cleaned up tracking and cancelled job'
+        'PR closed - cleaned up tracking, cancelled job, deleted context'
       );
 
       reply.status(200).send({
@@ -178,6 +185,32 @@ export async function handleGitHubWebhook(
       `PR #${j.mrNumber} - ${j.projectPath}`,
       logger
     );
+
+    // Create review context file with pre-fetched threads
+    const mergeRequestId = `github-${j.projectPath}-${j.mrNumber}`;
+    const contextGateway = new ReviewContextFileSystemGateway();
+    const threadFetchGateway = new GitHubThreadFetchGateway(defaultGitHubExecutor);
+
+    try {
+      const threads = threadFetchGateway.fetchThreads(j.projectPath, j.mrNumber);
+      contextGateway.create({
+        localPath: j.localPath,
+        mergeRequestId,
+        platform: 'github',
+        projectPath: j.projectPath,
+        mergeRequestNumber: j.mrNumber,
+        threads,
+      });
+      logger.info(
+        { prNumber: j.mrNumber, threadsCount: threads.length },
+        'Review context file created with threads'
+      );
+    } catch (error) {
+      logger.warn(
+        { prNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },
+        'Failed to create review context file, continuing without it'
+      );
+    }
 
     // Invoke Claude with progress tracking and cancellation support
     const result = await invokeClaudeReview(j, logger, (progress, event) => {
