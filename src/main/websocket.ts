@@ -2,10 +2,17 @@ import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
 import type { Logger } from 'pino';
 import type { ReviewProgress, ProgressEvent } from '../types/progress.js';
-import { getJobsStatus, setProgressChangeCallback, setStateChangeCallback } from '../queue/reviewQueue.js';
+import { getJobsStatus, setProgressChangeCallback, setStateChangeCallback, updateJobProgress } from '../queue/reviewQueue.js';
 import { onLog, type LogEntry } from '../services/logService.js';
+import { ReviewContextWatcherService } from '../services/reviewContextWatcher.service.js';
+import { ReviewContextFileSystemGateway } from '../interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
+import { ReviewContextProgressPresenter } from '../interface-adapters/presenters/reviewContextProgress.presenter.js';
 
 const wsClients = new Set<WebSocket>();
+
+const contextGateway = new ReviewContextFileSystemGateway();
+const contextWatcher = new ReviewContextWatcherService(contextGateway);
+const progressPresenter = new ReviewContextProgressPresenter();
 
 export function getWsClientsCount(): number {
   return wsClients.size;
@@ -67,6 +74,17 @@ export function setupWebSocketCallbacks(): void {
   setStateChangeCallback(() => {
     broadcastStateChange();
   });
+}
+
+export function startWatchingReviewContext(jobId: string, localPath: string, mergeRequestId: string): void {
+  contextWatcher.start(localPath, mergeRequestId, (contextProgress) => {
+    const reviewProgress = progressPresenter.toReviewProgress(contextProgress);
+    updateJobProgress(jobId, reviewProgress);
+  });
+}
+
+export function stopWatchingReviewContext(mergeRequestId: string): void {
+  contextWatcher.stop(mergeRequestId);
 }
 
 export async function registerWebSocketRoutes(

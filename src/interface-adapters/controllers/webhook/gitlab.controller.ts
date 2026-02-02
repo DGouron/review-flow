@@ -26,6 +26,7 @@ import { executeThreadActions, defaultCommandExecutor } from '../../../services/
 import { executeActionsFromContext } from '../../../services/contextActionsExecutor.js';
 import { ReviewContextFileSystemGateway } from '../../gateways/reviewContext.fileSystem.gateway.js';
 import { GitLabThreadFetchGateway, defaultGitLabExecutor } from '../../gateways/threadFetch.gitlab.gateway.js';
+import { startWatchingReviewContext, stopWatchingReviewContext } from '../../../main/websocket.js';
 
 export async function handleGitLabWebhook(
   request: FastifyRequest,
@@ -189,6 +190,9 @@ export async function handleGitLabWebhook(
                 { mrNumber: j.mrNumber, threadsCount: threads.length },
                 'Review context file created with threads for followup'
               );
+
+              startWatchingReviewContext(j.id, j.localPath, mergeRequestId);
+              logger.info({ mrNumber: j.mrNumber }, 'Started watching review context for live progress');
             } catch (error) {
               logger.warn(
                 { mrNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },
@@ -199,6 +203,8 @@ export async function handleGitLabWebhook(
             const result = await invokeClaudeReview(j, logger, (progress, progressEvent) => {
               updateJobProgress(j.id, progress, progressEvent);
             }, signal);
+
+            stopWatchingReviewContext(mergeRequestId);
 
             if (result.success) {
               // Parse review output for stats
@@ -381,6 +387,9 @@ export async function handleGitLabWebhook(
         { mrNumber: j.mrNumber, threadsCount: threads.length },
         'Review context file created with threads'
       );
+
+      startWatchingReviewContext(j.id, j.localPath, mergeRequestId);
+      logger.info({ mrNumber: j.mrNumber }, 'Started watching review context for live progress');
     } catch (error) {
       logger.warn(
         { mrNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },
@@ -392,6 +401,9 @@ export async function handleGitLabWebhook(
     const result = await invokeClaudeReview(j, logger, (progress, progressEvent) => {
       updateJobProgress(j.id, progress, progressEvent);
     }, signal);
+
+    // Stop watching context file (auto-stops on completion, but explicit stop for error cases)
+    stopWatchingReviewContext(mergeRequestId);
 
     // Send completion notification and record stats
     if (result.cancelled) {
