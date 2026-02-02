@@ -19,6 +19,7 @@ import {
 import { parseReviewOutput } from '../../../services/statsService.js';
 import { parseThreadActions } from '../../../services/threadActionsParser.js';
 import { executeThreadActions, defaultCommandExecutor } from '../../../services/threadActionsExecutor.js';
+import { executeActionsFromContext } from '../../../services/contextActionsExecutor.js';
 import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js';
 import { ReviewContextFileSystemGateway } from '../../gateways/reviewContext.fileSystem.gateway.js';
 import { GitHubThreadFetchGateway, defaultGitHubExecutor } from '../../gateways/threadFetch.github.gateway.js';
@@ -176,6 +177,10 @@ export async function handleGitHubWebhook(
     mrUrl: filterResult.mergeRequestUrl,
     sourceBranch: filterResult.sourceBranch,
     targetBranch: filterResult.targetBranch,
+    jobType: 'review',
+    title: prTitle,
+    description: event.pull_request?.body,
+    assignedBy,
   };
 
   const enqueued = await enqueueReview(job, async (j, signal) => {
@@ -228,7 +233,7 @@ export async function handleGitHubWebhook(
       // Parse review output for stats
       const parsed = parseReviewOutput(result.stdout);
 
-      // Execute thread actions from markers
+      // Execute thread actions from stdout markers (backward compatibility)
       const threadActions = parseThreadActions(result.stdout);
       if (threadActions.length > 0) {
         const actionResult = await executeThreadActions(
@@ -244,7 +249,22 @@ export async function handleGitHubWebhook(
         );
         logger.info(
           { ...actionResult, prNumber: j.mrNumber },
-          'Thread actions executed for review'
+          'Thread actions executed from stdout markers'
+        );
+      }
+
+      // Execute actions from context file (new mechanism)
+      const reviewContext = contextGateway.read(j.localPath, mergeRequestId);
+      if (reviewContext && reviewContext.actions.length > 0) {
+        const contextActionResult = await executeActionsFromContext(
+          reviewContext,
+          j.localPath,
+          logger,
+          defaultCommandExecutor
+        );
+        logger.info(
+          { ...contextActionResult, prNumber: j.mrNumber },
+          'Actions executed from context file'
         );
       }
 

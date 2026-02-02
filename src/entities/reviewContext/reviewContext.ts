@@ -1,3 +1,5 @@
+import type { ReviewContextAction, ReviewContextResult } from './reviewContextAction.schema.js'
+
 export interface ReviewContextThread {
   id: string
   file: string | null
@@ -9,6 +11,8 @@ export interface ReviewContextThread {
 export interface ReviewContextProgress {
   phase: 'pending' | 'initializing' | 'agents-running' | 'synthesizing' | 'publishing' | 'completed'
   currentStep: string | null
+  stepsCompleted?: string[]
+  updatedAt?: string
 }
 
 export interface ReviewContext {
@@ -19,8 +23,9 @@ export interface ReviewContext {
   mergeRequestNumber: number
   createdAt: string
   threads: ReviewContextThread[]
-  actions: unknown[]
+  actions: ReviewContextAction[]
   progress: ReviewContextProgress
+  result?: ReviewContextResult
 }
 
 export interface CreateReviewContextInput {

@@ -23,6 +23,7 @@ import { loadProjectConfig } from '../../../config/projectConfig.js';
 import { parseReviewOutput } from '../../../services/statsService.js';
 import { parseThreadActions } from '../../../services/threadActionsParser.js';
 import { executeThreadActions, defaultCommandExecutor } from '../../../services/threadActionsExecutor.js';
+import { executeActionsFromContext } from '../../../services/contextActionsExecutor.js';
 import { ReviewContextFileSystemGateway } from '../../gateways/reviewContext.fileSystem.gateway.js';
 import { GitLabThreadFetchGateway, defaultGitLabExecutor } from '../../gateways/threadFetch.gitlab.gateway.js';
 
@@ -203,7 +204,7 @@ export async function handleGitLabWebhook(
               // Parse review output for stats
               const parsed = parseReviewOutput(result.stdout);
 
-              // Execute thread actions from markers
+              // Execute thread actions from stdout markers (backward compatibility)
               const threadActions = parseThreadActions(result.stdout);
               if (threadActions.length > 0) {
                 const actionResult = await executeThreadActions(
@@ -219,7 +220,22 @@ export async function handleGitLabWebhook(
                 );
                 logger.info(
                   { ...actionResult, mrNumber: j.mrNumber },
-                  'Thread actions executed for followup'
+                  'Thread actions executed from stdout markers for followup'
+                );
+              }
+
+              // Execute actions from context file (new mechanism)
+              const reviewContext = contextGateway.read(j.localPath, mergeRequestId);
+              if (reviewContext && reviewContext.actions.length > 0) {
+                const contextActionResult = await executeActionsFromContext(
+                  reviewContext,
+                  j.localPath,
+                  logger,
+                  defaultCommandExecutor
+                );
+                logger.info(
+                  { ...contextActionResult, mrNumber: j.mrNumber },
+                  'Actions executed from context file for followup'
                 );
               }
 
@@ -388,7 +404,7 @@ export async function handleGitLabWebhook(
       // Parse review output for stats
       const parsed = parseReviewOutput(result.stdout);
 
-      // Execute thread actions from markers
+      // Execute thread actions from stdout markers (backward compatibility)
       const threadActions = parseThreadActions(result.stdout);
       if (threadActions.length > 0) {
         const actionResult = await executeThreadActions(
@@ -404,7 +420,22 @@ export async function handleGitLabWebhook(
         );
         logger.info(
           { ...actionResult, mrNumber: j.mrNumber },
-          'Thread actions executed for review'
+          'Thread actions executed from stdout markers'
+        );
+      }
+
+      // Execute actions from context file (new mechanism)
+      const reviewContext = contextGateway.read(j.localPath, mergeRequestId);
+      if (reviewContext && reviewContext.actions.length > 0) {
+        const contextActionResult = await executeActionsFromContext(
+          reviewContext,
+          j.localPath,
+          logger,
+          defaultCommandExecutor
+        );
+        logger.info(
+          { ...contextActionResult, mrNumber: j.mrNumber },
+          'Actions executed from context file'
         );
       }
 

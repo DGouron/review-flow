@@ -1,12 +1,14 @@
 import { writeFileSync, readFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs'
 import { join, dirname } from 'node:path'
-import type { ReviewContextGateway } from '../../entities/reviewContext/reviewContext.gateway.js'
+import type { ReviewContextGateway, UpdateResult } from '../../entities/reviewContext/reviewContext.gateway.js'
 import type {
   CreateReviewContextInput,
   CreateReviewContextResult,
   DeleteReviewContextResult,
   ReviewContext,
+  ReviewContextProgress,
 } from '../../entities/reviewContext/reviewContext.js'
+import type { ReviewContextAction, ReviewContextResult } from '../../entities/reviewContext/reviewContextAction.schema.js'
 
 export class ReviewContextFileSystemGateway implements ReviewContextGateway {
   getFilePath(localPath: string, mergeRequestId: string): string {
@@ -63,5 +65,47 @@ export class ReviewContextFileSystemGateway implements ReviewContextGateway {
   exists(localPath: string, mergeRequestId: string): boolean {
     const filePath = this.getFilePath(localPath, mergeRequestId)
     return existsSync(filePath)
+  }
+
+  appendAction(localPath: string, mergeRequestId: string, action: ReviewContextAction): UpdateResult {
+    const context = this.read(localPath, mergeRequestId)
+    if (!context) {
+      return { success: false }
+    }
+
+    context.actions.push(action)
+    const filePath = this.getFilePath(localPath, mergeRequestId)
+    writeFileSync(filePath, JSON.stringify(context, null, 2))
+
+    return { success: true }
+  }
+
+  updateProgress(localPath: string, mergeRequestId: string, progress: ReviewContextProgress): UpdateResult {
+    const context = this.read(localPath, mergeRequestId)
+    if (!context) {
+      return { success: false }
+    }
+
+    context.progress = {
+      ...progress,
+      updatedAt: new Date().toISOString(),
+    }
+    const filePath = this.getFilePath(localPath, mergeRequestId)
+    writeFileSync(filePath, JSON.stringify(context, null, 2))
+
+    return { success: true }
+  }
+
+  setResult(localPath: string, mergeRequestId: string, result: ReviewContextResult): UpdateResult {
+    const context = this.read(localPath, mergeRequestId)
+    if (!context) {
+      return { success: false }
+    }
+
+    context.result = result
+    const filePath = this.getFilePath(localPath, mergeRequestId)
+    writeFileSync(filePath, JSON.stringify(context, null, 2))
+
+    return { success: true }
   }
 }

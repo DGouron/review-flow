@@ -1,0 +1,152 @@
+import type { ReviewContext } from '../entities/reviewContext/reviewContext.js'
+import type { ReviewContextAction } from '../entities/reviewContext/reviewContextAction.schema.js'
+import type { CommandExecutor, ExecutionResult } from './threadActionsExecutor.js'
+
+interface Logger {
+  info: (obj: object, msg: string) => void
+  warn: (obj: object, msg: string) => void
+  error: (obj: object, msg: string) => void
+  debug: (obj: object, msg: string) => void
+}
+
+function encodeProjectPath(projectPath: string): string {
+  return projectPath.replace(/\//g, '%2F')
+}
+
+function buildGitHubCommand(
+  action: ReviewContextAction,
+  projectPath: string,
+  mrNumber: number
+): { command: string; args: string[] } | null {
+  switch (action.type) {
+    case 'THREAD_RESOLVE':
+      return {
+        command: 'gh',
+        args: [
+          'api',
+          'graphql',
+          '-f',
+          `query=mutation { resolveReviewThread(input: {threadId: "${action.threadId}"}) { thread { id isResolved } } }`,
+        ],
+      }
+    case 'POST_COMMENT':
+      return {
+        command: 'gh',
+        args: [
+          'api',
+          '--method',
+          'POST',
+          `repos/${projectPath}/issues/${mrNumber}/comments`,
+          '--field',
+          `body=${action.body}`,
+        ],
+      }
+    case 'ADD_LABEL':
+      return {
+        command: 'gh',
+        args: [
+          'api',
+          '--method',
+          'POST',
+          `repos/${projectPath}/issues/${mrNumber}/labels`,
+          '--field',
+          `labels[]=${action.label}`,
+        ],
+      }
+  }
+}
+
+function buildGitLabCommand(
+  action: ReviewContextAction,
+  projectPath: string,
+  mrNumber: number
+): { command: string; args: string[] } | null {
+  const encodedProject = encodeProjectPath(projectPath)
+  const baseUrl = `projects/${encodedProject}/merge_requests/${mrNumber}`
+
+  switch (action.type) {
+    case 'THREAD_RESOLVE':
+      return {
+        command: 'glab',
+        args: [
+          'api',
+          '--method',
+          'PUT',
+          `${baseUrl}/discussions/${action.threadId}`,
+          '--field',
+          'resolved=true',
+        ],
+      }
+    case 'POST_COMMENT':
+      return {
+        command: 'glab',
+        args: [
+          'api',
+          '--method',
+          'POST',
+          `${baseUrl}/notes`,
+          '--field',
+          `body=${action.body}`,
+        ],
+      }
+    case 'ADD_LABEL':
+      return {
+        command: 'glab',
+        args: [
+          'api',
+          '--method',
+          'PUT',
+          baseUrl,
+          '--field',
+          `add_labels=${action.label}`,
+        ],
+      }
+  }
+}
+
+export async function executeActionsFromContext(
+  context: ReviewContext,
+  localPath: string,
+  logger: Logger,
+  executor: CommandExecutor
+): Promise<ExecutionResult> {
+  const result: ExecutionResult = {
+    total: context.actions.length,
+    succeeded: 0,
+    failed: 0,
+    skipped: 0,
+  }
+
+  for (const action of context.actions) {
+    const commandInfo =
+      context.platform === 'gitlab'
+        ? buildGitLabCommand(action, context.projectPath, context.mergeRequestNumber)
+        : buildGitHubCommand(action, context.projectPath, context.mergeRequestNumber)
+
+    if (commandInfo === null) {
+      logger.debug({ action: action.type }, 'Action skipped (no-op)')
+      result.skipped++
+      continue
+    }
+
+    try {
+      executor(commandInfo.command, commandInfo.args, localPath)
+      result.succeeded++
+      logger.info(
+        { action: action.type, threadId: 'threadId' in action ? action.threadId : undefined },
+        'Context action executed successfully'
+      )
+    } catch (error) {
+      result.failed++
+      logger.error(
+        {
+          action: action.type,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        'Context action failed'
+      )
+    }
+  }
+
+  return result
+}

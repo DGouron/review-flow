@@ -1,6 +1,6 @@
 ---
 name: followup-basic
-description: Review de suivi pour vérifier les corrections. Utilise les marqueurs standardisés pour la gestion des threads.
+description: Review de suivi pour vérifier les corrections. Utilise le fichier de contexte pour la gestion des threads.
 ---
 
 # Review de Suivi
@@ -10,10 +10,91 @@ description: Review de suivi pour vérifier les corrections. Utilise les marqueu
 **Ton objectif** : Confirmer que les corrections sont correctes et détecter les nouveaux problèmes introduits.
 
 **Ton approche** :
+- Lire le contexte des threads depuis le fichier de contexte
 - Vérifier chaque point bloquant de la review précédente
 - Marquer les threads comme corrigés ou non
-- Répondre et résoudre les threads via marqueurs
+- Écrire les actions dans le fichier de contexte pour exécution automatique
 - Rapport court et actionnable
+
+---
+
+## Fichier de Contexte
+
+Le serveur fournit un fichier de contexte avec les informations des threads pré-chargées :
+
+**Chemin** : `.claude/reviews/logs/{mrId}.json`
+
+**Exemple** : `.claude/reviews/logs/github-owner-repo-42.json`
+
+**Structure** :
+```json
+{
+  "version": "1.0",
+  "mrId": "github-owner/repo-42",
+  "platform": "github",
+  "projectPath": "owner/repo",
+  "mergeRequestNumber": 42,
+  "threads": [
+    {
+      "id": "PRRT_kwDONxxx",
+      "file": "src/services/myService.ts",
+      "line": 320,
+      "status": "open",
+      "body": "Null check manquant avant d'accéder à user.email"
+    }
+  ],
+  "actions": [],
+  "progress": { "phase": "pending", "currentStep": null }
+}
+```
+
+**Au début de ta review**, lis ce fichier pour obtenir :
+- Les IDs des threads à résoudre
+- Les chemins de fichiers et numéros de ligne pour chaque thread
+- Le texte du commentaire décrivant le problème
+
+---
+
+## Écrire des Actions dans le Fichier de Contexte
+
+Au lieu (ou en plus) des marqueurs stdout, tu peux écrire les actions directement dans le fichier de contexte. Le serveur les exécutera après ta review.
+
+**Pour résoudre un thread** :
+```json
+{
+  "actions": [
+    {
+      "type": "THREAD_RESOLVE",
+      "threadId": "PRRT_kwDONxxx",
+      "message": "Corrigé - Ajout du null check"
+    }
+  ]
+}
+```
+
+**Pour poster un commentaire** :
+```json
+{
+  "actions": [
+    {
+      "type": "POST_COMMENT",
+      "body": "## Review de Suivi\n\nTous les problèmes corrigés."
+    }
+  ]
+}
+```
+
+**Pour ajouter un label** (ex: quand tous les bloquants sont corrigés) :
+```json
+{
+  "actions": [
+    {
+      "type": "ADD_LABEL",
+      "label": "needs_approve"
+    }
+  ]
+}
+```
 
 ---
 
@@ -26,8 +107,8 @@ description: Review de suivi pour vérifier les corrections. Utilise les marqueu
 [PROGRESS:context:started]
 ```
 
-1. Identifier la MR/PR à partir du numéro fourni
-2. Lire les commentaires de la review précédente pour identifier les bloquants
+1. **Lire le fichier de contexte** à `.claude/reviews/logs/{mrId}.json`
+2. Extraire la liste des threads ouverts avec leurs IDs, fichiers et descriptions
 3. Récupérer le diff actuel pour voir les modifications
 
 ```
@@ -43,7 +124,7 @@ description: Review de suivi pour vérifier les corrections. Utilise les marqueu
 [PROGRESS:verify:started]
 ```
 
-Pour CHAQUE point bloquant de la review précédente :
+Pour CHAQUE thread du fichier de contexte :
 
 | Status | Critère |
 |--------|---------|
@@ -82,31 +163,32 @@ Scan rapide pour les nouveaux problèmes introduits par les corrections :
 
 #### Pour les problèmes CORRIGÉS
 
-Répondre au thread en expliquant ce qui a été corrigé, puis le résoudre :
+Écrire une action THREAD_RESOLVE dans le fichier de contexte :
 
-```
-[THREAD_REPLY:THREAD_ID:✅ **Corrigé** - [Description courte de ce qui a été fait]]
-[THREAD_RESOLVE:THREAD_ID]
+```json
+{
+  "type": "THREAD_RESOLVE",
+  "threadId": "PRRT_kwDONxxx",
+  "message": "✅ Corrigé - Ajout du null check avant d'accéder à user.email"
+}
 ```
 
-**Exemple** :
+**Alternative** : Utiliser les marqueurs stdout (rétro-compatible) :
 ```
-[THREAD_REPLY:abc123def:✅ **Corrigé** - Ajout du null check avant d'accéder à user.email]
-[THREAD_RESOLVE:abc123def]
+[THREAD_REPLY:PRRT_kwDONxxx:✅ **Corrigé** - Ajout du null check avant d'accéder à user.email]
+[THREAD_RESOLVE:PRRT_kwDONxxx]
 ```
 
 #### Pour les problèmes NON CORRIGÉS
 
-Répondre sans résoudre (laisser le thread ouvert) :
-
+Laisser le thread ouvert (pas d'action). Optionnellement utiliser un marqueur stdout pour répondre :
 ```
 [THREAD_REPLY:THREAD_ID:❌ **Non corrigé** - [Explication courte de ce qui ne va toujours pas]]
 ```
 
 #### Pour les corrections PARTIELLES
 
-Répondre avec avertissement, ne pas résoudre :
-
+Laisser le thread ouvert. Optionnellement répondre :
 ```
 [THREAD_REPLY:THREAD_ID:⚠️ **Partiellement corrigé** - [Ce qui a été fait et ce qui reste]]
 ```
@@ -172,8 +254,23 @@ Aucun nouveau problème détecté.
 [PHASE:publishing]
 ```
 
-Poster le rapport de suivi :
+Ajouter une action POST_COMMENT dans le fichier de contexte :
+```json
+{
+  "type": "POST_COMMENT",
+  "body": "## Review de Suivi - MR/PR #[NUMÉRO]\n\n[Contenu complet du rapport]"
+}
+```
 
+Si tous les bloquants sont corrigés (blocking=0), ajouter un label :
+```json
+{
+  "type": "ADD_LABEL",
+  "label": "needs_approve"
+}
+```
+
+**Alternative** : Utiliser le marqueur stdout (rétro-compatible) :
 ```
 [POST_COMMENT:## Review de Suivi - MR/PR #[NUMÉRO]\n\n[Contenu complet du rapport]]
 ```
@@ -198,40 +295,23 @@ Où :
 
 ---
 
-## Récupérer les IDs de Threads
+## Résumé
 
-### GitLab
+1. **Lire** le contexte des threads depuis `.claude/reviews/logs/{mrId}.json`
+2. **Vérifier** chaque problème du thread dans le code actuel
+3. **Écrire** les actions THREAD_RESOLVE pour les problèmes corrigés
+4. **Écrire** l'action POST_COMMENT avec ton rapport
+5. **Écrire** l'action ADD_LABEL si prêt pour merge
+6. **Émettre** le marqueur REVIEW_STATS
 
-Utiliser l'API GitLab pour récupérer les IDs de discussions :
-```bash
-glab api "projects/PROJET_ENCODE/merge_requests/NUMERO_MR/discussions"
-```
-
-Chercher le champ `id` dans chaque discussion.
-
-### GitHub
-
-Utiliser l'API GraphQL GitHub :
-```bash
-gh api graphql -f query='
-query {
-  repository(owner: "OWNER", name: "REPO") {
-    pullRequest(number: NUMERO) {
-      reviewThreads(first: 100) {
-        nodes { id isResolved }
-      }
-    }
-  }
-}'
-```
-
-Les IDs de threads commencent par `PRRT_`.
+Le serveur exécute automatiquement toutes les actions après ta review.
 
 ---
 
 ## Notes
 
-- Ne répondre et résoudre que les threads pour les problèmes **vraiment corrigés**
+- Les IDs de threads sont pré-chargés dans le fichier de contexte - pas besoin d'interroger les APIs
+- Ne résoudre que les threads pour les problèmes **vraiment corrigés**
 - Laisser les threads ouverts pour les corrections partielles ou non faites
-- Le serveur exécute automatiquement les marqueurs `[THREAD_REPLY:...]` et `[THREAD_RESOLVE:...]`
-- Pas besoin d'utiliser les commandes `glab api` ou `gh api` directement pour la gestion des threads
+- Le serveur exécute les actions du fichier de contexte ET des marqueurs stdout
+- Les marqueurs stdout sont toujours supportés pour la rétro-compatibilité

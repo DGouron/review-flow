@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { reviewContextActionSchema, reviewContextResultSchema } from './reviewContextAction.schema.js'
 
 export const reviewContextThreadSchema = z.object({
   id: z.string(),
@@ -11,6 +12,8 @@ export const reviewContextThreadSchema = z.object({
 export const reviewContextProgressSchema = z.object({
   phase: z.enum(['pending', 'initializing', 'agents-running', 'synthesizing', 'publishing', 'completed']),
   currentStep: z.string().nullable(),
+  stepsCompleted: z.array(z.string()).optional(),
+  updatedAt: z.string().optional(),
 })
 
 export const reviewContextSchema = z.object({
@@ -21,8 +24,9 @@ export const reviewContextSchema = z.object({
   mergeRequestNumber: z.number(),
   createdAt: z.string(),
   threads: z.array(reviewContextThreadSchema),
-  actions: z.array(z.unknown()),
+  actions: z.array(reviewContextActionSchema),
   progress: reviewContextProgressSchema,
+  result: reviewContextResultSchema.optional(),
 })
 
 export const createReviewContextInputSchema = z.object({

@@ -1,6 +1,6 @@
 ---
 name: followup-basic
-description: Follow-up review to verify fixes. Uses standardized markers for thread management.
+description: Follow-up review to verify fixes. Uses context file for thread management.
 ---
 
 # Follow-up Review
@@ -10,10 +10,91 @@ description: Follow-up review to verify fixes. Uses standardized markers for thr
 **Your goal**: Confirm fixes are correct and detect any new issues introduced.
 
 **Your approach**:
+- Read thread context from the context file
 - Verify each blocking issue from the previous review
 - Mark threads as fixed or not fixed
-- Reply and resolve threads using markers
+- Write actions to the context file for automatic execution
 - Short, actionable report
+
+---
+
+## Context File
+
+The server provides a context file with pre-fetched thread information:
+
+**Path**: `.claude/reviews/logs/{mrId}.json`
+
+**Example**: `.claude/reviews/logs/github-owner-repo-42.json`
+
+**Structure**:
+```json
+{
+  "version": "1.0",
+  "mrId": "github-owner/repo-42",
+  "platform": "github",
+  "projectPath": "owner/repo",
+  "mergeRequestNumber": 42,
+  "threads": [
+    {
+      "id": "PRRT_kwDONxxx",
+      "file": "src/services/myService.ts",
+      "line": 320,
+      "status": "open",
+      "body": "Missing null check before accessing user.email"
+    }
+  ],
+  "actions": [],
+  "progress": { "phase": "pending", "currentStep": null }
+}
+```
+
+**At the start of your review**, read this file to get:
+- Thread IDs you need to resolve
+- File paths and line numbers for each thread
+- The body/comment text describing the issue
+
+---
+
+## Writing Actions to Context File
+
+Instead of (or in addition to) stdout markers, you can write actions directly to the context file. The server will execute them after your review completes.
+
+**To resolve a thread**:
+```json
+{
+  "actions": [
+    {
+      "type": "THREAD_RESOLVE",
+      "threadId": "PRRT_kwDONxxx",
+      "message": "Fixed - Added null check"
+    }
+  ]
+}
+```
+
+**To post a comment**:
+```json
+{
+  "actions": [
+    {
+      "type": "POST_COMMENT",
+      "body": "## Follow-up Review\n\nAll issues fixed."
+    }
+  ]
+}
+```
+
+**To add a label** (e.g., when all blocking issues are fixed):
+```json
+{
+  "actions": [
+    {
+      "type": "ADD_LABEL",
+      "label": "needs_approve"
+    }
+  ]
+}
+```
 
 ---
 
@@ -26,8 +107,8 @@ description: Follow-up review to verify fixes. Uses standardized markers for thr
 [PROGRESS:context:started]
 ```
 
-1. Identify the MR/PR from the provided number
-2. Read previous review comments to identify blocking issues
+1. **Read the context file** at `.claude/reviews/logs/{mrId}.json`
+2. Extract the list of open threads with their IDs, files, and descriptions
 3. Fetch the current diff to see modifications
 
 ```
@@ -43,7 +124,7 @@ description: Follow-up review to verify fixes. Uses standardized markers for thr
 [PROGRESS:verify:started]
 ```
 
-For EACH blocking issue from the previous review:
+For EACH thread from the context file:
 
 | Status | Criteria |
 |--------|----------|
@@ -82,31 +163,32 @@ Quick scan for new issues introduced by the fixes:
 
 #### For FIXED issues
 
-Reply to the thread explaining what was fixed, then resolve it:
+Write a THREAD_RESOLVE action to the context file:
 
-```
-[THREAD_REPLY:THREAD_ID:✅ **Fixed** - [Brief description of what was done]]
-[THREAD_RESOLVE:THREAD_ID]
+```json
+{
+  "type": "THREAD_RESOLVE",
+  "threadId": "PRRT_kwDONxxx",
+  "message": "✅ Fixed - Added null check before accessing user.email"
+}
 ```
 
-**Example**:
+**Alternative**: Use stdout markers (backward compatible):
 ```
-[THREAD_REPLY:abc123def:✅ **Fixed** - Added null check before accessing user.email]
-[THREAD_RESOLVE:abc123def]
+[THREAD_REPLY:PRRT_kwDONxxx:✅ **Fixed** - Added null check before accessing user.email]
+[THREAD_RESOLVE:PRRT_kwDONxxx]
 ```
 
 #### For NOT FIXED issues
 
-Reply without resolving (leave thread open):
-
+Leave the thread open (no action needed). Optionally use stdout marker to reply:
 ```
 [THREAD_REPLY:THREAD_ID:❌ **Not fixed** - [Brief explanation of what's still wrong]]
 ```
 
 #### For PARTIAL fixes
 
-Reply with warning, do not resolve:
-
+Leave the thread open. Optionally reply:
 ```
 [THREAD_REPLY:THREAD_ID:⚠️ **Partially fixed** - [What was done and what remains]]
 ```
@@ -172,8 +254,23 @@ No new issues detected.
 [PHASE:publishing]
 ```
 
-Post the follow-up report:
+Add a POST_COMMENT action to the context file:
+```json
+{
+  "type": "POST_COMMENT",
+  "body": "## Follow-up Review - MR/PR #[NUMBER]\n\n[Full report content]"
+}
+```
 
+If all blocking issues are fixed (blocking=0), add a label:
+```json
+{
+  "type": "ADD_LABEL",
+  "label": "needs_approve"
+}
+```
+
+**Alternative**: Use stdout marker (backward compatible):
 ```
 [POST_COMMENT:## Follow-up Review - MR/PR #[NUMBER]\n\n[Full report content]]
 ```
@@ -198,40 +295,23 @@ Where:
 
 ---
 
-## Getting Thread IDs
+## Summary
 
-### GitLab
+1. **Read** thread context from `.claude/reviews/logs/{mrId}.json`
+2. **Verify** each thread's issue against the current code
+3. **Write** THREAD_RESOLVE actions for fixed issues
+4. **Write** POST_COMMENT action with your report
+5. **Write** ADD_LABEL action if ready to merge
+6. **Emit** REVIEW_STATS marker
 
-Use the GitLab API to get discussion IDs:
-```bash
-glab api "projects/ENCODED_PROJECT/merge_requests/MR_NUMBER/discussions"
-```
-
-Look for the `id` field in each discussion.
-
-### GitHub
-
-Use the GitHub GraphQL API:
-```bash
-gh api graphql -f query='
-query {
-  repository(owner: "OWNER", name: "REPO") {
-    pullRequest(number: NUMBER) {
-      reviewThreads(first: 100) {
-        nodes { id isResolved }
-      }
-    }
-  }
-}'
-```
-
-Thread IDs start with `PRRT_`.
+The server automatically executes all actions after your review completes.
 
 ---
 
 ## Notes
 
-- Only reply and resolve threads for issues that are **truly fixed**
+- Thread IDs are pre-fetched in the context file - no need to query APIs
+- Only resolve threads for issues that are **truly fixed**
 - Leave threads open for partial fixes or unfixed issues
-- The server executes `[THREAD_REPLY:...]` and `[THREAD_RESOLVE:...]` markers automatically
-- No need to use direct `glab api` or `gh api` commands for thread management
+- The server executes actions from both context file AND stdout markers
+- Stdout markers are still supported for backward compatibility
