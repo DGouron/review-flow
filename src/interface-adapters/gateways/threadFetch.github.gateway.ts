@@ -1,7 +1,12 @@
+import { execSync } from 'node:child_process'
 import type { ThreadFetchGateway } from '../../entities/threadFetch/threadFetch.gateway.js'
 import type { ReviewContextThread } from '../../entities/reviewContext/reviewContext.js'
 
 export type CommandExecutor = (command: string) => string
+
+export const defaultGitHubExecutor: CommandExecutor = (command: string) => {
+  return execSync(command, { encoding: 'utf-8', timeout: 30000 })
+}
 
 interface GitHubReviewThreadNode {
   id: string

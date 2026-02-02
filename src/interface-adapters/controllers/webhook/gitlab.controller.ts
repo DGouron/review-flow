@@ -23,6 +23,8 @@ import { loadProjectConfig } from '../../../config/projectConfig.js';
 import { parseReviewOutput } from '../../../services/statsService.js';
 import { parseThreadActions } from '../../../services/threadActionsParser.js';
 import { executeThreadActions, defaultCommandExecutor } from '../../../services/threadActionsExecutor.js';
+import { ReviewContextFileSystemGateway } from '../../gateways/reviewContext.fileSystem.gateway.js';
+import { GitLabThreadFetchGateway, defaultGitLabExecutor } from '../../gateways/threadFetch.gitlab.gateway.js';
 
 export async function handleGitLabWebhook(
   request: FastifyRequest,
@@ -65,12 +67,17 @@ export async function handleGitLabWebhook(
       // Archive the MR from tracking
       const archived = archiveMr(repoConfig.localPath, mrId);
 
+      // Delete review context file
+      const contextGateway = new ReviewContextFileSystemGateway();
+      const contextDeleted = contextGateway.delete(repoConfig.localPath, mrId);
+
       logger.info(
         {
           mrNumber,
           project: projectPath,
           jobCancelled: cancelled,
           trackingArchived: archived,
+          contextDeleted: contextDeleted.deleted,
         },
         'MR closed - cleaned up tracking and cancelled job'
       );
@@ -161,6 +168,32 @@ export async function handleGitLabWebhook(
 
           enqueueReview(followupJob, async (j, signal) => {
             sendNotification('Review followup démarrée', `MR !${j.mrNumber} - ${j.projectPath}`, logger);
+
+            // Create review context file with pre-fetched threads
+            const mergeRequestId = `gitlab-${j.projectPath}-${j.mrNumber}`;
+            const contextGateway = new ReviewContextFileSystemGateway();
+            const threadFetchGateway = new GitLabThreadFetchGateway(defaultGitLabExecutor);
+
+            try {
+              const threads = threadFetchGateway.fetchThreads(j.projectPath, j.mrNumber);
+              contextGateway.create({
+                localPath: j.localPath,
+                mergeRequestId,
+                platform: 'gitlab',
+                projectPath: j.projectPath,
+                mergeRequestNumber: j.mrNumber,
+                threads,
+              });
+              logger.info(
+                { mrNumber: j.mrNumber, threadsCount: threads.length },
+                'Review context file created with threads for followup'
+              );
+            } catch (error) {
+              logger.warn(
+                { mrNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },
+                'Failed to create review context file for followup, continuing without it'
+              );
+            }
 
             const result = await invokeClaudeReview(j, logger, (progress, progressEvent) => {
               updateJobProgress(j.id, progress, progressEvent);
@@ -312,6 +345,32 @@ export async function handleGitLabWebhook(
       `MR !${j.mrNumber} - ${j.projectPath}`,
       logger
     );
+
+    // Create review context file with pre-fetched threads
+    const mergeRequestId = `gitlab-${j.projectPath}-${j.mrNumber}`;
+    const contextGateway = new ReviewContextFileSystemGateway();
+    const threadFetchGateway = new GitLabThreadFetchGateway(defaultGitLabExecutor);
+
+    try {
+      const threads = threadFetchGateway.fetchThreads(j.projectPath, j.mrNumber);
+      contextGateway.create({
+        localPath: j.localPath,
+        mergeRequestId,
+        platform: 'gitlab',
+        projectPath: j.projectPath,
+        mergeRequestNumber: j.mrNumber,
+        threads,
+      });
+      logger.info(
+        { mrNumber: j.mrNumber, threadsCount: threads.length },
+        'Review context file created with threads'
+      );
+    } catch (error) {
+      logger.warn(
+        { mrNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },
+        'Failed to create review context file, continuing without it'
+      );
+    }
 
     // Invoke Claude with progress tracking and cancellation support
     const result = await invokeClaudeReview(j, logger, (progress, progressEvent) => {
