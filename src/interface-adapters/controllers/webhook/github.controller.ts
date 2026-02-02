@@ -177,6 +177,10 @@ export async function handleGitHubWebhook(
     mrUrl: filterResult.mergeRequestUrl,
     sourceBranch: filterResult.sourceBranch,
     targetBranch: filterResult.targetBranch,
+    jobType: 'review',
+    title: prTitle,
+    description: event.pull_request?.body,
+    assignedBy,
   };
 
   const enqueued = await enqueueReview(job, async (j, signal) => {
