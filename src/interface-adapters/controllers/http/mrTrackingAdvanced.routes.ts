@@ -8,7 +8,14 @@ import {
   syncAllThreads,
   syncSingleMrThreads,
   loadMrTracking,
+  recordReviewCompletion,
 } from '../../../services/mrTrackingService.js';
+import { parseReviewOutput } from '../../../services/statsService.js';
+import { parseThreadActions } from '../../../services/threadActionsParser.js';
+import { executeThreadActions, defaultCommandExecutor } from '../../../services/threadActionsExecutor.js';
+import { ReviewContextFileSystemGateway } from '../../gateways/reviewContext.fileSystem.gateway.js';
+import { GitHubThreadFetchGateway, defaultGitHubExecutor } from '../../gateways/threadFetch.github.gateway.js';
+import { GitLabThreadFetchGateway, defaultGitLabExecutor } from '../../gateways/threadFetch.gitlab.gateway.js';
 import type { Logger } from 'pino';
 
 interface MrTrackingAdvancedRoutesOptions {
@@ -93,11 +100,91 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
     }, async (job, signal) => {
       sendNotification('Review followup started', `MR !${job.mrNumber}`, logger);
 
+      // Create review context file with pre-fetched threads
+      const contextGateway = new ReviewContextFileSystemGateway();
+      const threadFetchGateway = job.platform === 'github'
+        ? new GitHubThreadFetchGateway(defaultGitHubExecutor)
+        : new GitLabThreadFetchGateway(defaultGitLabExecutor);
+
+      try {
+        const threads = threadFetchGateway.fetchThreads(job.projectPath, job.mrNumber);
+        contextGateway.create({
+          localPath: job.localPath,
+          mergeRequestId: mrId,
+          platform: job.platform,
+          projectPath: job.projectPath,
+          mergeRequestNumber: job.mrNumber,
+          threads,
+        });
+        logger.info(
+          { mrNumber: job.mrNumber, threadsCount: threads.length },
+          'Review context file created with threads for manual followup'
+        );
+      } catch (error) {
+        logger.warn(
+          { mrNumber: job.mrNumber, error: error instanceof Error ? error.message : String(error) },
+          'Failed to create review context file for manual followup, continuing without it'
+        );
+      }
+
       const result = await invokeClaudeReview(job, logger, (progress, event) => {
         updateJobProgress(job.id, progress, event);
       }, signal);
 
       if (result.success) {
+        // Parse review output for stats
+        const parsed = parseReviewOutput(result.stdout);
+
+        // Execute thread actions from markers
+        const threadActions = parseThreadActions(result.stdout);
+        if (threadActions.length > 0) {
+          const actionResult = await executeThreadActions(
+            threadActions,
+            {
+              platform: job.platform,
+              projectPath: job.projectPath,
+              mrNumber: job.mrNumber,
+              localPath: job.localPath,
+            },
+            logger,
+            defaultCommandExecutor
+          );
+          logger.info(
+            { ...actionResult, mrNumber: job.mrNumber },
+            'Thread actions executed for manual followup'
+          );
+        }
+
+        // Sync threads to get real state after followup resolves threads
+        const updatedMr = syncSingleMrThreads(job.localPath, mrId);
+
+        // Record followup completion with parsed stats
+        recordReviewCompletion(
+          job.localPath,
+          mrId,
+          {
+            type: 'followup',
+            durationMs: result.durationMs,
+            score: parsed.score,
+            blocking: parsed.blocking,
+            warnings: parsed.warnings,
+            suggestions: parsed.suggestions,
+            threadsOpened: 0,
+            threadsClosed: 0,
+          }
+        );
+
+        logger.info(
+          {
+            mrNumber: job.mrNumber,
+            score: parsed.score,
+            blocking: parsed.blocking,
+            openThreads: updatedMr?.openThreads,
+            state: updatedMr?.state,
+          },
+          'Manual followup stats recorded and threads synced'
+        );
+
         sendNotification('Review followup completed', `MR !${job.mrNumber}`, logger);
       } else if (!result.cancelled) {
         sendNotification('Review followup failed', `MR !${job.mrNumber}`, logger);
