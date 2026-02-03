@@ -224,6 +224,18 @@ export async function handleGitHubWebhook(
     // Invoke Claude with progress tracking and cancellation support
     const result = await invokeClaudeReview(j, logger, (progress, event) => {
       updateJobProgress(j.id, progress, event);
+
+      // Also update the review context file for file-based progress tracking
+      const runningAgent = progress.agents.find(a => a.status === 'running');
+      const completedAgents = progress.agents
+        .filter(a => a.status === 'completed')
+        .map(a => a.name);
+
+      contextGateway.updateProgress(j.localPath, mergeRequestId, {
+        phase: progress.currentPhase,
+        currentStep: runningAgent?.name ?? null,
+        stepsCompleted: completedAgents,
+      });
     }, signal);
 
     // Stop watching context file (auto-stops on completion, but explicit stop for error cases)
