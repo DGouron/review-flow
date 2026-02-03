@@ -202,6 +202,18 @@ export async function handleGitLabWebhook(
 
             const result = await invokeClaudeReview(j, logger, (progress, progressEvent) => {
               updateJobProgress(j.id, progress, progressEvent);
+
+              // Also update the review context file for file-based progress tracking
+              const runningAgent = progress.agents.find(a => a.status === 'running');
+              const completedAgents = progress.agents
+                .filter(a => a.status === 'completed')
+                .map(a => a.name);
+
+              contextGateway.updateProgress(j.localPath, mergeRequestId, {
+                phase: progress.currentPhase,
+                currentStep: runningAgent?.name ?? null,
+                stepsCompleted: completedAgents,
+              });
             }, signal);
 
             stopWatchingReviewContext(mergeRequestId);
@@ -212,7 +224,9 @@ export async function handleGitLabWebhook(
 
               // Execute thread actions from stdout markers (backward compatibility)
               const threadActions = parseThreadActions(result.stdout);
+              let threadResolveCount = 0;
               if (threadActions.length > 0) {
+                threadResolveCount = threadActions.filter(a => a.type === 'THREAD_RESOLVE').length;
                 const actionResult = await executeThreadActions(
                   threadActions,
                   {
@@ -225,7 +239,7 @@ export async function handleGitLabWebhook(
                   defaultCommandExecutor
                 );
                 logger.info(
-                  { ...actionResult, mrNumber: j.mrNumber },
+                  { ...actionResult, threadResolveCount, mrNumber: j.mrNumber },
                   'Thread actions executed from stdout markers for followup'
                 );
               }
@@ -250,7 +264,7 @@ export async function handleGitLabWebhook(
               const updatedMr = syncSingleMrThreads(j.localPath, mrId);
 
               // Record followup completion with parsed stats
-              // Use actual thread counts from GitLab sync, not estimates
+              // threadsClosed comes from THREAD_RESOLVE markers parsed from output
               recordReviewCompletion(
                 j.localPath,
                 mrId,
@@ -261,9 +275,8 @@ export async function handleGitLabWebhook(
                   blocking: parsed.blocking,
                   warnings: parsed.warnings,
                   suggestions: parsed.suggestions,
-                  // Don't estimate threads - syncSingleMrThreads already updated the real count
                   threadsOpened: 0,
-                  threadsClosed: 0,
+                  threadsClosed: threadResolveCount,
                 }
               );
               logger.info(
@@ -400,6 +413,18 @@ export async function handleGitLabWebhook(
     // Invoke Claude with progress tracking and cancellation support
     const result = await invokeClaudeReview(j, logger, (progress, progressEvent) => {
       updateJobProgress(j.id, progress, progressEvent);
+
+      // Also update the review context file for file-based progress tracking
+      const runningAgent = progress.agents.find(a => a.status === 'running');
+      const completedAgents = progress.agents
+        .filter(a => a.status === 'completed')
+        .map(a => a.name);
+
+      contextGateway.updateProgress(j.localPath, mergeRequestId, {
+        phase: progress.currentPhase,
+        currentStep: runningAgent?.name ?? null,
+        stepsCompleted: completedAgents,
+      });
     }, signal);
 
     // Stop watching context file (auto-stops on completion, but explicit stop for error cases)

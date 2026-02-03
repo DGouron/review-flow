@@ -203,6 +203,34 @@ export function filterGitLabMrClose(event: GitLabMergeRequestEvent): FilterResul
 }
 
 /**
+ * Check if a GitLab MR was merged
+ * Returns info to update tracking status
+ */
+export function filterGitLabMrMerge(event: GitLabMergeRequestEvent): FilterResult {
+  const mr = event.object_attributes;
+
+  // Check if action is "merge"
+  if (mr.action !== 'merge') {
+    return { shouldProcess: false, reason: `Action is ${mr.action}, not merge` };
+  }
+
+  // Verify state is merged
+  if (mr.state !== 'merged') {
+    return { shouldProcess: false, reason: `State is ${mr.state}, not merged` };
+  }
+
+  return {
+    shouldProcess: true,
+    reason: 'MR was merged',
+    mergeRequestNumber: mr.iid,
+    projectPath: event.project.path_with_namespace,
+    mergeRequestUrl: mr.url,
+    sourceBranch: mr.source_branch,
+    targetBranch: mr.target_branch,
+  };
+}
+
+/**
  * Filter GitHub PR events
  * Returns true if we should trigger a review
  */

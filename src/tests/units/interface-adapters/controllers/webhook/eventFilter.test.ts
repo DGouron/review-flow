@@ -15,6 +15,7 @@ import {
   filterGitLabEvent,
   filterGitLabMrUpdate,
   filterGitLabMrClose,
+  filterGitLabMrMerge,
   filterGitHubEvent,
   filterGitHubLabelEvent,
   filterGitHubPrClose,
@@ -231,6 +232,52 @@ describe('filterGitLabMrClose', () => {
       const result = filterGitLabMrClose(event)
 
       expect(result.shouldProcess).toBe(false)
+    })
+  })
+})
+
+describe('filterGitLabMrMerge', () => {
+  describe('when MR is merged', () => {
+    it('should detect merge event', () => {
+      const event = GitLabEventFactory.createMergedMr()
+
+      const result = filterGitLabMrMerge(event)
+
+      expect(result.shouldProcess).toBe(true)
+      expect(result.reason).toContain('merged')
+      if (result.shouldProcess) {
+        expect(result.mergeRequestNumber).toBe(42)
+        expect(result.projectPath).toBe('test-org/test-project')
+      }
+    })
+  })
+
+  describe('when action is not merge', () => {
+    it('should not process non-merge actions', () => {
+      const event = GitLabEventFactory.createMergeRequestEvent({
+        object_attributes: { action: 'update' },
+      })
+
+      const result = filterGitLabMrMerge(event)
+
+      expect(result.shouldProcess).toBe(false)
+      expect(result.reason).toContain('update')
+    })
+  })
+
+  describe('when state is not merged', () => {
+    it('should not process if state mismatch', () => {
+      const event = GitLabEventFactory.createMergeRequestEvent({
+        object_attributes: {
+          action: 'merge',
+          state: 'opened',
+        },
+      })
+
+      const result = filterGitLabMrMerge(event)
+
+      expect(result.shouldProcess).toBe(false)
+      expect(result.reason).toContain('opened')
     })
   })
 })
