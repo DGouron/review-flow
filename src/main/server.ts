@@ -48,7 +48,10 @@ export async function startServer(options: ServerOptions = {}): Promise<FastifyI
   const deps = createDependencies(config);
 
   initQueue(deps.logger);
-  setupWebSocketCallbacks();
+  setupWebSocketCallbacks({
+    reviewContextWatcher: deps.reviewContextWatcher,
+    progressPresenter: deps.progressPresenter,
+  });
 
   const app = await buildServer(deps);
 

@@ -1,18 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
-import type { Logger } from 'pino';
 import type { ReviewProgress, ProgressEvent } from '../types/progress.js';
+import type { Dependencies } from './dependencies.js';
 import { getJobsStatus, setProgressChangeCallback, setStateChangeCallback, updateJobProgress } from '../queue/reviewQueue.js';
 import { onLog, type LogEntry } from '../services/logService.js';
-import { ReviewContextWatcherService } from '../services/reviewContextWatcher.service.js';
-import { ReviewContextFileSystemGateway } from '../interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
-import { ReviewContextProgressPresenter } from '../interface-adapters/presenters/reviewContextProgress.presenter.js';
 
 const wsClients = new Set<WebSocket>();
 
-const contextGateway = new ReviewContextFileSystemGateway();
-const contextWatcher = new ReviewContextWatcherService(contextGateway);
-const progressPresenter = new ReviewContextProgressPresenter();
+let injectedDeps: Pick<Dependencies, 'reviewContextWatcher' | 'progressPresenter'> | null = null;
 
 export function getWsClientsCount(): number {
   return wsClients.size;
@@ -66,7 +61,8 @@ function broadcastStateChange(): void {
   }
 }
 
-export function setupWebSocketCallbacks(): void {
+export function setupWebSocketCallbacks(deps: Pick<Dependencies, 'reviewContextWatcher' | 'progressPresenter'>): void {
+  injectedDeps = deps;
   onLog(broadcastLogEntry);
   setProgressChangeCallback((jobId, progress, event) => {
     broadcastProgress(jobId, progress, event);
@@ -77,20 +73,28 @@ export function setupWebSocketCallbacks(): void {
 }
 
 export function startWatchingReviewContext(jobId: string, localPath: string, mergeRequestId: string): void {
-  contextWatcher.start(localPath, mergeRequestId, (contextProgress) => {
+  if (!injectedDeps) {
+    throw new Error('WebSocket dependencies not initialized. Call setupWebSocketCallbacks first.');
+  }
+  const { reviewContextWatcher, progressPresenter } = injectedDeps;
+  reviewContextWatcher.start(localPath, mergeRequestId, (contextProgress) => {
     const reviewProgress = progressPresenter.toReviewProgress(contextProgress);
     updateJobProgress(jobId, reviewProgress);
   });
 }
 
 export function stopWatchingReviewContext(mergeRequestId: string): void {
-  contextWatcher.stop(mergeRequestId);
+  if (!injectedDeps) {
+    throw new Error('WebSocket dependencies not initialized. Call setupWebSocketCallbacks first.');
+  }
+  injectedDeps.reviewContextWatcher.stop(mergeRequestId);
 }
 
 export async function registerWebSocketRoutes(
   app: FastifyInstance,
-  logger: Logger
+  deps: Pick<Dependencies, 'logger'>
 ): Promise<void> {
+  const { logger } = deps;
   app.get('/ws', { websocket: true }, (connection) => {
     const socket = connection.socket;
     logger.info('WebSocket client connected');
