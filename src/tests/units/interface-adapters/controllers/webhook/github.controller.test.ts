@@ -52,6 +52,11 @@ vi.mock('../../../../../claude/invoker.js', () => ({
   sendNotification: vi.fn(),
 }));
 
+vi.mock('../../../../../main/websocket.js', () => ({
+  startWatchingReviewContext: vi.fn(),
+  stopWatchingReviewContext: vi.fn(),
+}));
+
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { handleGitHubWebhook } from '../../../../../interface-adapters/controllers/webhook/github.controller.js';
 import { GitHubEventFactory } from '../../../../factories/gitHubEvent.factory.js';

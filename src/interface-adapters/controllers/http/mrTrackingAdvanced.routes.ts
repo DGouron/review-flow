@@ -133,6 +133,18 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
 
       const result = await invokeClaudeReview(job, logger, (progress, event) => {
         updateJobProgress(job.id, progress, event);
+
+        // Also update the review context file for file-based progress tracking
+        const runningAgent = progress.agents.find(a => a.status === 'running');
+        const completedAgents = progress.agents
+          .filter(a => a.status === 'completed')
+          .map(a => a.name);
+
+        contextGateway.updateProgress(job.localPath, mrId, {
+          phase: progress.currentPhase,
+          currentStep: runningAgent?.name ?? null,
+          stepsCompleted: completedAgents,
+        });
       }, signal);
 
       stopWatchingReviewContext(mrId);
@@ -143,7 +155,9 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
 
         // Execute thread actions from markers
         const threadActions = parseThreadActions(result.stdout);
+        let threadResolveCount = 0;
         if (threadActions.length > 0) {
+          threadResolveCount = threadActions.filter(a => a.type === 'THREAD_RESOLVE').length;
           const actionResult = await executeThreadActions(
             threadActions,
             {
@@ -156,7 +170,7 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
             defaultCommandExecutor
           );
           logger.info(
-            { ...actionResult, mrNumber: job.mrNumber },
+            { ...actionResult, threadResolveCount, mrNumber: job.mrNumber },
             'Thread actions executed for manual followup'
           );
         }
@@ -165,6 +179,7 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
         const updatedMr = syncSingleMrThreads(job.localPath, mrId);
 
         // Record followup completion with parsed stats
+        // threadsClosed comes from THREAD_RESOLVE markers parsed from output
         recordReviewCompletion(
           job.localPath,
           mrId,
@@ -176,7 +191,7 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
             warnings: parsed.warnings,
             suggestions: parsed.suggestions,
             threadsOpened: 0,
-            threadsClosed: 0,
+            threadsClosed: threadResolveCount,
           }
         );
 

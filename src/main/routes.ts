@@ -57,7 +57,7 @@ export async function registerRoutes(
   await app.register(cliStatusRoutes);
   await app.register(projectConfigRoutes);
 
-  await registerWebSocketRoutes(app, deps.logger);
+  await registerWebSocketRoutes(app, deps);
 
   app.post('/webhooks/gitlab', async (request, reply) => {
     await handleGitLabWebhook(request, reply, deps.logger);
