@@ -95,8 +95,7 @@ export async function registerWebSocketRoutes(
   deps: Pick<Dependencies, 'logger'>
 ): Promise<void> {
   const { logger } = deps;
-  app.get('/ws', { websocket: true }, (connection) => {
-    const socket = connection.socket;
+  app.get('/ws', { websocket: true }, (socket) => {
     logger.info('WebSocket client connected');
     wsClients.add(socket);
 
