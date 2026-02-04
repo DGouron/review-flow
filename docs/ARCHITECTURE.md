@@ -1,10 +1,10 @@
-# Architecture technique
+# Technical Architecture
 
-## Vue d'ensemble
+## Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        Flux de données                          │
+│                          Data Flow                              │
 └─────────────────────────────────────────────────────────────────┘
 
     GitLab/GitHub                Cloudflare                   Local
@@ -45,69 +45,69 @@
          │                           │                          │
 ```
 
-## Structure des fichiers
+## File Structure
 
 ```
 src/
-├── server.ts              # Point d'entrée Fastify
+├── server.ts              # Fastify entry point
 │
 ├── config/
-│   └── loader.ts          # Chargement et validation config
+│   └── loader.ts          # Config loading and validation
 │
 ├── security/
-│   └── verifier.ts        # Vérification signatures webhook
+│   └── verifier.ts        # Webhook signature verification
 │
 ├── webhooks/
-│   ├── gitlab.handler.ts  # Handler GitLab
-│   ├── github.handler.ts  # Handler GitHub
-│   └── eventFilter.ts     # Logique de filtrage
+│   ├── gitlab.handler.ts  # GitLab handler
+│   ├── github.handler.ts  # GitHub handler
+│   └── eventFilter.ts     # Filtering logic
 │
 ├── queue/
-│   └── reviewQueue.ts     # Gestion queue + déduplication
+│   └── reviewQueue.ts     # Queue management + deduplication
 │
 └── claude/
-    └── invoker.ts         # Invocation CLI Claude
+    └── invoker.ts         # Claude CLI invocation
 ```
 
-## Composants
+## Components
 
 ### 1. Server (server.ts)
 
-- **Framework** : Fastify 4.x
-- **Rôle** : Point d'entrée HTTP, routing, raw body parsing
-- **Particularité** : Custom content parser pour stocker le raw body (nécessaire pour HMAC GitHub)
+- **Framework**: Fastify 4.x
+- **Role**: HTTP entry point, routing, raw body parsing
+- **Note**: Custom content parser to store raw body (required for GitHub HMAC)
 
 ### 2. Config Loader (config/loader.ts)
 
-- Charge `config.json` et `.env`
-- Validation stricte au démarrage
-- Cache en mémoire (singleton)
-- Fonctions de recherche de repo par URL ou path
+- Loads `config.json` and `.env`
+- Strict validation at startup
+- In-memory cache (singleton)
+- Repo search functions by URL or path
 
 ### 3. Security Verifier (security/verifier.ts)
 
-- **GitLab** : Comparaison token `X-Gitlab-Token` avec `timingSafeEqual`
-- **GitHub** : Vérification HMAC-SHA256 de `X-Hub-Signature-256`
-- Protection contre timing attacks
+- **GitLab**: Token comparison `X-Gitlab-Token` with `timingSafeEqual`
+- **GitHub**: HMAC-SHA256 verification of `X-Hub-Signature-256`
+- Protection against timing attacks
 
 ### 4. Event Filter (webhooks/eventFilter.ts)
 
-Filtre les événements selon ces critères :
+Filters events based on these criteria:
 
-| Critère | GitLab | GitHub |
-|---------|--------|--------|
-| Type event | `merge_request` | `pull_request` |
-| Action | `update` avec reviewers changed | `review_requested` |
-| État | `opened` | `open` |
-| Draft | Non | Non |
-| Reviewer | Username dans la liste | `requested_reviewer.login` |
+| Criterion | GitLab | GitHub |
+|-----------|--------|--------|
+| Event type | `merge_request` | `pull_request` |
+| Action | `update` with reviewers changed | `review_requested` |
+| State | `opened` | `open` |
+| Draft | No | No |
+| Reviewer | Username in list | `requested_reviewer.login` |
 
 ### 5. Review Queue (queue/reviewQueue.ts)
 
-- **Librairie** : p-queue
-- **Concurrence** : Configurable (défaut: 2)
-- **Déduplication** : Map avec TTL (défaut: 5 min)
-- **Tracking** : Jobs actifs et historique des 20 derniers
+- **Library**: p-queue
+- **Concurrency**: Configurable (default: 2)
+- **Deduplication**: Map with TTL (default: 5 min)
+- **Tracking**: Active jobs and history of last 20
 
 ### 6. Claude Invoker (claude/invoker.ts)
 
@@ -115,37 +115,37 @@ Filtre les événements selon ces critères :
 claude --print --permission-mode dontAsk --model sonnet -p "/<skill> <MR_NUMBER>"
 ```
 
-- **Spawn** : `child_process.spawn` (pas exec, pour gérer les gros outputs)
-- **CWD** : Chemin local du repo configuré
-- **Timeout** : 30 minutes max
-- **Notifications** : `notify-send` au début et à la fin
+- **Spawn**: `child_process.spawn` (not exec, to handle large outputs)
+- **CWD**: Configured local repo path
+- **Timeout**: 30 minutes max
+- **Notifications**: `notify-send` at start and end
 
-## Sécurité
+## Security
 
-### Vérification des webhooks
+### Webhook Verification
 
 ```typescript
-// GitLab : simple token comparison
+// GitLab: simple token comparison
 const token = request.headers['x-gitlab-token'];
 timingSafeEqual(Buffer.from(token), Buffer.from(expectedToken));
 
-// GitHub : HMAC-SHA256
+// GitHub: HMAC-SHA256
 const hmac = createHmac('sha256', secret);
 hmac.update(rawBody);
 const expected = `sha256=${hmac.digest('hex')}`;
 timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 ```
 
-### Pourquoi timingSafeEqual ?
+### Why timingSafeEqual?
 
-Comparaison caractère par caractère = timing attack possible.
-`timingSafeEqual` prend toujours le même temps quelque soit l'input.
+Character-by-character comparison = timing attack vulnerability.
+`timingSafeEqual` always takes the same time regardless of input.
 
-## Déduplication
+## Deduplication
 
-Problème : GitLab peut envoyer plusieurs webhooks pour le même événement (updates rapides).
+Problem: GitLab may send multiple webhooks for the same event (rapid updates).
 
-Solution :
+Solution:
 ```typescript
 const recentJobs = new Map<string, number>(); // jobId -> timestamp
 
@@ -156,21 +156,21 @@ function shouldDeduplicate(jobId: string): boolean {
 }
 ```
 
-Le job ID est `platform:projectPath:mrNumber`.
+The job ID is `platform:projectPath:mrNumber`.
 
 ## Extension
 
-### Ajouter une nouvelle plateforme
+### Adding a New Platform
 
-1. Créer `webhooks/newplatform.handler.ts`
-2. Ajouter la vérification de signature dans `security/verifier.ts`
-3. Ajouter le type dans `eventFilter.ts`
-4. Enregistrer la route dans `server.ts`
-5. Ajouter le type `platform` dans les configs
+1. Create `webhooks/newplatform.handler.ts`
+2. Add signature verification in `security/verifier.ts`
+3. Add the type in `eventFilter.ts`
+4. Register the route in `server.ts`
+5. Add the `platform` type in configs
 
-### Ajouter des notifications
+### Adding Notifications
 
-Modifier `claude/invoker.ts` :
+Modify `claude/invoker.ts`:
 ```typescript
 // Slack
 await fetch(slackWebhookUrl, { method: 'POST', body: JSON.stringify({ text }) });

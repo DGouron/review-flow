@@ -1,49 +1,49 @@
-# Déploiement en production
+# Production Deployment
 
-## Prérequis
+## Prerequisites
 
 - Node.js 20+
-- cloudflared installé
-- Un domaine configuré sur Cloudflare (optionnel, pour URL permanente)
+- cloudflared installed
+- A domain configured on Cloudflare (optional, for permanent URL)
 
-## Option 1 : Quick Tunnel (test)
+## Option 1: Quick Tunnel (testing)
 
-URL temporaire qui change à chaque redémarrage.
+Temporary URL that changes on each restart.
 
 ```bash
-# Terminal 1 : Serveur
+# Terminal 1: Server
 cd ~/claude-review-automation
 npm run build
 npm start
 
-# Terminal 2 : Tunnel
+# Terminal 2: Tunnel
 cloudflared tunnel --url http://localhost:3847
 ```
 
-## Option 2 : Tunnel permanent (production)
+## Option 2: Permanent Tunnel (production)
 
-### 1. Créer le tunnel
+### 1. Create the tunnel
 
 ```bash
-# S'authentifier
+# Authenticate
 cloudflared tunnel login
 
-# Créer le tunnel
+# Create tunnel
 cloudflared tunnel create claude-review
 
-# Noter l'ID du tunnel (ex: a1b2c3d4-...)
+# Note the tunnel ID (e.g., a1b2c3d4-...)
 ```
 
-### 2. Configurer le DNS
+### 2. Configure DNS
 
 ```bash
-# Créer l'entrée DNS
+# Create DNS entry
 cloudflared tunnel route dns claude-review review.your-domain.com
 ```
 
-### 3. Configuration cloudflared
+### 3. Cloudflared configuration
 
-Créer `~/.cloudflared/config.yml` :
+Create `~/.cloudflared/config.yml`:
 
 ```yaml
 tunnel: <TUNNEL_ID>
@@ -55,25 +55,25 @@ ingress:
   - service: http_status:404
 ```
 
-### 4. Services systemd
+### 4. Systemd services
 
 ```bash
-# Copier les fichiers de service
+# Copy service files
 sudo cp setup/claude-review-server.service /etc/systemd/system/
 sudo cp setup/cloudflared-tunnel.service /etc/systemd/system/
 
-# Recharger systemd
+# Reload systemd
 sudo systemctl daemon-reload
 
-# Activer et démarrer
+# Enable and start
 sudo systemctl enable --now claude-review-server
 sudo systemctl enable --now cloudflared-tunnel
 ```
 
-### 5. Vérification
+### 5. Verification
 
 ```bash
-# Status des services
+# Service status
 sudo systemctl status claude-review-server
 sudo systemctl status cloudflared-tunnel
 
@@ -85,47 +85,47 @@ journalctl -u cloudflared-tunnel -f
 curl https://review.your-domain.com/health
 ```
 
-## Mise à jour
+## Updating
 
 ```bash
-# Arrêter le service
+# Stop the service
 sudo systemctl stop claude-review-server
 
-# Mettre à jour
+# Update
 cd ~/claude-review-automation
 git pull
 npm install
 npm run build
 
-# Redémarrer
+# Restart
 sudo systemctl start claude-review-server
 ```
 
 ## Troubleshooting
 
-### Le webhook retourne 401
+### Webhook returns 401
 
-- Vérifier que `GITLAB_WEBHOOK_TOKEN` dans `.env` correspond au token dans GitLab
-- Vérifier les logs : `journalctl -u claude-review-server -n 50`
+- Verify that `GITLAB_WEBHOOK_TOKEN` in `.env` matches the token in GitLab
+- Check logs: `journalctl -u claude-review-server -n 50`
 
-### La review ne se lance pas
+### Review doesn't start
 
-1. Vérifier que le repo est configuré dans `config.json`
-2. Vérifier que ton username correspond à celui dans `config.json`
-3. Vérifier que la MR est ouverte (pas draft, pas merged)
+1. Verify the repo is configured in `config.json`
+2. Verify your username matches the one in `config.json`
+3. Verify the MR is open (not draft, not merged)
 
-### Le tunnel ne répond pas
+### Tunnel not responding
 
 ```bash
-# Vérifier le status
+# Check status
 cloudflared tunnel info claude-review
 
-# Redémarrer
+# Restart
 sudo systemctl restart cloudflared-tunnel
 ```
 
-### Claude Code échoue
+### Claude Code fails
 
-- Vérifier que le chemin local existe
-- Vérifier que la skill existe (`claude --help` dans le repo)
-- Vérifier les permissions Claude Code (`settings.local.json`)
+- Verify the local path exists
+- Verify the skill exists (`claude --help` in the repo)
+- Check Claude Code permissions (`settings.local.json`)

@@ -136,7 +136,7 @@ See the `/examples` directory for:
 
 1. Open the Claude Review Dashboard at `http://localhost:3847`
 2. Enter your project path (e.g., `/home/user/my-project`)
-3. Click "Charger" to load the configuration
+3. Click "Load" to load the configuration
 4. The dashboard will:
    - Validate the config and skills
    - Display the active platform (GitHub CLI or GitLab CLI)

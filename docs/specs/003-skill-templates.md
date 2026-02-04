@@ -1,33 +1,33 @@
-# SPEC-003 : Skill Templates (EN/FR)
+# SPEC-003: Skill Templates (EN/FR)
 
 ## User Story
 
-En tant que développeur souhaitant créer mes propres skills de review,
-je veux des templates de skills prêts à l'emploi en anglais et français,
-afin de démarrer rapidement sans partir de zéro.
+As a developer wanting to create my own review skills,
+I want ready-to-use skill templates in English and French,
+so I can start quickly without building from scratch.
 
-## Contexte
+## Context
 
-Les skills actuels (review-front, review-followup) sont spécifiques au projet MentorGoal et contiennent :
-- Des références hardcodées (mentor-goal/main-app-v3)
-- Des règles métier spécifiques (Clean Architecture, DDD, etc.)
-- Un mix de commandes techniques et de logique de review
+Current skills (review-front, review-followup) are specific to the MentorGoal project and contain:
+- Hardcoded references (mentor-goal/main-app-v3)
+- Project-specific business rules (Clean Architecture, DDD, etc.)
+- A mix of technical commands and review logic
 
-Les templates doivent :
-1. Être génériques et adaptables
-2. Utiliser les nouveaux marqueurs standardisés (SPEC-001)
-3. Séparer clairement les parties à personnaliser
+Templates must:
+1. Be generic and adaptable
+2. Use the new standardized markers (SPEC-001)
+3. Clearly separate customizable sections
 
-## Règles métier
+## Business Rules
 
-- Templates disponibles en `/templates/en/` et `/templates/fr/`
-- Chaque template est un dossier complet (SKILL.md + config exemple)
-- Les parties à personnaliser sont clairement marquées avec `<!-- CUSTOMIZE: ... -->`
-- Les templates utilisent UNIQUEMENT les marqueurs standardisés (pas de `glab`/`gh` direct)
+- Templates available in `/templates/en/` and `/templates/fr/`
+- Each template is a complete folder (SKILL.md + example config)
+- Customizable sections are clearly marked with `<!-- CUSTOMIZE: ... -->`
+- Templates use ONLY standardized markers (no direct `glab`/`gh` calls)
 
-## Livrables
+## Deliverables
 
-### Structure des templates
+### Template Structure
 
 ```
 templates/
@@ -53,71 +53,71 @@ templates/
         └── README.md
 ```
 
-### Template : review-basic
+### Template: review-basic
 
-Skill de review minimal avec :
-- Analyse du diff
-- Détection des problèmes basiques
-- Rapport simple
-- Marqueurs de progression
+Minimal review skill with:
+- Diff analysis
+- Basic issue detection
+- Simple report
+- Progress markers
 
-### Template : review-with-agents
+### Template: review-with-agents
 
-Skill de review avancé avec :
-- Plusieurs agents (architecture, testing, code quality)
-- Exécution séquentielle (anti memory-leak)
+Advanced review skill with:
+- Multiple agents (architecture, testing, code quality)
+- Sequential execution (anti memory-leak)
 - Scoring
-- Commentaires inline
+- Inline comments
 
-### Template : followup-basic
+### Template: followup-basic
 
-Skill de suivi avec :
-- Vérification des corrections
-- Réponse aux threads (via marqueurs)
-- Résolution des threads (via marqueurs)
-- Rapport de suivi
+Follow-up skill with:
+- Fix verification
+- Thread replies (via markers)
+- Thread resolution (via markers)
+- Follow-up report
 
-## Critères d'acceptation
+## Acceptance Criteria
 
-### Scénario : Template fonctionnel immédiatement
-
-```gherkin
-Given un développeur copiant templates/en/review-basic/ dans son projet
-When il remplace les placeholders <!-- CUSTOMIZE --> par ses valeurs
-And il lance une review
-Then la review s'exécute sans erreur
-And les marqueurs de progression sont émis correctement
-```
-
-### Scénario : Pas de commandes plateforme directes
+### Scenario: Template works immediately
 
 ```gherkin
-Given un template de skill
-When on recherche "glab" ou "gh api" dans le fichier
-Then aucune occurrence n'est trouvée
-And seuls les marqueurs [THREAD_...] et [POST_COMMENT:...] sont utilisés
+Given a developer copying templates/en/review-basic/ to their project
+When they replace the <!-- CUSTOMIZE --> placeholders with their values
+And they run a review
+Then the review executes without errors
+And progress markers are emitted correctly
 ```
 
-### Scénario : Sections personnalisables identifiées
+### Scenario: No direct platform commands
 
 ```gherkin
-Given le template review-with-agents
-When on lit le SKILL.md
-Then chaque section à personnaliser est marquée <!-- CUSTOMIZE: description -->
-And une liste des personnalisations possibles est en début de fichier
+Given a skill template
+When searching for "glab" or "gh api" in the file
+Then no occurrences are found
+And only [THREAD_...] and [POST_COMMENT:...] markers are used
 ```
 
-### Scénario : README explicatif
+### Scenario: Customizable sections identified
 
 ```gherkin
-Given un template
-When on lit son README.md
-Then on comprend le but du template
-And on voit les étapes d'installation
-And on voit un exemple de config.json correspondant
+Given the review-with-agents template
+When reading the SKILL.md
+Then each customizable section is marked <!-- CUSTOMIZE: description -->
+And a list of possible customizations is at the beginning of the file
 ```
 
-## Contenu des templates
+### Scenario: Explanatory README
+
+```gherkin
+Given a template
+When reading its README.md
+Then the template purpose is understood
+And installation steps are visible
+And a corresponding config.json example is shown
+```
+
+## Template Content
 
 ### review-basic (EN)
 
@@ -253,19 +253,19 @@ Generate follow-up summary.
 [REVIEW_STATS:blocking=X:warnings=0:suggestions=0:score=X]
 ```
 
-## Hors scope
+## Out of Scope
 
-- Templates pour des frameworks spécifiques (React, Vue, etc.)
-- Templates avec logique métier prédéfinie (DDD, Clean Architecture)
-- Traduction automatique des templates
+- Templates for specific frameworks (React, Vue, etc.)
+- Templates with predefined business logic (DDD, Clean Architecture)
+- Automatic template translation
 
-## Évaluation INVEST
+## INVEST Evaluation
 
-| Critère | Statut | Note |
-|---------|--------|------|
-| Independent | ✅ | Dépend de SPEC-001 pour les marqueurs |
-| Negotiable | ✅ | Contenu des templates flexible |
-| Valuable | ✅ | Accélère l'adoption |
-| Estimable | ✅ | ~1 jour |
-| Small | ✅ | 3 templates x 2 langues |
-| Testable | ✅ | Templates doivent s'exécuter sans erreur |
+| Criterion | Status | Note |
+|-----------|--------|------|
+| Independent | ✅ | Depends on SPEC-001 for markers |
+| Negotiable | ✅ | Template content is flexible |
+| Valuable | ✅ | Accelerates adoption |
+| Estimable | ✅ | ~1 day |
+| Small | ✅ | 3 templates x 2 languages |
+| Testable | ✅ | Templates must execute without errors |
