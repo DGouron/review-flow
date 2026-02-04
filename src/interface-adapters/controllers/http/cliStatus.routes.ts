@@ -1,12 +1,13 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { spawn } from 'node:child_process';
 import { logInfo, logWarn, logError } from '../../../services/logService.js';
+import { resolveClaudePath } from '../../../shared/services/claudePathResolver.js';
 
 export const cliStatusRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/api/claude/status', async () => {
     return new Promise((resolve) => {
       const startTime = Date.now();
-      const child = spawn('claude', ['--version'], {
+      const child = spawn(resolveClaudePath(), ['--version'], {
         timeout: 10000,
         env: { ...process.env, TERM: 'dumb' },
       });

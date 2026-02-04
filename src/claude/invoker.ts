@@ -8,6 +8,7 @@ import { getModel } from '../services/runtimeSettings.js';
 import { getProjectAgents, getFollowupAgents } from '../config/projectConfig.js';
 import { addReviewStats } from '../services/statsService.js';
 import { getMrDetails } from '../services/mrTrackingService.js';
+import { resolveClaudePath } from '../shared/services/claudePathResolver.js';
 
 // Memory guard configuration
 const MEMORY_LIMIT_GB = 4; // Kill process if RSS exceeds 4GB
@@ -110,7 +111,7 @@ export async function invokeClaudeReview(
     let stderr = '';
     let cancelled = false;
 
-    const child = spawn('claude', args, {
+    const child = spawn(resolveClaudePath(), args, {
       cwd: job.localPath,
       env: {
         ...process.env,
