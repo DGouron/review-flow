@@ -70,7 +70,7 @@ describe('executeThreadActions', () => {
 
     it('should execute POST_COMMENT with correct glab command', async () => {
       const actions: ThreadAction[] = [
-        { type: 'POST_COMMENT', message: '## Review Complete' },
+        { type: 'POST_COMMENT', body: '## Review Complete' },
       ]
 
       await executeThreadActions(actions, gitlabContext, mockLogger, mockExecutor)
@@ -160,7 +160,7 @@ describe('executeThreadActions', () => {
 
     it('should execute POST_COMMENT with gh api command', async () => {
       const actions: ThreadAction[] = [
-        { type: 'POST_COMMENT', message: '## Review Complete' },
+        { type: 'POST_COMMENT', body: '## Review Complete' },
       ]
 
       await executeThreadActions(actions, githubContext, mockLogger, mockExecutor)

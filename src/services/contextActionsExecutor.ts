@@ -53,6 +53,8 @@ function buildGitHubCommand(
           `labels[]=${action.label}`,
         ],
       }
+    default:
+      return null
   }
 }
 
@@ -101,6 +103,8 @@ function buildGitLabCommand(
           `add_labels=${action.label}`,
         ],
       }
+    default:
+      return null
   }
 }
 

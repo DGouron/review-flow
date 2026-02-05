@@ -74,18 +74,18 @@ describe('parseThreadActions', () => {
       expect(actions).toHaveLength(1)
       expect(actions[0]).toEqual({
         type: 'POST_COMMENT',
-        message: '## Follow-up Review Complete',
+        body: '## Follow-up Review Complete',
       })
     })
 
-    it('should preserve escaped newlines in message', () => {
+    it('should preserve escaped newlines in body', () => {
       const stdout = '[POST_COMMENT:## Titre\\n\\nParagraphe 1\\n\\nParagraphe 2]'
 
       const actions = parseThreadActions(stdout)
 
       expect(actions).toHaveLength(1)
       const action = actions[0] as PostCommentAction
-      expect(action.message).toBe('## Titre\n\nParagraphe 1\n\nParagraphe 2')
+      expect(action.body).toBe('## Titre\n\nParagraphe 1\n\nParagraphe 2')
     })
 
     it('should handle colons in markdown content', () => {
@@ -95,7 +95,7 @@ describe('parseThreadActions', () => {
 
       expect(actions).toHaveLength(1)
       const action = actions[0] as PostCommentAction
-      expect(action.message).toBe('## Summary\n\n- Score: 8/10\n- Status: Done')
+      expect(action.body).toBe('## Summary\n\n- Score: 8/10\n- Status: Done')
     })
   })
 

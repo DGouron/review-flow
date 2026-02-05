@@ -1,28 +1,13 @@
-export interface ThreadReplyAction {
-  type: 'THREAD_REPLY'
-  threadId: string
-  message: string
-}
+// Re-export types from unified entity for backward compatibility
+export type {
+  ThreadReplyAction,
+  ThreadResolveAction,
+  PostCommentAction,
+  FetchThreadsAction,
+  ThreadAction,
+} from '../entities/reviewAction/reviewAction.js'
 
-export interface ThreadResolveAction {
-  type: 'THREAD_RESOLVE'
-  threadId: string
-}
-
-export interface PostCommentAction {
-  type: 'POST_COMMENT'
-  message: string
-}
-
-export interface FetchThreadsAction {
-  type: 'FETCH_THREADS'
-}
-
-export type ThreadAction =
-  | ThreadReplyAction
-  | ThreadResolveAction
-  | PostCommentAction
-  | FetchThreadsAction
+import type { ThreadAction } from '../entities/reviewAction/reviewAction.js'
 
 const THREAD_REPLY_REGEX = /\[THREAD_REPLY:([^:\]]+):([^\]]*)\]/g
 const THREAD_RESOLVE_REGEX = /\[THREAD_RESOLVE:([^\]]+)\]/g
@@ -69,7 +54,7 @@ export function parseThreadActions(stdout: string): ThreadAction[] {
       index: match.index,
       action: {
         type: 'POST_COMMENT',
-        message: unescapeNewlines(match[1]),
+        body: unescapeNewlines(match[1]),
       },
     })
   }

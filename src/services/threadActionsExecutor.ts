@@ -75,10 +75,12 @@ function buildGitLabCommand(
           'POST',
           `${baseUrl}/notes`,
           '--field',
-          `body=${action.message}`,
+          `body=${action.body}`,
         ],
       }
     case 'FETCH_THREADS':
+      return null
+    default:
       return null
   }
 }
@@ -119,10 +121,12 @@ function buildGitHubCommand(
           'POST',
           `repos/${context.projectPath}/issues/${context.mrNumber}/comments`,
           '--field',
-          `body=${action.message}`,
+          `body=${action.body}`,
         ],
       }
     case 'FETCH_THREADS':
+      return null
+    default:
       return null
   }
 }
