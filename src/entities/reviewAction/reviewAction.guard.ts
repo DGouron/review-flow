@@ -1,18 +1,10 @@
+import { createGuard } from '../../shared/foundation/guard.base.js'
 import { reviewActionSchema } from './reviewAction.schema.js'
 import type { ReviewAction } from './reviewAction.js'
 
-export function parseReviewAction(data: unknown): ReviewAction {
-  return reviewActionSchema.parse(data)
-}
+const reviewActionGuard = createGuard(reviewActionSchema)
 
-export function isValidReviewAction(data: unknown): data is ReviewAction {
-  return reviewActionSchema.safeParse(data).success
-}
-
-export function safeParseReviewAction(data: unknown) {
-  return reviewActionSchema.safeParse(data)
-}
-
-export function parseReviewActionCollection(data: unknown): ReviewAction[] {
-  return reviewActionSchema.array().parse(data)
-}
+export const parseReviewAction: (data: unknown) => ReviewAction = reviewActionGuard.parse
+export const safeParseReviewAction = reviewActionGuard.safeParse
+export const isValidReviewAction: (data: unknown) => data is ReviewAction = reviewActionGuard.isValid
+export const parseReviewActionCollection: (data: unknown) => ReviewAction[] = reviewActionGuard.parseCollection
