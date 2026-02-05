@@ -1,17 +1,13 @@
 {
 	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-	"assist": {
-		"actions": {
-			"source": {
-				"organizeImports": "on"
-			}
-		}
+	"organizeImports": {
+		"enabled": true
 	},
 	"linter": {
 		"enabled": true,
 		"rules": {
 			"suspicious": {
-				"noExplicitAny": "warn",
+				"noExplicitAny": "error",
 				"noArrayIndexKey": "off",
 				"noImplicitAnyLet": "info",
 				"noAssignInExpressions": "off",
@@ -42,19 +38,6 @@
 			"style": {
 				"noNonNullAssertion": "off",
 				"noParameterAssign": "off"
-			},
-			"a11y": {
-				"useKeyWithClickEvents": "off",
-				"noSvgWithoutTitle": "off",
-				"useButtonType": "off",
-				"noAutofocus": "off",
-				"noLabelWithoutControl": "off",
-				"useSemanticElements": "off",
-				"noStaticElementInteractions": "info",
-				"useAriaPropsSupportedByRole": "warn"
-			},
-			"security": {
-				"noDangerouslySetInnerHtml": "info"
 			},
 			"performance": {
 				"noDelete": "off",

@@ -32,8 +32,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:ci": "vitest --run --coverage",
-    "coverage": "vitest --coverage"
+    "test:ci": "vitest --run",
+    "coverage": "vitest --coverage",
+    "lint": "biome check src/",
+    "lint:fix": "biome check --write src/",
+    "verify": "yarn typecheck && yarn lint && yarn test:ci"
   },
   "dependencies": {
     "@fastify/static": "^8.0.0",
@@ -46,6 +49,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
     "@types/node": "^20.0.0",
     "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^4.0.18",
