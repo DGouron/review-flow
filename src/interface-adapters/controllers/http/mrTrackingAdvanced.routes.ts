@@ -65,7 +65,7 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
     }
 
     const [, platform, , mrNumberStr] = match;
-    const mrNumber = parseInt(mrNumberStr, 10);
+    const mrNumber = Number.parseInt(mrNumberStr, 10);
 
     const repo = getRepositories().find(
       (r) => r.localPath === validation.path && r.enabled

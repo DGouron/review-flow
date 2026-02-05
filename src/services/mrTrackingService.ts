@@ -692,10 +692,10 @@ function fetchGitHubThreads(
       const reviews = JSON.parse(reviewsResult);
 
       // Count pending review threads (not approved yet)
-      let pendingReviews = 0;
+      let _pendingReviews = 0;
       for (const review of reviews) {
         if (review.state === 'CHANGES_REQUESTED' || review.state === 'COMMENTED') {
-          pendingReviews++;
+          _pendingReviews++;
         }
       }
     } catch {

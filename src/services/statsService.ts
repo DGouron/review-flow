@@ -130,10 +130,10 @@ export function parseReviewOutput(stdout: string): {
     const suggestionsMatch = statsStr.match(/suggestions=(\d+)/);
     const scoreMatch = statsStr.match(/score=(\d+(?:\.\d+)?)/);
 
-    if (blockingMatch) blocking = parseInt(blockingMatch[1], 10);
-    if (warningsMatch) warnings = parseInt(warningsMatch[1], 10);
-    if (suggestionsMatch) suggestions = parseInt(suggestionsMatch[1], 10);
-    if (scoreMatch) score = parseFloat(scoreMatch[1]);
+    if (blockingMatch) blocking = Number.parseInt(blockingMatch[1], 10);
+    if (warningsMatch) warnings = Number.parseInt(warningsMatch[1], 10);
+    if (suggestionsMatch) suggestions = Number.parseInt(suggestionsMatch[1], 10);
+    if (scoreMatch) score = Number.parseFloat(scoreMatch[1]);
 
     return { score, blocking, warnings, suggestions };
   }
@@ -142,25 +142,25 @@ export function parseReviewOutput(stdout: string): {
   // 📊 Score global : X/10
   const scoreMatch = stdout.match(/Score\s+[Gg]lobal\s*:\s*(\d+(?:\.\d+)?)\s*\/\s*10/i);
   if (scoreMatch) {
-    score = parseFloat(scoreMatch[1]);
+    score = Number.parseFloat(scoreMatch[1]);
   }
 
   // 🚨 Bloquants : X (summary count)
   const blockingSummary = stdout.match(/🚨\s*Bloquants?\s*:\s*(\d+)/i);
   if (blockingSummary) {
-    blocking = parseInt(blockingSummary[1], 10);
+    blocking = Number.parseInt(blockingSummary[1], 10);
   }
 
   // ⚠️ Importants : X (summary count)
   const warningsSummary = stdout.match(/⚠️\s*Importants?\s*:\s*(\d+)/i);
   if (warningsSummary) {
-    warnings = parseInt(warningsSummary[1], 10);
+    warnings = Number.parseInt(warningsSummary[1], 10);
   }
 
   // 📝 Améliorations/Suggestions : X (summary count)
   const suggestionsSummary = stdout.match(/(?:📝|💡)\s*(?:Améliorations?|Suggestions?)[^:]*:\s*(\d+)/i);
   if (suggestionsSummary) {
-    suggestions = parseInt(suggestionsSummary[1], 10);
+    suggestions = Number.parseInt(suggestionsSummary[1], 10);
   }
 
   // If summary format worked, return

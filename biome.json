@@ -1,51 +1,34 @@
 {
 	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"formatter": {
+		"enabled": false
+	},
 	"organizeImports": {
-		"enabled": true
+		"enabled": false
 	},
 	"linter": {
 		"enabled": true,
 		"rules": {
+			"recommended": true,
 			"suspicious": {
 				"noExplicitAny": "error",
-				"noArrayIndexKey": "off",
-				"noImplicitAnyLet": "info",
-				"noAssignInExpressions": "off",
-				"noMisleadingCharacterClass": "off",
-				"noConfusingVoidType": "off",
-				"noDuplicateFields": "error",
-				"noControlCharactersInRegex": "warn"
+				"noAssignInExpressions": "off"
 			},
 			"correctness": {
-				"useExhaustiveDependencies": "off",
-				"useJsxKeyInIterable": "info",
-				"noUnsafeOptionalChaining": "info",
-				"noChildrenProp": "off",
-				"noUnusedImports": "warn",
-				"noUnusedVariables": "warn",
-				"useHookAtTopLevel": "warn"
+				"noUnusedImports": "error",
+				"noUnusedVariables": "error"
 			},
 			"complexity": {
 				"noForEach": "off",
-				"noBannedTypes": "off",
 				"noStaticOnlyClass": "off",
-				"useArrowFunction": "off"
-			},
-			"nursery": {
-				"useUniqueElementIds": "info",
-				"noNestedComponentDefinitions": "warn"
+				"noThisInStatic": "off"
 			},
 			"style": {
 				"noNonNullAssertion": "off",
-				"noParameterAssign": "off"
-			},
-			"performance": {
-				"noDelete": "off",
-				"noAccumulatingSpread": "info"
+				"noParameterAssign": "off",
+				"useTemplate": "off",
+				"noUselessElse": "off"
 			}
 		}
-	},
-	"javascript": {
-		"jsxRuntime": "reactClassic"
 	}
 }
