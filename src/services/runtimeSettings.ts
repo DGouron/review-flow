@@ -1,28 +1,9 @@
-/**
- * Runtime settings that can be changed without restart
- */
+// Strangler Fig: Re-export from new location
+// This file will be removed once all imports are updated
+export {
+  getModel,
+  setModel,
+  getSettings,
+} from '../frameworks/settings/runtimeSettings.js';
 
-export type ClaudeModel = 'sonnet' | 'opus';
-
-interface RuntimeSettings {
-  model: ClaudeModel;
-}
-
-const settings: RuntimeSettings = {
-  model: 'opus', // Default to opus as requested
-};
-
-export function getModel(): ClaudeModel {
-  return settings.model;
-}
-
-export function setModel(model: ClaudeModel): void {
-  if (model !== 'sonnet' && model !== 'opus') {
-    throw new Error(`Invalid model: ${model}`);
-  }
-  settings.model = model;
-}
-
-export function getSettings(): RuntimeSettings {
-  return { ...settings };
-}
+export type { ClaudeModel } from '../frameworks/settings/runtimeSettings.js';
