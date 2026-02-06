@@ -107,30 +107,12 @@ export async function invokeClaudeReview(
   // Build MCP system prompt injection
   const mcpSystemPrompt = buildMcpSystemPrompt(job);
 
-  // Build merge request ID for MCP context
-  const mergeRequestId = `${job.platform}-${job.projectPath}-${job.mrNumber}`;
-
-  // Build MCP config with env vars for progress tracking
-  const mcpConfig = JSON.stringify({
-    "review-progress": {
-      command: "node",
-      args: ["/home/damien/Documents/Projets/claude-review-automation/dist/mcpServer.js"],
-      env: {
-        MCP_JOB_ID: job.id,
-        MCP_LOCAL_PATH: job.localPath,
-        MCP_MERGE_REQUEST_ID: mergeRequestId,
-        MCP_JOB_TYPE: job.jobType || 'review',
-      },
-    },
-  });
-
   // Build arguments
-  // Allow git and glab commands for review workflow
+  // Note: --mcp-config was causing Claude to hang, disabled for now
+  // MCP server relies on config in ~/.claude/settings.json
   const args = [
     '--print',
-    '--dangerously-skip-permissions',
     '--model', model,
-    '--mcp-config', mcpConfig,
     '--append-system-prompt', mcpSystemPrompt,
     '-p', prompt,
   ];
