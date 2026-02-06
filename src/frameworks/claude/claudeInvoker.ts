@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { writeFileSync, mkdirSync, existsSync, unlinkSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync, unlinkSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { Logger } from 'pino';
@@ -16,6 +16,7 @@ import { resolveClaudePath } from '../../shared/services/claudePathResolver.js';
 // MCP context file for passing job info to the MCP server
 const MCP_CONTEXT_DIR = join(homedir(), '.claude-review');
 const MCP_CONTEXT_FILE = join(MCP_CONTEXT_DIR, 'current-job.json');
+const MCP_SERVER_PATH = '/home/damien/Documents/Projets/claude-review-automation/dist/mcpServer.js';
 
 function writeMcpContext(job: ReviewJob): void {
   try {
@@ -33,6 +34,37 @@ function writeMcpContext(job: ReviewJob): void {
     writeFileSync(MCP_CONTEXT_FILE, JSON.stringify(context, null, 2));
   } catch {
     // Non-critical, MCP will work without context
+  }
+}
+
+function ensureProjectMcpConfig(projectPath: string): void {
+  try {
+    const mcpConfigPath = join(projectPath, '.mcp.json');
+    const expectedConfig = {
+      mcpServers: {
+        "review-progress": {
+          command: "node",
+          args: [MCP_SERVER_PATH],
+        },
+      },
+    };
+
+    // Check if file exists and has correct config
+    if (existsSync(mcpConfigPath)) {
+      const existing = JSON.parse(readFileSync(mcpConfigPath, 'utf-8'));
+      if (existing?.mcpServers?.["review-progress"]) {
+        return; // Already configured
+      }
+      // Merge with existing config
+      existing.mcpServers = existing.mcpServers || {};
+      existing.mcpServers["review-progress"] = expectedConfig.mcpServers["review-progress"];
+      writeFileSync(mcpConfigPath, JSON.stringify(existing, null, 2) + '\n');
+    } else {
+      // Create new config
+      writeFileSync(mcpConfigPath, JSON.stringify(expectedConfig, null, 2) + '\n');
+    }
+  } catch {
+    // Non-critical, skill may still work without MCP
   }
 }
 
@@ -152,8 +184,9 @@ export async function invokeClaudeReview(
     '-p', prompt,
   ];
 
-  // Write MCP context file for the MCP server to read
+  // Setup MCP: write context file and ensure project has .mcp.json
   writeMcpContext(job);
+  ensureProjectMcpConfig(job.localPath);
 
   logger.info(
     {
