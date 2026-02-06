@@ -28,6 +28,62 @@ export interface InvocationResult {
 export type ProgressCallback = (progress: ReviewProgress, event?: ProgressEvent) => void;
 
 /**
+ * Build MCP system prompt for progress tracking
+ * This instruction is AUTHORITATIVE and forces Claude to use MCP tools
+ */
+function buildMcpSystemPrompt(job: ReviewJob): string {
+  return `
+# MCP Progress Tracking (MANDATORY)
+
+**CRITICAL INSTRUCTION**: You MUST use the MCP tools below for ALL progress tracking. This is NON-NEGOTIABLE.
+
+## Your Job Context
+- **Job ID**: \`${job.id}\`
+- **Job Type**: ${job.jobType || 'review'}
+- **MR Number**: ${job.mrNumber}
+
+## MANDATORY MCP Tools Usage
+
+You have access to these MCP tools. USE THEM - do NOT use text markers like [PROGRESS:...] or [PHASE:...].
+
+### Phase Management
+\`\`\`
+set_phase({ jobId: "${job.id}", phase: "initializing" })
+set_phase({ jobId: "${job.id}", phase: "agents-running" })
+set_phase({ jobId: "${job.id}", phase: "synthesizing" })
+set_phase({ jobId: "${job.id}", phase: "publishing" })
+set_phase({ jobId: "${job.id}", phase: "completed" })
+\`\`\`
+
+### Agent Progress (call for EACH audit/step)
+\`\`\`
+start_agent({ jobId: "${job.id}", agentName: "agent-name" })
+complete_agent({ jobId: "${job.id}", agentName: "agent-name", status: "success" })
+complete_agent({ jobId: "${job.id}", agentName: "agent-name", status: "failed", error: "message" })
+\`\`\`
+
+### Thread Actions
+\`\`\`
+get_threads({ jobId: "${job.id}" })
+add_action({ jobId: "${job.id}", type: "THREAD_RESOLVE", threadId: "xxx" })
+add_action({ jobId: "${job.id}", type: "THREAD_REPLY", threadId: "xxx", message: "..." })
+add_action({ jobId: "${job.id}", type: "POST_COMMENT", body: "..." })
+\`\`\`
+
+## Workflow Pattern
+
+1. **Start**: \`set_phase({ jobId: "${job.id}", phase: "initializing" })\`
+2. **Before each audit**: \`start_agent({ jobId: "${job.id}", agentName: "xxx" })\`
+3. **After each audit**: \`complete_agent({ jobId: "${job.id}", agentName: "xxx", status: "success" })\`
+4. **Synthesis**: \`set_phase({ jobId: "${job.id}", phase: "synthesizing" })\`
+5. **Publishing**: \`set_phase({ jobId: "${job.id}", phase: "publishing" })\`
+6. **End**: \`set_phase({ jobId: "${job.id}", phase: "completed" })\`
+
+**VIOLATION**: If you use text markers like [PROGRESS:xxx:started] instead of MCP tools, the dashboard will NOT update in real-time. USE THE MCP TOOLS.
+`.trim();
+}
+
+/**
  * Invoke Claude Code CLI for a review job
  * @param job - The review job to execute
  * @param logger - Pino logger instance
@@ -48,12 +104,16 @@ export async function invokeClaudeReview(
   // Get configured model
   const model = getModel();
 
+  // Build MCP system prompt injection
+  const mcpSystemPrompt = buildMcpSystemPrompt(job);
+
   // Build arguments
   // Allow git and glab commands for review workflow
   const args = [
     '--print',
     '--dangerously-skip-permissions',
     '--model', model,
+    '--append-system-prompt', mcpSystemPrompt,
     '-p', prompt,
   ];
 
