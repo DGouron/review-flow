@@ -1,9 +1,10 @@
 import { calculateOverallProgress } from "../../entities/progress/progress.calculator.js";
 import type {
+	AgentCompletionStatus,
 	ProgressChangeCallback,
 	ReviewProgressGateway,
 } from "../../entities/progress/progress.gateway.js";
-import type { ReviewProgress } from "../../entities/progress/progress.type.js";
+import type { ReviewPhase, ReviewProgress } from "../../entities/progress/progress.type.js";
 
 export class ReviewProgressMemoryGateway implements ReviewProgressGateway {
 	private progressStore = new Map<string, ReviewProgress>();
@@ -54,7 +55,8 @@ export class ReviewProgressMemoryGateway implements ReviewProgressGateway {
 	completeAgent(
 		jobId: string,
 		agentName: string,
-		_result: string,
+		status: AgentCompletionStatus,
+		error?: string,
 	): ReviewProgress | null {
 		const progress = this.progressStore.get(jobId);
 		if (!progress) return null;
@@ -62,8 +64,26 @@ export class ReviewProgressMemoryGateway implements ReviewProgressGateway {
 		const agent = progress.agents.find((a) => a.name === agentName);
 		if (!agent) return null;
 
-		agent.status = "completed";
+		agent.status = status === "success" ? "completed" : "failed";
 		agent.completedAt = new Date();
+		if (error) {
+			agent.error = error;
+		}
+		progress.lastUpdate = new Date();
+		progress.overallProgress = calculateOverallProgress(progress);
+
+		if (this.onProgressChange) {
+			this.onProgressChange(jobId, progress);
+		}
+
+		return progress;
+	}
+
+	setPhase(jobId: string, phase: ReviewPhase): ReviewProgress | null {
+		const progress = this.progressStore.get(jobId);
+		if (!progress) return null;
+
+		progress.currentPhase = phase;
 		progress.lastUpdate = new Date();
 		progress.overallProgress = calculateOverallProgress(progress);
 

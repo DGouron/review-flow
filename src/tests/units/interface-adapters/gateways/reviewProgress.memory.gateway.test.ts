@@ -71,6 +71,25 @@ describe("ReviewProgressMemoryGateway", () => {
 			expect(agent?.status).toBe("completed");
 			expect(agent?.completedAt).toBeDefined();
 		});
+
+		it("should set agent status to failed with error message when completing with failed status", () => {
+			const gateway = new ReviewProgressMemoryGateway();
+			const jobId = "gitlab:project:123";
+			gateway.createProgress(jobId, ["testing"]);
+			gateway.startAgent(jobId, "testing");
+
+			const progress = gateway.completeAgent(
+				jobId,
+				"testing",
+				"failed",
+				"No test files found",
+			);
+
+			const agent = progress?.agents.find((a) => a.name === "testing");
+			expect(agent?.status).toBe("failed");
+			expect(agent?.error).toBe("No test files found");
+			expect(agent?.completedAt).toBeDefined();
+		});
 	});
 
 	describe("onProgressChange callback", () => {

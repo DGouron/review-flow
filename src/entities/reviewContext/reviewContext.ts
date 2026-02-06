@@ -15,6 +15,12 @@ export interface ReviewContextProgress {
   updatedAt?: string
 }
 
+export interface AgentInstructions {
+  contextFilePath: string
+  critical: string[]
+  actionSchema: Record<string, Record<string, string>>
+}
+
 export interface ReviewContext {
   version: string
   mergeRequestId: string
@@ -26,6 +32,7 @@ export interface ReviewContext {
   actions: ReviewContextAction[]
   progress: ReviewContextProgress
   result?: ReviewContextResult
+  agentInstructions?: AgentInstructions
 }
 
 export interface CreateReviewContextInput {

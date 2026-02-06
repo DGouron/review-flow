@@ -1,4 +1,5 @@
-import type { GitLabMergeRequestEvent, GitLabPushEvent } from '../../interface-adapters/controllers/webhook/eventFilter.js'
+import type { GitLabMergeRequestEvent } from '../../entities/gitlab/gitlabMergeRequestEvent.guard.js'
+import type { GitLabPushEvent } from '../../interface-adapters/controllers/webhook/eventFilter.js'
 
 type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P]
@@ -56,9 +57,19 @@ export class GitLabEventFactory {
         draft: false,
       },
       reviewers: [],
+      assignees: [],
     }
 
     return overrides ? deepMerge(base, overrides) : base
+  }
+
+  static createWithAssignee(
+    assigneeUsername: string,
+    assigneeName = 'MR Assignee'
+  ): GitLabMergeRequestEvent {
+    return this.createMergeRequestEvent({
+      assignees: [{ username: assigneeUsername, name: assigneeName }],
+    })
   }
 
   static createWithReviewerAdded(reviewerUsername: string): GitLabMergeRequestEvent {
@@ -98,6 +109,15 @@ export class GitLabEventFactory {
       object_attributes: {
         state: 'merged',
         action: 'merge',
+      },
+    })
+  }
+
+  static createApprovedMr(): GitLabMergeRequestEvent {
+    return this.createMergeRequestEvent({
+      object_attributes: {
+        state: 'opened',
+        action: 'approved',
       },
     })
   }

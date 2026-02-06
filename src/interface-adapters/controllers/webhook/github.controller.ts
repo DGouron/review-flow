@@ -141,10 +141,12 @@ export async function handleGitHubWebhook(
   }
 
   // 5. Track PR assignment with user info
+  // Use PR assignee (actual owner), not webhook sender (who requested the review)
   const prTitle = event.pull_request?.title || `PR #${filterResult.mergeRequestNumber}`;
+  const prAssignee = event.pull_request?.assignees?.[0];
   const assignedBy = {
-    username: event.sender?.login || 'unknown',
-    displayName: event.sender?.login,
+    username: prAssignee?.login || event.sender?.login || 'unknown',
+    displayName: prAssignee?.login || event.sender?.login,
   };
 
   trackMrAssignment(
