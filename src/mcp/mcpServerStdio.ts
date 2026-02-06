@@ -13,6 +13,7 @@ import { createSetPhaseHandler } from "../interface-adapters/controllers/mcp/set
 import { createGetThreadsHandler } from "../interface-adapters/controllers/mcp/getThreads.handler.js";
 import { createAddActionHandler } from "../interface-adapters/controllers/mcp/addAction.handler.js";
 import { getProjectAgents, getFollowupAgents } from "../config/projectConfig.js";
+import { mcpLogger } from "./mcpLogger.js";
 
 interface McpJobContext {
 	jobId: string;
@@ -121,15 +122,29 @@ const TOOL_DEFINITIONS = [
 ];
 
 export async function startMcpServer(): Promise<void> {
+	mcpLogger.info("=== MCP Server Starting ===", {
+		logFile: mcpLogger.getLogPath(),
+		pid: process.pid,
+	});
+
 	const reviewContextGateway = new ReviewContextFileSystemGateway();
 	const mcpDeps = createMcpDependencies({ reviewContextGateway });
 
 	const jobContext = getJobContextFromEnv();
+	mcpLogger.info("Job context from env", {
+		hasContext: !!jobContext,
+		jobId: jobContext?.jobId,
+		localPath: jobContext?.localPath,
+		mergeRequestId: jobContext?.mergeRequestId,
+		jobType: jobContext?.jobType,
+	});
+
 	if (jobContext) {
 		mcpDeps.jobContextGateway.register(jobContext.jobId, {
 			localPath: jobContext.localPath,
 			mergeRequestId: jobContext.mergeRequestId,
 		});
+		mcpLogger.info("Job context registered");
 
 		const agents = jobContext.jobType === "followup"
 			? getFollowupAgents(jobContext.localPath)
@@ -137,6 +152,9 @@ export async function startMcpServer(): Promise<void> {
 
 		const agentNames = agents?.map((a) => a.name) ?? ["analysis"];
 		mcpDeps.progressGateway.createProgress(jobContext.jobId, agentNames);
+		mcpLogger.info("Progress created", { agentNames });
+	} else {
+		mcpLogger.warn("No job context from environment - MCP tools may not work correctly");
 	}
 
 	const getWorkflowHandler = createGetWorkflowHandler({ progressGateway: mcpDeps.progressGateway });
@@ -173,30 +191,54 @@ export async function startMcpServer(): Promise<void> {
 		},
 	);
 
-	server.setRequestHandler(ListToolsRequestSchema, async () => ({
-		tools: TOOL_DEFINITIONS,
-	}));
+	server.setRequestHandler(ListToolsRequestSchema, async () => {
+		mcpLogger.debug("ListTools called", { toolCount: TOOL_DEFINITIONS.length });
+		return { tools: TOOL_DEFINITIONS };
+	});
 
 	server.setRequestHandler(CallToolRequestSchema, async (request) => {
 		const { name, arguments: args } = request.params;
+		const startTime = Date.now();
+
+		mcpLogger.info(`Tool called: ${name}`, { args });
 
 		const handler = handlers[name];
 		if (!handler) {
+			mcpLogger.error(`Unknown tool: ${name}`);
 			return {
 				content: [{ type: "text" as const, text: `Unknown tool: ${name}` }],
 				isError: true,
 			};
 		}
 
-		const result = handler(args ?? {}) as {
-			content: Array<{ type: "text"; text: string }>;
-			isError?: boolean;
-		};
-		return result;
+		try {
+			const result = handler(args ?? {}) as {
+				content: Array<{ type: "text"; text: string }>;
+				isError?: boolean;
+			};
+
+			const durationMs = Date.now() - startTime;
+			mcpLogger.info(`Tool completed: ${name}`, {
+				durationMs,
+				isError: result.isError ?? false,
+				responsePreview: result.content?.[0]?.text?.substring(0, 200),
+			});
+
+			return result;
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			mcpLogger.error(`Tool error: ${name}`, { error: errorMessage });
+			return {
+				content: [{ type: "text" as const, text: `Error: ${errorMessage}` }],
+				isError: true,
+			};
+		}
 	});
 
 	const transport = new StdioServerTransport();
+	mcpLogger.info("Connecting to stdio transport...");
 	await server.connect(transport);
+	mcpLogger.info("MCP Server connected and ready");
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
