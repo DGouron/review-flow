@@ -107,12 +107,30 @@ export async function invokeClaudeReview(
   // Build MCP system prompt injection
   const mcpSystemPrompt = buildMcpSystemPrompt(job);
 
+  // Build merge request ID for MCP context
+  const mergeRequestId = `${job.platform}-${job.projectPath}-${job.mrNumber}`;
+
+  // Build MCP config with env vars for progress tracking
+  const mcpConfig = JSON.stringify({
+    "review-progress": {
+      command: "node",
+      args: ["/home/damien/Documents/Projets/claude-review-automation/dist/mcpServer.js"],
+      env: {
+        MCP_JOB_ID: job.id,
+        MCP_LOCAL_PATH: job.localPath,
+        MCP_MERGE_REQUEST_ID: mergeRequestId,
+        MCP_JOB_TYPE: job.jobType || 'review',
+      },
+    },
+  });
+
   // Build arguments
   // Allow git and glab commands for review workflow
   const args = [
     '--print',
     '--dangerously-skip-permissions',
     '--model', model,
+    '--mcp-config', mcpConfig,
     '--append-system-prompt', mcpSystemPrompt,
     '-p', prompt,
   ];
@@ -171,9 +189,6 @@ export async function invokeClaudeReview(
     let stderr = '';
     let cancelled = false;
 
-    // Build merge request ID for MCP context
-    const mergeRequestId = `${job.platform}-${job.projectPath}-${job.mrNumber}`;
-
     const child = spawn(resolveClaudePath(), args, {
       cwd: job.localPath,
       env: {
@@ -181,11 +196,7 @@ export async function invokeClaudeReview(
         // Ensure non-interactive mode
         TERM: 'dumb',
         CI: 'true',
-        // MCP context for progress tracking
-        MCP_JOB_ID: job.id,
-        MCP_LOCAL_PATH: job.localPath,
-        MCP_MERGE_REQUEST_ID: mergeRequestId,
-        MCP_JOB_TYPE: job.jobType || 'review',
+        // Note: MCP env vars are now passed via --mcp-config
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
