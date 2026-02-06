@@ -8,6 +8,7 @@ import type {
   ReviewContext,
   ReviewContextProgress,
 } from '../../entities/reviewContext/reviewContext.js'
+import { buildAgentInstructions } from '../../services/agentInstructionsBuilder.js'
 import type { ReviewContextAction, ReviewContextResult } from '../../entities/reviewContext/reviewContextAction.schema.js'
 
 export class ReviewContextFileSystemGateway implements ReviewContextGateway {
@@ -19,6 +20,8 @@ export class ReviewContextFileSystemGateway implements ReviewContextGateway {
     const filePath = this.getFilePath(input.localPath, input.mergeRequestId)
 
     mkdirSync(dirname(filePath), { recursive: true })
+
+    const agentInstructions = buildAgentInstructions(filePath)
 
     const content: ReviewContext = {
       version: '1.0',
@@ -33,6 +36,7 @@ export class ReviewContextFileSystemGateway implements ReviewContextGateway {
         phase: 'pending',
         currentStep: null,
       },
+      agentInstructions,
     }
 
     writeFileSync(filePath, JSON.stringify(content, null, 2))

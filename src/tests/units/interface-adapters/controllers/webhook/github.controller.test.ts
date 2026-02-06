@@ -248,4 +248,97 @@ describe('handleGitHubWebhook', () => {
       expect(mrTrackingService.recordReviewCompletion).not.toHaveBeenCalled();
     });
   });
+
+  describe('assignedBy attribution', () => {
+    it('should use PR assignee as assignedBy when assignee is present', async () => {
+      const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
+      event.pull_request.assignees = [{ login: 'pr-owner' }];
+      event.sender = { login: 'reviewer-who-requested' };
+
+      const request = {
+        body: event,
+        headers: {},
+      } as unknown as FastifyRequest;
+
+      await handleGitHubWebhook(request, mockReply, logger);
+
+      expect(mrTrackingService.trackMrAssignment).toHaveBeenCalledWith(
+        '/home/user/projects/test-repo',
+        expect.any(Object),
+        expect.objectContaining({
+          username: 'pr-owner',
+          displayName: 'pr-owner',
+        })
+      );
+    });
+
+    it('should fallback to sender when no assignee is present', async () => {
+      const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
+      event.pull_request.assignees = [];
+      event.sender = { login: 'webhook-sender' };
+
+      const request = {
+        body: event,
+        headers: {},
+      } as unknown as FastifyRequest;
+
+      await handleGitHubWebhook(request, mockReply, logger);
+
+      expect(mrTrackingService.trackMrAssignment).toHaveBeenCalledWith(
+        '/home/user/projects/test-repo',
+        expect.any(Object),
+        expect.objectContaining({
+          username: 'webhook-sender',
+          displayName: 'webhook-sender',
+        })
+      );
+    });
+
+    it('should use first assignee when multiple assignees exist', async () => {
+      const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
+      event.pull_request.assignees = [
+        { login: 'primary-owner' },
+        { login: 'secondary-owner' },
+      ];
+      event.sender = { login: 'reviewer' };
+
+      const request = {
+        body: event,
+        headers: {},
+      } as unknown as FastifyRequest;
+
+      await handleGitHubWebhook(request, mockReply, logger);
+
+      expect(mrTrackingService.trackMrAssignment).toHaveBeenCalledWith(
+        '/home/user/projects/test-repo',
+        expect.any(Object),
+        expect.objectContaining({
+          username: 'primary-owner',
+          displayName: 'primary-owner',
+        })
+      );
+    });
+
+    it('should fallback to sender when assignees field is undefined', async () => {
+      const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
+      (event.pull_request as Record<string, unknown>).assignees = undefined;
+      event.sender = { login: 'fallback-sender' };
+
+      const request = {
+        body: event,
+        headers: {},
+      } as unknown as FastifyRequest;
+
+      await handleGitHubWebhook(request, mockReply, logger);
+
+      expect(mrTrackingService.trackMrAssignment).toHaveBeenCalledWith(
+        '/home/user/projects/test-repo',
+        expect.any(Object),
+        expect.objectContaining({
+          username: 'fallback-sender',
+          displayName: 'fallback-sender',
+        })
+      );
+    });
+  });
 });

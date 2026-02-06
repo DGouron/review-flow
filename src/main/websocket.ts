@@ -13,7 +13,7 @@ export function getWsClientsCount(): number {
   return wsClients.size;
 }
 
-function broadcastProgress(jobId: string, progress: ReviewProgress, event?: ProgressEvent): void {
+export function broadcastProgress(jobId: string, progress: ReviewProgress, event?: ProgressEvent): void {
   const message = JSON.stringify({
     type: 'progress',
     jobId,

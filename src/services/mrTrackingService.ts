@@ -65,6 +65,7 @@ export interface TrackedMr {
   totalSuggestions: number;
   totalDurationMs: number;
   averageScore: number | null;
+  latestScore: number | null;
 }
 
 /**
@@ -249,6 +250,7 @@ export function trackMrAssignment(
     totalSuggestions: 0,
     totalDurationMs: 0,
     averageScore: null,
+    latestScore: null,
   };
 
   data.mrs.push(trackedMr);
@@ -310,7 +312,12 @@ export function recordReviewCompletion(
   mr.openThreads = Math.max(0, mr.openThreads + (reviewData.threadsOpened ?? 0) - (reviewData.threadsClosed ?? 0));
   mr.totalThreads += reviewData.threadsOpened ?? 0;
 
-  // Recalculate average score
+  // Update latest score (current state of the MR)
+  if (reviewData.score !== null) {
+    mr.latestScore = reviewData.score;
+  }
+
+  // Recalculate average score (historical metric)
   const reviewsWithScore = mr.reviews.filter((r) => r.score !== null);
   if (reviewsWithScore.length > 0) {
     mr.averageScore = reviewsWithScore.reduce((sum, r) => sum + (r.score ?? 0), 0) / reviewsWithScore.length;

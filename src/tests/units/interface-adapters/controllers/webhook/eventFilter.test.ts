@@ -16,6 +16,7 @@ import {
   filterGitLabMrUpdate,
   filterGitLabMrClose,
   filterGitLabMrMerge,
+  filterGitLabMrApprove,
   filterGitHubEvent,
   filterGitHubLabelEvent,
   filterGitHubPrClose,
@@ -278,6 +279,36 @@ describe('filterGitLabMrMerge', () => {
 
       expect(result.shouldProcess).toBe(false)
       expect(result.reason).toContain('opened')
+    })
+  })
+})
+
+describe('filterGitLabMrApprove', () => {
+  describe('when MR is approved', () => {
+    it('should detect approval event', () => {
+      const event = GitLabEventFactory.createApprovedMr()
+
+      const result = filterGitLabMrApprove(event)
+
+      expect(result.shouldProcess).toBe(true)
+      expect(result.reason).toContain('approved')
+      if (result.shouldProcess) {
+        expect(result.mergeRequestNumber).toBe(42)
+        expect(result.projectPath).toBe('test-org/test-project')
+      }
+    })
+  })
+
+  describe('when action is not approved', () => {
+    it('should not process non-approved actions', () => {
+      const event = GitLabEventFactory.createMergeRequestEvent({
+        object_attributes: { action: 'update' },
+      })
+
+      const result = filterGitLabMrApprove(event)
+
+      expect(result.shouldProcess).toBe(false)
+      expect(result.reason).toContain('update')
     })
   })
 })

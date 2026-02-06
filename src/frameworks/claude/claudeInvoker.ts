@@ -111,6 +111,9 @@ export async function invokeClaudeReview(
     let stderr = '';
     let cancelled = false;
 
+    // Build merge request ID for MCP context
+    const mergeRequestId = `${job.platform}-${job.projectPath}-${job.mrNumber}`;
+
     const child = spawn(resolveClaudePath(), args, {
       cwd: job.localPath,
       env: {
@@ -118,6 +121,11 @@ export async function invokeClaudeReview(
         // Ensure non-interactive mode
         TERM: 'dumb',
         CI: 'true',
+        // MCP context for progress tracking
+        MCP_JOB_ID: job.id,
+        MCP_LOCAL_PATH: job.localPath,
+        MCP_MERGE_REQUEST_ID: mergeRequestId,
+        MCP_JOB_TYPE: job.jobType || 'review',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });

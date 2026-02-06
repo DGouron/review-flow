@@ -1,7 +1,8 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Logger } from 'pino';
 import { verifyGitLabSignature, getGitLabEventType } from '../../../security/verifier.js';
-import { filterGitLabEvent, filterGitLabMrUpdate, filterGitLabMrClose, type GitLabMergeRequestEvent } from './eventFilter.js';
+import { gitLabMergeRequestEventGuard } from '../../../entities/gitlab/gitlabMergeRequestEvent.guard.js';
+import { filterGitLabEvent, filterGitLabMrUpdate, filterGitLabMrClose, filterGitLabMrMerge, filterGitLabMrApprove } from './eventFilter.js';
 import { findRepositoryByProjectPath } from '../../../config/loader.js';
 import {
   enqueueReview,
@@ -18,6 +19,8 @@ import {
   recordReviewCompletion,
   syncSingleMrThreads,
   archiveMr,
+  markMrMerged,
+  approveMr,
 } from '../../../services/mrTrackingService.js';
 import { loadProjectConfig } from '../../../config/projectConfig.js';
 import { parseReviewOutput } from '../../../services/statsService.js';
@@ -49,8 +52,14 @@ export async function handleGitLabWebhook(
     return;
   }
 
-  // 3. Parse event
-  const event = request.body as GitLabMergeRequestEvent;
+  // 3. Parse and validate event
+  const parseResult = gitLabMergeRequestEventGuard.safeParse(request.body);
+  if (!parseResult.success) {
+    logger.warn({ errors: parseResult.error }, 'Invalid GitLab webhook payload');
+    reply.status(400).send({ error: 'Invalid webhook payload' });
+    return;
+  }
+  const event = parseResult.data;
 
   // 3a. Check if MR was closed - clean up tracking and cancel any running job
   const closeResult = filterGitLabMrClose(event);
@@ -99,7 +108,33 @@ export async function handleGitLabWebhook(
     return;
   }
 
-  // 3b. Filter for review assignment
+  // 3b. Check if MR was merged - update tracking state
+  const mergeResult = filterGitLabMrMerge(event);
+  if (mergeResult.shouldProcess) {
+    const repoConfig = findRepositoryByProjectPath(mergeResult.projectPath);
+    if (repoConfig) {
+      const mrId = `gitlab-${mergeResult.projectPath}-${mergeResult.mergeRequestNumber}`;
+      markMrMerged(repoConfig.localPath, mrId);
+      logger.info({ mrNumber: mergeResult.mergeRequestNumber }, 'MR marked as merged');
+      reply.status(200).send({ status: 'merged', mrNumber: mergeResult.mergeRequestNumber });
+      return;
+    }
+  }
+
+  // 3c. Check if MR was approved - update tracking state
+  const approveResult = filterGitLabMrApprove(event);
+  if (approveResult.shouldProcess) {
+    const repoConfig = findRepositoryByProjectPath(approveResult.projectPath);
+    if (repoConfig) {
+      const mrId = `gitlab-${approveResult.projectPath}-${approveResult.mergeRequestNumber}`;
+      approveMr(repoConfig.localPath, mrId);
+      logger.info({ mrNumber: approveResult.mergeRequestNumber }, 'MR marked as approved');
+      reply.status(200).send({ status: 'approved', mrNumber: approveResult.mergeRequestNumber });
+      return;
+    }
+  }
+
+  // 3d. Filter for review assignment
   const filterResult = filterGitLabEvent(event);
 
   // Debug: log reviewers data
@@ -222,31 +257,12 @@ export async function handleGitLabWebhook(
               // Parse review output for stats
               const parsed = parseReviewOutput(result.stdout);
 
-              // Execute thread actions from stdout markers (backward compatibility)
-              const threadActions = parseThreadActions(result.stdout);
               let threadResolveCount = 0;
-              if (threadActions.length > 0) {
-                threadResolveCount = threadActions.filter(a => a.type === 'THREAD_RESOLVE').length;
-                const actionResult = await executeThreadActions(
-                  threadActions,
-                  {
-                    platform: 'gitlab',
-                    projectPath: j.projectPath,
-                    mrNumber: j.mrNumber,
-                    localPath: j.localPath,
-                  },
-                  logger,
-                  defaultCommandExecutor
-                );
-                logger.info(
-                  { ...actionResult, threadResolveCount, mrNumber: j.mrNumber },
-                  'Thread actions executed from stdout markers for followup'
-                );
-              }
 
-              // Execute actions from context file (new mechanism)
+              // PRIMARY: Execute actions from context file (agent writes actions here)
               const reviewContext = contextGateway.read(j.localPath, mergeRequestId);
               if (reviewContext && reviewContext.actions.length > 0) {
+                threadResolveCount = reviewContext.actions.filter(a => a.type === 'THREAD_RESOLVE').length;
                 const contextActionResult = await executeActionsFromContext(
                   reviewContext,
                   j.localPath,
@@ -254,9 +270,30 @@ export async function handleGitLabWebhook(
                   defaultCommandExecutor
                 );
                 logger.info(
-                  { ...contextActionResult, mrNumber: j.mrNumber },
+                  { ...contextActionResult, threadResolveCount, mrNumber: j.mrNumber },
                   'Actions executed from context file for followup'
                 );
+              } else {
+                // FALLBACK: Execute thread actions from stdout markers (backward compatibility)
+                const threadActions = parseThreadActions(result.stdout);
+                if (threadActions.length > 0) {
+                  threadResolveCount = threadActions.filter(a => a.type === 'THREAD_RESOLVE').length;
+                  const actionResult = await executeThreadActions(
+                    threadActions,
+                    {
+                      platform: 'gitlab',
+                      projectPath: j.projectPath,
+                      mrNumber: j.mrNumber,
+                      localPath: j.localPath,
+                    },
+                    logger,
+                    defaultCommandExecutor
+                  );
+                  logger.info(
+                    { ...actionResult, threadResolveCount, mrNumber: j.mrNumber },
+                    'Thread actions executed from stdout markers for followup (fallback)'
+                  );
+                }
               }
 
               // Sync threads from GitLab FIRST to get real state after followup resolves threads
@@ -329,10 +366,12 @@ export async function handleGitLabWebhook(
   }
 
   // 5. Track MR assignment with user info
+  // Use MR assignee (actual owner), not webhook trigger (who added the reviewer)
   const mrTitle = event.object_attributes?.title || `MR !${filterResult.mergeRequestNumber}`;
+  const mrAssignee = event.assignees?.[0];
   const assignedBy = {
-    username: event.user?.username || 'unknown',
-    displayName: event.user?.name,
+    username: mrAssignee?.username || event.user?.username || 'unknown',
+    displayName: mrAssignee?.name || event.user?.name,
   };
 
   trackMrAssignment(
@@ -441,27 +480,7 @@ export async function handleGitLabWebhook(
       // Parse review output for stats
       const parsed = parseReviewOutput(result.stdout);
 
-      // Execute thread actions from stdout markers (backward compatibility)
-      const threadActions = parseThreadActions(result.stdout);
-      if (threadActions.length > 0) {
-        const actionResult = await executeThreadActions(
-          threadActions,
-          {
-            platform: 'gitlab',
-            projectPath: j.projectPath,
-            mrNumber: j.mrNumber,
-            localPath: j.localPath,
-          },
-          logger,
-          defaultCommandExecutor
-        );
-        logger.info(
-          { ...actionResult, mrNumber: j.mrNumber },
-          'Thread actions executed from stdout markers'
-        );
-      }
-
-      // Execute actions from context file (new mechanism)
+      // PRIMARY: Execute actions from context file (agent writes actions here)
       const reviewContext = contextGateway.read(j.localPath, mergeRequestId);
       if (reviewContext && reviewContext.actions.length > 0) {
         const contextActionResult = await executeActionsFromContext(
@@ -474,6 +493,26 @@ export async function handleGitLabWebhook(
           { ...contextActionResult, mrNumber: j.mrNumber },
           'Actions executed from context file'
         );
+      } else {
+        // FALLBACK: Execute thread actions from stdout markers (backward compatibility)
+        const threadActions = parseThreadActions(result.stdout);
+        if (threadActions.length > 0) {
+          const actionResult = await executeThreadActions(
+            threadActions,
+            {
+              platform: 'gitlab',
+              projectPath: j.projectPath,
+              mrNumber: j.mrNumber,
+              localPath: j.localPath,
+            },
+            logger,
+            defaultCommandExecutor
+          );
+          logger.info(
+            { ...actionResult, mrNumber: j.mrNumber },
+            'Thread actions executed from stdout markers (fallback)'
+          );
+        }
       }
 
       // Record review completion with parsed stats
