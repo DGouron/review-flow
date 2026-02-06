@@ -22,7 +22,8 @@ import {
   markMrMerged,
   approveMr,
 } from '../../../services/mrTrackingService.js';
-import { loadProjectConfig } from '../../../config/projectConfig.js';
+import { loadProjectConfig, getProjectAgents, getFollowupAgents } from '../../../config/projectConfig.js';
+import { DEFAULT_AGENTS, DEFAULT_FOLLOWUP_AGENTS } from '../../../entities/progress/agentDefinition.type.js';
 import { parseReviewOutput } from '../../../services/statsService.js';
 import { parseThreadActions } from '../../../services/threadActionsParser.js';
 import { executeThreadActions, defaultCommandExecutor } from '../../../services/threadActionsExecutor.js';
@@ -181,6 +182,15 @@ export async function handleGitLabWebhook(
         logger.info({ needsFollowup, mrState: mr?.state }, 'Followup check result');
 
         if (needsFollowup) {
+          if (mr.autoFollowup === false) {
+            logger.info(
+              { mrNumber: updateResult.mergeRequestNumber, project: updateResult.projectPath },
+              'Auto-followup disabled for this MR, skipping'
+            );
+            reply.status(200).send({ status: 'ignored', reason: 'Auto-followup disabled' });
+            return;
+          }
+
           logger.info(
             { mrNumber: updateResult.mergeRequestNumber, project: updateResult.projectPath },
             'Auto-triggering followup review after push'
@@ -213,6 +223,7 @@ export async function handleGitLabWebhook(
 
             try {
               const threads = threadFetchGateway.fetchThreads(j.projectPath, j.mrNumber);
+              const followupAgentsList = getFollowupAgents(j.localPath) ?? DEFAULT_FOLLOWUP_AGENTS;
               contextGateway.create({
                 localPath: j.localPath,
                 mergeRequestId,
@@ -220,6 +231,7 @@ export async function handleGitLabWebhook(
                 projectPath: j.projectPath,
                 mergeRequestNumber: j.mrNumber,
                 threads,
+                agents: followupAgentsList,
               });
               logger.info(
                 { mrNumber: j.mrNumber, threadsCount: threads.length },
@@ -427,6 +439,7 @@ export async function handleGitLabWebhook(
 
     try {
       const threads = threadFetchGateway.fetchThreads(j.projectPath, j.mrNumber);
+      const reviewAgentsList = getProjectAgents(j.localPath) ?? DEFAULT_AGENTS;
       contextGateway.create({
         localPath: j.localPath,
         mergeRequestId,
@@ -434,6 +447,7 @@ export async function handleGitLabWebhook(
         projectPath: j.projectPath,
         mergeRequestNumber: j.mrNumber,
         threads,
+        agents: reviewAgentsList,
       });
       logger.info(
         { mrNumber: j.mrNumber, threadsCount: threads.length },

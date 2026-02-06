@@ -29,6 +29,7 @@ export class TrackedMrFactory {
       totalDurationMs: 0,
       averageScore: null,
       latestScore: null,
+      autoFollowup: true,
       ...overrides,
     };
   }
