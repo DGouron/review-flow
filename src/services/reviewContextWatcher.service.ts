@@ -3,13 +3,16 @@ import type { ReviewContextProgress } from '../entities/reviewContext/reviewCont
 
 export type ProgressCallback = (progress: ReviewContextProgress) => void
 
-const POLLING_INTERVAL_MS = 500
+const DEFAULT_POLLING_INTERVAL_MS = 500
 
 export class ReviewContextWatcherService {
   private watchers = new Map<string, NodeJS.Timeout>()
   private lastProgress = new Map<string, string>()
 
-  constructor(private gateway: ReviewContextGateway) {}
+  constructor(
+    private gateway: ReviewContextGateway,
+    private pollingIntervalMs = DEFAULT_POLLING_INTERVAL_MS,
+  ) {}
 
   start(localPath: string, mergeRequestId: string, callback: ProgressCallback): void {
     const interval = setInterval(() => {
@@ -25,7 +28,7 @@ export class ReviewContextWatcherService {
           }
         }
       }
-    }, POLLING_INTERVAL_MS)
+    }, this.pollingIntervalMs)
     this.watchers.set(mergeRequestId, interval)
   }
 

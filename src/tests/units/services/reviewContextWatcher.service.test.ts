@@ -119,4 +119,32 @@ describe('ReviewContextWatcherService', () => {
 
     watcher.stop(mergeRequestId)
   })
+
+  it('should use custom polling interval when provided', async () => {
+    const customWatcher = new ReviewContextWatcherService(gateway, 200)
+    const mergeRequestId = 'github-owner-repo-42'
+    const localPath = '/tmp/repo'
+    let callCount = 0
+
+    const context = ReviewContextFactory.createInProgress('verify', ['context'])
+    gateway.setContext(mergeRequestId, context)
+
+    customWatcher.start(localPath, mergeRequestId, () => {
+      callCount++
+    })
+
+    await vi.advanceTimersByTimeAsync(250)
+    expect(callCount).toBe(1)
+
+    gateway.updateContextProgress(mergeRequestId, {
+      phase: 'agents-running',
+      currentStep: 'scan',
+      stepsCompleted: ['context', 'verify'],
+    })
+
+    await vi.advanceTimersByTimeAsync(250)
+    expect(callCount).toBe(2)
+
+    customWatcher.stopAll()
+  })
 })

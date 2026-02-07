@@ -23,6 +23,7 @@ import { executeActionsFromContext } from '../../../services/contextActionsExecu
 import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js';
 import { ReviewContextFileSystemGateway } from '../../gateways/reviewContext.fileSystem.gateway.js';
 import { GitHubThreadFetchGateway, defaultGitHubExecutor } from '../../gateways/threadFetch.github.gateway.js';
+import { GitHubDiffMetadataFetchGateway } from '../../gateways/diffMetadataFetch.github.gateway.js';
 import { startWatchingReviewContext, stopWatchingReviewContext } from '../../../main/websocket.js';
 import { getProjectAgents } from '../../../config/projectConfig.js';
 import { DEFAULT_AGENTS } from '../../../entities/progress/agentDefinition.type.js';
@@ -196,13 +197,23 @@ export async function handleGitHubWebhook(
       logger
     );
 
-    // Create review context file with pre-fetched threads
+    // Create review context file with pre-fetched threads and diff metadata
     const mergeRequestId = `github-${j.projectPath}-${j.mrNumber}`;
     const contextGateway = new ReviewContextFileSystemGateway();
     const threadFetchGateway = new GitHubThreadFetchGateway(defaultGitHubExecutor);
+    const diffMetadataFetchGateway = new GitHubDiffMetadataFetchGateway(defaultGitHubExecutor);
 
     try {
       const threads = threadFetchGateway.fetchThreads(j.projectPath, j.mrNumber);
+      let diffMetadata: import('../../../entities/reviewContext/reviewContext.js').DiffMetadata | undefined;
+      try {
+        diffMetadata = diffMetadataFetchGateway.fetchDiffMetadata(j.projectPath, j.mrNumber);
+      } catch (error) {
+        logger.warn(
+          { prNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },
+          'Failed to fetch diff metadata, inline comments will be skipped'
+        );
+      }
       const reviewAgentsList = getProjectAgents(j.localPath) ?? DEFAULT_AGENTS;
       contextGateway.create({
         localPath: j.localPath,
@@ -212,9 +223,10 @@ export async function handleGitHubWebhook(
         mergeRequestNumber: j.mrNumber,
         threads,
         agents: reviewAgentsList,
+        diffMetadata,
       });
       logger.info(
-        { prNumber: j.mrNumber, threadsCount: threads.length },
+        { prNumber: j.mrNumber, threadsCount: threads.length, hasDiffMetadata: !!diffMetadata },
         'Review context file created with threads'
       );
 

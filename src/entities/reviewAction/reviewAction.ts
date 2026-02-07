@@ -5,6 +5,7 @@ import type {
   postCommentActionSchema,
   threadReplyActionSchema,
   addLabelActionSchema,
+  postInlineCommentActionSchema,
   fetchThreadsActionSchema,
 } from './reviewAction.schema.js'
 
@@ -13,6 +14,7 @@ export type ThreadResolveAction = z.infer<typeof threadResolveActionSchema>
 export type PostCommentAction = z.infer<typeof postCommentActionSchema>
 export type ThreadReplyAction = z.infer<typeof threadReplyActionSchema>
 export type AddLabelAction = z.infer<typeof addLabelActionSchema>
+export type PostInlineCommentAction = z.infer<typeof postInlineCommentActionSchema>
 export type FetchThreadsAction = z.infer<typeof fetchThreadsActionSchema>
 
 // Unified ReviewAction type

@@ -17,6 +17,8 @@ import { executeThreadActions, defaultCommandExecutor } from '../../../services/
 import { ReviewContextFileSystemGateway } from '../../gateways/reviewContext.fileSystem.gateway.js';
 import { GitHubThreadFetchGateway, defaultGitHubExecutor } from '../../gateways/threadFetch.github.gateway.js';
 import { GitLabThreadFetchGateway, defaultGitLabExecutor } from '../../gateways/threadFetch.gitlab.gateway.js';
+import { GitLabDiffMetadataFetchGateway } from '../../gateways/diffMetadataFetch.gitlab.gateway.js';
+import { GitHubDiffMetadataFetchGateway } from '../../gateways/diffMetadataFetch.github.gateway.js';
 import { startWatchingReviewContext, stopWatchingReviewContext } from '../../../main/websocket.js';
 import type { Logger } from 'pino';
 
@@ -103,14 +105,26 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
     }, async (job, signal) => {
       sendNotification('Review followup started', `MR !${job.mrNumber}`, logger);
 
-      // Create review context file with pre-fetched threads
+      // Create review context file with pre-fetched threads and diff metadata
       const contextGateway = new ReviewContextFileSystemGateway();
       const threadFetchGateway = job.platform === 'github'
         ? new GitHubThreadFetchGateway(defaultGitHubExecutor)
         : new GitLabThreadFetchGateway(defaultGitLabExecutor);
+      const diffMetadataFetchGateway = job.platform === 'github'
+        ? new GitHubDiffMetadataFetchGateway(defaultGitHubExecutor)
+        : new GitLabDiffMetadataFetchGateway(defaultGitLabExecutor);
 
       try {
         const threads = threadFetchGateway.fetchThreads(job.projectPath, job.mrNumber);
+        let diffMetadata: import('../../../entities/reviewContext/reviewContext.js').DiffMetadata | undefined;
+        try {
+          diffMetadata = diffMetadataFetchGateway.fetchDiffMetadata(job.projectPath, job.mrNumber);
+        } catch (error) {
+          logger.warn(
+            { mrNumber: job.mrNumber, error: error instanceof Error ? error.message : String(error) },
+            'Failed to fetch diff metadata for followup, inline comments will be skipped'
+          );
+        }
         const followupAgentsList = getFollowupAgents(job.localPath) ?? DEFAULT_FOLLOWUP_AGENTS;
         contextGateway.create({
           localPath: job.localPath,
@@ -120,9 +134,10 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
           mergeRequestNumber: job.mrNumber,
           threads,
           agents: followupAgentsList,
+          diffMetadata,
         });
         logger.info(
-          { mrNumber: job.mrNumber, threadsCount: threads.length },
+          { mrNumber: job.mrNumber, threadsCount: threads.length, hasDiffMetadata: !!diffMetadata },
           'Review context file created with threads for manual followup'
         );
 
@@ -181,6 +196,7 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
               projectPath: job.projectPath,
               mrNumber: job.mrNumber,
               localPath: job.localPath,
+              diffMetadata: reviewContext?.diffMetadata,
             },
             logger,
             defaultCommandExecutor

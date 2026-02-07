@@ -62,6 +62,52 @@ describe('GitLabReviewActionCliGateway', () => {
     expect(result.succeeded).toBe(1)
   })
 
+  it('should execute POST_INLINE_COMMENT action with correct glab command', async () => {
+    const executor = vi.fn()
+    const gateway = new GitLabReviewActionCliGateway(executor)
+    const actions: ReviewAction[] = [
+      { type: 'POST_INLINE_COMMENT', filePath: 'src/app.ts', line: 42, body: 'Extract this logic.' }
+    ]
+    const context = {
+      projectPath: 'group/project',
+      mrNumber: 123,
+      localPath: '/tmp',
+      diffMetadata: { baseSha: 'base111', headSha: 'head222', startSha: 'start333' },
+    }
+
+    const result = await gateway.execute(actions, context)
+
+    expect(executor).toHaveBeenCalledWith(
+      'glab',
+      expect.arrayContaining([
+        'position[base_sha]=base111',
+        'position[head_sha]=head222',
+        'position[start_sha]=start333',
+        'position[position_type]=text',
+        'position[new_path]=src/app.ts',
+        'position[old_path]=src/app.ts',
+        'position[new_line]=42',
+        'body=Extract this logic.',
+      ]),
+      '/tmp'
+    )
+    expect(result.succeeded).toBe(1)
+  })
+
+  it('should skip POST_INLINE_COMMENT when diffMetadata is missing', async () => {
+    const executor = vi.fn()
+    const gateway = new GitLabReviewActionCliGateway(executor)
+    const actions: ReviewAction[] = [
+      { type: 'POST_INLINE_COMMENT', filePath: 'src/app.ts', line: 42, body: 'Test' }
+    ]
+    const context = { projectPath: 'group/project', mrNumber: 123, localPath: '/tmp' }
+
+    const result = await gateway.execute(actions, context)
+
+    expect(executor).not.toHaveBeenCalled()
+    expect(result.skipped).toBe(1)
+  })
+
   it('should skip FETCH_THREADS action', async () => {
     const executor = vi.fn()
     const gateway = new GitLabReviewActionCliGateway(executor)

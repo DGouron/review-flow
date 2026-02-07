@@ -3,6 +3,7 @@
 export {
   threadResolveActionSchema,
   postCommentActionSchema,
+  postInlineCommentActionSchema,
   addLabelActionSchema,
   reviewActionSchema as reviewContextActionSchema,
 } from '../reviewAction/reviewAction.schema.js'
@@ -10,6 +11,7 @@ export {
 export type {
   ThreadResolveAction,
   PostCommentAction,
+  PostInlineCommentAction,
   AddLabelAction,
   ReviewContextAction,
 } from '../reviewAction/reviewAction.js'

@@ -100,6 +100,63 @@ describe("addAction usecase", () => {
 		}
 	});
 
+	it("should add POST_INLINE_COMMENT action successfully", () => {
+		const result = addAction(
+			jobId,
+			{ type: "POST_INLINE_COMMENT", filePath: "src/app.ts", line: 42, body: "Extract this." },
+			{ jobContextGateway, reviewContextGateway },
+		);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.actionId).toBeDefined();
+			expect(result.actionType).toBe("POST_INLINE_COMMENT");
+		}
+
+		const context = reviewContextGateway.read(tempDir, mergeRequestId);
+		expect(context?.actions).toHaveLength(1);
+		expect(context?.actions[0].type).toBe("POST_INLINE_COMMENT");
+	});
+
+	it("should return error when POST_INLINE_COMMENT missing filePath", () => {
+		const result = addAction(
+			jobId,
+			{ type: "POST_INLINE_COMMENT", filePath: "", line: 42, body: "test" } as never,
+			{ jobContextGateway, reviewContextGateway },
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error).toContain("filePath required");
+		}
+	});
+
+	it("should return error when POST_INLINE_COMMENT has invalid line", () => {
+		const result = addAction(
+			jobId,
+			{ type: "POST_INLINE_COMMENT", filePath: "src/app.ts", line: 0, body: "test" } as never,
+			{ jobContextGateway, reviewContextGateway },
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error).toContain("line must be > 0");
+		}
+	});
+
+	it("should return error when POST_INLINE_COMMENT missing body", () => {
+		const result = addAction(
+			jobId,
+			{ type: "POST_INLINE_COMMENT", filePath: "src/app.ts", line: 42, body: "" } as never,
+			{ jobContextGateway, reviewContextGateway },
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error).toContain("body required");
+		}
+	});
+
 	it("should return error when POST_COMMENT missing body", () => {
 		const result = addAction(
 			jobId,

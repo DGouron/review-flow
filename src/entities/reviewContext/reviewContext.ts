@@ -1,5 +1,11 @@
 import type { ReviewContextAction, ReviewContextResult } from './reviewContextAction.schema.js'
 
+export interface DiffMetadata {
+  baseSha: string
+  headSha: string
+  startSha: string
+}
+
 export interface ReviewContextThread {
   id: string
   file: string | null
@@ -39,6 +45,7 @@ export interface ReviewContext {
   progress: ReviewContextProgress
   result?: ReviewContextResult
   agentInstructions?: AgentInstructions
+  diffMetadata?: DiffMetadata
 }
 
 export interface CreateReviewContextInput {
@@ -49,6 +56,7 @@ export interface CreateReviewContextInput {
   mergeRequestNumber: number
   threads?: ReviewContextThread[]
   agents?: ReviewContextAgent[]
+  diffMetadata?: DiffMetadata
 }
 
 export interface CreateReviewContextResult {

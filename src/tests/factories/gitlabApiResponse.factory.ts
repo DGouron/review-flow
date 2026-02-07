@@ -15,8 +15,19 @@ interface GitLabDiscussion {
   notes: GitLabNote[]
 }
 
+interface GitLabMergeRequestVersion {
+  id: number
+  base_commit_sha: string
+  head_commit_sha: string
+  start_commit_sha: string
+}
+
 export class GitLabApiResponseFactory {
   static createDiscussionsResponse(discussions: GitLabDiscussion[]): string {
     return JSON.stringify(discussions)
+  }
+
+  static createVersionsResponse(versions: GitLabMergeRequestVersion[]): string {
+    return JSON.stringify(versions)
   }
 }

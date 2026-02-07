@@ -38,6 +38,7 @@ export class ReviewContextFileSystemGateway implements ReviewContextGateway {
         ...(input.agents ? { agents: input.agents } : {}),
       },
       agentInstructions,
+      ...(input.diffMetadata ? { diffMetadata: input.diffMetadata } : {}),
     }
 
     writeFileSync(filePath, JSON.stringify(content, null, 2))

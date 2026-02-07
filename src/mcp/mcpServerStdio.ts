@@ -153,19 +153,21 @@ const TOOL_DEFINITIONS = [
 	},
 	{
 		name: "add_action",
-		description: "Add an action to be executed (resolve thread, post comment, reply)",
+		description: "Add an action to be executed (resolve thread, post comment, reply, inline comment)",
 		inputSchema: {
 			type: "object" as const,
 			properties: {
 				jobId: { type: "string", description: "The job ID for the review" },
 				type: {
 					type: "string",
-					enum: ["THREAD_RESOLVE", "THREAD_REPLY", "POST_COMMENT"],
+					enum: ["THREAD_RESOLVE", "THREAD_REPLY", "POST_COMMENT", "POST_INLINE_COMMENT"],
 					description: "The action type",
 				},
 				threadId: { type: "string", description: "Thread ID for resolve/reply actions" },
 				message: { type: "string", description: "Message for reply action" },
-				body: { type: "string", description: "Body for post comment action" },
+				body: { type: "string", description: "Body for post comment action or inline comment" },
+				filePath: { type: "string", description: "File path for inline comment (POST_INLINE_COMMENT)" },
+				line: { type: "number", description: "Line number for inline comment (POST_INLINE_COMMENT)" },
 			},
 			required: ["jobId", "type"],
 		},

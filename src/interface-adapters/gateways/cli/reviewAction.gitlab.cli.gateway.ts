@@ -42,6 +42,25 @@ export class GitLabReviewActionCliGateway
           args: ['api', '--method', 'PUT', baseUrl, '--field', `add_labels=${action.label}`],
         }
 
+      case 'POST_INLINE_COMMENT': {
+        if (!context.diffMetadata) return null
+        return {
+          command: 'glab',
+          args: [
+            'api', '--method', 'POST',
+            `${baseUrl}/discussions`,
+            '--field', `body=${action.body}`,
+            '--field', `position[base_sha]=${context.diffMetadata.baseSha}`,
+            '--field', `position[head_sha]=${context.diffMetadata.headSha}`,
+            '--field', `position[start_sha]=${context.diffMetadata.startSha}`,
+            '--field', 'position[position_type]=text',
+            '--field', `position[new_path]=${action.filePath}`,
+            '--field', `position[old_path]=${action.filePath}`,
+            '--field', `position[new_line]=${action.line}`,
+          ],
+        }
+      }
+
       case 'FETCH_THREADS':
         return null
     }
