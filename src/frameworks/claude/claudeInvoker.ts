@@ -1,4 +1,6 @@
 import { spawn } from 'node:child_process';
+import { writeFileSync, mkdirSync, existsSync, unlinkSync, readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
 import type { Logger } from 'pino';
 import type { ReviewJob } from '../../queue/reviewQueue.js';
 import type { ReviewProgress, ProgressEvent } from '../../entities/progress/progress.type.js';
@@ -9,6 +11,72 @@ import { getProjectAgents, getFollowupAgents } from '../../config/projectConfig.
 import { addReviewStats } from '../../services/statsService.js';
 import { getMrDetails } from '../../services/mrTrackingService.js';
 import { resolveClaudePath } from '../../shared/services/claudePathResolver.js';
+import { getJobContextFilePath } from '../../shared/services/mcpJobContext.js';
+
+const MCP_SERVER_PATH = '/home/damien/Documents/Projets/claude-review-automation/dist/mcpServer.js';
+
+export function writeMcpContext(job: ReviewJob): void {
+  try {
+    const filePath = getJobContextFilePath(job.id);
+    const dir = dirname(filePath);
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+    const mergeRequestId = `${job.platform}-${job.projectPath}-${job.mrNumber}`;
+    const context = {
+      jobId: job.id,
+      localPath: job.localPath,
+      mergeRequestId,
+      jobType: job.jobType || 'review',
+      timestamp: new Date().toISOString(),
+    };
+    writeFileSync(filePath, JSON.stringify(context, null, 2));
+  } catch {
+    // Non-critical, MCP will work without context
+  }
+}
+
+function ensureProjectMcpConfig(projectPath: string): void {
+  try {
+    const mcpConfigPath = join(projectPath, '.mcp.json');
+    const expectedConfig = {
+      mcpServers: {
+        "review-progress": {
+          command: "node",
+          args: [MCP_SERVER_PATH],
+        },
+      },
+    };
+
+    // Check if file exists and has correct config
+    if (existsSync(mcpConfigPath)) {
+      const existing = JSON.parse(readFileSync(mcpConfigPath, 'utf-8'));
+      if (existing?.mcpServers?.["review-progress"]) {
+        return; // Already configured
+      }
+      // Merge with existing config
+      existing.mcpServers = existing.mcpServers || {};
+      existing.mcpServers["review-progress"] = expectedConfig.mcpServers["review-progress"];
+      writeFileSync(mcpConfigPath, JSON.stringify(existing, null, 2) + '\n');
+    } else {
+      // Create new config
+      writeFileSync(mcpConfigPath, JSON.stringify(expectedConfig, null, 2) + '\n');
+    }
+  } catch {
+    // Non-critical, skill may still work without MCP
+  }
+}
+
+export function cleanupMcpContext(jobId: string): void {
+  try {
+    const filePath = getJobContextFilePath(jobId);
+    if (existsSync(filePath)) {
+      unlinkSync(filePath);
+    }
+  } catch {
+    // Ignore cleanup errors
+  }
+}
 
 // Memory guard configuration
 const MEMORY_LIMIT_GB = 4; // Kill process if RSS exceeds 4GB
@@ -26,6 +94,84 @@ export interface InvocationResult {
 }
 
 export type ProgressCallback = (progress: ReviewProgress, event?: ProgressEvent) => void;
+
+/**
+ * Build MCP system prompt for progress tracking
+ * This instruction is AUTHORITATIVE and forces Claude to use MCP tools
+ */
+function buildMcpSystemPrompt(job: ReviewJob): string {
+  return `
+# AUTOMATED REVIEW MODE - EXECUTE IMMEDIATELY
+
+## CRITICAL EXECUTION RULES
+
+You are running in FULLY AUTOMATED, NON-INTERACTIVE mode.
+- **EXECUTE the skill instructions step by step RIGHT NOW**
+- Do NOT produce a "plan" or "summary" of what you will do
+- Do NOT wait for approval, confirmation, or user input
+- Do NOT say "once approved", "when you confirm", or "the plan is ready"
+- Do NOT use EnterPlanMode or AskUserQuestion (they are disabled)
+- Your output goes to a log file, not to a human
+
+## PROJECT CLAUDE.md RULES CLARIFICATION
+
+The project CLAUDE.md may contain rules like "mandatory skills before writing code" (/tdd, /architecture, /anti-overengineering).
+These rules are about WRITING production code. You are in **READ-ONLY review mode** — you are NOT writing code.
+- These mandatory-before-coding rules do NOT apply to you
+- You CAN and SHOULD read/load any skill files referenced by the review skill (e.g. architecture/SKILL.md, tdd/SKILL.md) as audit references
+- Do NOT invoke skills as interactive workflows — READ them for review criteria only
+- JUST FOLLOW the review/followup skill instructions and EXECUTE each step
+
+## Your Job Context
+- **Job ID**: \`${job.id}\`
+- **Job Type**: ${job.jobType || 'review'}
+- **MR Number**: ${job.mrNumber}
+
+## MANDATORY MCP Tools Usage
+
+You MUST use these MCP tools for ALL operations. Do NOT use text markers.
+
+### Phase Management
+\`\`\`
+set_phase({ jobId: "${job.id}", phase: "initializing" })
+set_phase({ jobId: "${job.id}", phase: "agents-running" })
+set_phase({ jobId: "${job.id}", phase: "synthesizing" })
+set_phase({ jobId: "${job.id}", phase: "publishing" })
+set_phase({ jobId: "${job.id}", phase: "completed" })
+\`\`\`
+
+### Agent Progress (call for EACH audit/step)
+\`\`\`
+start_agent({ jobId: "${job.id}", agentName: "agent-name" })
+complete_agent({ jobId: "${job.id}", agentName: "agent-name", status: "success" })
+complete_agent({ jobId: "${job.id}", agentName: "agent-name", status: "failed", error: "message" })
+\`\`\`
+
+### GitLab/GitHub Actions (USE THESE - do NOT use glab/gh CLI)
+\`\`\`
+get_threads({ jobId: "${job.id}" })
+add_action({ jobId: "${job.id}", type: "THREAD_RESOLVE", threadId: "xxx" })
+add_action({ jobId: "${job.id}", type: "THREAD_REPLY", threadId: "xxx", message: "..." })
+add_action({ jobId: "${job.id}", type: "POST_COMMENT", body: "..." })
+\`\`\`
+
+## Workflow Pattern
+
+1. **Start**: \`set_phase({ jobId: "${job.id}", phase: "initializing" })\`
+2. **Before each audit**: \`start_agent({ jobId: "${job.id}", agentName: "xxx" })\`
+3. **After each audit**: \`complete_agent({ jobId: "${job.id}", agentName: "xxx", status: "success" })\`
+4. **Synthesis**: \`set_phase({ jobId: "${job.id}", phase: "synthesizing" })\`
+5. **Threads**: \`start_agent({ jobId: "${job.id}", agentName: "threads" })\` then \`complete_agent\`
+6. **Report**: \`start_agent({ jobId: "${job.id}", agentName: "report" })\` then \`complete_agent\`
+7. **Publishing**: \`set_phase({ jobId: "${job.id}", phase: "publishing" })\`
+8. **End**: \`set_phase({ jobId: "${job.id}", phase: "completed" })\`
+
+**VIOLATIONS**:
+- Producing a "plan" instead of executing → Review will be empty
+- Using text markers like [PROGRESS:xxx] → Dashboard won't update
+- Waiting for user approval → Review will hang forever
+`.trim();
+}
 
 /**
  * Invoke Claude Code CLI for a review job
@@ -48,14 +194,28 @@ export async function invokeClaudeReview(
   // Get configured model
   const model = getModel();
 
+  // Build MCP system prompt injection
+  const mcpSystemPrompt = buildMcpSystemPrompt(job);
+
   // Build arguments
-  // Allow git and glab commands for review workflow
+  // MCP server reads context from per-job files in ~/.claude-review/jobs/
+  // Note: --allowedTools grants permissions explicitly (safer than --dangerously-skip-permissions)
   const args = [
     '--print',
-    '--dangerously-skip-permissions',
     '--model', model,
+    '--append-system-prompt', mcpSystemPrompt,
+    // Grant permissions for review operations (automated, no user to approve)
+    // - Core tools: Read, Glob, Grep, Bash, Edit, Task, Skill, Write, LSP
+    // - MCP tools: mcp__review-progress__* (all tools from our progress tracking server)
+    '--allowedTools', 'Read,Glob,Grep,Bash,Edit,Task,Skill,Write,LSP,mcp__review-progress__*',
+    // Disable interactive tools - reviews cannot wait for user approval
+    '--disallowedTools', 'EnterPlanMode,AskUserQuestion',
     '-p', prompt,
   ];
+
+  // Setup MCP: write context file and ensure project has .mcp.json
+  writeMcpContext(job);
+  ensureProjectMcpConfig(job.localPath);
 
   logger.info(
     {
@@ -118,6 +278,7 @@ export async function invokeClaudeReview(
         // Ensure non-interactive mode
         TERM: 'dumb',
         CI: 'true',
+        // Note: MCP env vars are now passed via --mcp-config
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -218,14 +379,29 @@ export async function invokeClaudeReview(
     });
 
     child.on('close', (code) => {
-      // Cleanup interval and abort listener
+      // Cleanup interval, abort listener, and MCP context
       clearInterval(memoryCheckInterval);
+      cleanupMcpContext(job.id);
       if (signal) {
         signal.removeEventListener('abort', abortHandler);
       }
 
       const durationMs = Date.now() - startTime;
       const success = code === 0 && !cancelled && !memoryExceeded;
+
+      // Save stdout to log file for debugging
+      try {
+        const logsDir = join(job.localPath, '.claude', 'reviews', 'logs');
+        if (!existsSync(logsDir)) {
+          mkdirSync(logsDir, { recursive: true });
+        }
+        const sanitizedJobId = job.id.replace(/[:/\\]/g, '-');
+        const logPath = join(logsDir, `${sanitizedJobId}-stdout.log`);
+        writeFileSync(logPath, `=== Claude Review Output ===\nJob: ${job.id}\nMR: ${job.mrNumber}\nSkill: ${job.skill}\nExit code: ${code}\nDuration: ${Math.round(durationMs / 1000)}s\nTimestamp: ${new Date().toISOString()}\n\n--- STDOUT ---\n${stdout}\n\n--- STDERR ---\n${stderr}\n`);
+        logger.info({ logPath }, 'Review stdout saved to log file');
+      } catch {
+        // Non-critical
+      }
 
       // Finalize progress
       if (memoryExceeded) {

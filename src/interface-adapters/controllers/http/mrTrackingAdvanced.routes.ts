@@ -2,7 +2,8 @@ import type { FastifyPluginAsync } from 'fastify';
 import type { RepositoryConfig } from '../../../config/loader.js';
 import { logInfo, logError } from '../../../services/logService.js';
 import { enqueueReview, createJobId, updateJobProgress } from '../../../queue/reviewQueue.js';
-import { loadProjectConfig } from '../../../config/projectConfig.js';
+import { loadProjectConfig, getFollowupAgents } from '../../../config/projectConfig.js';
+import { DEFAULT_FOLLOWUP_AGENTS } from '../../../entities/progress/agentDefinition.type.js';
 import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js';
 import {
   syncAllThreads,
@@ -98,6 +99,7 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
       skill,
       sourceBranch: 'unknown',
       targetBranch: 'unknown',
+      jobType: 'followup',
     }, async (job, signal) => {
       sendNotification('Review followup started', `MR !${job.mrNumber}`, logger);
 
@@ -109,6 +111,7 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
 
       try {
         const threads = threadFetchGateway.fetchThreads(job.projectPath, job.mrNumber);
+        const followupAgentsList = getFollowupAgents(job.localPath) ?? DEFAULT_FOLLOWUP_AGENTS;
         contextGateway.create({
           localPath: job.localPath,
           mergeRequestId: mrId,
@@ -116,6 +119,7 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
           projectPath: job.projectPath,
           mergeRequestNumber: job.mrNumber,
           threads,
+          agents: followupAgentsList,
         });
         logger.info(
           { mrNumber: job.mrNumber, threadsCount: threads.length },
@@ -153,11 +157,23 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
         // Parse review output for stats
         const parsed = parseReviewOutput(result.stdout);
 
-        // Execute thread actions from markers
-        const threadActions = parseThreadActions(result.stdout);
+        // Collect thread actions from both sources:
+        // 1. MCP actions from review context file (new way)
+        // 2. Text markers from stdout (legacy fallback)
+        const reviewContext = contextGateway.read(job.localPath, mrId);
+        const mcpActions = reviewContext?.actions ?? [];
+        const markerActions = parseThreadActions(result.stdout);
+
+        // Combine actions (MCP takes priority, markers as fallback)
+        const threadActions = mcpActions.length > 0 ? mcpActions : markerActions;
+
         let threadResolveCount = 0;
         if (threadActions.length > 0) {
           threadResolveCount = threadActions.filter(a => a.type === 'THREAD_RESOLVE').length;
+          logger.info(
+            { mcpActionsCount: mcpActions.length, markerActionsCount: markerActions.length, mrNumber: job.mrNumber },
+            'Executing thread actions'
+          );
           const actionResult = await executeThreadActions(
             threadActions,
             {
@@ -219,6 +235,38 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
     logInfo('Followup triggered manually', { mrId, mrNumber, skill });
 
     return { success: true, jobId, message: 'Followup review in progress' };
+  });
+
+  fastify.post('/api/mr-tracking/auto-followup', async (request, reply) => {
+    const body = request.body as { mrId?: string; projectPath?: string; enabled?: boolean };
+    const { mrId, projectPath, enabled } = body;
+
+    if (!mrId) {
+      reply.code(400);
+      return { success: false, error: 'mrId requis' };
+    }
+
+    if (typeof enabled !== 'boolean') {
+      reply.code(400);
+      return { success: false, error: 'enabled (boolean) requis' };
+    }
+
+    const validation = validateProjectPath(projectPath);
+    if (!validation.valid) {
+      reply.code(400);
+      return { success: false, error: validation.error };
+    }
+
+    const { setAutoFollowup } = await import('../../../services/mrTrackingService.js');
+    const result = setAutoFollowup(validation.path, mrId, enabled);
+
+    if (!result) {
+      reply.code(404);
+      return { success: false, error: 'MR non trouvée' };
+    }
+
+    logInfo('Auto-followup toggled', { mrId, enabled });
+    return { success: true, mr: result };
   });
 
   fastify.post('/api/mr-tracking/sync', async (request, reply) => {

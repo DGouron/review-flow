@@ -1,10 +1,19 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { existsSync, unlinkSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
+import type { Logger } from 'pino';
 import type { ReviewFileGateway } from '../../gateways/reviewFile.gateway.js';
-import { cancelJob } from '../../../queue/reviewQueue.js';
+import { cancelReview } from '../../../usecases/cancelReview.usecase.js';
+import type { CancelReviewQueuePort } from '../../../usecases/cancelReview.usecase.js';
+import { removeMrFromTracking, recomputeProjectStats } from '../../../services/mrTrackingService.js';
+import { sanitizeJobId } from '../../../shared/services/mcpJobContext.js';
 
 interface ReviewRoutesOptions {
   reviewFileGateway: ReviewFileGateway;
   getRepositories: () => Array<{ localPath: string; enabled: boolean }>;
+  queuePort: CancelReviewQueuePort;
+  logger: Logger;
 }
 
 const FILENAME_REGEX = /^\d{4}-\d{2}-\d{2}-(?:MR|PR)-[^/\\]+\.md$/;
@@ -13,7 +22,7 @@ export const reviewRoutes: FastifyPluginAsync<ReviewRoutesOptions> = async (
   fastify,
   opts
 ) => {
-  const { reviewFileGateway, getRepositories } = opts;
+  const { reviewFileGateway, getRepositories, queuePort, logger } = opts;
 
   fastify.get('/api/reviews', async (request) => {
     const query = request.query as { path?: string };
@@ -81,18 +90,41 @@ export const reviewRoutes: FastifyPluginAsync<ReviewRoutesOptions> = async (
 
   fastify.post('/api/reviews/cancel/:jobId', async (request, reply) => {
     const { jobId } = request.params as { jobId: string };
+    const body = (request.body ?? {}) as { projectPath?: string; mrId?: string };
 
     if (!jobId || jobId.length === 0) {
       reply.code(400);
-      return { success: false, error: 'Job ID required' };
+      return { success: false, error: 'Job ID requis' };
     }
 
-    const cancelled = cancelJob(jobId);
-    if (cancelled) {
+    const result = cancelReview(jobId, {
+      queuePort,
+      logger,
+    });
+
+    if (result.status === 'cancelled') {
+      if (body.projectPath && body.mrId) {
+        removeMrFromTracking(body.projectPath, body.mrId);
+        recomputeProjectStats(body.projectPath);
+
+        try {
+          const contextPath = join(homedir(), '.claude-review', 'jobs', `${sanitizeJobId(jobId)}.json`);
+          if (existsSync(contextPath)) {
+            unlinkSync(contextPath);
+          }
+        } catch {
+          logger.warn({ jobId }, 'Failed to delete review context file');
+        }
+      }
+
       return { success: true, message: `Job ${jobId} cancelled` };
     }
 
+    if (result.status === 'already-completed') {
+      return { success: false, status: 'already-completed', message: 'Cette review est déjà terminée' };
+    }
+
     reply.code(404);
-    return { success: false, error: 'Job not found or already completed' };
+    return { success: false, error: 'Job non trouvé' };
   });
 };

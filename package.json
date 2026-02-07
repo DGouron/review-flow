@@ -41,6 +41,7 @@
   "dependencies": {
     "@fastify/static": "^8.0.0",
     "@fastify/websocket": "^11.0.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "dotenv": "^16.4.0",
     "fastify": "^5.0.0",
     "p-queue": "^8.0.0",

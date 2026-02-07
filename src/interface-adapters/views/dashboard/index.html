@@ -170,6 +170,19 @@
     </div>
   </div>
 
+  <div id="cancel-modal" class="modal-overlay hidden" onclick="closeCancelModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-title" id="cancel-modal-title"></div>
+      <div class="modal-message">Cette action est irréversible. La review sera arrêtée immédiatement.</div>
+      <div class="modal-actions">
+        <button class="btn-modal-back" onclick="closeCancelModal()">Revenir</button>
+        <button class="btn-modal-confirm" id="cancel-modal-confirm" onclick="confirmCancelReview()">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
   <script>
     const API_URL = window.location.origin;
     const WS_URL = `ws://${window.location.host}/ws`;
@@ -304,6 +317,7 @@
               </div>
               ${review.error ? `<div class="error-message">${review.error}</div>` : ''}
             </div>
+            ${isActive ? `<button class="btn-cancel-review" onclick="event.stopPropagation(); showCancelModal('${review.id}', ${mrNumber}, '${review.jobType || 'review'}')" title="Annuler"><i data-lucide="x"></i> Annuler</button>` : ''}
             <div class="review-assigner">
               <div class="review-assigner-info">
                 <span class="review-assigner-name">${assignerDisplay}</span>
@@ -811,8 +825,13 @@
         : `<span class="mr-threads all-resolved"><i data-lucide="check-circle"></i> Résolus</span>`;
 
       const openBtn = `<a href="${mr.url}" target="_blank" class="btn-action open"><i data-lucide="external-link"></i> Ouvrir</a>`;
+      const autoFollowupChecked = mr.autoFollowup !== false ? 'checked' : '';
       const actions = type === 'pending-fix'
-        ? `<button class="btn-action" onclick="triggerFollowup('${mr.id}')"><i data-lucide="refresh-cw"></i> Followup</button>${openBtn}`
+        ? `<label class="auto-followup-toggle" onclick="event.stopPropagation()" title="Active/désactive le followup automatique après un push">
+             <input type="checkbox" ${autoFollowupChecked} onchange="toggleAutoFollowup('${mr.id}', this.checked)">
+             Auto follow-up
+           </label>
+           <button class="btn-action" onclick="triggerFollowup('${mr.id}')"><i data-lucide="refresh-cw"></i> Followup</button>${openBtn}`
         : openBtn;
 
       // Stats badges
@@ -995,6 +1014,23 @@
       } catch (error) {
         console.error('Error triggering followup:', error);
         alert('Erreur lors du déclenchement du followup');
+      }
+    }
+
+    async function toggleAutoFollowup(mrId, enabled) {
+      try {
+        const response = await fetch(`${API_URL}/api/mr-tracking/auto-followup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mrId, projectPath: currentProjectPath, enabled })
+        });
+        const data = await response.json();
+        if (!data.success) {
+          alert('Erreur: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error toggling auto-followup:', error);
+        alert('Erreur lors du changement de auto follow-up');
       }
     }
 
@@ -1394,6 +1430,75 @@
     // Platform-aware MR/PR label
     function getMrLabel(platform = activePlatform) {
       return platform === 'github' ? 'PR' : 'MR';
+    }
+
+    // Cancel review modal state
+    let cancelModalJobId = null;
+
+    function showCancelModal(jobId, mrNumber, jobType) {
+      cancelModalJobId = jobId;
+      const typeLabel = jobType === 'followup' ? 'followup' : 'review';
+      document.getElementById('cancel-modal-title').textContent = `Annuler la ${typeLabel} de la ${getMrLabel()} !${mrNumber} (${typeLabel}) ?`;
+      const modal = document.getElementById('cancel-modal');
+      modal.classList.remove('hidden');
+      requestAnimationFrame(() => modal.classList.add('visible'));
+    }
+
+    function closeCancelModal(event) {
+      if (event && event.target !== event.currentTarget) return;
+      const modal = document.getElementById('cancel-modal');
+      modal.classList.remove('visible');
+      setTimeout(() => modal.classList.add('hidden'), 200);
+      cancelModalJobId = null;
+    }
+
+    async function confirmCancelReview() {
+      if (!cancelModalJobId) return;
+
+      const jobId = cancelModalJobId;
+      closeCancelModal();
+
+      try {
+        const response = await fetch(`${API_URL}/api/reviews/cancel/${encodeURIComponent(jobId)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectPath: currentProjectPath || undefined,
+            mrId: jobId,
+          }),
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          const card = document.querySelector(`.review-item[data-job-id="${jobId}"]`);
+          if (card) card.remove();
+          showToast('Review annulée', 'success');
+          fetchStatus();
+        } else if (data.status === 'already-completed') {
+          showToast('Cette review est déjà terminée', 'info');
+          fetchStatus();
+        } else {
+          showToast(data.error || 'Erreur lors de l\'annulation', 'error');
+        }
+      } catch (error) {
+        console.error('Error cancelling review:', error);
+        showToast('Erreur lors de l\'annulation', 'error');
+      }
+    }
+
+    function showToast(message, type) {
+      const container = document.getElementById('toast-container');
+      const iconName = type === 'success' ? 'check-circle' : type === 'info' ? 'info' : 'alert-circle';
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<i data-lucide="${iconName}"></i> ${escapeHtml(message)}`;
+      container.appendChild(toast);
+      refreshIcons();
+      requestAnimationFrame(() => toast.classList.add('visible'));
+      setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
     }
 
     // Init

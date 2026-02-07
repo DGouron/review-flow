@@ -234,6 +234,23 @@ export async function enqueueReview(
 }
 
 /**
+ * Get job status by ID
+ */
+export function getJobStatus(jobId: string): 'queued' | 'running' | 'completed' | 'failed' | null {
+  const active = activeJobs.get(jobId);
+  if (active) {
+    return active.status;
+  }
+
+  const completed = completedJobs.find((job) => job.job.id === jobId);
+  if (completed) {
+    return completed.status;
+  }
+
+  return null;
+}
+
+/**
  * Cancel a running or queued job
  * @returns true if the job was found and cancelled, false otherwise
  */
