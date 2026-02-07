@@ -5,7 +5,7 @@ import type { ReviewContextProgress } from '../../../../entities/reviewContext/r
 describe('ReviewContextProgressPresenter', () => {
   const presenter = new ReviewContextProgressPresenter()
 
-  it('should map context progress to review progress with completed and running steps', () => {
+  it('should fallback to DEFAULT_FOLLOWUP_AGENTS when no agents in context', () => {
     const contextProgress: ReviewContextProgress = {
       phase: 'agents-running',
       currentStep: 'scan',
@@ -46,5 +46,60 @@ describe('ReviewContextProgressPresenter', () => {
     expect(result.currentPhase).toBe('completed')
     expect(result.overallProgress).toBe(100)
     expect(result.agents.every(a => a.status === 'completed')).toBe(true)
+  })
+
+  it('should use agents from context when provided', () => {
+    const contextProgress: ReviewContextProgress = {
+      phase: 'agents-running',
+      currentStep: 'ddd',
+      stepsCompleted: ['clean-architecture'],
+      agents: [
+        { name: 'clean-architecture', displayName: 'Clean Archi' },
+        { name: 'ddd', displayName: 'DDD' },
+        { name: 'react-best-practices', displayName: 'React' },
+        { name: 'solid', displayName: 'SOLID' },
+        { name: 'testing', displayName: 'Testing' },
+        { name: 'code-quality', displayName: 'Code Quality' },
+      ],
+      updatedAt: '2026-02-06T10:00:00Z',
+    }
+
+    const result = presenter.toReviewProgress(contextProgress)
+
+    expect(result.agents).toHaveLength(6)
+
+    const cleanArchi = result.agents.find(a => a.name === 'clean-architecture')
+    expect(cleanArchi?.status).toBe('completed')
+    expect(cleanArchi?.displayName).toBe('Clean Archi')
+
+    const ddd = result.agents.find(a => a.name === 'ddd')
+    expect(ddd?.status).toBe('running')
+    expect(ddd?.displayName).toBe('DDD')
+
+    const react = result.agents.find(a => a.name === 'react-best-practices')
+    expect(react?.status).toBe('pending')
+
+    expect(result.overallProgress).toBeGreaterThan(0)
+    expect(result.overallProgress).toBeLessThan(100)
+  })
+
+  it('should use custom agents from project config', () => {
+    const contextProgress: ReviewContextProgress = {
+      phase: 'agents-running',
+      currentStep: 'perf-audit',
+      stepsCompleted: ['security-audit'],
+      agents: [
+        { name: 'security-audit', displayName: 'Security' },
+        { name: 'perf-audit', displayName: 'Performance' },
+      ],
+    }
+
+    const result = presenter.toReviewProgress(contextProgress)
+
+    expect(result.agents).toHaveLength(2)
+    expect(result.agents[0].name).toBe('security-audit')
+    expect(result.agents[0].status).toBe('completed')
+    expect(result.agents[1].name).toBe('perf-audit')
+    expect(result.agents[1].status).toBe('running')
   })
 })

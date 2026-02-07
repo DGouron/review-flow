@@ -14,6 +14,7 @@ const gitHubPullRequestEventSchema = z.object({
     head: z.object({ ref: z.string() }),
     base: z.object({ ref: z.string() }),
     requested_reviewers: z.array(z.object({ login: z.string() })),
+    assignees: z.array(z.object({ login: z.string() })).optional(),
   }),
   repository: z.object({
     full_name: z.string(),

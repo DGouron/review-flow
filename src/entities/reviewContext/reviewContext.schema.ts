@@ -16,6 +16,12 @@ export const reviewContextProgressSchema = z.object({
   updatedAt: z.string().optional(),
 })
 
+export const agentInstructionsSchema = z.object({
+  contextFilePath: z.string(),
+  critical: z.array(z.string()),
+  actionSchema: z.record(z.string(), z.record(z.string(), z.string())),
+})
+
 export const reviewContextSchema = z.object({
   version: z.string(),
   mergeRequestId: z.string(),
@@ -27,6 +33,7 @@ export const reviewContextSchema = z.object({
   actions: z.array(reviewContextActionSchema),
   progress: reviewContextProgressSchema,
   result: reviewContextResultSchema.optional(),
+  agentInstructions: agentInstructionsSchema.optional(),
 })
 
 export const createReviewContextInputSchema = z.object({

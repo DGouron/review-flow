@@ -1,4 +1,4 @@
-import type { ReviewContextProgress } from '../../entities/reviewContext/reviewContext.js'
+import type { ReviewContextProgress, ReviewContextAgent } from '../../entities/reviewContext/reviewContext.js'
 import type { ReviewProgress, ReviewPhase, AgentProgress } from '../../entities/progress/progress.type.js'
 import { DEFAULT_FOLLOWUP_AGENTS } from '../../entities/progress/agentDefinition.type.js'
 import { calculateOverallProgress } from '../../entities/progress/progress.calculator.js'
@@ -8,7 +8,9 @@ export class ReviewContextProgressPresenter {
     const stepsCompleted = contextProgress.stepsCompleted ?? []
     const currentStep = contextProgress.currentStep
 
-    const agents: AgentProgress[] = DEFAULT_FOLLOWUP_AGENTS.map(agent => {
+    const agentDefinitions = this.resolveAgents(contextProgress)
+
+    const agents: AgentProgress[] = agentDefinitions.map(agent => {
       let status: AgentProgress['status'] = 'pending'
 
       if (stepsCompleted.includes(agent.name)) {
@@ -36,6 +38,13 @@ export class ReviewContextProgressPresenter {
     progress.overallProgress = phase === 'completed' ? 100 : calculateOverallProgress(progress)
 
     return progress
+  }
+
+  private resolveAgents(contextProgress: ReviewContextProgress): ReviewContextAgent[] {
+    if (contextProgress.agents && contextProgress.agents.length > 0) {
+      return contextProgress.agents
+    }
+    return DEFAULT_FOLLOWUP_AGENTS
   }
 
   private mapPhase(phase: ReviewContextProgress['phase']): ReviewPhase {
