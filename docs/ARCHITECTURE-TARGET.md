@@ -94,27 +94,14 @@ last-updated: 2026-02-07
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                               ENTITIES                                      │
 │                                                                             │
-│  src/entities/                                                              │
-│  ├── reviewAction/                    # Actions on MR                       │
-│  │   ├── reviewAction.ts              # Types: ReviewAction union           │
-│  │   ├── reviewAction.schema.ts       # Zod schemas                         │
-│  │   ├── reviewAction.guard.ts        # Validation                          │
-│  │   └── reviewAction.gateway.ts      # Interface (port)                    │
-│  │                                                                          │
-│  ├── reviewStats/                     # Review statistics                   │
-│  │   ├── reviewStats.ts               # Types: ReviewStats, ProjectStats    │
-│  │   ├── reviewStats.schema.ts        # Zod schemas                         │
-│  │   ├── reviewStats.guard.ts         # Validation                          │
-│  │   ├── reviewStats.gateway.ts       # Interface (port)                    │
-│  │   └── reviewStats.factory.ts       # Factories                           │
-│  │                                                                          │
-│  ├── actionExecution/                 # Execution context                   │
-│  │   └── executionContext.ts          # ExecutionContext, ExecutionResult   │
-│  │                                                                          │
-│  ├── reviewContext/                   # Review context (existing)           │
-│  ├── reviewRequest/                   # Abstract MR/PR (existing)           │
-│  ├── review/                          # Review and scoring (existing)       │
-│  └── threadFetch/                     # Fetch threads (existing)            │
+│  src/entities/    Each: types + schema + guard + gateway (port)              │
+│  ├── reviewAction/       # Actions on MR (ReviewAction union)               │
+│  ├── reviewStats/        # Statistics (ReviewStats, ProjectStats)            │
+│  ├── actionExecution/    # ExecutionContext, ExecutionResult                 │
+│  ├── reviewContext/      # Review context                                   │
+│  ├── reviewRequest/      # Abstract MR/PR                                   │
+│  ├── review/             # Review and scoring                               │
+│  └── threadFetch/        # Fetch threads                                    │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -145,166 +132,48 @@ last-updated: 2026-02-07
 
 ## Data Flow: Follow-Up Review
 
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Push       │     │  Controller  │     │   Use Case   │
-│   Event      │────►│  (webhook)   │────►│  handle      │
-└──────────────┘     └──────────────┘     │  Push        │
-                                          └──────────────┘
-                                                 │
-                                          ┌──────┴──────┐
-                                          │ Check state │
-                                          │ openThreads │
-                                          └──────┬──────┘
-                                                 │
-                                                 ▼
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   GitLab     │     │   Gateway    │     │   Use Case   │     │   Gateway    │
-│   API        │◄────│  (CLI)       │◄────│  execute     │◄────│  (context    │
-└──────────────┘     │  reviewAction│     │  FollowUp    │     │   file)      │
-                     └──────────────┘     │  Review      │     └──────────────┘
-                                          └──────────────┘
-```
+Same pattern as Initial Review, triggered by Push Event. Controller checks `state == pending-fix && openThreads > 0` before dispatching to `executeFollowUpReview` use case. Context is loaded from context file instead of being freshly created.
 
 ## ReviewAction: Unified Concept
 
-```
-                    ReviewAction (entity)
-                           │
-        ┌──────────────────┼──────────────────┐
-        │                  │                  │
-        ▼                  ▼                  ▼
-┌───────────────┐  ┌───────────────┐  ┌───────────────┐
-│ THREAD_REPLY  │  │ THREAD_RESOLVE│  │ POST_COMMENT  │
-│ threadId      │  │ threadId      │  │ body          │
-│ message       │  │               │  │               │
-└───────────────┘  └───────────────┘  └───────────────┘
-        │                  │                  │
-        └──────────────────┼──────────────────┘
-                           │
-        ┌──────────────────┼──────────────────┐
-        │                  │                  │
-        ▼                  ▼                  ▼
-┌───────────────┐  ┌───────────────┐  ┌───────────────┐
-│ ADD_LABEL     │  │ FETCH_THREADS │  │ (extensible)  │
-│ label         │  │               │  │               │
-└───────────────┘  └───────────────┘  └───────────────┘
-```
+`ReviewAction` is a discriminated union: `THREAD_REPLY` (threadId, message), `THREAD_RESOLVE` (threadId), `POST_COMMENT` (body), `ADD_LABEL` (label), `FETCH_THREADS`. Extensible by adding new types.
 
 ## ReviewAction Execution Pattern
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        ReviewActionGateway (interface)                      │
-│                                                                             │
-│  execute(actions: ReviewAction[], context: ExecutionContext)                │
-│    → ExecutionResult { total, succeeded, failed, skipped }                  │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    ReviewActionCliGateway (implementation)                  │
-│                                                                             │
-│  constructor(                                                               │
-│    gitlabAdapter: ReviewActionPlatformAdapter,                              │
-│    githubAdapter: ReviewActionPlatformAdapter,                              │
-│    commandExecutor: CommandExecutorGateway                                  │
-│  )                                                                          │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-              ┌───────────────────────┴───────────────────────┐
-              │                                               │
-              ▼                                               ▼
-┌─────────────────────────────┐             ┌─────────────────────────────┐
-│  ReviewActionPlatformAdapter │             │  CommandExecutorGateway     │
-│  (interface)                 │             │  (interface)                │
-│                              │             │                             │
-│  buildCommand(               │             │  execute(                   │
-│    action: ReviewAction,     │             │    command: string,         │
-│    projectPath: string,      │             │    args: string[],          │
-│    mrNumber: number          │             │    cwd: string              │
-│  ): CommandSpec | null       │             │  ): void                    │
-└─────────────────────────────┘             └─────────────────────────────┘
-              │                                               │
-      ┌───────┴───────┐                                       │
-      │               │                                       │
-      ▼               ▼                                       ▼
-┌───────────┐   ┌───────────┐                      ┌─────────────────────┐
-│  GitLab   │   │  GitHub   │                      │  CLI Implementation │
-│  Adapter  │   │  Adapter  │                      │  (execSync)         │
-└───────────┘   └───────────┘                      └─────────────────────┘
+ReviewActionGateway (interface)
+  execute(actions: ReviewAction[], context: ExecutionContext) → ExecutionResult
+        │
+        ▼
+ReviewActionCliGateway (implementation)
+        │
+   ┌────┴────┐
+   ▼         ▼
+PlatformAdapter (interface)    CommandExecutorGateway (interface)
+  buildCommand(action,           execute(command, args, cwd)
+    projectPath, mrNumber)
+   │         │                            │
+   ▼         ▼                            ▼
+GitLab    GitHub                   CLI (execSync)
+Adapter   Adapter
 ```
 
 ## Target Folder Structure
 
 ```
 src/
-├── main/                           # Composition root
-│   ├── server.ts                   # Bootstrap Fastify
-│   ├── dependencies.ts             # DI container
-│   ├── routes.ts                   # Route registry
-│   └── websocket.ts                # WebSocket setup
-│
-├── entities/                       # Enterprise Business Rules
-│   ├── reviewAction/
-│   ├── reviewStats/
-│   ├── actionExecution/
-│   ├── reviewContext/
-│   ├── reviewRequest/
-│   ├── review/
-│   └── threadFetch/
-│
-├── usecases/                       # Application Business Rules
-│   ├── triggerReview.usecase.ts
-│   ├── executeInitialReview.usecase.ts
-│   ├── executeFollowUpReview.usecase.ts
-│   ├── addReviewStats.usecase.ts
-│   └── handleReviewRequestPush.usecase.ts
-│
-├── interface-adapters/             # Controllers, Presenters, Gateways
-│   ├── controllers/
-│   │   ├── webhook/
-│   │   └── http/
-│   ├── presenters/
-│   ├── gateways/
-│   │   ├── cli/
-│   │   ├── fileSystem/
-│   │   └── api/
-│   ├── adapters/
-│   ├── services/
-│   └── views/
-│
-├── frameworks/                     # Frameworks & Drivers
-│   ├── claude/
-│   ├── queue/
-│   ├── config/
-│   ├── logging/
-│   └── settings/
-│
-├── shared/                         # Cross-cutting concerns
-│   └── foundation/
-│
-├── config/                         # Config files (legacy, → frameworks/)
-├── security/                       # Security (legacy, → interface-adapters/)
-└── server.ts                       # Entry point (legacy, → main/)
+├── main/                  # Composition root (server, DI, routes, websocket)
+├── entities/              # Enterprise Business Rules (reviewAction, reviewStats, etc.)
+├── usecases/              # Application Business Rules (trigger, execute, stats)
+├── interface-adapters/    # Controllers, Presenters, Gateways, Adapters (ACL)
+├── frameworks/            # Frameworks & Drivers (claude, queue, config, logging)
+├── shared/                # Cross-cutting concerns (foundation)
+├── config/                # (legacy, → frameworks/)
+├── security/              # (legacy, → interface-adapters/)
+└── server.ts              # (legacy, → main/)
 ```
 
-## Dependency Rule
-
-```
-    Frameworks & Drivers
-            │
-            ▼
-    Interface Adapters
-            │
-            ▼
-        Use Cases
-            │
-            ▼
-        Entities
-
-Dependencies ALWAYS point inward (toward Entities).
-```
+**Dependency Rule**: Dependencies ALWAYS point inward (Frameworks → Interface Adapters → Use Cases → Entities).
 
 ## Migration Backlog
 

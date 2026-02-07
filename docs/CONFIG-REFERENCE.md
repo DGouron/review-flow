@@ -90,45 +90,7 @@ The system uses two configuration files:
 | `followupSkill` | string | No | Skill name for follow-up reviews |
 | `enabled` | boolean | No | Enable/disable this repository (default: `true`) |
 
-### Example: Multi-Repository Setup
-
-```json
-{
-  "server": { "port": 3000 },
-  "user": {
-    "gitlabUsername": "john.doe",
-    "githubUsername": "johndoe"
-  },
-  "queue": {
-    "maxConcurrent": 3,
-    "deduplicationWindowMs": 600000
-  },
-  "repositories": [
-    {
-      "platform": "gitlab",
-      "remoteUrl": "https://gitlab.com/company/frontend",
-      "localPath": "/home/dev/projects/frontend",
-      "skill": "review-react",
-      "followupSkill": "review-followup",
-      "enabled": true
-    },
-    {
-      "platform": "gitlab",
-      "remoteUrl": "https://gitlab.com/company/backend",
-      "localPath": "/home/dev/projects/backend",
-      "skill": "review-python",
-      "enabled": true
-    },
-    {
-      "platform": "github",
-      "remoteUrl": "https://github.com/myorg/api",
-      "localPath": "/home/dev/projects/api",
-      "skill": "review-api",
-      "enabled": false
-    }
-  ]
-}
-```
+Multiple repositories: add additional entries to the `repositories[]` array. Mix platforms (gitlab/github) freely.
 
 ---
 
@@ -179,87 +141,13 @@ The system uses two configuration files:
 
 ### Default Agents
 
-When `agents` is not specified:
+When `agents` is omitted: `clean-architecture`, `ddd`, `react-best-practices`, `solid`, `testing`, `code-quality`.
 
-```json
-[
-  { "name": "clean-architecture", "displayName": "Clean Archi" },
-  { "name": "ddd", "displayName": "DDD" },
-  { "name": "react-best-practices", "displayName": "React" },
-  { "name": "solid", "displayName": "SOLID" },
-  { "name": "testing", "displayName": "Testing" },
-  { "name": "code-quality", "displayName": "Code Quality" }
-]
-```
-
-When `followupAgents` is not specified:
-
-```json
-[
-  { "name": "context", "displayName": "Context" },
-  { "name": "verify", "displayName": "Verify" },
-  { "name": "scan", "displayName": "Scan" },
-  { "name": "threads", "displayName": "Threads" },
-  { "name": "report", "displayName": "Report" }
-]
-```
+When `followupAgents` is omitted: `context`, `verify`, `scan`, `threads`, `report`.
 
 ---
 
-## Examples
-
-### Minimal Project Config
-
-```json
-{
-  "github": false,
-  "gitlab": true,
-  "reviewSkill": "review-code"
-}
-```
-
-### Full-Featured Project Config
-
-```json
-{
-  "github": true,
-  "gitlab": true,
-  "defaultModel": "opus",
-  "reviewSkill": "review-frontend",
-  "reviewFollowupSkill": "review-followup",
-  "agents": [
-    { "name": "architecture", "displayName": "Architecture" },
-    { "name": "react", "displayName": "React Patterns" },
-    { "name": "accessibility", "displayName": "A11y" },
-    { "name": "performance", "displayName": "Performance" },
-    { "name": "security", "displayName": "Security" },
-    { "name": "testing", "displayName": "Testing" }
-  ],
-  "followupAgents": [
-    { "name": "diff-analysis", "displayName": "Diff Analysis" },
-    { "name": "thread-verification", "displayName": "Thread Check" },
-    { "name": "regression-scan", "displayName": "Regressions" }
-  ]
-}
-```
-
-### Backend Python Project
-
-```json
-{
-  "github": false,
-  "gitlab": true,
-  "defaultModel": "sonnet",
-  "reviewSkill": "review-python",
-  "agents": [
-    { "name": "pep8", "displayName": "PEP 8" },
-    { "name": "type-hints", "displayName": "Type Hints" },
-    { "name": "security", "displayName": "Security" },
-    { "name": "sql", "displayName": "SQL Safety" },
-    { "name": "testing", "displayName": "pytest" }
-  ]
-}
-```
+Minimal project config: `{ "gitlab": true, "reviewSkill": "review-code" }`.
 
 ---
 
@@ -267,71 +155,10 @@ When `followupAgents` is not specified:
 
 The automation server creates these files in `.claude/reviews/`:
 
-| File | Description |
-|------|-------------|
-| `stats.json` | Review statistics history |
-| `tracking.json` | MR/PR tracking data |
-
-### stats.json Structure
-
-```json
-{
-  "project/path": {
-    "totalReviews": 42,
-    "totalDuration": 123456,
-    "averageScore": 7.8,
-    "averageDuration": 2940,
-    "totalBlocking": 15,
-    "totalWarnings": 89,
-    "reviews": [
-      {
-        "id": "1706745600000-123",
-        "timestamp": "2024-02-01T10:00:00.000Z",
-        "mrNumber": 123,
-        "duration": 45000,
-        "score": 8.5,
-        "blocking": 1,
-        "warnings": 3,
-        "suggestions": 5,
-        "assignedBy": "jane.doe"
-      }
-    ],
-    "lastUpdated": "2024-02-01T10:00:45.000Z"
-  }
-}
-```
-
-### tracking.json Structure
-
-```json
-{
-  "gitlab-project/path-123": {
-    "id": "gitlab-project/path-123",
-    "mrNumber": 123,
-    "title": "feat: Add new feature",
-    "url": "https://gitlab.com/project/path/-/merge_requests/123",
-    "project": "project/path",
-    "platform": "gitlab",
-    "sourceBranch": "feature/new-feature",
-    "targetBranch": "main",
-    "state": "open",
-    "openThreads": 3,
-    "totalThreads": 5,
-    "createdAt": "2024-02-01T09:00:00.000Z",
-    "lastReviewAt": "2024-02-01T10:00:00.000Z",
-    "reviews": [
-      {
-        "type": "review",
-        "timestamp": "2024-02-01T10:00:00.000Z",
-        "durationMs": 45000,
-        "score": 8.5,
-        "blocking": 1,
-        "warnings": 3
-      }
-    ]
-  }
-}
-```
+| File | Description | Key Fields |
+|------|-------------|------------|
+| `stats.json` | Review statistics history per project | `totalReviews`, `averageScore`, `reviews[]` (with score, blocking, warnings) |
+| `tracking.json` | MR/PR lifecycle tracking | `state`, `openThreads`, `reviews[]` (with type, score, duration) |
 
 ---
 
@@ -348,14 +175,7 @@ The automation server creates these files in `.claude/reviews/`:
 
 ## Validation
 
-Configuration files are validated at startup. Common errors:
-
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `Missing required field` | Required field not set | Add the missing field |
-| `Invalid model` | Unknown model name | Use `"sonnet"` or `"opus"` |
-| `Repository not found` | `localPath` doesn't exist | Create directory or fix path |
-| `Skill not found` | Skill not in `.claude/skills/` | Create the skill file |
+Configuration files are validated at startup. Common errors: missing required fields, invalid model name (use `"sonnet"` or `"opus"`), nonexistent `localPath`, or missing skill file in `.claude/skills/`.
 
 ---
 

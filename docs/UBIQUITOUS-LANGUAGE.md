@@ -100,16 +100,7 @@ pending-review ──→ pending-fix ──→ pending-approval ──→ approv
 
 ### InitialReview vs FollowUpReview
 
-Both review types produce `ReviewAction[]` as output. The difference is in the **intention**, not the action types:
-
-| Aspect | InitialReview | FollowUpReview |
-|--------|---------------|----------------|
-| **Input** | stdout from Claude skill | ReviewContext file |
-| **Parser** | `reviewAction.presenter.ts` | Reads context directly |
-| **Focus** | Find all issues | Verify fixes were applied |
-| **Typical actions** | POST_COMMENT, ADD_LABEL | THREAD_RESOLVE, POST_COMMENT |
-
-**Key insight**: The distinction lives in the **Use Case layer**, not in the entity types. Both use the same `ReviewAction` entity and the same `ReviewActionGateway` for execution.
+Both produce `ReviewAction[]`. The distinction lives in the **Use Case layer**: initial reviews find all issues, followup reviews verify fixes. Both use the same `ReviewAction` entity and `ReviewActionGateway` for execution.
 
 ## Scoring
 
@@ -126,32 +117,11 @@ Both review types produce `ReviewAction[]` as output. The difference is in the *
 
 ## Value Objects
 
-### ReviewRequestState
-Encapsulates the state machine for ReviewRequest tracking. Validates transitions and provides helper methods.
-
-```typescript
-const state = ReviewRequestState.pendingReview();
-if (state.canTransitionTo('pending-fix')) {
-  const newState = state.transitionTo('pending-fix');
-}
-```
-
-### ReviewScore
-Encapsulates review metrics with computed severity.
-
-```typescript
-const score = ReviewScore.create({ blocking: 1, warnings: 2, suggestions: 3 });
-score.severity; // 'critical'
-score.toString(); // '1B/2W/3S'
-```
-
-### Duration
-Encapsulates time durations with formatting.
-
-```typescript
-const duration = Duration.fromMilliseconds(125000);
-duration.formatted; // '2m 5s'
-```
+| Value Object | Purpose | Location |
+|-------------|---------|----------|
+| `ReviewRequestState` | State machine for ReviewRequest tracking, validates transitions | `entities/reviewRequest/` |
+| `ReviewScore` | Review metrics with computed severity (`critical`/`warning`/`info`/`clean`) | `entities/review/` |
+| `Duration` | Time duration with formatting (`2m 5s`) | `entities/` |
 
 ## Agents
 
@@ -168,63 +138,14 @@ Claude review uses specialized agents for different aspects:
 
 ## Events
 
-### Webhook Events (External)
-- `merge_request` (GitLab) / `pull_request` (GitHub): ReviewRequest changes
-- `push` (GitLab) / `push` (GitHub): New commits on branch
+**Webhook (External)**: `merge_request`/`pull_request` (ReviewRequest changes), `push` (new commits).
 
-### Domain Events (Internal)
-- `ReviewRequested`: Initial review triggered
-- `FollowupRequested`: Followup review triggered
-- `ReviewCompleted`: Review finished successfully
-- `ReviewFailed`: Review encountered an error
-- `ThreadsUpdated`: Thread counts changed
+**Domain (Internal)**: `ReviewRequested`, `FollowupRequested`, `ReviewCompleted`, `ReviewFailed`, `ThreadsUpdated`.
 
-## Abbreviations (Usage Rules)
+## Abbreviations
 
-| Abbreviation | Full Term | When to Use |
-|--------------|-----------|-------------|
-| MR | MergeRequest | Only in GitLab-specific contexts (logs, API calls) |
-| PR | PullRequest | Only in GitHub-specific contexts (logs, API calls) |
-| VO | Value Object | Technical documentation only |
-| ACL | Anti-Corruption Layer | Technical documentation only |
-
-**Rule**: In domain code, always use full terms (`ReviewRequest`, not `MR` or `PR`).
+MR (MergeRequest), PR (PullRequest), VO (Value Object), ACL (Anti-Corruption Layer) — only in platform-specific or technical documentation contexts. In domain code, always use full terms.
 
 ## Architecture Patterns
 
-### Gateway Pattern
-Interfaces that abstract external dependencies (filesystem, APIs).
-
-| Gateway | Responsibility | Location |
-|---------|----------------|----------|
-| ReviewRequestTrackingGateway | MR/PR tracking persistence | `entities/` (interface) → `interface-adapters/gateways/fileSystem/` (impl) |
-| ReviewStatsGateway | Project statistics persistence | `entities/reviewStats/` (interface) → `interface-adapters/gateways/fileSystem/` (impl) |
-| ReviewFileGateway | Review files CRUD operations | `entities/` (interface) → `interface-adapters/gateways/fileSystem/` (impl) |
-| ReviewActionGateway | Execute actions on MR via CLI | `entities/reviewAction/` (interface) → `interface-adapters/gateways/cli/` (impl) |
-| CommandExecutorGateway | Low-level CLI command execution | `entities/command/` (interface) → `interface-adapters/gateways/cli/` (impl) |
-
-### Platform Adapters (ACL)
-Adapters that build platform-specific commands from domain actions.
-
-| Adapter | Translation |
-|---------|-------------|
-| ReviewActionGitLabAdapter | ReviewAction → glab API command |
-| ReviewActionGitHubAdapter | ReviewAction → gh API command |
-
-### Anti-Corruption Layer (ACL)
-Adapters that translate external platform concepts to domain concepts.
-
-| Adapter | Translation |
-|---------|-------------|
-| GitLabMergeRequestAdapter | GitLab MR → ReviewRequest |
-| GitHubPullRequestAdapter | GitHub PR → ReviewRequest |
-| PlatformAdapter | Unified translation with validation |
-
-### Use Cases
-Business logic orchestration functions.
-
-| UseCase | Purpose |
-|---------|---------|
-| triggerReview | Enqueue a new review job |
-| handleReviewRequestPush | Trigger followup if conditions met |
-| cancelReview | Cancel a running/queued review |
+For the full architecture with gateways, adapters, ACLs, and use cases, see [ARCHITECTURE-TARGET.md](./ARCHITECTURE-TARGET.md).

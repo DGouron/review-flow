@@ -268,13 +268,6 @@ Generate follow-up summary.
 - Templates with predefined business logic (DDD, Clean Architecture)
 - Automatic template translation
 
-## INVEST Evaluation
+## INVEST
 
-| Criterion | Status | Note |
-|-----------|--------|------|
-| Independent | ✅ | Depends on SPEC-001 for markers |
-| Negotiable | ✅ | Template content is flexible |
-| Valuable | ✅ | Accelerates adoption |
-| Estimable | ✅ | ~1 day |
-| Small | ✅ | 3 templates x 2 languages |
-| Testable | ✅ | Templates must execute without errors |
+All criteria met. Depends on SPEC-001 for markers. Estimate: ~1 day (3 templates x 2 languages).
