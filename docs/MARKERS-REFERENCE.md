@@ -130,6 +130,8 @@ Or inline emoji markers (counted):
 
 These markers trigger platform API calls after review completion.
 
+> **MCP equivalent**: These actions can also be performed via MCP tools using `add_action`. See [MCP-TOOLS-REFERENCE.md](./MCP-TOOLS-REFERENCE.md) for the structured alternative.
+
 ### `[THREAD_REPLY:threadId:message]`
 
 Reply to an existing discussion thread.
