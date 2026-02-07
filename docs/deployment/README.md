@@ -15,7 +15,23 @@ This guide covers:
 - `cloudflared` installed ([download](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/))
 - A domain on Cloudflare (for permanent URL)
 
-## Quick Setup
+## Quick Test (Temporary Tunnel)
+
+For testing without permanent setup. The URL changes on each restart.
+
+```bash
+# Terminal 1: Server
+cd ~/claude-review-automation
+yarn install && yarn build
+yarn start
+
+# Terminal 2: Tunnel
+cloudflared tunnel --url http://localhost:3000
+```
+
+Copy the generated URL and use it for your webhook configuration.
+
+## Production Setup
 
 ### 1. Build the project
 
