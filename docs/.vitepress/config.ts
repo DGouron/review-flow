@@ -22,6 +22,7 @@ export default defineConfig({
 	},
 
 	themeConfig: {
+		logo: "/logo.svg",
 		nav,
 		sidebar,
 

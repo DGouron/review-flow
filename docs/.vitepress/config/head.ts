@@ -1,25 +1,36 @@
 import type { HeadConfig } from "vitepress";
 
+const siteUrl = "https://dgouron.github.io/claude-review-automation/";
+const title = "Claude Review Automation";
+const description =
+	"AI-powered code review automation for GitLab and GitHub merge requests";
+
 export const head: HeadConfig[] = [
-	["link", { rel: "icon", href: "/favicon.svg" }],
+	["link", { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }],
 	["meta", { name: "theme-color", content: "#06b6d4" }],
-	[
-		"meta",
-		{ property: "og:title", content: "Claude Review Automation" },
-	],
+
+	// Open Graph
+	["meta", { property: "og:type", content: "website" }],
+	["meta", { property: "og:title", content: title }],
+	["meta", { property: "og:description", content: description }],
+	["meta", { property: "og:url", content: siteUrl }],
 	[
 		"meta",
 		{
-			property: "og:description",
-			content:
-				"AI-powered code review automation for GitLab and GitHub merge requests",
+			property: "og:image",
+			content: `${siteUrl}og-image.svg`,
 		},
 	],
+
+	// Twitter
+	["meta", { name: "twitter:card", content: "summary_large_image" }],
+	["meta", { name: "twitter:title", content: title }],
+	["meta", { name: "twitter:description", content: description }],
 	[
 		"meta",
 		{
-			property: "og:url",
-			content: "https://dgouron.github.io/claude-review-automation/",
+			name: "twitter:image",
+			content: `${siteUrl}og-image.svg`,
 		},
 	],
 ];
