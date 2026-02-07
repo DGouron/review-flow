@@ -10,10 +10,10 @@ Technical architecture documentation for Claude Review Automation, built on Clea
 
 The system follows a layered architecture inspired by Uncle Bob's Clean Architecture:
 
-- **Domain layer** — Core entities, value objects, and business rules
-- **Use Cases layer** — Application-specific business orchestration
+- **Entities** — Core business rules, enterprise-wide invariants
+- **Use Cases** — Application-specific business orchestration
 - **Interface Adapters** — Controllers, presenters, and gateways
-- **Frameworks** — External tools (Fastify, Claude Code, GitLab/GitHub APIs)
+- **Frameworks & Drivers** — External tools (Fastify, Claude Code, GitLab/GitHub APIs)
 
 ## Documentation
 
