@@ -1,16 +1,16 @@
 # MCP Review Progress - Specification
 
-## Problème
+## Problem
 
-Le système actuel parse les markers `[PROGRESS:agent:status]` depuis stdout de Claude, mais:
-- stdout est bufferisé et non fiable au runtime
-- Les markers sont custom et non standardisés
-- Les skills du projet doivent connaître les markers à émettre
-- Pas de validation, parsing regex fragile
+The current system parses `[PROGRESS:agent:status]` markers from Claude's stdout, but:
+- stdout is buffered and unreliable at runtime
+- Markers are custom and non-standardized
+- Project skills must know which markers to emit
+- No validation, fragile regex parsing
 
 ## Solution
 
-Créer un **MCP Server** local qui expose des tools standardisés pour le tracking de progression.
+Create a local **MCP Server** that exposes standardized tools for progress tracking.
 
 ## Architecture
 
@@ -27,8 +27,8 @@ Créer un **MCP Server** local qui expose des tools standardisés pour le tracki
 ┌─────────────▼───────────────────────────────────────────────────┐
 │  Claude CLI                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │ Skill appelle:                                              ││
-│  │   mcp__review_progress__get_workflow()  → liste des steps   ││
+│  │ Skill calls:                                                ││
+│  │   mcp__review_progress__get_workflow()  → list of steps     ││
 │  │   mcp__review_progress__start_agent("clean-architecture")   ││
 │  │   mcp__review_progress__complete_agent("clean-architecture")││
 │  └─────────────────────────────────────────────────────────────┘│
@@ -37,92 +37,24 @@ Créer un **MCP Server** local qui expose des tools standardisés pour le tracki
 
 ## MCP Tools
 
-### 1. `get_workflow` (OBLIGATOIRE - appeler en premier)
+For full tool parameters and examples, see [MCP-TOOLS-REFERENCE.md](../MCP-TOOLS-REFERENCE.md).
 
-Retourne le workflow standardisé à suivre.
+### Tool Summary
 
-**Input**: `{ jobId: string }`
+| Tool | Purpose |
+|------|---------|
+| `get_workflow` | Get workflow definition, agent list, and MR context (call first) |
+| `set_phase` | Update global review phase |
+| `start_agent` | Signal the start of an agent/audit |
+| `complete_agent` | Signal the end of an agent/audit |
+| `add_action` | Queue an action (resolve thread, post comment) |
+| `get_threads` | Retrieve open threads on the MR |
 
-**Output**:
-```json
-{
-  "jobId": "gitlab:project:123",
-  "workflow": {
-    "phases": ["initializing", "agents-running", "synthesizing", "publishing", "completed"],
-    "agents": [
-      { "name": "clean-architecture", "displayName": "Clean Archi", "order": 1 },
-      { "name": "ddd", "displayName": "DDD", "order": 2 },
-      { "name": "react-best-practices", "displayName": "React", "order": 3 },
-      { "name": "solid", "displayName": "SOLID", "order": 4 },
-      { "name": "testing", "displayName": "Testing", "order": 5 },
-      { "name": "code-quality", "displayName": "Code Quality", "order": 6 }
-    ],
-    "instructions": "Call start_agent before each audit, complete_agent after. Call set_phase to update global phase."
-  },
-  "context": {
-    "threads": [...],
-    "mergeRequestNumber": 123,
-    "projectPath": "mentor-goal/main-app-v3"
-  }
-}
-```
+## Claude CLI Integration
 
-### 2. `set_phase`
+### Option A: MCP Config in project (recommended)
 
-Met à jour la phase globale de la review.
-
-**Input**: `{ jobId: string, phase: "initializing" | "agents-running" | "synthesizing" | "publishing" | "completed" }`
-
-**Output**: `{ success: true }`
-
-### 3. `start_agent`
-
-Signale le début d'un agent/audit.
-
-**Input**: `{ jobId: string, agentName: string }`
-
-**Output**: `{ success: true, agentName: string, startedAt: string }`
-
-### 4. `complete_agent`
-
-Signale la fin d'un agent/audit.
-
-**Input**: `{ jobId: string, agentName: string, status?: "success" | "failed", error?: string }`
-
-**Output**: `{ success: true, agentName: string, completedAt: string, overallProgress: number }`
-
-### 5. `add_action`
-
-Ajoute une action à exécuter (résoudre thread, poster commentaire).
-
-**Input**:
-```json
-{
-  "jobId": "string",
-  "action": {
-    "type": "THREAD_RESOLVE" | "THREAD_REPLY" | "POST_COMMENT",
-    "threadId?": "string",
-    "message?": "string",
-    "body?": "string"
-  }
-}
-```
-
-**Output**: `{ success: true, actionId: string }`
-
-### 6. `get_threads`
-
-Récupère les threads ouverts de la MR.
-
-**Input**: `{ jobId: string }`
-
-**Output**: `{ threads: Thread[] }`
-
-## Intégration avec Claude CLI
-
-### Option A: MCP Config dans le projet (recommandé)
-
-Ajouter dans `.claude/settings.json` du projet analysé:
+Add to `.claude/settings.json` of the analyzed project:
 ```json
 {
   "mcpServers": {
@@ -138,36 +70,36 @@ Ajouter dans `.claude/settings.json` du projet analysé:
 }
 ```
 
-### Option B: MCP via argument CLI
+### Option B: MCP via CLI argument
 
 ```bash
 claude --print \
-  --mcp '{"review-progress":{"command":"node","args":["mcp-server.js"]}}' \
+  --mcp '{"review-progress":{"command":"node","args":["mcpServer.js"]}}' \
   -p "/review-front 4748"
 ```
 
-## Workflow type dans un skill
+## Typical Workflow in a Skill
 
 ```markdown
-## Instructions de Review
+## Review Instructions
 
-1. **OBLIGATOIRE**: Appeler `mcp__review_progress__get_workflow()` pour obtenir:
-   - La liste des agents à exécuter dans l'ordre
-   - Les threads existants sur la MR
-   - Le contexte de la review
+1. **MANDATORY**: Call `mcp__review_progress__get_workflow()` to get:
+   - The list of agents to execute in order
+   - Existing threads on the MR
+   - The review context
 
-2. Appeler `mcp__review_progress__set_phase("agents-running")`
+2. Call `mcp__review_progress__set_phase("agents-running")`
 
-3. Pour chaque agent dans l'ordre:
+3. For each agent in order:
    - `mcp__review_progress__start_agent("agent-name")`
-   - Effectuer l'audit
+   - Perform the audit
    - `mcp__review_progress__complete_agent("agent-name")`
 
 4. `mcp__review_progress__set_phase("synthesizing")`
-   - Compiler le rapport final
+   - Compile the final report
 
 5. `mcp__review_progress__set_phase("publishing")`
-   - Poster sur GitLab
+   - Post to GitLab
 
 6. `mcp__review_progress__set_phase("completed")`
 ```
@@ -183,23 +115,23 @@ claude --print \
 
 ## Migration
 
-1. Créer le MCP Server
-2. Mettre à jour `claudeInvoker.ts` pour passer les env vars
-3. Créer un skill template avec les instructions MCP
-4. Déprécier le parsing stdout (garder en fallback)
+1. Create the MCP Server
+2. Update `claudeInvoker.ts` to pass env vars
+3. Create a skill template with MCP instructions
+4. Deprecate stdout parsing (keep as fallback)
 
 ## Tests
 
-- Unit tests pour chaque tool
-- Integration test: spawn MCP server + simuler appels
-- E2E test: review complète avec MCP
+- Unit tests for each tool
+- Integration test: spawn MCP server + simulate calls
+- E2E test: full review with MCP
 
 ## Status
 
-- [ ] Spec validée
-- [ ] MCP Server implémenté
-- [ ] Tools implémentés
-- [ ] Intégration claudeInvoker
-- [ ] Skill template créé
+- [x] Spec validated
+- [x] MCP Server implemented
+- [x] Tools implemented
+- [x] claudeInvoker integration
+- [x] Skill template created
 - [ ] Tests
-- [ ] Migration skills existants
+- [ ] Migrate existing skills
