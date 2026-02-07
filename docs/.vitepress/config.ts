@@ -45,7 +45,7 @@ export default defineConfig({
 
 		footer: {
 			message: "Released under the MIT License.",
-			copyright: "Copyright © 2024-present Damien Gouron",
+			copyright: "Copyright © 2026-present Damien Gouron",
 		},
 	},
 });
