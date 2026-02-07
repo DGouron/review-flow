@@ -1,3 +1,12 @@
+---
+title: Ubiquitous Language
+scope: reference
+related:
+  - src/entities/
+  - docs/ARCHITECTURE-TARGET.md
+last-updated: 2026-02-07
+---
+
 # Ubiquitous Language - Code Review Automation
 
 ## Core Domain Concepts

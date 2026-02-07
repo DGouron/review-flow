@@ -1,3 +1,13 @@
+---
+title: Technical Architecture
+scope: architecture
+related:
+  - src/server.ts
+  - src/interface-adapters/controllers/webhook/gitlab.controller.ts
+  - src/interface-adapters/controllers/webhook/github.controller.ts
+last-updated: 2026-02-07
+---
+
 # Technical Architecture
 
 ## Overview

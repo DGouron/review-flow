@@ -1,3 +1,13 @@
+---
+title: Configuration Reference
+scope: reference
+related:
+  - config.example.json
+  - .env.example
+  - src/config/
+last-updated: 2026-02-07
+---
+
 # Configuration Reference
 
 Complete reference for claude-review-automation configuration files.

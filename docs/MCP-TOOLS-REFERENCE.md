@@ -1,3 +1,13 @@
+---
+title: MCP Tools Reference
+scope: reference
+related:
+  - src/mcp/
+  - src/interface-adapters/controllers/mcp/
+  - src/usecases/mcp/
+last-updated: 2026-02-07
+---
+
 # MCP Tools Reference
 
 Complete reference for all MCP tools exposed by claude-review-automation.

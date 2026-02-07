@@ -1,3 +1,13 @@
+---
+title: MCP Review Progress Architecture
+scope: architecture
+related:
+  - src/mcp/
+  - src/main/mcpDependencies.ts
+  - docs/mcp/MCP-REVIEW-PROGRESS.md
+last-updated: 2026-02-07
+---
+
 # MCP Review Progress - Clean Architecture
 
 ## Overview

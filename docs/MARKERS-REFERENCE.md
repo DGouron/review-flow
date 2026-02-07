@@ -1,3 +1,12 @@
+---
+title: Markers Reference
+scope: reference
+related:
+  - src/interface-adapters/presenters/
+  - docs/MCP-TOOLS-REFERENCE.md
+last-updated: 2026-02-07
+---
+
 # Markers Reference
 
 Complete reference for all markers recognized by claude-review-automation.

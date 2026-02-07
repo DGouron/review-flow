@@ -1,3 +1,13 @@
+---
+title: MCP Review Progress Specification
+scope: spec
+related:
+  - docs/MCP-TOOLS-REFERENCE.md
+  - docs/mcp/MCP-ARCHITECTURE.md
+  - src/mcpServer.ts
+last-updated: 2026-02-07
+---
+
 # MCP Review Progress - Specification
 
 ## Problem

@@ -1,3 +1,14 @@
+---
+title: Target Architecture
+scope: architecture
+related:
+  - docs/ARCHITECTURE.md
+  - src/entities/
+  - src/usecases/
+  - src/interface-adapters/
+last-updated: 2026-02-07
+---
+
 # Target Architecture - Clean Architecture
 
 ## Layer Overview

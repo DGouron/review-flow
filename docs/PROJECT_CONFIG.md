@@ -1,3 +1,12 @@
+---
+title: Project Configuration
+scope: guide
+related:
+  - templates/SETUP.md
+  - docs/CONFIG-REFERENCE.md
+last-updated: 2026-02-07
+---
+
 # Project Configuration
 
 Claude Review Automation uses a configuration file in each project to customize review behavior.

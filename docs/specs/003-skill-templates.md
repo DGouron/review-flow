@@ -1,3 +1,12 @@
+---
+title: "SPEC-003: Skill Templates"
+scope: spec
+related:
+  - templates/SKILL.md.template
+  - docs/REVIEW-SKILLS-GUIDE.md
+last-updated: 2026-02-07
+---
+
 # SPEC-003: Skill Templates (EN/FR)
 
 ## User Story
