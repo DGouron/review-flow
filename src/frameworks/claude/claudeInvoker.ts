@@ -28,6 +28,10 @@ export function writeMcpContext(job: ReviewJob): void {
       localPath: job.localPath,
       mergeRequestId,
       jobType: job.jobType || 'review',
+      platform: job.platform,
+      projectPath: job.projectPath,
+      sourceBranch: job.sourceBranch,
+      targetBranch: job.targetBranch,
       timestamp: new Date().toISOString(),
     };
     writeFileSync(filePath, JSON.stringify(context, null, 2));
@@ -125,7 +129,11 @@ These rules are about WRITING production code. You are in **READ-ONLY review mod
 ## Your Job Context
 - **Job ID**: \`${job.id}\`
 - **Job Type**: ${job.jobType || 'review'}
+- **Platform**: ${job.platform}
+- **Project**: ${job.projectPath}
 - **MR Number**: ${job.mrNumber}
+- **Source Branch**: ${job.sourceBranch || 'unknown'}
+- **Target Branch**: ${job.targetBranch || 'unknown'}
 
 ## MANDATORY MCP Tools Usage
 
@@ -153,7 +161,15 @@ get_threads({ jobId: "${job.id}" })
 add_action({ jobId: "${job.id}", type: "THREAD_RESOLVE", threadId: "xxx" })
 add_action({ jobId: "${job.id}", type: "THREAD_REPLY", threadId: "xxx", message: "..." })
 add_action({ jobId: "${job.id}", type: "POST_COMMENT", body: "..." })
+add_action({ jobId: "${job.id}", type: "POST_INLINE_COMMENT", filePath: "src/file.ts", line: 42, body: "..." })
 \`\`\`
+
+### Inline Comments on Diff
+Use \`POST_INLINE_COMMENT\` to post comments directly on specific lines in the diff.
+- **filePath**: The file path relative to the repository root
+- **line**: The line number in the NEW version of the file (must be a line visible in the diff)
+- **body**: The comment text (supports markdown)
+- The diff metadata (SHAs) is pre-fetched automatically — just provide filePath, line, and body
 
 ## Workflow Pattern
 

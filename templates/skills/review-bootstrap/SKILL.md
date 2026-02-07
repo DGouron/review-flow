@@ -57,6 +57,16 @@ After completing your review analysis, you MUST update the context file:
       "type": "THREAD_REPLY",
       "threadId": "xyz789ghi...",
       "message": "Verified: the fix correctly addresses the issue."
+    },
+    {
+      "type": "POST_INLINE_COMMENT",
+      "filePath": "src/path/to/file.ts",
+      "line": 42,
+      "body": "Comment on this line of the diff"
+    },
+    {
+      "type": "POST_COMMENT",
+      "body": "Global comment on the MR/PR"
     }
   ]
 }

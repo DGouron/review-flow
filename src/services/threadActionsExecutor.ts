@@ -16,6 +16,7 @@ export interface ExecutionContext {
   projectPath: string
   mrNumber: number
   localPath: string
+  diffMetadata?: import('../entities/reviewContext/reviewContext.js').DiffMetadata
 }
 
 export type { ExecutionResult, CommandExecutor }
@@ -40,6 +41,7 @@ export async function executeThreadActions(
     projectPath: context.projectPath,
     mrNumber: context.mrNumber,
     localPath: context.localPath,
+    diffMetadata: context.diffMetadata,
   }
 
   const gateway =

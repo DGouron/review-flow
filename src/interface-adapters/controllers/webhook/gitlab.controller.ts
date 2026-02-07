@@ -30,6 +30,7 @@ import { executeThreadActions, defaultCommandExecutor } from '../../../services/
 import { executeActionsFromContext } from '../../../services/contextActionsExecutor.js';
 import { ReviewContextFileSystemGateway } from '../../gateways/reviewContext.fileSystem.gateway.js';
 import { GitLabThreadFetchGateway, defaultGitLabExecutor } from '../../gateways/threadFetch.gitlab.gateway.js';
+import { GitLabDiffMetadataFetchGateway } from '../../gateways/diffMetadataFetch.gitlab.gateway.js';
 import { startWatchingReviewContext, stopWatchingReviewContext } from '../../../main/websocket.js';
 
 export async function handleGitLabWebhook(
@@ -216,13 +217,23 @@ export async function handleGitLabWebhook(
           enqueueReview(followupJob, async (j, signal) => {
             sendNotification('Review followup démarrée', `MR !${j.mrNumber} - ${j.projectPath}`, logger);
 
-            // Create review context file with pre-fetched threads
+            // Create review context file with pre-fetched threads and diff metadata
             const mergeRequestId = `gitlab-${j.projectPath}-${j.mrNumber}`;
             const contextGateway = new ReviewContextFileSystemGateway();
             const threadFetchGateway = new GitLabThreadFetchGateway(defaultGitLabExecutor);
+            const diffMetadataFetchGateway = new GitLabDiffMetadataFetchGateway(defaultGitLabExecutor);
 
             try {
               const threads = threadFetchGateway.fetchThreads(j.projectPath, j.mrNumber);
+              let diffMetadata: import('../../../entities/reviewContext/reviewContext.js').DiffMetadata | undefined;
+              try {
+                diffMetadata = diffMetadataFetchGateway.fetchDiffMetadata(j.projectPath, j.mrNumber);
+              } catch (error) {
+                logger.warn(
+                  { mrNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },
+                  'Failed to fetch diff metadata for followup, inline comments will be skipped'
+                );
+              }
               const followupAgentsList = getFollowupAgents(j.localPath) ?? DEFAULT_FOLLOWUP_AGENTS;
               contextGateway.create({
                 localPath: j.localPath,
@@ -232,9 +243,10 @@ export async function handleGitLabWebhook(
                 mergeRequestNumber: j.mrNumber,
                 threads,
                 agents: followupAgentsList,
+                diffMetadata,
               });
               logger.info(
-                { mrNumber: j.mrNumber, threadsCount: threads.length },
+                { mrNumber: j.mrNumber, threadsCount: threads.length, hasDiffMetadata: !!diffMetadata },
                 'Review context file created with threads for followup'
               );
 
@@ -432,13 +444,23 @@ export async function handleGitLabWebhook(
       logger
     );
 
-    // Create review context file with pre-fetched threads
+    // Create review context file with pre-fetched threads and diff metadata
     const mergeRequestId = `gitlab-${j.projectPath}-${j.mrNumber}`;
     const contextGateway = new ReviewContextFileSystemGateway();
     const threadFetchGateway = new GitLabThreadFetchGateway(defaultGitLabExecutor);
+    const diffMetadataFetchGateway = new GitLabDiffMetadataFetchGateway(defaultGitLabExecutor);
 
     try {
       const threads = threadFetchGateway.fetchThreads(j.projectPath, j.mrNumber);
+      let diffMetadata: import('../../../entities/reviewContext/reviewContext.js').DiffMetadata | undefined;
+      try {
+        diffMetadata = diffMetadataFetchGateway.fetchDiffMetadata(j.projectPath, j.mrNumber);
+      } catch (error) {
+        logger.warn(
+          { mrNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },
+          'Failed to fetch diff metadata, inline comments will be skipped'
+        );
+      }
       const reviewAgentsList = getProjectAgents(j.localPath) ?? DEFAULT_AGENTS;
       contextGateway.create({
         localPath: j.localPath,
@@ -448,9 +470,10 @@ export async function handleGitLabWebhook(
         mergeRequestNumber: j.mrNumber,
         threads,
         agents: reviewAgentsList,
+        diffMetadata,
       });
       logger.info(
-        { mrNumber: j.mrNumber, threadsCount: threads.length },
+        { mrNumber: j.mrNumber, threadsCount: threads.length, hasDiffMetadata: !!diffMetadata },
         'Review context file created with threads'
       );
 

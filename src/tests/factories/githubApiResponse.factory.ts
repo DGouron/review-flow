@@ -6,7 +6,16 @@ interface GitHubThreadData {
   body: string
 }
 
+interface GitHubPullRequestData {
+  base: { sha: string }
+  head: { sha: string }
+}
+
 export class GitHubApiResponseFactory {
+  static createPullRequestResponse(pr: GitHubPullRequestData): string {
+    return JSON.stringify(pr)
+  }
+
   static createReviewThreadsResponse(threads: GitHubThreadData[]): string {
     return JSON.stringify({
       data: {

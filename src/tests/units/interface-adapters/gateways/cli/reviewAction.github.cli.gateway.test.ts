@@ -68,6 +68,49 @@ describe('GitHubReviewActionCliGateway', () => {
     expect(result.succeeded).toBe(1)
   })
 
+  it('should execute POST_INLINE_COMMENT action with correct gh command', async () => {
+    const executor = vi.fn()
+    const gateway = new GitHubReviewActionCliGateway(executor)
+    const actions: ReviewAction[] = [
+      { type: 'POST_INLINE_COMMENT', filePath: 'src/app.ts', line: 42, body: 'Extract this logic.' }
+    ]
+    const context = {
+      projectPath: 'owner/repo',
+      mrNumber: 42,
+      localPath: '/tmp',
+      diffMetadata: { baseSha: 'base111', headSha: 'head222', startSha: 'start333' },
+    }
+
+    const result = await gateway.execute(actions, context)
+
+    expect(executor).toHaveBeenCalledWith(
+      'gh',
+      expect.arrayContaining([
+        'repos/owner/repo/pulls/42/comments',
+        'body=Extract this logic.',
+        'commit_id=head222',
+        'path=src/app.ts',
+        'line=42',
+      ]),
+      '/tmp'
+    )
+    expect(result.succeeded).toBe(1)
+  })
+
+  it('should skip POST_INLINE_COMMENT when diffMetadata is missing', async () => {
+    const executor = vi.fn()
+    const gateway = new GitHubReviewActionCliGateway(executor)
+    const actions: ReviewAction[] = [
+      { type: 'POST_INLINE_COMMENT', filePath: 'src/app.ts', line: 42, body: 'Test' }
+    ]
+    const context = { projectPath: 'owner/repo', mrNumber: 42, localPath: '/tmp' }
+
+    const result = await gateway.execute(actions, context)
+
+    expect(executor).not.toHaveBeenCalled()
+    expect(result.skipped).toBe(1)
+  })
+
   it('should skip FETCH_THREADS action', async () => {
     const executor = vi.fn()
     const gateway = new GitHubReviewActionCliGateway(executor)

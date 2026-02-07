@@ -5,7 +5,7 @@ import {
 	type AddActionDependencies,
 } from "../../../usecases/mcp/addAction.usecase.js";
 
-const VALID_ACTION_TYPES = ["THREAD_RESOLVE", "THREAD_REPLY", "POST_COMMENT"] as const;
+const VALID_ACTION_TYPES = ["THREAD_RESOLVE", "THREAD_REPLY", "POST_COMMENT", "POST_INLINE_COMMENT"] as const;
 
 function isValidActionType(type: unknown): type is ActionInput["type"] {
 	return (
@@ -63,6 +63,13 @@ export function createAddActionHandler(
 				type: "THREAD_REPLY",
 				threadId: typeof threadId === "string" ? threadId : "",
 				message: typeof message === "string" ? message : "",
+			};
+		} else if (type === "POST_INLINE_COMMENT") {
+			action = {
+				type: "POST_INLINE_COMMENT",
+				filePath: typeof args.filePath === "string" ? args.filePath : "",
+				line: typeof args.line === "number" ? args.line : 0,
+				body: typeof body === "string" ? body : "",
 			};
 		} else {
 			action = {

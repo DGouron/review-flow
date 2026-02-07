@@ -50,6 +50,22 @@ describe("addAction handler", () => {
 		expect(content.actionType).toBe("POST_COMMENT");
 	});
 
+	it("should add POST_INLINE_COMMENT action successfully", () => {
+		const handler = createAddActionHandler({ jobContextGateway, reviewContextGateway });
+		const result = handler({
+			jobId,
+			type: "POST_INLINE_COMMENT",
+			filePath: "src/app.ts",
+			line: 42,
+			body: "Extract this logic.",
+		});
+
+		expect(result.isError).toBeUndefined();
+		const content = JSON.parse(result.content[0].text);
+		expect(content.success).toBe(true);
+		expect(content.actionType).toBe("POST_INLINE_COMMENT");
+	});
+
 	it("should return error when jobId is missing", () => {
 		const handler = createAddActionHandler({ jobContextGateway, reviewContextGateway });
 		const result = handler({ type: "POST_COMMENT", body: "test" });

@@ -59,6 +59,62 @@ describe('ReviewContextAction', () => {
     })
   })
 
+  describe('PostInlineCommentAction', () => {
+    it('should validate a post inline comment action', () => {
+      const action = {
+        type: 'POST_INLINE_COMMENT',
+        filePath: 'src/app.ts',
+        line: 42,
+        body: 'Consider extracting this logic into a separate function.',
+      }
+
+      const result = reviewContextActionSchema.safeParse(action)
+
+      expect(result.success).toBe(true)
+      if (result.success && result.data.type === 'POST_INLINE_COMMENT') {
+        expect(result.data.filePath).toBe('src/app.ts')
+        expect(result.data.line).toBe(42)
+        expect(result.data.body).toBe('Consider extracting this logic into a separate function.')
+      }
+    })
+
+    it('should reject post inline comment without filePath', () => {
+      const action = {
+        type: 'POST_INLINE_COMMENT',
+        line: 42,
+        body: 'Missing filePath',
+      }
+
+      const result = reviewContextActionSchema.safeParse(action)
+
+      expect(result.success).toBe(false)
+    })
+
+    it('should reject post inline comment without line', () => {
+      const action = {
+        type: 'POST_INLINE_COMMENT',
+        filePath: 'src/app.ts',
+        body: 'Missing line',
+      }
+
+      const result = reviewContextActionSchema.safeParse(action)
+
+      expect(result.success).toBe(false)
+    })
+
+    it('should reject post inline comment without body', () => {
+      const action = {
+        type: 'POST_INLINE_COMMENT',
+        filePath: 'src/app.ts',
+        line: 42,
+      }
+
+      const result = reviewContextActionSchema.safeParse(action)
+
+      expect(result.success).toBe(false)
+    })
+  })
+
   describe('Invalid actions', () => {
     it('should reject action with unknown type', () => {
       const action = {

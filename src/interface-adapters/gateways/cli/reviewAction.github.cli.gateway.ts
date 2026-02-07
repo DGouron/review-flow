@@ -58,6 +58,21 @@ export class GitHubReviewActionCliGateway
           ],
         }
 
+      case 'POST_INLINE_COMMENT': {
+        if (!context.diffMetadata) return null
+        return {
+          command: 'gh',
+          args: [
+            'api', '--method', 'POST',
+            `repos/${context.projectPath}/pulls/${context.mrNumber}/comments`,
+            '--field', `body=${action.body}`,
+            '--field', `commit_id=${context.diffMetadata.headSha}`,
+            '--field', `path=${action.filePath}`,
+            '--field', `line=${action.line}`,
+          ],
+        }
+      }
+
       case 'FETCH_THREADS':
         return null
     }

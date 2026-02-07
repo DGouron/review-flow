@@ -78,6 +78,24 @@ describe('reviewAction.guard', () => {
       }
     })
 
+    it('should parse a valid POST_INLINE_COMMENT action', () => {
+      const input = {
+        type: 'POST_INLINE_COMMENT',
+        filePath: 'src/app.ts',
+        line: 42,
+        body: 'Consider extracting this logic.',
+      }
+
+      const result = parseReviewAction(input)
+
+      expect(result.type).toBe('POST_INLINE_COMMENT')
+      if (result.type === 'POST_INLINE_COMMENT') {
+        expect(result.filePath).toBe('src/app.ts')
+        expect(result.line).toBe(42)
+        expect(result.body).toBe('Consider extracting this logic.')
+      }
+    })
+
     it('should parse a valid FETCH_THREADS action', () => {
       const input = {
         type: 'FETCH_THREADS',

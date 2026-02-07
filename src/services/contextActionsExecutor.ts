@@ -31,6 +31,7 @@ export async function executeActionsFromContext(
     projectPath: context.projectPath,
     mrNumber: context.mergeRequestNumber,
     localPath,
+    diffMetadata: context.diffMetadata,
   }
 
   const gateway =

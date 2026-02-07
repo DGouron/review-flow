@@ -5,7 +5,8 @@ import type { ReviewContextAction } from "../../entities/reviewContext/reviewCon
 export type ActionInput =
 	| { type: "THREAD_RESOLVE"; threadId: string; message?: string }
 	| { type: "THREAD_REPLY"; threadId: string; message: string }
-	| { type: "POST_COMMENT"; body: string };
+	| { type: "POST_COMMENT"; body: string }
+	| { type: "POST_INLINE_COMMENT"; filePath: string; line: number; body: string };
 
 export type AddActionResult =
 	| { success: true; actionId: string; actionType: string }
@@ -36,6 +37,16 @@ function validateAction(action: ActionInput): string | null {
 		if (!action.body) {
 			return "body required for POST_COMMENT";
 		}
+	} else if (action.type === "POST_INLINE_COMMENT") {
+		if (!action.filePath) {
+			return "filePath required for POST_INLINE_COMMENT";
+		}
+		if (!action.line || action.line <= 0) {
+			return "line must be > 0 for POST_INLINE_COMMENT";
+		}
+		if (!action.body) {
+			return "body required for POST_INLINE_COMMENT";
+		}
 	}
 	return null;
 }
@@ -53,6 +64,14 @@ function toReviewContextAction(action: ActionInput): ReviewContextAction {
 			type: "THREAD_REPLY",
 			threadId: action.threadId,
 			message: action.message,
+		};
+	}
+	if (action.type === "POST_INLINE_COMMENT") {
+		return {
+			type: "POST_INLINE_COMMENT",
+			filePath: action.filePath,
+			line: action.line,
+			body: action.body,
 		};
 	}
 	return {

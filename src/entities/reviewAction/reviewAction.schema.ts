@@ -22,6 +22,13 @@ export const addLabelActionSchema = z.object({
   label: z.string(),
 })
 
+export const postInlineCommentActionSchema = z.object({
+  type: z.literal('POST_INLINE_COMMENT'),
+  filePath: z.string(),
+  line: z.number(),
+  body: z.string(),
+})
+
 export const fetchThreadsActionSchema = z.object({
   type: z.literal('FETCH_THREADS'),
 })
@@ -31,5 +38,6 @@ export const reviewActionSchema = z.discriminatedUnion('type', [
   postCommentActionSchema,
   threadReplyActionSchema,
   addLabelActionSchema,
+  postInlineCommentActionSchema,
   fetchThreadsActionSchema,
 ])
