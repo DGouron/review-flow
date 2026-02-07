@@ -112,249 +112,43 @@ src/
 
 ---
 
-## Reused Entities (existing)
+## Reused Entities
 
-### `entities/progress/progress.type.ts`
-
-```typescript
-// Existing - do not modify
-export type AgentStatus = 'pending' | 'running' | 'completed' | 'failed'
-export type ReviewPhase = 'initializing' | 'agents-running' | 'synthesizing' | 'publishing' | 'completed'
-
-export interface AgentProgress {
-  name: string
-  displayName: string
-  status: AgentStatus
-  startedAt?: Date
-  completedAt?: Date
-  error?: string
-}
-
-export interface ReviewProgress {
-  agents: AgentProgress[]
-  currentPhase: ReviewPhase
-  overallProgress: number
-  lastUpdate: Date
-}
-```
+**`entities/progress/progress.type.ts`** — `AgentStatus` (`pending`|`running`|`completed`|`failed`), `ReviewPhase` (5 phases), `AgentProgress`, `ReviewProgress`. Do not modify.
 
 ---
 
 ## ReviewProgressMemoryGateway
 
-### Interface (in entities/progress/)
+**Interface**: `entities/progress/progress.gateway.ts` — CRUD for `ReviewProgress` per jobId, plus `setPhase`, `startAgent`, `completeAgent`, and `onProgressChange` callback.
 
-```typescript
-// entities/progress/progress.gateway.ts
-export interface ReviewProgressGateway {
-  create(jobId: string, agents: AgentDefinition[]): ReviewProgress
-  get(jobId: string): ReviewProgress | null
-  delete(jobId: string): boolean
-
-  setPhase(jobId: string, phase: ReviewPhase): ReviewProgress | null
-  startAgent(jobId: string, agentName: string): ReviewProgress | null
-  completeAgent(jobId: string, agentName: string, status: 'success' | 'failed', error?: string): ReviewProgress | null
-
-  onProgressChange(callback: (jobId: string, progress: ReviewProgress) => void): void
-}
-```
-
-### Implementation
-
-```typescript
-// interface-adapters/gateways/reviewProgress.memory.gateway.ts
-export class ReviewProgressMemoryGateway implements ReviewProgressGateway {
-  private progressMap = new Map<string, ReviewProgress>()
-  private jobMetadata = new Map<string, { localPath: string; mergeRequestId: string }>()
-  private callbacks: Array<(jobId: string, progress: ReviewProgress) => void> = []
-
-  create(jobId: string, agents: AgentDefinition[]): ReviewProgress {
-    const progress = createInitialProgress(agents)
-    this.progressMap.set(jobId, progress)
-    this.notify(jobId, progress)
-    return progress
-  }
-
-  // ... other methods
-}
-```
+**Implementation**: `interface-adapters/gateways/reviewProgress.memory.gateway.ts` — In-memory `Map<jobId, ReviewProgress>` with per-job metadata and event callbacks.
 
 ---
 
 ## Use Cases
 
-### `usecases/mcp/getWorkflow.usecase.ts`
+**`usecases/mcp/getWorkflow.usecase.ts`** — Returns `{ jobId, workflow (phases, agents, instructions), context (MR number, project, platform, threads), currentState (phase, agents, overallProgress) }`. Includes embedded `WORKFLOW_INSTRUCTIONS` string that guides Claude through the mandatory tool call sequence.
 
-```typescript
-export interface GetWorkflowInput {
-  jobId: string
-}
-
-export interface GetWorkflowOutput {
-  jobId: string
-  workflow: {
-    phases: ReviewPhase[]
-    agents: Array<{ name: string; displayName: string; order: number }>
-    instructions: string
-  }
-  context: {
-    mergeRequestNumber: number
-    projectPath: string
-    platform: 'gitlab' | 'github'
-    threads: ReviewContextThread[]
-  }
-  currentState: {
-    phase: ReviewPhase
-    agents: AgentProgress[]
-    overallProgress: number
-  }
-}
-
-const WORKFLOW_INSTRUCTIONS = `
-MANDATORY WORKFLOW - Call these MCP tools in order:
-
-1. get_workflow (this tool) - Get context and agent list
-2. set_phase("initializing") - Mark review as starting
-3. set_phase("agents-running") - Before running audits
-4. For EACH agent in workflow.agents (in order):
-   a. start_agent(agentName) - BEFORE starting audit
-   b. [Perform the audit]
-   c. complete_agent(agentName) - AFTER completing audit
-5. set_phase("synthesizing") - When compiling report
-6. set_phase("publishing") - When posting to GitLab/GitHub
-7. set_phase("completed") - When done
-
-Use add_action() for thread resolutions or comments.
-Use get_threads() to check current thread state.
-`
-```
+Other use cases in `usecases/mcp/`: `startAgent`, `completeAgent`, `setPhase`, `addAction`, `getThreads`.
 
 ---
 
 ## MCP Server
 
-### `mcp/server.ts`
-
-```typescript
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-
-export interface McpToolDefinition {
-  name: string
-  description: string
-  inputSchema: object
-  handler: (params: unknown) => Promise<McpToolResult>
-}
-
-export interface McpToolResult {
-  content: Array<{ type: 'text'; text: string }>
-  isError?: boolean
-}
-
-export class ReviewProgressMcpServer {
-  private server: Server
-  private tools = new Map<string, McpToolDefinition>()
-
-  constructor() {
-    this.server = new Server(
-      { name: 'review-progress', version: '1.0.0' },
-      { capabilities: { tools: {} } }
-    )
-  }
-
-  registerTool(tool: McpToolDefinition): void {
-    this.tools.set(tool.name, tool)
-  }
-
-  async start(): Promise<void> {
-    this.server.setRequestHandler('tools/list', async () => ({
-      tools: Array.from(this.tools.values()).map(t => ({
-        name: t.name,
-        description: t.description,
-        inputSchema: t.inputSchema,
-      })),
-    }))
-
-    this.server.setRequestHandler('tools/call', async (request) => {
-      const { name, arguments: args } = request.params
-      const tool = this.tools.get(name)
-      if (!tool) throw new Error(`Unknown tool: ${name}`)
-      return tool.handler(args)
-    })
-
-    const transport = new StdioServerTransport()
-    await this.server.connect(transport)
-  }
-}
-```
+**`mcp/server.ts`** — `ReviewProgressMcpServer` wraps `@modelcontextprotocol/sdk`. Registers tools via `registerTool(McpToolDefinition)` and handles `tools/list` and `tools/call` requests. Connects via `StdioServerTransport`.
 
 ---
 
 ## WebSocket Integration (bridge)
 
-```typescript
-// In main/mcpDependencies.ts
-export function createMcpDependencies(existingDeps: Dependencies) {
-  const progressGateway = new ReviewProgressMemoryGateway()
-
-  // Bridge: MCP → WebSocket broadcast
-  progressGateway.onProgressChange((jobId, progress) => {
-    // Broadcast to dashboard via existing WebSocket
-    broadcastProgress(jobId, progress)
-
-    // Sync to JSON file for backward compatibility
-    const metadata = progressGateway.getMetadata(jobId)
-    if (metadata) {
-      existingDeps.reviewContextGateway.updateProgress(
-        metadata.localPath,
-        metadata.mergeRequestId,
-        {
-          phase: progress.currentPhase,
-          currentStep: progress.agents.find(a => a.status === 'running')?.name ?? null,
-          stepsCompleted: progress.agents.filter(a => a.status === 'completed').map(a => a.name),
-        }
-      )
-    }
-  })
-
-  return {
-    progressGateway,
-    contextGateway: existingDeps.reviewContextGateway,
-    // ... use cases
-  }
-}
-```
+**`main/mcpDependencies.ts`** — `createMcpDependencies()` wires the bridge: `progressGateway.onProgressChange` broadcasts updates to the dashboard via WebSocket and syncs to JSON file for backward compatibility.
 
 ---
 
-## Sequence Diagram
+## Sequence
 
-```
-┌──────────┐     ┌───────────┐     ┌──────────────┐     ┌─────────────┐     ┌───────────┐
-│ Claude   │     │ MCP Server│     │ Use Cases    │     │ Gateways    │     │ WebSocket │
-└────┬─────┘     └─────┬─────┘     └──────┬───────┘     └──────┬──────┘     └─────┬─────┘
-     │                 │                  │                    │                  │
-     │ get_workflow    │                  │                    │                  │
-     │────────────────>│ getWorkflow()    │                    │                  │
-     │                 │─────────────────>│ get(jobId)         │                  │
-     │                 │                  │───────────────────>│                  │
-     │<────────────────│<─────────────────│<───────────────────│                  │
-     │ {workflow,      │                  │                    │                  │
-     │  context,       │                  │                    │                  │
-     │  instructions}  │                  │                    │                  │
-     │                 │                  │                    │                  │
-     │ start_agent     │                  │                    │                  │
-     │("clean-arch")   │                  │                    │                  │
-     │────────────────>│ startAgent()     │                    │                  │
-     │                 │─────────────────>│ startAgent()       │                  │
-     │                 │                  │───────────────────>│ notify()         │
-     │                 │                  │                    │─────────────────>│
-     │                 │                  │                    │                  │ broadcast
-     │<────────────────│<─────────────────│<───────────────────│                  │ to dashboard
-     │ {success,       │                  │                    │                  │
-     │  startedAt,     │                  │                    │                  │
-     │  progress: 8%}  │                  │                    │                  │
-```
+`Claude → MCP Server → Use Case → Gateway → WebSocket (broadcast to dashboard)`. Each tool call follows this chain. Progress updates trigger both WebSocket broadcast and JSON file sync.
 
 ---
 
