@@ -9,6 +9,7 @@ export {
   createJobId,
   enqueueReview,
   cancelJob,
+  getJobStatus,
   getQueueStats,
   getJobsStatus,
   updateJobProgress,

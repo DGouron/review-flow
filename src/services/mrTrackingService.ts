@@ -65,6 +65,9 @@ export interface TrackedMr {
   totalSuggestions: number;
   totalDurationMs: number;
   averageScore: number | null;
+  latestScore: number | null;
+
+  autoFollowup: boolean;
 }
 
 /**
@@ -151,6 +154,12 @@ export function loadMrTracking(projectPath: string): MrTrackingData {
     }
     if (!data.stats) {
       data.stats = createEmptyStats();
+    }
+
+    for (const mr of data.mrs) {
+      if (mr.autoFollowup === undefined) {
+        mr.autoFollowup = true;
+      }
     }
 
     return data;
@@ -249,6 +258,8 @@ export function trackMrAssignment(
     totalSuggestions: 0,
     totalDurationMs: 0,
     averageScore: null,
+    latestScore: null,
+    autoFollowup: true,
   };
 
   data.mrs.push(trackedMr);
@@ -310,7 +321,12 @@ export function recordReviewCompletion(
   mr.openThreads = Math.max(0, mr.openThreads + (reviewData.threadsOpened ?? 0) - (reviewData.threadsClosed ?? 0));
   mr.totalThreads += reviewData.threadsOpened ?? 0;
 
-  // Recalculate average score
+  // Update latest score (current state of the MR)
+  if (reviewData.score !== null) {
+    mr.latestScore = reviewData.score;
+  }
+
+  // Recalculate average score (historical metric)
   const reviewsWithScore = mr.reviews.filter((r) => r.score !== null);
   if (reviewsWithScore.length > 0) {
     mr.averageScore = reviewsWithScore.reduce((sum, r) => sum + (r.score ?? 0), 0) / reviewsWithScore.length;
@@ -418,6 +434,39 @@ export function markMrClosed(projectPath: string, mrId: string): boolean {
 }
 
 /**
+ * Remove MR from tracking completely (no history kept)
+ */
+export function removeMrFromTracking(projectPath: string, mrId: string): boolean {
+  const data = loadMrTracking(projectPath);
+
+  if (data.mrs.length === 0) return false;
+
+  const index = data.mrs.findIndex((mr) => mr.id === mrId);
+
+  if (index < 0) return false;
+
+  data.mrs.splice(index, 1);
+  saveMrTracking(projectPath, data);
+  return true;
+}
+
+/**
+ * Recompute project stats from current MR data
+ */
+export function recomputeProjectStats(projectPath: string): void {
+  const data = loadMrTracking(projectPath);
+  recalculateStats(data);
+  data.lastUpdated = new Date().toISOString();
+
+  const trackingPath = getTrackingPath(projectPath);
+  const dir = dirname(trackingPath);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  writeFileSync(trackingPath, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+/**
  * Remove MR from active tracking (keeps in history)
  */
 export function archiveMr(projectPath: string, mrId: string): boolean {
@@ -429,6 +478,24 @@ export function archiveMr(projectPath: string, mrId: string): boolean {
   data.mrs.splice(index, 1);
   saveMrTracking(projectPath, data);
   return true;
+}
+
+/**
+ * Toggle auto-followup for a specific MR
+ */
+export function setAutoFollowup(
+  projectPath: string,
+  mrId: string,
+  enabled: boolean
+): TrackedMr | null {
+  const data = loadMrTracking(projectPath);
+  const mr = data.mrs.find((m) => m.id === mrId);
+
+  if (!mr) return null;
+
+  mr.autoFollowup = enabled;
+  saveMrTracking(projectPath, data);
+  return mr;
 }
 
 /**

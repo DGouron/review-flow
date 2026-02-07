@@ -1,45 +1,8 @@
 import { loadConfig } from '../../../config/loader.js';
 import type { GitHubPullRequestEvent } from '../../../entities/github/githubPullRequestEvent.guard.js';
+import type { GitLabMergeRequestEvent } from '../../../entities/gitlab/gitlabMergeRequestEvent.guard.js';
 
-export type { GitHubPullRequestEvent };
-
-// GitLab MR Event types
-export interface GitLabMergeRequestEvent {
-  object_kind: 'merge_request';
-  event_type: string;
-  user: {
-    username: string;
-    name: string;
-  };
-  project: {
-    id: number;
-    name: string;
-    path_with_namespace: string;
-    web_url: string;
-    git_http_url: string;
-  };
-  object_attributes: {
-    iid: number;
-    title: string;
-    description?: string;
-    state: 'opened' | 'closed' | 'merged' | 'locked';
-    action: string;
-    source_branch: string;
-    target_branch: string;
-    url: string;
-    draft?: boolean;
-  };
-  reviewers?: Array<{
-    username: string;
-    name: string;
-  }>;
-  changes?: {
-    reviewers?: {
-      previous: Array<{ username: string }>;
-      current: Array<{ username: string }>;
-    };
-  };
-}
+export type { GitHubPullRequestEvent, GitLabMergeRequestEvent };
 
 export const REVIEW_TRIGGER_LABEL = 'needs-review';
 
@@ -222,6 +185,28 @@ export function filterGitLabMrMerge(event: GitLabMergeRequestEvent): FilterResul
   return {
     shouldProcess: true,
     reason: 'MR was merged',
+    mergeRequestNumber: mr.iid,
+    projectPath: event.project.path_with_namespace,
+    mergeRequestUrl: mr.url,
+    sourceBranch: mr.source_branch,
+    targetBranch: mr.target_branch,
+  };
+}
+
+/**
+ * Check if a GitLab MR was approved
+ * Returns info to update tracking status
+ */
+export function filterGitLabMrApprove(event: GitLabMergeRequestEvent): FilterResult {
+  const mr = event.object_attributes;
+
+  if (mr.action !== 'approved') {
+    return { shouldProcess: false, reason: `Action is ${mr.action}, not approved` };
+  }
+
+  return {
+    shouldProcess: true,
+    reason: 'MR was approved',
     mergeRequestNumber: mr.iid,
     projectPath: event.project.path_with_namespace,
     mergeRequestUrl: mr.url,

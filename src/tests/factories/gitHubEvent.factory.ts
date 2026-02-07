@@ -47,6 +47,7 @@ export class GitHubEventFactory {
           ref: 'main',
         },
         requested_reviewers: [],
+        assignees: [],
       },
       repository: {
         full_name: 'test-owner/test-repo',

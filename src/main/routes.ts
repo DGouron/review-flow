@@ -15,6 +15,7 @@ import { projectConfigRoutes } from '../interface-adapters/controllers/http/proj
 import { registerWebSocketRoutes } from './websocket.js';
 import { handleGitLabWebhook } from '../interface-adapters/controllers/webhook/gitlab.controller.js';
 import { handleGitHubWebhook } from '../interface-adapters/controllers/webhook/github.controller.js';
+import { cancelJob, getJobStatus } from '../queue/reviewQueue.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -37,6 +38,8 @@ export async function registerRoutes(
   await app.register(reviewRoutes, {
     reviewFileGateway: deps.reviewFileGateway,
     getRepositories: () => deps.config.repositories,
+    queuePort: { getJobStatus, cancelJob },
+    logger: deps.logger,
   });
 
   await app.register(statsRoutes, {

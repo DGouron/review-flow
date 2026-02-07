@@ -8,11 +8,23 @@ export interface ReviewContextThread {
   body: string
 }
 
+export interface ReviewContextAgent {
+  name: string
+  displayName: string
+}
+
 export interface ReviewContextProgress {
   phase: 'pending' | 'initializing' | 'agents-running' | 'synthesizing' | 'publishing' | 'completed'
   currentStep: string | null
   stepsCompleted?: string[]
+  agents?: ReviewContextAgent[]
   updatedAt?: string
+}
+
+export interface AgentInstructions {
+  contextFilePath: string
+  critical: string[]
+  actionSchema: Record<string, Record<string, string>>
 }
 
 export interface ReviewContext {
@@ -26,6 +38,7 @@ export interface ReviewContext {
   actions: ReviewContextAction[]
   progress: ReviewContextProgress
   result?: ReviewContextResult
+  agentInstructions?: AgentInstructions
 }
 
 export interface CreateReviewContextInput {
@@ -35,6 +48,7 @@ export interface CreateReviewContextInput {
   projectPath: string
   mergeRequestNumber: number
   threads?: ReviewContextThread[]
+  agents?: ReviewContextAgent[]
 }
 
 export interface CreateReviewContextResult {
