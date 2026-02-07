@@ -24,6 +24,8 @@ import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js
 import { ReviewContextFileSystemGateway } from '../../gateways/reviewContext.fileSystem.gateway.js';
 import { GitHubThreadFetchGateway, defaultGitHubExecutor } from '../../gateways/threadFetch.github.gateway.js';
 import { startWatchingReviewContext, stopWatchingReviewContext } from '../../../main/websocket.js';
+import { getProjectAgents } from '../../../config/projectConfig.js';
+import { DEFAULT_AGENTS } from '../../../entities/progress/agentDefinition.type.js';
 
 export async function handleGitHubWebhook(
   request: FastifyRequest,
@@ -201,6 +203,7 @@ export async function handleGitHubWebhook(
 
     try {
       const threads = threadFetchGateway.fetchThreads(j.projectPath, j.mrNumber);
+      const reviewAgentsList = getProjectAgents(j.localPath) ?? DEFAULT_AGENTS;
       contextGateway.create({
         localPath: j.localPath,
         mergeRequestId,
@@ -208,6 +211,7 @@ export async function handleGitHubWebhook(
         projectPath: j.projectPath,
         mergeRequestNumber: j.mrNumber,
         threads,
+        agents: reviewAgentsList,
       });
       logger.info(
         { prNumber: j.mrNumber, threadsCount: threads.length },

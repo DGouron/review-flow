@@ -35,6 +35,7 @@ export class ReviewContextFileSystemGateway implements ReviewContextGateway {
       progress: {
         phase: 'pending',
         currentStep: null,
+        ...(input.agents ? { agents: input.agents } : {}),
       },
       agentInstructions,
     }
@@ -92,6 +93,7 @@ export class ReviewContextFileSystemGateway implements ReviewContextGateway {
 
     context.progress = {
       ...progress,
+      agents: progress.agents ?? context.progress.agents,
       updatedAt: new Date().toISOString(),
     }
     const filePath = this.getFilePath(localPath, mergeRequestId)

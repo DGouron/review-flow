@@ -5,9 +5,8 @@ import {
 	ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
-import { homedir } from "node:os";
 import { createMcpDependencies } from "../main/mcpDependencies.js";
+import type { McpDependencies } from "../main/mcpDependencies.js";
 import { ReviewContextFileSystemGateway } from "../interface-adapters/gateways/reviewContext.fileSystem.gateway.js";
 import { createGetWorkflowHandler } from "../interface-adapters/controllers/mcp/getWorkflow.handler.js";
 import { createStartAgentHandler } from "../interface-adapters/controllers/mcp/startAgent.handler.js";
@@ -16,6 +15,7 @@ import { createSetPhaseHandler } from "../interface-adapters/controllers/mcp/set
 import { createGetThreadsHandler } from "../interface-adapters/controllers/mcp/getThreads.handler.js";
 import { createAddActionHandler } from "../interface-adapters/controllers/mcp/addAction.handler.js";
 import { getProjectAgents, getFollowupAgents } from "../config/projectConfig.js";
+import { getJobContextFilePath } from "../shared/services/mcpJobContext.js";
 import { mcpLogger } from "./mcpLogger.js";
 
 interface McpJobContext {
@@ -25,17 +25,16 @@ interface McpJobContext {
 	jobType: "review" | "followup";
 }
 
-const MCP_CONTEXT_FILE = join(homedir(), ".claude-review", "current-job.json");
-
-function getJobContextFromFile(): McpJobContext | null {
+export function loadJobContextFromFile(jobId: string): McpJobContext | null {
 	try {
-		if (!existsSync(MCP_CONTEXT_FILE)) {
-			mcpLogger.debug("No context file found", { path: MCP_CONTEXT_FILE });
+		const filePath = getJobContextFilePath(jobId);
+		if (!existsSync(filePath)) {
+			mcpLogger.debug("No per-job context file found", { jobId, path: filePath });
 			return null;
 		}
-		const content = readFileSync(MCP_CONTEXT_FILE, "utf-8");
+		const content = readFileSync(filePath, "utf-8");
 		const data = JSON.parse(content);
-		mcpLogger.info("Loaded job context from file", { path: MCP_CONTEXT_FILE, jobId: data.jobId });
+		mcpLogger.info("Loaded job context from per-job file", { jobId, path: filePath });
 		return {
 			jobId: data.jobId,
 			localPath: data.localPath,
@@ -43,12 +42,12 @@ function getJobContextFromFile(): McpJobContext | null {
 			jobType: data.jobType || "review",
 		};
 	} catch (error) {
-		mcpLogger.error("Failed to read context file", { error: String(error) });
+		mcpLogger.error("Failed to read per-job context file", { jobId, error: String(error) });
 		return null;
 	}
 }
 
-function getJobContextFromEnv(): McpJobContext | null {
+export function getJobContextFromEnv(): McpJobContext | null {
 	const jobId = process.env.MCP_JOB_ID;
 	const localPath = process.env.MCP_LOCAL_PATH;
 	const mergeRequestId = process.env.MCP_MERGE_REQUEST_ID;
@@ -61,21 +60,30 @@ function getJobContextFromEnv(): McpJobContext | null {
 	return { jobId, localPath, mergeRequestId, jobType };
 }
 
-function getJobContext(): McpJobContext | null {
-	// Try env vars first (for backward compatibility), then file
-	const fromEnv = getJobContextFromEnv();
-	if (fromEnv) {
-		mcpLogger.info("Using job context from env vars");
-		return fromEnv;
+export function ensureJobContextLoaded(jobId: string, mcpDeps: McpDependencies): void {
+	if (mcpDeps.jobContextGateway.get(jobId)) {
+		return;
 	}
 
-	const fromFile = getJobContextFromFile();
-	if (fromFile) {
-		mcpLogger.info("Using job context from file");
-		return fromFile;
+	const jobContext = getJobContextFromEnv() ?? loadJobContextFromFile(jobId);
+	if (!jobContext) {
+		mcpLogger.warn("No job context found for lazy loading", { jobId });
+		return;
 	}
 
-	return null;
+	mcpDeps.jobContextGateway.register(jobContext.jobId, {
+		localPath: jobContext.localPath,
+		mergeRequestId: jobContext.mergeRequestId,
+	});
+	mcpLogger.info("Job context lazy-loaded and registered", { jobId });
+
+	const agents = jobContext.jobType === "followup"
+		? getFollowupAgents(jobContext.localPath)
+		: getProjectAgents(jobContext.localPath);
+
+	const agentNames = agents?.map((a) => a.name) ?? ["analysis"];
+	mcpDeps.progressGateway.createProgress(jobContext.jobId, agentNames);
+	mcpLogger.info("Progress created via lazy loading", { jobId, agentNames });
 }
 
 const TOOL_DEFINITIONS = [
@@ -173,32 +181,7 @@ export async function startMcpServer(): Promise<void> {
 	const reviewContextGateway = new ReviewContextFileSystemGateway();
 	const mcpDeps = createMcpDependencies({ reviewContextGateway });
 
-	const jobContext = getJobContext();
-	mcpLogger.info("Job context loaded", {
-		hasContext: !!jobContext,
-		jobId: jobContext?.jobId,
-		localPath: jobContext?.localPath,
-		mergeRequestId: jobContext?.mergeRequestId,
-		jobType: jobContext?.jobType,
-	});
-
-	if (jobContext) {
-		mcpDeps.jobContextGateway.register(jobContext.jobId, {
-			localPath: jobContext.localPath,
-			mergeRequestId: jobContext.mergeRequestId,
-		});
-		mcpLogger.info("Job context registered");
-
-		const agents = jobContext.jobType === "followup"
-			? getFollowupAgents(jobContext.localPath)
-			: getProjectAgents(jobContext.localPath);
-
-		const agentNames = agents?.map((a) => a.name) ?? ["analysis"];
-		mcpDeps.progressGateway.createProgress(jobContext.jobId, agentNames);
-		mcpLogger.info("Progress created", { agentNames });
-	} else {
-		mcpLogger.warn("No job context from environment - MCP tools may not work correctly");
-	}
+	mcpLogger.info("MCP server initialized - context will be lazy-loaded on first tool call");
 
 	const getWorkflowHandler = createGetWorkflowHandler({ progressGateway: mcpDeps.progressGateway });
 	const startAgentHandler = createStartAgentHandler({ progressGateway: mcpDeps.progressGateway });
@@ -244,6 +227,11 @@ export async function startMcpServer(): Promise<void> {
 		const startTime = Date.now();
 
 		mcpLogger.info(`Tool called: ${name}`, { args });
+
+		const jobId = (args as Record<string, unknown>)?.jobId as string | undefined;
+		if (jobId) {
+			ensureJobContextLoaded(jobId, mcpDeps);
+		}
 
 		const handler = handlers[name];
 		if (!handler) {

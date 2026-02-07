@@ -10,6 +10,8 @@ export const DEFAULT_AGENTS: AgentDefinition[] = [
   { name: 'solid', displayName: 'SOLID' },
   { name: 'testing', displayName: 'Testing' },
   { name: 'code-quality', displayName: 'Code Quality' },
+  { name: 'threads', displayName: 'Threads' },
+  { name: 'report', displayName: 'Rapport' },
 ];
 
 export const DEFAULT_FOLLOWUP_AGENTS: AgentDefinition[] = [
