@@ -36,7 +36,10 @@
     "coverage": "vitest --coverage",
     "lint": "biome check src/",
     "lint:fix": "biome check --write src/",
-    "verify": "yarn typecheck && yarn lint && yarn test:ci"
+    "verify": "yarn typecheck && yarn lint && yarn test:ci",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
     "@fastify/static": "^8.0.0",
@@ -57,7 +60,9 @@
     "@vitest/ui": "^4.0.18",
     "tsx": "^4.7.0",
     "typescript": "^5.8.0",
-    "vitest": "^4.0.18"
+    "vitepress": "^1.6.4",
+    "vitest": "^4.0.18",
+    "vue": "^3.5.27"
   },
   "engines": {
     "node": ">=20.0.0"
