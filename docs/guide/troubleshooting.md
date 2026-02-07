@@ -1,10 +1,5 @@
 ---
 title: Troubleshooting
-scope: guide
-related:
-  - docs/QUICKSTART.md
-  - docs/deployment/README.md
-last-updated: 2026-02-07
 ---
 
 # Troubleshooting

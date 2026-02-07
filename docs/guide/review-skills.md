@@ -1,11 +1,5 @@
 ---
 title: Review Skills Guide
-scope: guide
-related:
-  - docs/MARKERS-REFERENCE.md
-  - docs/MCP-TOOLS-REFERENCE.md
-  - templates/SKILL.md.template
-last-updated: 2026-02-07
 ---
 
 # Review Skills Guide

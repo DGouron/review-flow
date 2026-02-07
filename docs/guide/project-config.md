@@ -1,10 +1,5 @@
 ---
 title: Project Configuration
-scope: guide
-related:
-  - templates/SETUP.md
-  - docs/CONFIG-REFERENCE.md
-last-updated: 2026-02-07
 ---
 
 # Project Configuration

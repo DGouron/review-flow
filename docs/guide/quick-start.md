@@ -1,10 +1,5 @@
 ---
 title: Quick Start
-scope: guide
-related:
-  - docs/deployment/README.md
-  - docs/CONFIG-REFERENCE.md
-last-updated: 2026-02-07
 ---
 
 # Quick Start
