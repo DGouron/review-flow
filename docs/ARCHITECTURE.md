@@ -49,24 +49,32 @@
 
 ```
 src/
-├── server.ts              # Fastify entry point
+├── server.ts                                      # Fastify entry point
+├── mcpServer.ts                                   # MCP server entry point
 │
-├── config/
-│   └── loader.ts          # Config loading and validation
+├── config/                                        # Config loading and validation
+├── security/                                      # Webhook signature verification
+├── entities/                                      # Domain entities and types
+├── usecases/                                      # Business logic (incl. mcp/)
 │
-├── security/
-│   └── verifier.ts        # Webhook signature verification
+├── interface-adapters/
+│   ├── controllers/
+│   │   ├── webhook/
+│   │   │   ├── gitlab.controller.ts               # GitLab webhook handler
+│   │   │   ├── github.controller.ts               # GitHub webhook handler
+│   │   │   └── eventFilter.ts                     # Filtering logic
+│   │   └── mcp/                                   # MCP tool handlers
+│   └── gateways/                                  # Gateway implementations
 │
-├── webhooks/
-│   ├── gitlab.handler.ts  # GitLab handler
-│   ├── github.handler.ts  # GitHub handler
-│   └── eventFilter.ts     # Filtering logic
+├── frameworks/
+│   └── claude/                                    # Claude CLI integration
 │
-├── queue/
-│   └── reviewQueue.ts     # Queue management + deduplication
+├── mcp/                                           # MCP server infrastructure
+│   ├── server.ts                                  # MCP server setup
+│   └── mcpServerStdio.ts                          # Stdio transport
 │
-└── claude/
-    └── invoker.ts         # Claude CLI invocation
+├── queue/                                         # Review queue management
+└── shared/                                        # Shared services and utilities
 ```
 
 ## Components
