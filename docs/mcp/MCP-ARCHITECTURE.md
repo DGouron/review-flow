@@ -1,8 +1,8 @@
-# MCP Review Progress - Architecture Clean
+# MCP Review Progress - Clean Architecture
 
-## Vue d'ensemble
+## Overview
 
-Le MCP Server est un **nouveau canal d'entrée** pour le Bounded Context existant `reviewProgress`. Il réutilise les entités et types existants sans duplication.
+The MCP Server is a **new input channel** for the existing `reviewProgress` Bounded Context. It reuses existing entities and types without duplication.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -14,7 +14,7 @@ Le MCP Server est un **nouveau canal d'entrée** pour le Bounded Context existan
 │                    INTERFACE ADAPTERS                                       │
 │  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐    │
 │  │ MCP Tool Handlers  │  │ Progress Memory    │  │ Context FileSystem │    │
-│  │ (Controllers)      │  │ Gateway (NOUVEAU)  │  │ Gateway (existant) │    │
+│  │ (Controllers)      │  │ Gateway (new)      │  │ Gateway (existing) │    │
 │  └────────────────────┘  └────────────────────┘  └────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     ↑↓
@@ -26,7 +26,7 @@ Le MCP Server est un **nouveau canal d'entrée** pour le Bounded Context existan
 └─────────────────────────────────────────────────────────────────────────────┘
                                     ↑↓
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    ENTITIES (EXISTANTS - réutilisés)                        │
+│                    ENTITIES (existing - reused)                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
 │  │ progress/progress.type.ts     → ReviewProgress, AgentProgress        │   │
 │  │ reviewContext/reviewContext.ts → ReviewContext, ReviewContextProgress│   │
@@ -36,33 +36,33 @@ Le MCP Server est un **nouveau canal d'entrée** pour le Bounded Context existan
 
 ---
 
-## Décision DDD : Pas de nouveau Bounded Context
+## DDD Decision: No New Bounded Context
 
-Le MCP réutilise le BC existant `reviewProgress` car :
-- Même vocabulaire (Agent, Phase, Progress)
-- Même raison d'être (tracker la progression)
-- MCP = nouveau canal, pas nouveau domaine
+MCP reuses the existing `reviewProgress` BC because:
+- Same vocabulary (Agent, Phase, Progress)
+- Same purpose (tracking progress)
+- MCP = new channel, not a new domain
 
 ---
 
-## Structure des fichiers
+## File Structure
 
 ```
 src/
 ├── entities/
-│   ├── progress/                      # EXISTANT - réutilisé tel quel
+│   ├── progress/                      # Existing - reused as-is
 │   │   ├── progress.type.ts           # ReviewProgress, AgentProgress, ReviewPhase
 │   │   ├── progress.factory.ts        # createInitialProgress()
 │   │   ├── progress.calculator.ts     # calculateOverallProgress()
 │   │   └── agentDefinition.type.ts    # AgentDefinition
 │   │
-│   └── reviewContext/                 # EXISTANT - réutilisé tel quel
+│   └── reviewContext/                 # Existing - reused as-is
 │       ├── reviewContext.ts           # ReviewContext, ReviewContextProgress
 │       ├── reviewContext.schema.ts    # Zod schemas
 │       └── reviewContext.gateway.ts   # Interface gateway
 │
 ├── usecases/
-│   └── mcp/                           # NOUVEAU - Use cases MCP
+│   └── mcp/                           # MCP use cases
 │       ├── getWorkflow.usecase.ts
 │       ├── startAgent.usecase.ts
 │       ├── completeAgent.usecase.ts
@@ -72,8 +72,8 @@ src/
 │
 ├── interface-adapters/
 │   ├── gateways/
-│   │   ├── reviewContext.fileSystem.gateway.ts  # EXISTANT
-│   │   └── reviewProgress.memory.gateway.ts     # NOUVEAU - état runtime + events
+│   │   ├── reviewContext.fileSystem.gateway.ts  # Existing
+│   │   └── reviewProgress.memory.gateway.ts     # Runtime state + events
 │   │
 │   └── controllers/
 │       └── mcp/                                  # MCP handlers
@@ -90,7 +90,7 @@ src/
 │   └── types.ts                       # MCP protocol types
 │
 ├── main/
-│   └── mcpDependencies.ts             # NOUVEAU - DI container MCP
+│   └── mcpDependencies.ts             # DI container for MCP
 │
 └── tests/
     └── units/
@@ -102,12 +102,12 @@ src/
 
 ---
 
-## Entités réutilisées (existantes)
+## Reused Entities (existing)
 
 ### `entities/progress/progress.type.ts`
 
 ```typescript
-// Déjà existant - ne pas modifier
+// Existing - do not modify
 export type AgentStatus = 'pending' | 'running' | 'completed' | 'failed'
 export type ReviewPhase = 'initializing' | 'agents-running' | 'synthesizing' | 'publishing' | 'completed'
 
@@ -130,12 +130,12 @@ export interface ReviewProgress {
 
 ---
 
-## Nouveau Gateway : ReviewProgressMemoryGateway
+## ReviewProgressMemoryGateway
 
-### Interface (à ajouter dans entities/progress/)
+### Interface (in entities/progress/)
 
 ```typescript
-// entities/progress/progress.gateway.ts (NOUVEAU)
+// entities/progress/progress.gateway.ts
 export interface ReviewProgressGateway {
   create(jobId: string, agents: AgentDefinition[]): ReviewProgress
   get(jobId: string): ReviewProgress | null
@@ -149,10 +149,10 @@ export interface ReviewProgressGateway {
 }
 ```
 
-### Implémentation
+### Implementation
 
 ```typescript
-// interface-adapters/gateways/reviewProgress.memory.gateway.ts (NOUVEAU)
+// interface-adapters/gateways/reviewProgress.memory.gateway.ts
 export class ReviewProgressMemoryGateway implements ReviewProgressGateway {
   private progressMap = new Map<string, ReviewProgress>()
   private jobMetadata = new Map<string, { localPath: string; mergeRequestId: string }>()
@@ -165,7 +165,7 @@ export class ReviewProgressMemoryGateway implements ReviewProgressGateway {
     return progress
   }
 
-  // ... autres méthodes
+  // ... other methods
 }
 ```
 
@@ -280,19 +280,19 @@ export class ReviewProgressMcpServer {
 
 ---
 
-## Intégration WebSocket (bridge)
+## WebSocket Integration (bridge)
 
 ```typescript
-// Dans main/mcpDependencies.ts
+// In main/mcpDependencies.ts
 export function createMcpDependencies(existingDeps: Dependencies) {
   const progressGateway = new ReviewProgressMemoryGateway()
 
   // Bridge: MCP → WebSocket broadcast
   progressGateway.onProgressChange((jobId, progress) => {
-    // Broadcast au dashboard via WebSocket existant
+    // Broadcast to dashboard via existing WebSocket
     broadcastProgress(jobId, progress)
 
-    // Sync vers fichier JSON pour backward compat
+    // Sync to JSON file for backward compatibility
     const metadata = progressGateway.getMetadata(jobId)
     if (metadata) {
       existingDeps.reviewContextGateway.updateProgress(
@@ -317,7 +317,7 @@ export function createMcpDependencies(existingDeps: Dependencies) {
 
 ---
 
-## Diagramme de séquence
+## Sequence Diagram
 
 ```
 ┌──────────┐     ┌───────────┐     ┌──────────────┐     ┌─────────────┐     ┌───────────┐
@@ -348,7 +348,7 @@ export function createMcpDependencies(existingDeps: Dependencies) {
 
 ---
 
-## Dépendance NPM requise
+## Required NPM Dependency
 
 ```bash
 yarn add @modelcontextprotocol/sdk
@@ -356,6 +356,6 @@ yarn add @modelcontextprotocol/sdk
 
 ---
 
-## Prochaines étapes
+## Next Steps
 
-Voir tickets dans `.claude/backlog/tickets/`
+See tickets in `.claude/backlog/tickets/`

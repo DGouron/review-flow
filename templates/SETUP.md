@@ -1,21 +1,21 @@
-# Configuration d'un Projet pour les Reviews Automatiques
+# Project Setup for Automatic Reviews
 
-## Structure Requise
+## Required Structure
 
-Dans votre projet, créez la structure suivante :
+In your project, create the following structure:
 
 ```
 .claude/
 ├── reviews/
-│   └── config.json          # Configuration des reviews
+│   └── config.json          # Review configuration
 └── skills/
-    └── review-{{type}}/     # Skill de review
+    └── review-{{type}}/     # Review skill
         └── SKILL.md
 ```
 
 ## 1. Configuration (`config.json`)
 
-Copiez `config.json.template` vers `.claude/reviews/config.json` :
+Copy `config.json.template` to `.claude/reviews/config.json`:
 
 ```json
 {
@@ -35,73 +35,73 @@ Copiez `config.json.template` vers `.claude/reviews/config.json` :
 
 ### Options
 
-| Champ | Type | Description |
+| Field | Type | Description |
 |-------|------|-------------|
-| `github` | boolean | Activer les webhooks GitHub |
-| `gitlab` | boolean | Activer les webhooks GitLab |
-| `defaultModel` | string | Modèle Claude (`opus`, `sonnet`, `haiku`) |
-| `reviewSkill` | string | Nom du skill de review principal |
-| `reviewFollowupSkill` | string | Nom du skill de followup |
-| `agents` | array | Liste des agents pour le dashboard |
+| `github` | boolean | Enable GitHub webhooks |
+| `gitlab` | boolean | Enable GitLab webhooks |
+| `defaultModel` | string | Claude model (`opus`, `sonnet`, `haiku`) |
+| `reviewSkill` | string | Main review skill name |
+| `reviewFollowupSkill` | string | Follow-up skill name |
+| `agents` | array | Agent list for the dashboard |
 
 ### Agents
 
-Les agents définissent ce qui s'affiche dans le dashboard :
+Agents define what appears on the dashboard:
 
 ```json
 {
-  "name": "clean-architecture",   // ID unique (kebab-case)
-  "displayName": "Clean Archi"    // Nom affiché
+  "name": "clean-architecture",   // Unique ID (kebab-case)
+  "displayName": "Clean Archi"    // Display name
 }
 ```
 
-**Important** : Les noms d'agents doivent correspondre aux marqueurs `[PROGRESS:name:status]` dans le skill.
+**Important**: Agent names must match the `[PROGRESS:name:status]` markers in the skill.
 
 ---
 
-## 2. Skill de Review (`SKILL.md`)
+## 2. Review Skill (`SKILL.md`)
 
-Copiez `SKILL.md.template` vers `.claude/skills/review-{{type}}/SKILL.md`.
+Copy `SKILL.md.template` to `.claude/skills/review-{{type}}/SKILL.md`.
 
-### Personnalisation
+### Customization
 
-1. Remplacez les variables `{{...}}`
-2. Définissez vos agents d'audit
-3. Adaptez les règles à votre projet
+1. Replace `{{...}}` variables
+2. Define your audit agents
+3. Adapt rules to your project
 
-### Marqueurs Obligatoires
+### Required Markers
 
-Pour le tracking temps réel, le skill doit émettre :
+For real-time tracking, the skill must emit:
 
 ```
-[PHASE:initializing]           # Démarrage
-[PHASE:agents-running]         # Agents en cours
-[PROGRESS:agent-name:started]  # Début d'un agent
-[PROGRESS:agent-name:completed]# Fin d'un agent
-[PHASE:synthesizing]           # Synthèse
-[PHASE:publishing]             # Publication
-[PHASE:completed]              # Terminé
+[PHASE:initializing]           # Starting
+[PHASE:agents-running]         # Agents running
+[PROGRESS:agent-name:started]  # Agent started
+[PROGRESS:agent-name:completed]# Agent completed
+[PHASE:synthesizing]           # Synthesis
+[PHASE:publishing]             # Publishing
+[PHASE:completed]              # Done
 
 [REVIEW_STATS:blocking=X:warnings=X:suggestions=X:score=X]
 ```
 
 ---
 
-## 3. Configuration Serveur
+## 3. Server Configuration
 
-Dans `~/.config/claude-review-automation/config.json` :
+In `~/.config/claude-review-automation/config.json`:
 
 ```json
 {
   "port": 3847,
-  "webhookSecretGitlab": "votre-secret-gitlab",
-  "webhookSecretGithub": "votre-secret-github",
-  "gitlabUser": "votre-username-gitlab",
-  "githubUser": "votre-username-github",
+  "webhookSecretGitlab": "your-gitlab-secret",
+  "webhookSecretGithub": "your-github-secret",
+  "gitlabUser": "your-gitlab-username",
+  "githubUser": "your-github-username",
   "repositories": [
     {
       "projectPath": "group/project-name",
-      "localPath": "/chemin/vers/projet",
+      "localPath": "/path/to/project",
       "skill": "review-front"
     }
   ]
@@ -114,29 +114,29 @@ Dans `~/.config/claude-review-automation/config.json` :
 
 ### GitLab
 
-1. Aller dans **Settings > Webhooks**
-2. URL : `http://votre-serveur:3847/webhooks/gitlab`
-3. Secret Token : votre `webhookSecretGitlab`
-4. Trigger : `Merge request events`
+1. Go to **Settings > Webhooks**
+2. URL: `http://your-server:3847/webhooks/gitlab`
+3. Secret Token: your `webhookSecretGitlab`
+4. Trigger: `Merge request events`
 
 ### GitHub
 
-1. Aller dans **Settings > Webhooks**
-2. URL : `http://votre-serveur:3847/webhooks/github`
-3. Secret : votre `webhookSecretGithub`
-4. Events : `Pull requests`
+1. Go to **Settings > Webhooks**
+2. URL: `http://your-server:3847/webhooks/github`
+3. Secret: your `webhookSecretGithub`
+4. Events: `Pull requests`
 
 ---
 
-## 5. Vérification
+## 5. Verification
 
-1. Assignez-vous comme reviewer sur une MR/PR
-2. Vérifiez le dashboard : http://localhost:3847
-3. La review devrait se déclencher automatiquement
+1. Assign yourself as reviewer on a MR/PR
+2. Check the dashboard: http://localhost:3847
+3. The review should trigger automatically
 
 ---
 
-## Exemples de Skills Spécialisés
+## Specialized Skill Examples
 
 ### Frontend (React/Vue/Angular)
 

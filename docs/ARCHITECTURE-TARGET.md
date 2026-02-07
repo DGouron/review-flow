@@ -1,6 +1,6 @@
-# Architecture Cible - Clean Architecture
+# Target Architecture - Clean Architecture
 
-## Vue d'ensemble des couches
+## Layer Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -224,7 +224,7 @@
 └───────────┘   └───────────┘                      └─────────────────────┘
 ```
 
-## Structure des dossiers cible
+## Target Folder Structure
 
 ```
 src/
@@ -295,7 +295,7 @@ src/
 Dependencies ALWAYS point inward (toward Entities).
 ```
 
-## Backlog de migration
+## Migration Backlog
 
 | Ticket | Description | Dependencies |
 |--------|-------------|--------------|
