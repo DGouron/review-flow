@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "review-progress": {
+      "command": "node",
+      "args": [
+        "/home/damien/Documents/Projets/claude-review-automation/dist/mcpServer.js"
+      ]
+    }
+  }
+}
