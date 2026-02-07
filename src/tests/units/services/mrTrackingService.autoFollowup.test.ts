@@ -5,7 +5,7 @@ import {
   setAutoFollowup,
   loadMrTracking,
   trackMrAssignment,
-  saveMrTracking,
+  type saveMrTracking,
 } from '../../../services/mrTrackingService.js';
 import { TrackedMrFactory, MrTrackingDataFactory } from '../../factories/trackedMr.factory.js';
 
@@ -56,7 +56,7 @@ describe('autoFollowup toggle', () => {
       const rawData = MrTrackingDataFactory.withMrs([legacyMr]);
       const rawJson = JSON.parse(JSON.stringify(rawData));
       for (const mr of rawJson.mrs) {
-        delete mr.autoFollowup;
+        mr.autoFollowup = undefined;
       }
       writeFileSync(trackingPath, JSON.stringify(rawJson, null, 2));
 

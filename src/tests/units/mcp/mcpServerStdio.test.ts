@@ -126,9 +126,9 @@ describe('mcpServerStdio context loading', () => {
     it('should return null when env vars are missing', () => {
       const originalEnv = process.env;
       process.env = { ...originalEnv };
-      delete process.env.MCP_JOB_ID;
-      delete process.env.MCP_LOCAL_PATH;
-      delete process.env.MCP_MERGE_REQUEST_ID;
+      process.env.MCP_JOB_ID = undefined;
+      process.env.MCP_LOCAL_PATH = undefined;
+      process.env.MCP_MERGE_REQUEST_ID = undefined;
 
       const result = getJobContextFromEnv();
 
