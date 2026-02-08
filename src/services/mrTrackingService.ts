@@ -7,46 +7,19 @@ import type { AssignmentInfo } from '../entities/tracking/assignmentInfo.js';
 import type { TrackedMr } from '../entities/tracking/trackedMr.js';
 import type { MrTrackingData, ProjectStats } from '../entities/tracking/mrTrackingData.js';
 import { createEmptyStats } from '../entities/tracking/mrTrackingData.js';
+import { ProjectStatsCalculator } from '../interface-adapters/services/projectStats.calculator.js';
 export { createTrackedMrId } from '../entities/tracking/trackedMr.js';
 
 export type { ReviewEvent, AssignmentInfo, TrackedMr, MrTrackingData, ProjectStats };
+
+const statsCalculator = new ProjectStatsCalculator();
 
 function getTrackingPath(projectPath: string): string {
   return join(projectPath, '.claude', 'reviews', 'mr-tracking.json');
 }
 
 function recalculateStats(data: MrTrackingData): void {
-  const mrs = data.mrs;
-
-  data.stats.totalMrs = mrs.length;
-  data.stats.totalReviews = mrs.reduce((sum, mr) => sum + mr.totalReviews, 0);
-  data.stats.totalFollowups = mrs.reduce((sum, mr) => sum + mr.totalFollowups, 0);
-
-  if (mrs.length > 0) {
-    data.stats.averageReviewsPerMr = (data.stats.totalReviews + data.stats.totalFollowups) / mrs.length;
-  }
-
-  // Calculate average time to approval
-  const approvedMrs = mrs.filter((mr) => mr.approvedAt && mr.createdAt);
-  if (approvedMrs.length > 0) {
-    const totalTime = approvedMrs.reduce((sum, mr) => {
-      const created = new Date(mr.createdAt).getTime();
-      const approved = new Date(mr.approvedAt!).getTime();
-      return sum + (approved - created);
-    }, 0);
-    data.stats.averageTimeToApproval = totalTime / approvedMrs.length;
-  }
-
-  // Top assigners
-  const assignerCounts = new Map<string, number>();
-  for (const mr of mrs) {
-    const username = mr.assignment.username;
-    assignerCounts.set(username, (assignerCounts.get(username) || 0) + 1);
-  }
-  data.stats.topAssigners = Array.from(assignerCounts.entries())
-    .map(([username, count]) => ({ username, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
+  data.stats = statsCalculator.compute(data.mrs);
 }
 
 export function loadMrTracking(projectPath: string): MrTrackingData {
