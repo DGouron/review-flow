@@ -37,6 +37,7 @@ export async function registerRoutes(
 
   await app.register(reviewRoutes, {
     reviewFileGateway: deps.reviewFileGateway,
+    reviewRequestTrackingGateway: deps.reviewRequestTrackingGateway,
     getRepositories: () => deps.config.repositories,
     queuePort: { getJobStatus, cancelJob },
     logger: deps.logger,
@@ -53,6 +54,7 @@ export async function registerRoutes(
 
   await app.register(mrTrackingAdvancedRoutes, {
     getRepositories: () => deps.config.repositories,
+    reviewRequestTrackingGateway: deps.reviewRequestTrackingGateway,
     logger: deps.logger,
   });
 
@@ -63,11 +65,11 @@ export async function registerRoutes(
   await registerWebSocketRoutes(app, deps);
 
   app.post('/webhooks/gitlab', async (request, reply) => {
-    await handleGitLabWebhook(request, reply, deps.logger);
+    await handleGitLabWebhook(request, reply, deps.logger, deps.reviewRequestTrackingGateway);
   });
 
   app.post('/webhooks/github', async (request, reply) => {
-    await handleGitHubWebhook(request, reply, deps.logger);
+    await handleGitHubWebhook(request, reply, deps.logger, deps.reviewRequestTrackingGateway);
   });
 
   app.get('/', async (_request, reply) => {

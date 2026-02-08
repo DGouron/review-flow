@@ -1,10 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { ReviewRequestTrackingGateway } from '../../gateways/reviewRequestTracking.gateway.js';
-import {
-  getPendingFixMrs,
-  getPendingApprovalMrs,
-  approveMr,
-} from '../../../services/mrTrackingService.js';
+import { TransitionStateUseCase } from '../../../usecases/tracking/transitionState.usecase.js';
 import { logInfo, logError } from '../../../services/logService.js';
 
 interface MrTrackingRoutesOptions {
@@ -26,8 +22,10 @@ function validateProjectPath(path: string | undefined): { valid: false; error: s
 
 export const mrTrackingRoutes: FastifyPluginAsync<MrTrackingRoutesOptions> = async (
   fastify,
-  _opts
+  opts
 ) => {
+  const { reviewRequestTrackingGateway } = opts;
+
   fastify.get('/api/mr-tracking', async (request, reply) => {
     const query = request.query as { path?: string };
     const validation = validateProjectPath(query.path);
@@ -38,8 +36,8 @@ export const mrTrackingRoutes: FastifyPluginAsync<MrTrackingRoutesOptions> = asy
     }
 
     try {
-      const pendingFix = getPendingFixMrs(validation.path);
-      const pendingApproval = getPendingApprovalMrs(validation.path);
+      const pendingFix = reviewRequestTrackingGateway.getByState(validation.path, 'pending-fix');
+      const pendingApproval = reviewRequestTrackingGateway.getByState(validation.path, 'pending-approval');
       return {
         success: true,
         pendingFix,
@@ -67,7 +65,12 @@ export const mrTrackingRoutes: FastifyPluginAsync<MrTrackingRoutesOptions> = asy
       return { success: false, error: validation.error };
     }
 
-    const approved = approveMr(validation.path, mrId);
+    const transitionState = new TransitionStateUseCase(reviewRequestTrackingGateway);
+    const approved = transitionState.execute({
+      projectPath: validation.path,
+      mrId,
+      targetState: 'approved',
+    });
 
     if (approved) {
       logInfo('MR approuvée', { mrId });

@@ -27,12 +27,12 @@ describe('ReviewRequestTrackingGateway', () => {
   });
 
   describe('getByNumber', () => {
-    it('should return undefined when no tracking data exists', () => {
+    it('should return null when no tracking data exists', () => {
       const gateway = new InMemoryReviewRequestTrackingGateway();
 
       const result = gateway.getByNumber('/project', 42, 'gitlab');
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
 
     it('should find tracked MR by number and platform', () => {
@@ -43,7 +43,7 @@ describe('ReviewRequestTrackingGateway', () => {
 
       const result = gateway.getByNumber('/my/project', 42, 'gitlab');
 
-      expect(result).toBeDefined();
+      expect(result).not.toBeNull();
       expect(result?.mrNumber).toBe(42);
       expect(result?.platform).toBe('gitlab');
     });
@@ -56,7 +56,7 @@ describe('ReviewRequestTrackingGateway', () => {
 
       const result = gateway.getByNumber('/my/project', 42, 'github');
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
   });
 
@@ -69,11 +69,11 @@ describe('ReviewRequestTrackingGateway', () => {
 
       const result = gateway.getById('/my/project', 'mr-unique-123');
 
-      expect(result).toBeDefined();
+      expect(result).not.toBeNull();
       expect(result?.id).toBe('mr-unique-123');
     });
 
-    it('should return undefined for unknown id', () => {
+    it('should return null for unknown id', () => {
       const gateway = new InMemoryReviewRequestTrackingGateway();
       const trackedMr = TrackedMrFactory.create({ id: 'mr-123' });
       const trackingData = MrTrackingDataFactory.withMrs([trackedMr]);
@@ -81,7 +81,7 @@ describe('ReviewRequestTrackingGateway', () => {
 
       const result = gateway.getById('/my/project', 'unknown-id');
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
   });
 
@@ -182,6 +182,115 @@ describe('ReviewRequestTrackingGateway', () => {
     });
   });
 
+  describe('getByState', () => {
+    it('should return MRs matching the given state', () => {
+      const gateway = new InMemoryReviewRequestTrackingGateway();
+      const pendingFix = TrackedMrFactory.create({ id: 'mr-1', state: 'pending-fix' });
+      const pendingReview = TrackedMrFactory.create({ id: 'mr-2', state: 'pending-review' });
+      const anotherPendingFix = TrackedMrFactory.create({ id: 'mr-3', state: 'pending-fix' });
+      const trackingData = MrTrackingDataFactory.withMrs([pendingFix, pendingReview, anotherPendingFix]);
+      gateway.saveTracking('/my/project', trackingData);
+
+      const result = gateway.getByState('/my/project', 'pending-fix');
+
+      expect(result).toHaveLength(2);
+      expect(result.map((mr) => mr.id)).toEqual(['mr-1', 'mr-3']);
+    });
+
+    it('should return empty array when no MRs match', () => {
+      const gateway = new InMemoryReviewRequestTrackingGateway();
+      const mr = TrackedMrFactory.create({ state: 'pending-review' });
+      const trackingData = MrTrackingDataFactory.withMrs([mr]);
+      gateway.saveTracking('/my/project', trackingData);
+
+      const result = gateway.getByState('/my/project', 'approved');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array when no tracking data exists', () => {
+      const gateway = new InMemoryReviewRequestTrackingGateway();
+
+      const result = gateway.getByState('/my/project', 'pending-fix');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getActiveMrs', () => {
+    it('should return MRs that are not merged or closed', () => {
+      const gateway = new InMemoryReviewRequestTrackingGateway();
+      const active = TrackedMrFactory.create({ id: 'mr-1', state: 'pending-fix' });
+      const merged = TrackedMrFactory.create({ id: 'mr-2', state: 'merged' });
+      const closed = TrackedMrFactory.create({ id: 'mr-3', state: 'closed' });
+      const trackingData = MrTrackingDataFactory.withMrs([active, merged, closed]);
+      gateway.saveTracking('/my/project', trackingData);
+
+      const result = gateway.getActiveMrs('/my/project');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('mr-1');
+    });
+
+    it('should return empty array when no tracking data exists', () => {
+      const gateway = new InMemoryReviewRequestTrackingGateway();
+
+      const result = gateway.getActiveMrs('/my/project');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('remove', () => {
+    it('should remove MR from tracking', () => {
+      const gateway = new InMemoryReviewRequestTrackingGateway();
+      const mr = TrackedMrFactory.create({ id: 'mr-to-remove' });
+      gateway.create('/my/project', mr);
+
+      const removed = gateway.remove('/my/project', 'mr-to-remove');
+
+      expect(removed).toBe(true);
+      expect(gateway.getById('/my/project', 'mr-to-remove')).toBeNull();
+    });
+
+    it('should return false when MR does not exist', () => {
+      const gateway = new InMemoryReviewRequestTrackingGateway();
+
+      const removed = gateway.remove('/my/project', 'nonexistent');
+
+      expect(removed).toBe(false);
+    });
+
+    it('should return false when no tracking data exists', () => {
+      const gateway = new InMemoryReviewRequestTrackingGateway();
+
+      const removed = gateway.remove('/unknown/project', 'mr-1');
+
+      expect(removed).toBe(false);
+    });
+  });
+
+  describe('archive', () => {
+    it('should remove MR from active list', () => {
+      const gateway = new InMemoryReviewRequestTrackingGateway();
+      const mr = TrackedMrFactory.create({ id: 'mr-to-archive' });
+      gateway.create('/my/project', mr);
+
+      const archived = gateway.archive('/my/project', 'mr-to-archive');
+
+      expect(archived).toBe(true);
+      expect(gateway.getById('/my/project', 'mr-to-archive')).toBeNull();
+    });
+
+    it('should return false when MR does not exist', () => {
+      const gateway = new InMemoryReviewRequestTrackingGateway();
+
+      const archived = gateway.archive('/my/project', 'nonexistent');
+
+      expect(archived).toBe(false);
+    });
+  });
+
   describe('recordPush', () => {
     it('should update lastPushAt and return the MR', () => {
       const gateway = new InMemoryReviewRequestTrackingGateway();
@@ -194,16 +303,16 @@ describe('ReviewRequestTrackingGateway', () => {
 
       const result = gateway.recordPush('/my/project', 42, 'gitlab');
 
-      expect(result).toBeDefined();
+      expect(result).not.toBeNull();
       expect(result?.lastPushAt).not.toBeNull();
     });
 
-    it('should return undefined for unknown MR', () => {
+    it('should return null for unknown MR', () => {
       const gateway = new InMemoryReviewRequestTrackingGateway();
 
       const result = gateway.recordPush('/my/project', 999, 'gitlab');
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
   });
 });

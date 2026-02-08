@@ -2,7 +2,9 @@ import type {
   ReviewRequestTrackingGateway,
   Platform,
 } from '../../interface-adapters/gateways/reviewRequestTracking.gateway.js';
-import type { MrTrackingData, TrackedMr, ReviewEvent } from '../../services/mrTrackingService.js';
+import type { MrTrackingData } from '../../entities/tracking/mrTrackingData.js';
+import type { TrackedMr } from '../../entities/tracking/trackedMr.js';
+import type { ReviewEvent } from '../../entities/tracking/reviewEvent.js';
 
 export class InMemoryReviewRequestTrackingGateway implements ReviewRequestTrackingGateway {
   private storage = new Map<string, MrTrackingData>();
@@ -15,24 +17,24 @@ export class InMemoryReviewRequestTrackingGateway implements ReviewRequestTracki
     this.storage.set(projectPath, data);
   }
 
-  getById(projectPath: string, reviewRequestId: string): TrackedMr | undefined {
+  getById(projectPath: string, reviewRequestId: string): TrackedMr | null {
     const data = this.storage.get(projectPath);
-    if (!data) return undefined;
+    if (!data) return null;
 
-    return data.mrs.find((mr) => mr.id === reviewRequestId);
+    return data.mrs.find((mr) => mr.id === reviewRequestId) ?? null;
   }
 
   getByNumber(
     projectPath: string,
     reviewRequestNumber: number,
     platform: Platform
-  ): TrackedMr | undefined {
+  ): TrackedMr | null {
     const data = this.storage.get(projectPath);
-    if (!data) return undefined;
+    if (!data) return null;
 
     return data.mrs.find(
       (mr) => mr.mrNumber === reviewRequestNumber && mr.platform === platform
-    );
+    ) ?? null;
   }
 
   create(projectPath: string, reviewRequest: TrackedMr): void {
@@ -74,6 +76,38 @@ export class InMemoryReviewRequestTrackingGateway implements ReviewRequestTracki
     this.storage.set(projectPath, data);
   }
 
+  getByState(projectPath: string, state: TrackedMr['state']): TrackedMr[] {
+    const data = this.storage.get(projectPath);
+    if (!data) return [];
+
+    return data.mrs.filter((mr) => mr.state === state);
+  }
+
+  getActiveMrs(projectPath: string): TrackedMr[] {
+    const data = this.storage.get(projectPath);
+    if (!data) return [];
+
+    return data.mrs.filter((mr) => mr.state !== 'merged' && mr.state !== 'closed');
+  }
+
+  remove(projectPath: string, reviewRequestId: string): boolean {
+    const data = this.storage.get(projectPath);
+    if (!data) return false;
+
+    const index = data.mrs.findIndex((mr) => mr.id === reviewRequestId);
+    if (index === -1) return false;
+
+    data.mrs.splice(index, 1);
+    data.stats.totalMrs = data.mrs.length;
+    data.lastUpdated = new Date().toISOString();
+    this.storage.set(projectPath, data);
+    return true;
+  }
+
+  archive(projectPath: string, reviewRequestId: string): boolean {
+    return this.remove(projectPath, reviewRequestId);
+  }
+
   recordReviewEvent(
     projectPath: string,
     reviewRequestId: string,
@@ -109,14 +143,14 @@ export class InMemoryReviewRequestTrackingGateway implements ReviewRequestTracki
     projectPath: string,
     reviewRequestNumber: number,
     platform: Platform
-  ): TrackedMr | undefined {
+  ): TrackedMr | null {
     const data = this.storage.get(projectPath);
-    if (!data) return undefined;
+    if (!data) return null;
 
     const mr = data.mrs.find(
       (m) => m.mrNumber === reviewRequestNumber && m.platform === platform
     );
-    if (!mr) return undefined;
+    if (!mr) return null;
 
     mr.lastPushAt = new Date().toISOString();
     data.lastUpdated = new Date().toISOString();

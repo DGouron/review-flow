@@ -5,12 +5,9 @@ import { enqueueReview, createJobId, updateJobProgress } from '../../../queue/re
 import { loadProjectConfig, getFollowupAgents } from '../../../config/projectConfig.js';
 import { DEFAULT_FOLLOWUP_AGENTS } from '../../../entities/progress/agentDefinition.type.js';
 import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js';
-import {
-  syncAllThreads,
-  syncSingleMrThreads,
-  loadMrTracking,
-  recordReviewCompletion,
-} from '../../../services/mrTrackingService.js';
+import type { ReviewRequestTrackingGateway } from '../../gateways/reviewRequestTracking.gateway.js';
+import { RecordReviewCompletionUseCase } from '../../../usecases/tracking/recordReviewCompletion.usecase.js';
+import { SyncThreadsUseCase } from '../../../usecases/tracking/syncThreads.usecase.js';
 import { parseReviewOutput } from '../../../services/statsService.js';
 import { parseThreadActions } from '../../../services/threadActionsParser.js';
 import { executeThreadActions, defaultCommandExecutor } from '../../../services/threadActionsExecutor.js';
@@ -24,6 +21,7 @@ import type { Logger } from 'pino';
 
 interface MrTrackingAdvancedRoutesOptions {
   getRepositories: () => RepositoryConfig[];
+  reviewRequestTrackingGateway: ReviewRequestTrackingGateway;
   logger: Logger;
 }
 
@@ -44,7 +42,7 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
   fastify,
   opts
 ) => {
-  const { getRepositories, logger } = opts;
+  const { getRepositories, reviewRequestTrackingGateway, logger } = opts;
 
   fastify.post('/api/mr-tracking/followup', async (request, reply) => {
     const body = request.body as { mrId?: string; projectPath?: string };
@@ -208,14 +206,16 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
         }
 
         // Sync threads to get real state after followup resolves threads
-        const updatedMr = syncSingleMrThreads(job.localPath, mrId);
+        const syncUseCase = new SyncThreadsUseCase(reviewRequestTrackingGateway, threadFetchGateway);
+        const updatedMr = syncUseCase.execute({ projectPath: job.localPath, mrId });
 
         // Record followup completion with parsed stats
         // threadsClosed comes from THREAD_RESOLVE markers parsed from output
-        recordReviewCompletion(
-          job.localPath,
+        const recordCompletion = new RecordReviewCompletionUseCase(reviewRequestTrackingGateway);
+        recordCompletion.execute({
+          projectPath: job.localPath,
           mrId,
-          {
+          reviewData: {
             type: 'followup',
             durationMs: result.durationMs,
             score: parsed.score,
@@ -224,8 +224,8 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
             suggestions: parsed.suggestions,
             threadsOpened: 0,
             threadsClosed: threadResolveCount,
-          }
-        );
+          },
+        });
 
         logger.info(
           {
@@ -273,8 +273,8 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
       return { success: false, error: validation.error };
     }
 
-    const { setAutoFollowup } = await import('../../../services/mrTrackingService.js');
-    const result = setAutoFollowup(validation.path, mrId, enabled);
+    reviewRequestTrackingGateway.update(validation.path, mrId, { autoFollowup: enabled });
+    const result = reviewRequestTrackingGateway.getById(validation.path, mrId);
 
     if (!result) {
       reply.code(404);
@@ -297,20 +297,40 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
 
     try {
       if (mrId) {
-        const mr = syncSingleMrThreads(validation.path, mrId);
-        if (mr) {
-          logInfo('MR/PR synced', { mrId, openThreads: mr.openThreads, state: mr.state });
-          return { success: true, mr };
-        } else {
+        const mrData = reviewRequestTrackingGateway.getById(validation.path, mrId);
+        if (!mrData) {
           reply.code(404);
           return { success: false, error: 'MR/PR not found' };
         }
-      } else {
-        await syncAllThreads(validation.path);
-        const data = loadMrTracking(validation.path);
-        logInfo('All MRs/PRs synced', { count: data.mrs.length });
-        return { success: true, mrs: data.mrs };
+        const syncThreadFetchGateway = mrData.platform === 'github'
+          ? new GitHubThreadFetchGateway(defaultGitHubExecutor)
+          : new GitLabThreadFetchGateway(defaultGitLabExecutor);
+        const syncUseCase = new SyncThreadsUseCase(reviewRequestTrackingGateway, syncThreadFetchGateway);
+        const mr = syncUseCase.execute({ projectPath: validation.path, mrId });
+        if (mr) {
+          logInfo('MR/PR synced', { mrId, openThreads: mr.openThreads, state: mr.state });
+          return { success: true, mr };
+        }
+        reply.code(404);
+        return { success: false, error: 'MR/PR not found' };
       }
+
+      const activeMrs = reviewRequestTrackingGateway.getActiveMrs(validation.path);
+      for (const activeMr of activeMrs) {
+        try {
+          const syncThreadFetchGateway = activeMr.platform === 'github'
+            ? new GitHubThreadFetchGateway(defaultGitHubExecutor)
+            : new GitLabThreadFetchGateway(defaultGitLabExecutor);
+          const syncUseCase = new SyncThreadsUseCase(reviewRequestTrackingGateway, syncThreadFetchGateway);
+          syncUseCase.execute({ projectPath: validation.path, mrId: activeMr.id });
+        } catch {
+          // Ignore individual MR sync failures
+        }
+      }
+      const data = reviewRequestTrackingGateway.loadTracking(validation.path);
+      const mrs = data?.mrs ?? [];
+      logInfo('All MRs/PRs synced', { count: mrs.length });
+      return { success: true, mrs };
     } catch (err) {
       const error = err as Error;
       logError('Sync failed', { error: error.message });

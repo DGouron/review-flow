@@ -38,17 +38,6 @@ vi.mock('../../../../../queue/reviewQueue.js', () => ({
   cancelJob: vi.fn(),
 }));
 
-vi.mock('../../../../../services/mrTrackingService.js', () => ({
-  trackMrAssignment: vi.fn(),
-  recordReviewCompletion: vi.fn(),
-  recordMrPush: vi.fn(),
-  needsFollowupReview: vi.fn(() => false),
-  syncSingleMrThreads: vi.fn(),
-  archiveMr: vi.fn(),
-  markMrMerged: vi.fn(() => true),
-  approveMr: vi.fn(() => true),
-}));
-
 vi.mock('../../../../../claude/invoker.js', () => ({
   invokeClaudeReview: vi.fn(),
   sendNotification: vi.fn(),
@@ -61,6 +50,8 @@ vi.mock('../../../../../main/websocket.js', () => ({
 
 vi.mock('../../../../../config/projectConfig.js', () => ({
   loadProjectConfig: vi.fn(() => null),
+  getProjectAgents: vi.fn(() => null),
+  getFollowupAgents: vi.fn(() => null),
 }));
 
 vi.mock('../../../../../../interface-adapters/gateways/reviewContext.fileSystem.gateway.js', () => ({
@@ -83,10 +74,37 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { handleGitLabWebhook } from '../../../../../interface-adapters/controllers/webhook/gitlab.controller.js';
 import { GitLabEventFactory } from '../../../../factories/gitLabEvent.factory.js';
 import { createStubLogger } from '../../../../stubs/logger.stub.js';
-import * as mrTrackingService from '../../../../../services/mrTrackingService.js';
+import { TrackedMrFactory } from '../../../../factories/trackedMr.factory.js';
+import type { TrackedMr } from '../../../../../entities/tracking/trackedMr.js';
+
+function createMockTrackingGateway() {
+  const basicMr = TrackedMrFactory.create({
+    id: 'gitlab-test-org/test-project-42',
+    mrNumber: 42,
+    platform: 'gitlab',
+    project: 'test-org/test-project',
+  });
+
+  return {
+    getById: vi.fn((): TrackedMr | null => basicMr),
+    getByNumber: vi.fn(() => null),
+    create: vi.fn(),
+    update: vi.fn(),
+    getByState: vi.fn(() => []),
+    getActiveMrs: vi.fn(() => []),
+    remove: vi.fn(() => true),
+    archive: vi.fn(() => true),
+    recordReviewEvent: vi.fn(),
+    recordPush: vi.fn(() => null),
+    loadTracking: vi.fn(() => null),
+    saveTracking: vi.fn(),
+  };
+}
 
 describe('handleGitLabWebhook', () => {
   let mockReply: FastifyReply;
+  let mockGateway: ReturnType<typeof createMockTrackingGateway>;
+
   const logger = createStubLogger();
 
   beforeEach(() => {
@@ -95,6 +113,7 @@ describe('handleGitLabWebhook', () => {
       status: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     } as unknown as FastifyReply;
+    mockGateway = createMockTrackingGateway();
   });
 
   afterEach(() => {
@@ -102,49 +121,52 @@ describe('handleGitLabWebhook', () => {
   });
 
   describe('when MR is merged', () => {
-    it('should call markMrMerged to update tracking state', async () => {
+    it('should transition state to merged via gateway', async () => {
       const event = GitLabEventFactory.createMergedMr();
       const request = {
         body: event,
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger);
+      await handleGitLabWebhook(request, mockReply, logger, mockGateway);
 
-      expect(mrTrackingService.markMrMerged).toHaveBeenCalledWith(
+      expect(mockGateway.update).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
-        'gitlab-test-org/test-project-42'
+        'gitlab-test-org/test-project-42',
+        expect.objectContaining({ state: 'merged' })
       );
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'merged' })
       );
-    })
+    });
   });
 
   describe('when MR is approved', () => {
-    it('should call approveMr to update tracking state', async () => {
+    it('should transition state to approved via gateway', async () => {
       const event = GitLabEventFactory.createApprovedMr();
       const request = {
         body: event,
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger);
+      await handleGitLabWebhook(request, mockReply, logger, mockGateway);
 
-      expect(mrTrackingService.approveMr).toHaveBeenCalledWith(
+      expect(mockGateway.update).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
-        'gitlab-test-org/test-project-42'
+        'gitlab-test-org/test-project-42',
+        expect.objectContaining({ state: 'approved' })
       );
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'approved' })
       );
-    })
+    });
   });
 
   describe('assignedBy attribution', () => {
     it('should use MR assignee as assignedBy when assignee is present', async () => {
+      mockGateway.getById.mockReturnValue(null);
       const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       event.assignees = [{ username: 'mr-owner', name: 'MR Owner' }];
       event.user = { username: 'reviewer-who-added', name: 'Reviewer Who Added' };
@@ -154,19 +176,21 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger);
+      await handleGitLabWebhook(request, mockReply, logger, mockGateway);
 
-      expect(mrTrackingService.trackMrAssignment).toHaveBeenCalledWith(
+      expect(mockGateway.create).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
-        expect.any(Object),
         expect.objectContaining({
-          username: 'mr-owner',
-          displayName: 'MR Owner',
+          assignment: expect.objectContaining({
+            username: 'mr-owner',
+            displayName: 'MR Owner',
+          }),
         })
       );
     });
 
     it('should fallback to event.user when no assignee is present', async () => {
+      mockGateway.getById.mockReturnValue(null);
       const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       event.assignees = [];
       event.user = { username: 'webhook-trigger', name: 'Webhook Trigger' };
@@ -176,19 +200,21 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger);
+      await handleGitLabWebhook(request, mockReply, logger, mockGateway);
 
-      expect(mrTrackingService.trackMrAssignment).toHaveBeenCalledWith(
+      expect(mockGateway.create).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
-        expect.any(Object),
         expect.objectContaining({
-          username: 'webhook-trigger',
-          displayName: 'Webhook Trigger',
+          assignment: expect.objectContaining({
+            username: 'webhook-trigger',
+            displayName: 'Webhook Trigger',
+          }),
         })
       );
     });
 
     it('should use first assignee when multiple assignees exist', async () => {
+      mockGateway.getById.mockReturnValue(null);
       const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       event.assignees = [
         { username: 'primary-owner', name: 'Primary Owner' },
@@ -201,19 +227,21 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger);
+      await handleGitLabWebhook(request, mockReply, logger, mockGateway);
 
-      expect(mrTrackingService.trackMrAssignment).toHaveBeenCalledWith(
+      expect(mockGateway.create).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
-        expect.any(Object),
         expect.objectContaining({
-          username: 'primary-owner',
-          displayName: 'Primary Owner',
+          assignment: expect.objectContaining({
+            username: 'primary-owner',
+            displayName: 'Primary Owner',
+          }),
         })
       );
     });
 
     it('should fallback to event.user when assignees field is undefined', async () => {
+      mockGateway.getById.mockReturnValue(null);
       const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       (event as Record<string, unknown>).assignees = undefined;
       event.user = { username: 'fallback-user', name: 'Fallback User' };
@@ -223,14 +251,15 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger);
+      await handleGitLabWebhook(request, mockReply, logger, mockGateway);
 
-      expect(mrTrackingService.trackMrAssignment).toHaveBeenCalledWith(
+      expect(mockGateway.create).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
-        expect.any(Object),
         expect.objectContaining({
-          username: 'fallback-user',
-          displayName: 'Fallback User',
+          assignment: expect.objectContaining({
+            username: 'fallback-user',
+            displayName: 'Fallback User',
+          }),
         })
       );
     });

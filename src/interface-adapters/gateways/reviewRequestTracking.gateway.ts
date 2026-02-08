@@ -1,4 +1,6 @@
-import type { MrTrackingData, TrackedMr, ReviewEvent } from '../../services/mrTrackingService.js';
+import type { MrTrackingData } from '../../entities/tracking/mrTrackingData.js';
+import type { TrackedMr } from '../../entities/tracking/trackedMr.js';
+import type { ReviewEvent } from '../../entities/tracking/reviewEvent.js';
 
 export type Platform = 'gitlab' | 'github';
 
@@ -6,12 +8,12 @@ export interface ReviewRequestTrackingGateway {
   loadTracking(projectPath: string): MrTrackingData | null;
   saveTracking(projectPath: string, data: MrTrackingData): void;
 
-  getById(projectPath: string, reviewRequestId: string): TrackedMr | undefined;
+  getById(projectPath: string, reviewRequestId: string): TrackedMr | null;
   getByNumber(
     projectPath: string,
     reviewRequestNumber: number,
     platform: Platform
-  ): TrackedMr | undefined;
+  ): TrackedMr | null;
 
   create(projectPath: string, reviewRequest: TrackedMr): void;
   update(
@@ -19,6 +21,11 @@ export interface ReviewRequestTrackingGateway {
     reviewRequestId: string,
     updates: Partial<TrackedMr>
   ): void;
+
+  getByState(projectPath: string, state: TrackedMr['state']): TrackedMr[];
+  getActiveMrs(projectPath: string): TrackedMr[];
+  remove(projectPath: string, reviewRequestId: string): boolean;
+  archive(projectPath: string, reviewRequestId: string): boolean;
 
   recordReviewEvent(
     projectPath: string,
@@ -29,5 +36,5 @@ export interface ReviewRequestTrackingGateway {
     projectPath: string,
     reviewRequestNumber: number,
     platform: Platform
-  ): TrackedMr | undefined;
+  ): TrackedMr | null;
 }
