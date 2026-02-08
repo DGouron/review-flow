@@ -4,26 +4,13 @@ import type {
   ReviewRequestTrackingGateway,
   Platform,
 } from '../reviewRequestTracking.gateway.js';
-import type { MrTrackingData } from '../../../entities/tracking/mrTrackingData.js';
+import { createEmptyStats, type MrTrackingData } from '../../../entities/tracking/mrTrackingData.js';
 import type { TrackedMr } from '../../../entities/tracking/trackedMr.js';
 import type { ReviewEvent } from '../../../entities/tracking/reviewEvent.js';
-import { ProjectStatsCalculator } from '../../services/projectStats.calculator.js';
-
-const statsCalculator = new ProjectStatsCalculator();
+import type { ProjectStatsCalculator } from '../../services/projectStats.calculator.js';
 
 function getTrackingPath(projectPath: string): string {
   return join(projectPath, '.claude', 'reviews', 'mr-tracking.json');
-}
-
-function createEmptyStats(): MrTrackingData['stats'] {
-  return {
-    totalMrs: 0,
-    totalReviews: 0,
-    totalFollowups: 0,
-    averageReviewsPerMr: 0,
-    averageTimeToApproval: null,
-    topAssigners: [],
-  };
 }
 
 function createEmptyTrackingData(): MrTrackingData {
@@ -35,6 +22,8 @@ function createEmptyTrackingData(): MrTrackingData {
 }
 
 export class FileSystemReviewRequestTrackingGateway implements ReviewRequestTrackingGateway {
+  constructor(private readonly statsCalculator: ProjectStatsCalculator) {}
+
   loadTracking(projectPath: string): MrTrackingData | null {
     const trackingPath = getTrackingPath(projectPath);
 
@@ -67,7 +56,7 @@ export class FileSystemReviewRequestTrackingGateway implements ReviewRequestTrac
       mkdirSync(dir, { recursive: true });
     }
 
-    data.stats = statsCalculator.compute(data.mrs);
+    data.stats = this.statsCalculator.compute(data.mrs);
     data.lastUpdated = new Date().toISOString();
     writeFileSync(trackingPath, JSON.stringify(data, null, 2), 'utf-8');
   }

@@ -36,8 +36,9 @@ export class ProjectStatsCalculator {
     if (approvedMrs.length === 0) return null;
 
     const totalTime = approvedMrs.reduce((sum, mr) => {
+      if (!mr.approvedAt) return sum;
       const created = new Date(mr.createdAt).getTime();
-      const approved = new Date(mr.approvedAt!).getTime();
+      const approved = new Date(mr.approvedAt).getTime();
       return sum + (approved - created);
     }, 0);
 

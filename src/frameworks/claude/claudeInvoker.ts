@@ -10,6 +10,7 @@ import { getModel } from '../../services/runtimeSettings.js';
 import { getProjectAgents, getFollowupAgents } from '../../config/projectConfig.js';
 import { addReviewStats } from '../../services/statsService.js';
 import { FileSystemReviewRequestTrackingGateway } from '../../interface-adapters/gateways/fileSystem/reviewRequestTracking.fileSystem.js';
+import { ProjectStatsCalculator } from '../../interface-adapters/services/projectStats.calculator.js';
 import { resolveClaudePath } from '../../shared/services/claudePathResolver.js';
 import { getJobContextFilePath } from '../../shared/services/mcpJobContext.js';
 
@@ -479,7 +480,7 @@ export async function invokeClaudeReview(
         try {
           // Look up assignor from MR tracking
           const mrId = `${job.platform}-${job.projectPath}-${job.mrNumber}`;
-          const trackingGateway = new FileSystemReviewRequestTrackingGateway();
+          const trackingGateway = new FileSystemReviewRequestTrackingGateway(new ProjectStatsCalculator());
           const mrDetails = trackingGateway.getById(job.localPath, mrId);
           const assignedBy = mrDetails?.assignment?.username;
 
