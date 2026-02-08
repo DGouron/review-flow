@@ -32,10 +32,12 @@ describe('parseCliArgs', () => {
     expect(result.command).toBe('help');
   });
 
-  it('should detect explicit start command', () => {
+  it('should default to start for unknown args', () => {
     const result = parseCliArgs(['start']);
-
     expect(result.command).toBe('start');
+
+    const unknown = parseCliArgs(['banana']);
+    expect(unknown.command).toBe('start');
   });
 
   it('should detect --skip-dependency-check flag', () => {
