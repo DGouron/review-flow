@@ -8,10 +8,10 @@ interface RecordPushInput {
   platform: 'gitlab' | 'github';
 }
 
-export class RecordPushUseCase implements UseCase<RecordPushInput, TrackedMr | undefined> {
+export class RecordPushUseCase implements UseCase<RecordPushInput, TrackedMr | null> {
   constructor(private readonly trackingGateway: ReviewRequestTrackingGateway) {}
 
-  execute(input: RecordPushInput): TrackedMr | undefined {
+  execute(input: RecordPushInput): TrackedMr | null {
     return this.trackingGateway.recordPush(input.projectPath, input.mrNumber, input.platform);
   }
 }

@@ -12,16 +12,16 @@ describe('RecordPushUseCase', () => {
 
     const result = useCase.execute({ projectPath: '/project', mrNumber: 42, platform: 'gitlab' });
 
-    expect(result).toBeDefined();
-    expect(result!.lastPushAt).not.toBeNull();
+    expect(result).not.toBeNull();
+    expect(result?.lastPushAt).not.toBeNull();
   });
 
-  it('should return undefined for unknown MR', () => {
+  it('should return null for unknown MR', () => {
     const gateway = new InMemoryReviewRequestTrackingGateway();
     const useCase = new RecordPushUseCase(gateway);
 
     const result = useCase.execute({ projectPath: '/project', mrNumber: 999, platform: 'gitlab' });
 
-    expect(result).toBeUndefined();
+    expect(result).toBeNull();
   });
 });

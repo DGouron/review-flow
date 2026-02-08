@@ -11,11 +11,9 @@ import {
   cancelJob,
   type ReviewJob,
 } from '../../../queue/reviewQueue.js';
-import {
-  trackMrAssignment,
-  recordReviewCompletion,
-  archiveMr,
-} from '../../../services/mrTrackingService.js';
+import type { ReviewRequestTrackingGateway } from '../../gateways/reviewRequestTracking.gateway.js';
+import { TrackAssignmentUseCase } from '../../../usecases/tracking/trackAssignment.usecase.js';
+import { RecordReviewCompletionUseCase } from '../../../usecases/tracking/recordReviewCompletion.usecase.js';
 import { parseReviewOutput } from '../../../services/statsService.js';
 import { parseThreadActions } from '../../../services/threadActionsParser.js';
 import { executeThreadActions, defaultCommandExecutor } from '../../../services/threadActionsExecutor.js';
@@ -31,8 +29,11 @@ import { DEFAULT_AGENTS } from '../../../entities/progress/agentDefinition.type.
 export async function handleGitHubWebhook(
   request: FastifyRequest,
   reply: FastifyReply,
-  logger: Logger
+  logger: Logger,
+  trackingGateway: ReviewRequestTrackingGateway
 ): Promise<void> {
+  const trackAssignment = new TrackAssignmentUseCase(trackingGateway);
+  const recordCompletion = new RecordReviewCompletionUseCase(trackingGateway);
   // 1. Verify signature
   const verification = verifyGitHubSignature(request);
   if (!verification.valid) {
@@ -73,7 +74,7 @@ export async function handleGitHubWebhook(
       const cancelled = cancelJob(jobId);
 
       // Archive the PR from tracking
-      const archived = archiveMr(repoConfig.localPath, mrId);
+      const archived = trackingGateway.archive(repoConfig.localPath, mrId);
 
       // Delete review context file
       const contextGateway = new ReviewContextFileSystemGateway();
@@ -152,9 +153,9 @@ export async function handleGitHubWebhook(
     displayName: prAssignee?.login || event.sender?.login,
   };
 
-  trackMrAssignment(
-    repoConfig.localPath,
-    {
+  trackAssignment.execute({
+    projectPath: repoConfig.localPath,
+    mrInfo: {
       mrNumber: filterResult.mergeRequestNumber,
       title: prTitle,
       url: filterResult.mergeRequestUrl,
@@ -163,8 +164,8 @@ export async function handleGitHubWebhook(
       sourceBranch: filterResult.sourceBranch,
       targetBranch: filterResult.targetBranch,
     },
-    assignedBy
-  );
+    assignedBy,
+  });
 
   logger.info(
     { prNumber: filterResult.mergeRequestNumber, assignedBy: assignedBy.username },
@@ -307,10 +308,10 @@ export async function handleGitHubWebhook(
 
       // Record review completion with parsed stats
       // Only blocking issues count as open threads - warnings are informational
-      recordReviewCompletion(
-        j.localPath,
-        `github-${j.projectPath}-${j.mrNumber}`,
-        {
+      recordCompletion.execute({
+        projectPath: j.localPath,
+        mrId: `github-${j.projectPath}-${j.mrNumber}`,
+        reviewData: {
           type: 'review',
           durationMs: result.durationMs,
           score: parsed.score,
@@ -318,8 +319,8 @@ export async function handleGitHubWebhook(
           warnings: parsed.warnings,
           suggestions: parsed.suggestions,
           threadsOpened: parsed.blocking, // Only blocking issues open threads
-        }
-      );
+        },
+      });
 
       logger.info(
         {

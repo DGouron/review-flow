@@ -12,16 +12,13 @@ import {
   type ReviewJob,
 } from '../../../queue/reviewQueue.js';
 import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js';
-import {
-  needsFollowupReview,
-  recordMrPush,
-  trackMrAssignment,
-  recordReviewCompletion,
-  syncSingleMrThreads,
-  archiveMr,
-  markMrMerged,
-  approveMr,
-} from '../../../services/mrTrackingService.js';
+import type { ReviewRequestTrackingGateway } from '../../gateways/reviewRequestTracking.gateway.js';
+import { TrackAssignmentUseCase } from '../../../usecases/tracking/trackAssignment.usecase.js';
+import { RecordReviewCompletionUseCase } from '../../../usecases/tracking/recordReviewCompletion.usecase.js';
+import { RecordPushUseCase } from '../../../usecases/tracking/recordPush.usecase.js';
+import { TransitionStateUseCase } from '../../../usecases/tracking/transitionState.usecase.js';
+import { CheckFollowupNeededUseCase } from '../../../usecases/tracking/checkFollowupNeeded.usecase.js';
+import { SyncThreadsUseCase } from '../../../usecases/tracking/syncThreads.usecase.js';
 import { loadProjectConfig, getProjectAgents, getFollowupAgents } from '../../../config/projectConfig.js';
 import { DEFAULT_AGENTS, DEFAULT_FOLLOWUP_AGENTS } from '../../../entities/progress/agentDefinition.type.js';
 import { parseReviewOutput } from '../../../services/statsService.js';
@@ -36,8 +33,14 @@ import { startWatchingReviewContext, stopWatchingReviewContext } from '../../../
 export async function handleGitLabWebhook(
   request: FastifyRequest,
   reply: FastifyReply,
-  logger: Logger
+  logger: Logger,
+  trackingGateway: ReviewRequestTrackingGateway
 ): Promise<void> {
+  const trackAssignment = new TrackAssignmentUseCase(trackingGateway);
+  const recordCompletion = new RecordReviewCompletionUseCase(trackingGateway);
+  const recordPush = new RecordPushUseCase(trackingGateway);
+  const transitionState = new TransitionStateUseCase(trackingGateway);
+  const checkFollowupNeeded = new CheckFollowupNeededUseCase(trackingGateway);
   // 1. Verify signature
   const verification = verifyGitLabSignature(request);
   if (!verification.valid) {
@@ -78,7 +81,7 @@ export async function handleGitLabWebhook(
       const cancelled = cancelJob(jobId);
 
       // Archive the MR from tracking
-      const archived = archiveMr(repoConfig.localPath, mrId);
+      const archived = trackingGateway.archive(repoConfig.localPath, mrId);
 
       // Delete review context file
       const contextGateway = new ReviewContextFileSystemGateway();
@@ -116,7 +119,7 @@ export async function handleGitLabWebhook(
     const repoConfig = findRepositoryByProjectPath(mergeResult.projectPath);
     if (repoConfig) {
       const mrId = `gitlab-${mergeResult.projectPath}-${mergeResult.mergeRequestNumber}`;
-      markMrMerged(repoConfig.localPath, mrId);
+      transitionState.execute({ projectPath: repoConfig.localPath, mrId, targetState: 'merged' });
       logger.info({ mrNumber: mergeResult.mergeRequestNumber }, 'MR marked as merged');
       reply.status(200).send({ status: 'merged', mrNumber: mergeResult.mergeRequestNumber });
       return;
@@ -129,7 +132,7 @@ export async function handleGitLabWebhook(
     const repoConfig = findRepositoryByProjectPath(approveResult.projectPath);
     if (repoConfig) {
       const mrId = `gitlab-${approveResult.projectPath}-${approveResult.mergeRequestNumber}`;
-      approveMr(repoConfig.localPath, mrId);
+      transitionState.execute({ projectPath: repoConfig.localPath, mrId, targetState: 'approved' });
       logger.info({ mrNumber: approveResult.mergeRequestNumber }, 'MR marked as approved');
       reply.status(200).send({ status: 'approved', mrNumber: approveResult.mergeRequestNumber });
       return;
@@ -166,7 +169,7 @@ export async function handleGitLabWebhook(
       const updateRepoConfig = findRepositoryByProjectPath(updateResult.projectPath);
       if (updateRepoConfig) {
         // Record the push event
-        const mr = recordMrPush(updateRepoConfig.localPath, updateResult.mergeRequestNumber, 'gitlab');
+        const mr = recordPush.execute({ projectPath: updateRepoConfig.localPath, mrNumber: updateResult.mergeRequestNumber, platform: 'gitlab' });
         logger.info(
           {
             mrNumber: updateResult.mergeRequestNumber,
@@ -179,7 +182,7 @@ export async function handleGitLabWebhook(
         );
 
         // Check if this MR needs a followup (has open threads and was pushed since last review)
-        const needsFollowup = mr && needsFollowupReview(updateRepoConfig.localPath, updateResult.mergeRequestNumber, 'gitlab');
+        const needsFollowup = mr && checkFollowupNeeded.execute({ projectPath: updateRepoConfig.localPath, mrNumber: updateResult.mergeRequestNumber, platform: 'gitlab' });
         logger.info({ needsFollowup, mrState: mr?.state }, 'Followup check result');
 
         if (needsFollowup) {
@@ -322,14 +325,15 @@ export async function handleGitLabWebhook(
 
               // Sync threads from GitLab FIRST to get real state after followup resolves threads
               const mrId = `gitlab-${j.projectPath}-${j.mrNumber}`;
-              const updatedMr = syncSingleMrThreads(j.localPath, mrId);
+              const syncUseCase = new SyncThreadsUseCase(trackingGateway, threadFetchGateway);
+              const updatedMr = syncUseCase.execute({ projectPath: j.localPath, mrId });
 
               // Record followup completion with parsed stats
               // threadsClosed comes from THREAD_RESOLVE markers parsed from output
-              recordReviewCompletion(
-                j.localPath,
+              recordCompletion.execute({
+                projectPath: j.localPath,
                 mrId,
-                {
+                reviewData: {
                   type: 'followup',
                   durationMs: result.durationMs,
                   score: parsed.score,
@@ -338,8 +342,8 @@ export async function handleGitLabWebhook(
                   suggestions: parsed.suggestions,
                   threadsOpened: 0,
                   threadsClosed: threadResolveCount,
-                }
-              );
+                },
+              });
               logger.info(
                 {
                   mrNumber: j.mrNumber,
@@ -398,9 +402,9 @@ export async function handleGitLabWebhook(
     displayName: mrAssignee?.name || event.user?.name,
   };
 
-  trackMrAssignment(
-    repoConfig.localPath,
-    {
+  trackAssignment.execute({
+    projectPath: repoConfig.localPath,
+    mrInfo: {
       mrNumber: filterResult.mergeRequestNumber,
       title: mrTitle,
       url: filterResult.mergeRequestUrl,
@@ -409,8 +413,8 @@ export async function handleGitLabWebhook(
       sourceBranch: filterResult.sourceBranch,
       targetBranch: filterResult.targetBranch,
     },
-    assignedBy
-  );
+    assignedBy,
+  });
 
   logger.info(
     { mrNumber: filterResult.mergeRequestNumber, assignedBy: assignedBy.username },
@@ -554,10 +558,10 @@ export async function handleGitLabWebhook(
 
       // Record review completion with parsed stats
       // Only blocking issues count as open threads - warnings are informational
-      recordReviewCompletion(
-        j.localPath,
-        `gitlab-${j.projectPath}-${j.mrNumber}`,
-        {
+      recordCompletion.execute({
+        projectPath: j.localPath,
+        mrId: `gitlab-${j.projectPath}-${j.mrNumber}`,
+        reviewData: {
           type: 'review',
           durationMs: result.durationMs,
           score: parsed.score,
@@ -565,8 +569,8 @@ export async function handleGitLabWebhook(
           warnings: parsed.warnings,
           suggestions: parsed.suggestions,
           threadsOpened: parsed.blocking, // Only blocking issues open threads
-        }
-      );
+        },
+      });
 
       logger.info(
         {

@@ -18,13 +18,13 @@ interface RecordReviewCompletionInput {
   };
 }
 
-export class RecordReviewCompletionUseCase implements UseCase<RecordReviewCompletionInput, TrackedMr | undefined> {
+export class RecordReviewCompletionUseCase implements UseCase<RecordReviewCompletionInput, TrackedMr | null> {
   constructor(private readonly trackingGateway: ReviewRequestTrackingGateway) {}
 
-  execute(input: RecordReviewCompletionInput): TrackedMr | undefined {
+  execute(input: RecordReviewCompletionInput): TrackedMr | null {
     const { projectPath, mrId, reviewData } = input;
     const mr = this.trackingGateway.getById(projectPath, mrId);
-    if (!mr) return undefined;
+    if (!mr) return null;
 
     const now = new Date().toISOString();
     const suggestions = reviewData.suggestions ?? 0;
@@ -45,7 +45,8 @@ export class RecordReviewCompletionUseCase implements UseCase<RecordReviewComple
 
     this.trackingGateway.recordReviewEvent(projectPath, mrId, event);
 
-    const afterEvent = this.trackingGateway.getById(projectPath, mrId)!;
+    const afterEvent = this.trackingGateway.getById(projectPath, mrId);
+    if (!afterEvent) return null;
 
     const openThreads = Math.max(0, afterEvent.openThreads + threadsOpened - threadsClosed);
     const totalThreads = afterEvent.totalThreads + threadsOpened;

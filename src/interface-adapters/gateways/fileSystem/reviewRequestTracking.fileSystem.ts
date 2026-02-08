@@ -7,6 +7,9 @@ import type {
 import type { MrTrackingData } from '../../../entities/tracking/mrTrackingData.js';
 import type { TrackedMr } from '../../../entities/tracking/trackedMr.js';
 import type { ReviewEvent } from '../../../entities/tracking/reviewEvent.js';
+import { ProjectStatsCalculator } from '../../services/projectStats.calculator.js';
+
+const statsCalculator = new ProjectStatsCalculator();
 
 function getTrackingPath(projectPath: string): string {
   return join(projectPath, '.claude', 'reviews', 'mr-tracking.json');
@@ -64,28 +67,29 @@ export class FileSystemReviewRequestTrackingGateway implements ReviewRequestTrac
       mkdirSync(dir, { recursive: true });
     }
 
+    data.stats = statsCalculator.compute(data.mrs);
     data.lastUpdated = new Date().toISOString();
     writeFileSync(trackingPath, JSON.stringify(data, null, 2), 'utf-8');
   }
 
-  getById(projectPath: string, reviewRequestId: string): TrackedMr | undefined {
+  getById(projectPath: string, reviewRequestId: string): TrackedMr | null {
     const data = this.loadTracking(projectPath);
-    if (!data) return undefined;
+    if (!data) return null;
 
-    return data.mrs.find((mr) => mr.id === reviewRequestId);
+    return data.mrs.find((mr) => mr.id === reviewRequestId) ?? null;
   }
 
   getByNumber(
     projectPath: string,
     reviewRequestNumber: number,
     platform: Platform
-  ): TrackedMr | undefined {
+  ): TrackedMr | null {
     const data = this.loadTracking(projectPath);
-    if (!data) return undefined;
+    if (!data) return null;
 
     return data.mrs.find(
       (mr) => mr.mrNumber === reviewRequestNumber && mr.platform === platform
-    );
+    ) ?? null;
   }
 
   create(projectPath: string, reviewRequest: TrackedMr): void {
@@ -179,14 +183,14 @@ export class FileSystemReviewRequestTrackingGateway implements ReviewRequestTrac
     projectPath: string,
     reviewRequestNumber: number,
     platform: Platform
-  ): TrackedMr | undefined {
+  ): TrackedMr | null {
     const data = this.loadTracking(projectPath);
-    if (!data) return undefined;
+    if (!data) return null;
 
     const mr = data.mrs.find(
       (m) => m.mrNumber === reviewRequestNumber && m.platform === platform
     );
-    if (!mr) return undefined;
+    if (!mr) return null;
 
     mr.lastPushAt = new Date().toISOString();
     this.saveTracking(projectPath, data);

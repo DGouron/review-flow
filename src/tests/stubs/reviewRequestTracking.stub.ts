@@ -17,24 +17,24 @@ export class InMemoryReviewRequestTrackingGateway implements ReviewRequestTracki
     this.storage.set(projectPath, data);
   }
 
-  getById(projectPath: string, reviewRequestId: string): TrackedMr | undefined {
+  getById(projectPath: string, reviewRequestId: string): TrackedMr | null {
     const data = this.storage.get(projectPath);
-    if (!data) return undefined;
+    if (!data) return null;
 
-    return data.mrs.find((mr) => mr.id === reviewRequestId);
+    return data.mrs.find((mr) => mr.id === reviewRequestId) ?? null;
   }
 
   getByNumber(
     projectPath: string,
     reviewRequestNumber: number,
     platform: Platform
-  ): TrackedMr | undefined {
+  ): TrackedMr | null {
     const data = this.storage.get(projectPath);
-    if (!data) return undefined;
+    if (!data) return null;
 
     return data.mrs.find(
       (mr) => mr.mrNumber === reviewRequestNumber && mr.platform === platform
-    );
+    ) ?? null;
   }
 
   create(projectPath: string, reviewRequest: TrackedMr): void {
@@ -143,14 +143,14 @@ export class InMemoryReviewRequestTrackingGateway implements ReviewRequestTracki
     projectPath: string,
     reviewRequestNumber: number,
     platform: Platform
-  ): TrackedMr | undefined {
+  ): TrackedMr | null {
     const data = this.storage.get(projectPath);
-    if (!data) return undefined;
+    if (!data) return null;
 
     const mr = data.mrs.find(
       (m) => m.mrNumber === reviewRequestNumber && m.platform === platform
     );
-    if (!mr) return undefined;
+    if (!mr) return null;
 
     mr.lastPushAt = new Date().toISOString();
     data.lastUpdated = new Date().toISOString();

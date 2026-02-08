@@ -8,12 +8,12 @@ export interface ReviewRequestTrackingGateway {
   loadTracking(projectPath: string): MrTrackingData | null;
   saveTracking(projectPath: string, data: MrTrackingData): void;
 
-  getById(projectPath: string, reviewRequestId: string): TrackedMr | undefined;
+  getById(projectPath: string, reviewRequestId: string): TrackedMr | null;
   getByNumber(
     projectPath: string,
     reviewRequestNumber: number,
     platform: Platform
-  ): TrackedMr | undefined;
+  ): TrackedMr | null;
 
   create(projectPath: string, reviewRequest: TrackedMr): void;
   update(
@@ -36,5 +36,5 @@ export interface ReviewRequestTrackingGateway {
     projectPath: string,
     reviewRequestNumber: number,
     platform: Platform
-  ): TrackedMr | undefined;
+  ): TrackedMr | null;
 }

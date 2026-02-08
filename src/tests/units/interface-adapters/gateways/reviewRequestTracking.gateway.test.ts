@@ -27,12 +27,12 @@ describe('ReviewRequestTrackingGateway', () => {
   });
 
   describe('getByNumber', () => {
-    it('should return undefined when no tracking data exists', () => {
+    it('should return null when no tracking data exists', () => {
       const gateway = new InMemoryReviewRequestTrackingGateway();
 
       const result = gateway.getByNumber('/project', 42, 'gitlab');
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
 
     it('should find tracked MR by number and platform', () => {
@@ -43,7 +43,7 @@ describe('ReviewRequestTrackingGateway', () => {
 
       const result = gateway.getByNumber('/my/project', 42, 'gitlab');
 
-      expect(result).toBeDefined();
+      expect(result).not.toBeNull();
       expect(result?.mrNumber).toBe(42);
       expect(result?.platform).toBe('gitlab');
     });
@@ -56,7 +56,7 @@ describe('ReviewRequestTrackingGateway', () => {
 
       const result = gateway.getByNumber('/my/project', 42, 'github');
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
   });
 
@@ -69,11 +69,11 @@ describe('ReviewRequestTrackingGateway', () => {
 
       const result = gateway.getById('/my/project', 'mr-unique-123');
 
-      expect(result).toBeDefined();
+      expect(result).not.toBeNull();
       expect(result?.id).toBe('mr-unique-123');
     });
 
-    it('should return undefined for unknown id', () => {
+    it('should return null for unknown id', () => {
       const gateway = new InMemoryReviewRequestTrackingGateway();
       const trackedMr = TrackedMrFactory.create({ id: 'mr-123' });
       const trackingData = MrTrackingDataFactory.withMrs([trackedMr]);
@@ -81,7 +81,7 @@ describe('ReviewRequestTrackingGateway', () => {
 
       const result = gateway.getById('/my/project', 'unknown-id');
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
   });
 
@@ -250,7 +250,7 @@ describe('ReviewRequestTrackingGateway', () => {
       const removed = gateway.remove('/my/project', 'mr-to-remove');
 
       expect(removed).toBe(true);
-      expect(gateway.getById('/my/project', 'mr-to-remove')).toBeUndefined();
+      expect(gateway.getById('/my/project', 'mr-to-remove')).toBeNull();
     });
 
     it('should return false when MR does not exist', () => {
@@ -279,7 +279,7 @@ describe('ReviewRequestTrackingGateway', () => {
       const archived = gateway.archive('/my/project', 'mr-to-archive');
 
       expect(archived).toBe(true);
-      expect(gateway.getById('/my/project', 'mr-to-archive')).toBeUndefined();
+      expect(gateway.getById('/my/project', 'mr-to-archive')).toBeNull();
     });
 
     it('should return false when MR does not exist', () => {
@@ -303,16 +303,16 @@ describe('ReviewRequestTrackingGateway', () => {
 
       const result = gateway.recordPush('/my/project', 42, 'gitlab');
 
-      expect(result).toBeDefined();
+      expect(result).not.toBeNull();
       expect(result?.lastPushAt).not.toBeNull();
     });
 
-    it('should return undefined for unknown MR', () => {
+    it('should return null for unknown MR', () => {
       const gateway = new InMemoryReviewRequestTrackingGateway();
 
       const result = gateway.recordPush('/my/project', 999, 'gitlab');
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
   });
 });

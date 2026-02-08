@@ -54,7 +54,7 @@ export class TrackAssignmentUseCase implements UseCase<TrackAssignmentInput, Tra
       ...(shouldResetState ? { state: 'pending-review' } : {}),
     });
 
-    return this.trackingGateway.getById(projectPath, existing.id)!;
+    return this.trackingGateway.getById(projectPath, existing.id) ?? existing;
   }
 
   private createNew(

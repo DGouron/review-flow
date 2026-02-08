@@ -4,13 +4,14 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { Logger } from 'pino';
 import type { ReviewFileGateway } from '../../gateways/reviewFile.gateway.js';
+import type { ReviewRequestTrackingGateway } from '../../gateways/reviewRequestTracking.gateway.js';
 import { cancelReview } from '../../../usecases/cancelReview.usecase.js';
 import type { CancelReviewQueuePort } from '../../../usecases/cancelReview.usecase.js';
-import { removeMrFromTracking, recomputeProjectStats } from '../../../services/mrTrackingService.js';
 import { sanitizeJobId } from '../../../shared/services/mcpJobContext.js';
 
 interface ReviewRoutesOptions {
   reviewFileGateway: ReviewFileGateway;
+  reviewRequestTrackingGateway: ReviewRequestTrackingGateway;
   getRepositories: () => Array<{ localPath: string; enabled: boolean }>;
   queuePort: CancelReviewQueuePort;
   logger: Logger;
@@ -22,7 +23,7 @@ export const reviewRoutes: FastifyPluginAsync<ReviewRoutesOptions> = async (
   fastify,
   opts
 ) => {
-  const { reviewFileGateway, getRepositories, queuePort, logger } = opts;
+  const { reviewFileGateway, reviewRequestTrackingGateway, getRepositories, queuePort, logger } = opts;
 
   fastify.get('/api/reviews', async (request) => {
     const query = request.query as { path?: string };
@@ -104,8 +105,7 @@ export const reviewRoutes: FastifyPluginAsync<ReviewRoutesOptions> = async (
 
     if (result.status === 'cancelled') {
       if (body.projectPath && body.mrId) {
-        removeMrFromTracking(body.projectPath, body.mrId);
-        recomputeProjectStats(body.projectPath);
+        reviewRequestTrackingGateway.remove(body.projectPath, body.mrId);
 
         try {
           const contextPath = join(homedir(), '.claude-review', 'jobs', `${sanitizeJobId(jobId)}.json`);
