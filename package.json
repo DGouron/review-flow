@@ -1,6 +1,6 @@
 {
   "name": "reviewflow",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "description": "AI-powered code review automation for GitLab/GitHub using Claude Code",
   "type": "module",
   "main": "dist/main/server.js",
