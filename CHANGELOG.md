@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1](https://github.com/DGouron/claude-review-automation/compare/claude-review-automation-v2.0.0...claude-review-automation-v2.0.1) (2026-02-08)
+
+
+### Fixed
+
+* address PR review findings (non-null assertion, DRY, DIP) ([3553317](https://github.com/DGouron/claude-review-automation/commit/3553317298b57047543b3705e98389b90e43195e))
+
+
+### Changed
+
+* migrate all consumers to gateway+usecases, delete mrTrackingService ([db03372](https://github.com/DGouron/claude-review-automation/commit/db033724f128c5717b3266783bdf089a552c1172))
+* split mrTrackingService God Object (BACKLOG-013) ([1ce0b35](https://github.com/DGouron/claude-review-automation/commit/1ce0b3570f425c739db96d8ff8d8cba698150f22))
+
 ## [2.0.0](https://github.com/DGouron/claude-review-automation/compare/claude-review-automation-v1.0.0...claude-review-automation-v2.0.0) (2026-02-07)
 
 
