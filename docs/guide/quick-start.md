@@ -4,7 +4,7 @@ title: Quick Start
 
 # Quick Start
 
-Get Claude Review Automation running in 5 minutes.
+Get Reviewflow running in 5 minutes.
 
 ## Prerequisites
 
@@ -16,8 +16,8 @@ Get Claude Review Automation running in 5 minutes.
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/claude-review-automation.git
-cd claude-review-automation
+git clone https://github.com/YOUR_USERNAME/reviewflow.git
+cd reviewflow
 
 # Install dependencies
 yarn install

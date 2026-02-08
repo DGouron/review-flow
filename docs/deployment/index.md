@@ -4,7 +4,7 @@ title: Deployment Guide
 
 # Deployment Guide
 
-Run Claude Review Automation in production on a Linux VPS.
+Run Reviewflow in production on a Linux VPS.
 
 ## Overview
 
@@ -25,7 +25,7 @@ For testing without permanent setup. The URL changes on each restart.
 
 ```bash
 # Terminal 1: Server
-cd ~/claude-review-automation
+cd ~/reviewflow
 yarn install && yarn build
 yarn start
 
@@ -40,7 +40,7 @@ Copy the generated URL and use it for your webhook configuration.
 ### 1. Build the project
 
 ```bash
-cd ~/claude-review-automation
+cd ~/reviewflow
 yarn install
 yarn build
 ```
@@ -132,7 +132,7 @@ See the `templates/` directory for:
 sudo systemctl stop claude-review
 
 # Update code
-cd ~/claude-review-automation
+cd ~/reviewflow
 git pull
 yarn install
 yarn build

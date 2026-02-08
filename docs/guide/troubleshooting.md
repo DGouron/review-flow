@@ -4,7 +4,7 @@ title: Troubleshooting
 
 # Troubleshooting
 
-Common issues and solutions for claude-review-automation.
+Common issues and solutions for Reviewflow.
 
 ## Webhooks
 

@@ -4,10 +4,10 @@ import { nav } from "./config/nav";
 import { sidebar } from "./config/sidebar";
 
 export default defineConfig({
-	title: "Claude Review Automation",
+	title: "Reviewflow",
 	description:
-		"AI-powered code review automation for GitLab and GitHub merge requests",
-	base: "/claude-review-automation/",
+		"AI-powered code review automation for GitLab and GitHub",
+	base: "/reviewflow/",
 
 	lastUpdated: true,
 	cleanUrls: true,
@@ -29,13 +29,13 @@ export default defineConfig({
 		socialLinks: [
 			{
 				icon: "github",
-				link: "https://github.com/DGouron/claude-review-automation",
+				link: "https://github.com/DGouron/reviewflow",
 			},
 		],
 
 		editLink: {
 			pattern:
-				"https://github.com/DGouron/claude-review-automation/edit/master/docs/:path",
+				"https://github.com/DGouron/reviewflow/edit/master/docs/:path",
 			text: "Edit this page on GitHub",
 		},
 

@@ -1,4 +1,4 @@
-# Contributing to Claude Review Automation
+# Contributing to Reviewflow
 
 Thank you for your interest in contributing! This document provides guidelines for contributing to the project.
 
@@ -15,8 +15,8 @@ Thank you for your interest in contributing! This document provides guidelines f
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/claude-review-automation.git
-   cd claude-review-automation
+   git clone https://github.com/YOUR_USERNAME/reviewflow.git
+   cd reviewflow
    ```
 3. Install dependencies:
    ```bash

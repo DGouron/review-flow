@@ -97,7 +97,7 @@ describe('Server Integration', () => {
 
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body);
-    expect(body.name).toBe('claude-review-automation');
+    expect(body.name).toBe('reviewflow');
     expect(body).toHaveProperty('endpoints');
   });
 
