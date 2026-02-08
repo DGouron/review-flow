@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { writeFileSync, mkdirSync, existsSync, unlinkSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Logger } from 'pino';
 import type { ReviewJob } from '../../queue/reviewQueue.js';
 import type { ReviewProgress, ProgressEvent } from '../../entities/progress/progress.type.js';
@@ -14,7 +15,18 @@ import { ProjectStatsCalculator } from '../../interface-adapters/services/projec
 import { resolveClaudePath } from '../../shared/services/claudePathResolver.js';
 import { getJobContextFilePath } from '../../shared/services/mcpJobContext.js';
 
-const MCP_SERVER_PATH = '/home/damien/Documents/Projets/claude-review-automation/dist/mcpServer.js';
+const currentDir = dirname(fileURLToPath(import.meta.url));
+
+export function resolveMcpServerPath(): string {
+  // dist/frameworks/claude/claudeInvoker.js → dist/mcpServer.js
+  const candidate = join(currentDir, '..', '..', 'mcpServer.js');
+  if (existsSync(candidate)) return candidate;
+
+  throw new Error(
+    `MCP server not found at: ${candidate}\n` +
+    'Run "yarn build" to compile the project.'
+  );
+}
 
 export function writeMcpContext(job: ReviewJob): void {
   try {
@@ -41,14 +53,15 @@ export function writeMcpContext(job: ReviewJob): void {
   }
 }
 
-function ensureProjectMcpConfig(projectPath: string): void {
+export function ensureProjectMcpConfig(projectPath: string): void {
   try {
+    const mcpServerPath = resolveMcpServerPath();
     const mcpConfigPath = join(projectPath, '.mcp.json');
     const expectedConfig = {
       mcpServers: {
         "review-progress": {
           command: "node",
-          args: [MCP_SERVER_PATH],
+          args: [mcpServerPath],
         },
       },
     };

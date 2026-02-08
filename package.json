@@ -3,7 +3,10 @@
   "version": "2.0.0",
   "description": "Automatic code review trigger via webhooks for GitLab/GitHub MRs/PRs",
   "type": "module",
-  "main": "dist/server.js",
+  "main": "dist/main/server.js",
+  "bin": {
+    "reviewflow": "dist/main/cli.js"
+  },
   "license": "MIT",
   "author": "Damien Gouron",
   "repository": {
@@ -26,9 +29,9 @@
     "automation"
   ],
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc && mkdir -p dist/interface-adapters/views && cp -r src/interface-adapters/views/dashboard dist/interface-adapters/views/",
-    "start": "node dist/server.js",
+    "dev": "tsx watch src/main/cli.ts start --skip-dependency-check",
+    "build": "tsc && node scripts/copyAssets.mjs",
+    "start": "node dist/main/cli.js start",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:ui": "vitest --ui",
