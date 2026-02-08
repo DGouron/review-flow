@@ -1,6 +1,6 @@
-# Claude Review Automation
+# Reviewflow
 
-[![CI](https://github.com/DGouron/claude-review-automation/actions/workflows/ci.yml/badge.svg)](https://github.com/DGouron/claude-review-automation/actions/workflows/ci.yml)
+[![CI](https://github.com/DGouron/reviewflow/actions/workflows/ci.yml/badge.svg)](https://github.com/DGouron/reviewflow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue.svg)](https://www.typescriptlang.org/)
@@ -124,20 +124,31 @@ Review behavior is defined by [Claude Code skills](https://docs.anthropic.com/en
 
 ## Quick Start
 
-```bash
-# Install
-git clone https://github.com/DGouron/claude-review-automation.git
-cd claude-review-automation
-npm install
+### Install globally
 
+```bash
+npm install -g reviewflow
+# or
+yarn global add reviewflow
+```
+
+### Or run directly with npx
+
+```bash
+npx reviewflow --help
+npx reviewflow start
+```
+
+### Configure & run
+
+```bash
 # Configure
 cp .env.example .env
 cp config.example.json config.json
 # Edit config.json with your repositories
 
-# Build & run
-npm run build
-npm start
+# Start the server
+reviewflow start
 # Dashboard at http://localhost:3847
 ```
 

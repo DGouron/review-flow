@@ -1,9 +1,9 @@
 import type { HeadConfig } from "vitepress";
 
-const siteUrl = "https://dgouron.github.io/claude-review-automation/";
-const title = "Claude Review Automation";
+const siteUrl = "https://dgouron.github.io/reviewflow/";
+const title = "Reviewflow";
 const description =
-	"AI-powered code review automation for GitLab and GitHub merge requests";
+	"AI-powered code review automation for GitLab and GitHub";
 
 export const head: HeadConfig[] = [
 	["link", { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }],

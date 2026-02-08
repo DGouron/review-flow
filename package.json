@@ -1,19 +1,30 @@
 {
-  "name": "claude-review-automation",
+  "name": "reviewflow",
   "version": "2.0.1",
-  "description": "Automatic code review trigger via webhooks for GitLab/GitHub MRs/PRs",
+  "description": "AI-powered code review automation for GitLab/GitHub using Claude Code",
   "type": "module",
-  "main": "dist/server.js",
+  "main": "dist/main/server.js",
+  "bin": {
+    "reviewflow": "dist/main/cli.js"
+  },
   "license": "MIT",
   "author": "Damien Gouron",
   "repository": {
     "type": "git",
-    "url": "https://github.com/DGouron/claude-review-automation.git"
+    "url": "https://github.com/DGouron/reviewflow.git"
   },
   "bugs": {
-    "url": "https://github.com/DGouron/claude-review-automation/issues"
+    "url": "https://github.com/DGouron/reviewflow/issues"
   },
-  "homepage": "https://github.com/DGouron/claude-review-automation#readme",
+  "homepage": "https://github.com/DGouron/reviewflow#readme",
+  "files": [
+    "dist/",
+    "templates/",
+    "scripts/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "keywords": [
     "code-review",
     "claude",
@@ -23,12 +34,13 @@
     "github",
     "merge-request",
     "pull-request",
-    "automation"
+    "automation",
+    "reviewflow"
   ],
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc && mkdir -p dist/interface-adapters/views && cp -r src/interface-adapters/views/dashboard dist/interface-adapters/views/",
-    "start": "node dist/server.js",
+    "dev": "tsx watch src/main/cli.ts start --skip-dependency-check",
+    "build": "tsc && node scripts/copyAssets.mjs",
+    "start": "node dist/main/cli.js start",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:ui": "vitest --ui",

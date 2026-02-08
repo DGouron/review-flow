@@ -1,6 +1,6 @@
 # review-basic
 
-A minimal code review skill template for claude-review-automation.
+A minimal code review skill template for Reviewflow.
 
 ## Overview
 

@@ -64,7 +64,7 @@ Add to `.claude/settings.json` of the analyzed project:
   "mcpServers": {
     "review-progress": {
       "command": "node",
-      "args": ["/path/to/claude-review-automation/dist/mcpServer.js"],
+      "args": ["/path/to/reviewflow/dist/mcpServer.js"],
       "env": {
         "REVIEW_JOB_ID": "${JOB_ID}",
         "REVIEW_LOCAL_PATH": "${LOCAL_PATH}"

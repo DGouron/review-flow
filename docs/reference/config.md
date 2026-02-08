@@ -4,7 +4,7 @@ title: Configuration Reference
 
 # Configuration Reference
 
-Complete reference for claude-review-automation configuration files.
+Complete reference for Reviewflow configuration files.
 
 ## Overview
 
