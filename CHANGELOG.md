@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.0.0...reviewflow-v3.0.1) (2026-02-09)
+
+
+### Fixed
+
+* align all URLs and references with review-flow repo name ([1167969](https://github.com/DGouron/review-flow/commit/1167969e329d1a924039f1de0dfaebb17aaf1d0f))
+* align URLs and references with review-flow repo name ([fcdbe7b](https://github.com/DGouron/review-flow/commit/fcdbe7b01c458d2c43de06781d0852905bbeba10))
+
 ## [3.0.0](https://github.com/DGouron/claude-review-automation/compare/reviewflow-v2.0.1...reviewflow-v3.0.0) (2026-02-08)
 
 
