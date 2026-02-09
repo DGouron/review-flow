@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Claude Review Dashboard</title>
+  <title>Review Flow Dashboard</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -11,7 +11,7 @@
   <div class="container">
     <header>
       <div class="logo"><i data-lucide="bot"></i></div>
-      <h1>Claude Review</h1>
+      <h1>Review Flow</h1>
       <div class="header-actions">
         <button id="check-claude-btn" class="btn btn-primary" onclick="checkClaudeStatus()">
           <i data-lucide="search"></i> Vérifier Claude
@@ -1236,8 +1236,9 @@
     }
 
     // Project config loader with persistence
-    const STORAGE_KEY_PROJECTS = 'claude-review-projects';
-    const STORAGE_KEY_CURRENT = 'claude-review-current-project';
+    const STORAGE_KEY_PROJECTS = 'review-flow-projects';
+    const STORAGE_KEY_CURRENT = 'review-flow-current-project';
+
     let currentProjectConfig = null;
     let currentProjectPath = null;
 
