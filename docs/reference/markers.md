@@ -4,7 +4,7 @@ title: Markers Reference
 
 # Markers Reference
 
-Complete reference for all markers recognized by claude-review-automation.
+Complete reference for all markers recognized by review-flow.
 
 ## Overview
 

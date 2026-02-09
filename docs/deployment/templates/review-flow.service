@@ -1,0 +1,47 @@
+# Claude Review Automation - systemd service
+#
+# Installation:
+#   1. Copy this file to /etc/systemd/system/review-flow.service
+#   2. Replace YOUR_USER with your system username
+#   3. Replace /path/to/review-flow with your install path
+#   4. Run: sudo systemctl daemon-reload
+#   5. Run: sudo systemctl enable --now review-flow
+#
+# Usage:
+#   sudo systemctl start review-flow    # Start
+#   sudo systemctl stop review-flow     # Stop
+#   sudo systemctl restart review-flow  # Restart
+#   sudo systemctl status review-flow   # Status
+#   journalctl -u review-flow -f        # View logs
+
+[Unit]
+Description=Claude Review Automation Server
+Documentation=https://github.com/YOUR_USERNAME/review-flow
+After=network.target
+
+[Service]
+Type=simple
+
+# TODO: Replace YOUR_USER with your system username
+User=YOUR_USER
+
+# TODO: Replace with absolute path to project
+WorkingDirectory=/path/to/review-flow
+
+# TODO: Ensure .env exists at this path
+EnvironmentFile=/path/to/review-flow/.env
+
+# Start the server
+ExecStart=/usr/bin/node dist/server.js
+
+# Restart on failure
+Restart=on-failure
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=review-flow
+
+[Install]
+WantedBy=multi-user.target

@@ -3,20 +3,20 @@
 # Prerequisites:
 #   1. Install cloudflared: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
 #   2. Authenticate: cloudflared tunnel login
-#   3. Create tunnel: cloudflared tunnel create claude-review
-#   4. Configure DNS: cloudflared tunnel route dns claude-review review.your-domain.com
+#   3. Create tunnel: cloudflared tunnel create review-flow
+#   4. Configure DNS: cloudflared tunnel route dns review-flow review.your-domain.com
 #   5. Create config: ~/.cloudflared/config.yml (see cloudflared-config.yml template)
 #
 # Installation:
-#   1. Copy this file to /etc/systemd/system/cloudflared-claude-review.service
+#   1. Copy this file to /etc/systemd/system/cloudflared-review-flow.service
 #   2. Replace YOUR_USER with your system username
 #   3. Run: sudo systemctl daemon-reload
-#   4. Run: sudo systemctl enable --now cloudflared-claude-review
+#   4. Run: sudo systemctl enable --now cloudflared-review-flow
 #
 # Usage:
-#   sudo systemctl start cloudflared-claude-review
-#   sudo systemctl status cloudflared-claude-review
-#   journalctl -u cloudflared-claude-review -f
+#   sudo systemctl start cloudflared-review-flow
+#   sudo systemctl status cloudflared-review-flow
+#   journalctl -u cloudflared-review-flow -f
 
 [Unit]
 Description=Cloudflare Tunnel for Claude Review

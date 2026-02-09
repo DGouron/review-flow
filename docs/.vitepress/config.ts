@@ -7,7 +7,7 @@ export default defineConfig({
 	title: "Claude Review Automation",
 	description:
 		"AI-powered code review automation for GitLab and GitHub merge requests",
-	base: "/claude-review-automation/",
+	base: "/review-flow/",
 
 	lastUpdated: true,
 	cleanUrls: true,
@@ -29,13 +29,13 @@ export default defineConfig({
 		socialLinks: [
 			{
 				icon: "github",
-				link: "https://github.com/DGouron/claude-review-automation",
+				link: "https://github.com/DGouron/review-flow",
 			},
 		],
 
 		editLink: {
 			pattern:
-				"https://github.com/DGouron/claude-review-automation/edit/master/docs/:path",
+				"https://github.com/DGouron/review-flow/edit/master/docs/:path",
 			text: "Edit this page on GitHub",
 		},
 

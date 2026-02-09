@@ -19,14 +19,14 @@ import { VPButton } from "vitepress/theme";
 					tag="a"
 					size="medium"
 					theme="brand"
-					href="/claude-review-automation/guide/quick-start"
+					href="/review-flow/guide/quick-start"
 					text="Get Started"
 				/>
 				<VPButton
 					tag="a"
 					size="medium"
 					theme="alt"
-					href="https://github.com/DGouron/claude-review-automation"
+					href="https://github.com/DGouron/review-flow"
 					text="View on GitHub"
 				/>
 			</div>

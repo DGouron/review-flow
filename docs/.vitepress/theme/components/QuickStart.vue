@@ -11,7 +11,7 @@ const steps: Step[] = [
 	{
 		number: 1,
 		title: "Install",
-		code: "yarn add claude-review-automation",
+		code: "yarn add review-flow",
 	},
 	{
 		number: 2,
@@ -41,7 +41,7 @@ const steps: Step[] = [
 				tag="a"
 				size="medium"
 				theme="alt"
-				href="/claude-review-automation/guide/quick-start"
+				href="/review-flow/guide/quick-start"
 				text="View Full Quick Start →"
 			/>
 		</div>

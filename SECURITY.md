@@ -4,7 +4,7 @@
 
 **Please DO NOT open a public issue for security vulnerabilities.**
 
-If you discover a security vulnerability, please report it privately using [GitHub's private vulnerability reporting](https://github.com/DGouron/claude-review-automation/security/advisories/new). Include:
+If you discover a security vulnerability, please report it privately using [GitHub's private vulnerability reporting](https://github.com/DGouron/review-flow/security/advisories/new). Include:
 
 1. Description of the vulnerability
 2. Steps to reproduce

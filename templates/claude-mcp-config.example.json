@@ -4,7 +4,7 @@
     "review-progress": {
       "command": "node",
       "args": [
-        "/path/to/claude-review-automation/dist/mcpServer.js"
+        "/path/to/review-flow/dist/mcpServer.js"
       ],
       "env": {}
     }

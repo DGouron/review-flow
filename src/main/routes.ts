@@ -78,7 +78,7 @@ export async function registerRoutes(
 
   app.get('/api', async () => {
     return {
-      name: 'claude-review-automation',
+      name: 'review-flow',
       version: '1.0.0',
       endpoints: {
         dashboard: '/dashboard/',

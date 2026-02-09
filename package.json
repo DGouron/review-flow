@@ -1,5 +1,5 @@
 {
-  "name": "claude-review-automation",
+  "name": "review-flow",
   "version": "2.0.1",
   "description": "Automatic code review trigger via webhooks for GitLab/GitHub MRs/PRs",
   "type": "module",
@@ -8,12 +8,12 @@
   "author": "Damien Gouron",
   "repository": {
     "type": "git",
-    "url": "https://github.com/DGouron/claude-review-automation.git"
+    "url": "https://github.com/DGouron/review-flow.git"
   },
   "bugs": {
-    "url": "https://github.com/DGouron/claude-review-automation/issues"
+    "url": "https://github.com/DGouron/review-flow/issues"
   },
-  "homepage": "https://github.com/DGouron/claude-review-automation#readme",
+  "homepage": "https://github.com/DGouron/review-flow#readme",
   "keywords": [
     "code-review",
     "claude",

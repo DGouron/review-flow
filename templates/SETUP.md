@@ -89,7 +89,7 @@ For real-time tracking, the skill must emit:
 
 ## 3. Server Configuration
 
-In `~/.config/claude-review-automation/config.json`:
+In `~/.config/review-flow/config.json`:
 
 ```json
 {

@@ -4,9 +4,9 @@
 #
 # Prerequisites:
 #   1. cloudflared tunnel login
-#   2. cloudflared tunnel create claude-review
+#   2. cloudflared tunnel create review-flow
 #   3. Note the tunnel ID from the output
-#   4. cloudflared tunnel route dns claude-review review.your-domain.com
+#   4. cloudflared tunnel route dns review-flow review.your-domain.com
 #
 # Replace:
 #   - YOUR_TUNNEL_ID: The ID from step 2 (e.g., a1b2c3d4-e5f6-...)

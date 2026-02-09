@@ -16,8 +16,8 @@ Get Claude Review Automation running in 5 minutes.
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/claude-review-automation.git
-cd claude-review-automation
+git clone https://github.com/YOUR_USERNAME/review-flow.git
+cd review-flow
 
 # Install dependencies
 yarn install

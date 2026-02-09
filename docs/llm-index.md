@@ -7,7 +7,7 @@ title: Documentation Index (LLM Navigation)
 
 # Documentation Index
 
-Centralized navigation for all claude-review-automation documentation.
+Centralized navigation for all review-flow documentation.
 
 ## Quick Navigation
 

@@ -1,6 +1,6 @@
 # review-basic
 
-Un template de skill de code review minimal pour claude-review-automation.
+Un template de skill de code review minimal pour review-flow.
 
 ## Vue d'ensemble
 

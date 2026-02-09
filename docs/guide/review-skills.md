@@ -4,7 +4,7 @@ title: Review Skills Guide
 
 # Review Skills Guide
 
-This guide explains how to create custom code review skills for claude-review-automation.
+This guide explains how to create custom code review skills for review-flow.
 
 ## Overview
 
@@ -17,7 +17,7 @@ Review skills are Claude Code skills (SKILL.md files) that define how automated 
 - **Output format**: How to structure the review report
 - **Markers**: Special tags that trigger platform actions
 
-### How Does claude-review-automation Work?
+### How Does review-flow Work?
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
@@ -210,4 +210,4 @@ See [Troubleshooting](./troubleshooting.md) for common issues. For skill-specifi
 
 - [Markers Reference](../reference/markers.md) - Complete markers reference
 - [Configuration Reference](../reference/config.md) - Configuration options
-- [Example Skills](https://github.com/DGouron/claude-review-automation/tree/master/examples/skills) - Example skills
+- [Example Skills](https://github.com/DGouron/review-flow/tree/master/examples/skills) - Example skills
