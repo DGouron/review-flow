@@ -22,8 +22,12 @@ export function resolveMcpServerPath(): string {
   const candidate = join(currentDir, '..', '..', 'mcpServer.js');
   if (existsSync(candidate)) return candidate;
 
+  // Fallback for tsx dev mode: currentDir is src/frameworks/claude/
+  const devCandidate = join(process.cwd(), 'dist', 'mcpServer.js');
+  if (existsSync(devCandidate)) return devCandidate;
+
   throw new Error(
-    `MCP server not found at: ${candidate}\n` +
+    `MCP server not found at: ${candidate} or ${devCandidate}\n` +
     'Run "yarn build" to compile the project.'
   );
 }
@@ -228,17 +232,14 @@ export async function invokeClaudeReview(
   const mcpSystemPrompt = buildMcpSystemPrompt(job);
 
   // Build arguments
-  // MCP server reads context from per-job files in ~/.claude-review/jobs/
-  // Note: --allowedTools grants permissions explicitly (safer than --dangerously-skip-permissions)
+  // --permission-mode bypassPermissions: automated review, no user to approve
+  // --allowedTools / --disallowedTools: belt-and-suspenders to restrict tool scope
   const args = [
     '--print',
     '--model', model,
+    '--permission-mode', 'bypassPermissions',
     '--append-system-prompt', mcpSystemPrompt,
-    // Grant permissions for review operations (automated, no user to approve)
-    // - Core tools: Read, Glob, Grep, Bash, Edit, Task, Skill, Write, LSP
-    // - MCP tools: mcp__review-progress__* (all tools from our progress tracking server)
     '--allowedTools', 'Read,Glob,Grep,Bash,Edit,Task,Skill,Write,LSP,mcp__review-progress__*',
-    // Disable interactive tools - reviews cannot wait for user approval
     '--disallowedTools', 'EnterPlanMode,AskUserQuestion',
     '-p', prompt,
   ];
