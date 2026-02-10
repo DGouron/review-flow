@@ -5,9 +5,12 @@ import { createDependencies, type Dependencies } from './dependencies.js';
 import { registerRoutes } from './routes.js';
 import { setupWebSocketCallbacks } from './websocket.js';
 import { initQueue } from '../frameworks/queue/pQueueAdapter.js';
+import { removePidFile } from '../shared/services/pidFileManager.js';
+import { PID_FILE_PATH } from '../shared/services/daemonPaths.js';
 
 export interface ServerOptions {
   config?: Config;
+  portOverride?: number;
 }
 
 function addRawBodyParser(app: FastifyInstance): void {
@@ -54,14 +57,16 @@ export async function startServer(options: ServerOptions = {}): Promise<FastifyI
   });
 
   const app = await buildServer(deps);
+  const port = options.portOverride ?? config.server.port;
 
   await app.listen({
-    port: config.server.port,
+    port,
     host: '0.0.0.0',
   });
 
   const shutdown = async () => {
     deps.logger.info('Shutting down...');
+    removePidFile(PID_FILE_PATH);
     await app.close();
     process.exit(0);
   };

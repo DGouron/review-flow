@@ -1,5 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
 import { executeStart, type StartDependencies } from '../../../main/cli.js';
+import type { StartDaemonDependencies } from '../../../usecases/cli/startDaemon.usecase.js';
+
+function createFakeStartDaemonDeps(
+  overrides?: Partial<StartDaemonDependencies>,
+): StartDaemonDependencies {
+  return {
+    readPidFile: vi.fn(() => null),
+    writePidFile: vi.fn(),
+    isProcessRunning: vi.fn(() => false),
+    spawnDaemon: vi.fn(() => 42),
+    ...overrides,
+  };
+}
 
 function createFakeDeps(
   overrides: Partial<StartDependencies> = {},
@@ -9,6 +22,8 @@ function createFakeDeps(
     startServer: () => Promise.resolve(),
     exit: vi.fn(),
     error: vi.fn(),
+    log: vi.fn(),
+    startDaemonDeps: createFakeStartDaemonDeps(),
     ...overrides,
   };
 }
@@ -21,7 +36,7 @@ describe('executeStart', () => {
       ],
     });
 
-    executeStart(false, deps);
+    executeStart(false, false, undefined, deps);
 
     expect(deps.exit).toHaveBeenCalledWith(1);
     expect(deps.error).toHaveBeenCalledWith('Missing dependencies:');
@@ -35,7 +50,7 @@ describe('executeStart', () => {
       ],
     });
 
-    executeStart(false, deps);
+    executeStart(false, false, undefined, deps);
 
     expect(deps.error).toHaveBeenCalledWith(
       '  - Claude CLI: https://claude.example.com',
@@ -51,7 +66,7 @@ describe('executeStart', () => {
     ]);
     const deps = createFakeDeps({ validateDependencies });
 
-    executeStart(true, deps);
+    executeStart(true, false, undefined, deps);
 
     expect(validateDependencies).not.toHaveBeenCalled();
     expect(deps.exit).not.toHaveBeenCalled();
@@ -61,7 +76,7 @@ describe('executeStart', () => {
     const startServer = vi.fn(() => Promise.resolve());
     const deps = createFakeDeps({ startServer });
 
-    executeStart(false, deps);
+    executeStart(false, false, undefined, deps);
 
     expect(startServer).toHaveBeenCalled();
     expect(deps.exit).not.toHaveBeenCalled();
@@ -72,11 +87,32 @@ describe('executeStart', () => {
     const startServer = () => Promise.reject(serverError);
     const deps = createFakeDeps({ startServer });
 
-    executeStart(false, deps);
+    executeStart(false, false, undefined, deps);
 
     await vi.waitFor(() => {
       expect(deps.exit).toHaveBeenCalledWith(1);
       expect(deps.error).toHaveBeenCalledWith('Fatal error:', serverError);
     });
+  });
+
+  it('should spawn daemon when daemon flag is true', () => {
+    const spawnDaemon = vi.fn(() => 123);
+    const deps = createFakeDeps({
+      startDaemonDeps: createFakeStartDaemonDeps({ spawnDaemon }),
+    });
+
+    executeStart(false, true, 4000, deps);
+
+    expect(spawnDaemon).toHaveBeenCalledWith(4000);
+    expect(deps.log).toHaveBeenCalled();
+  });
+
+  it('should not start server when daemon mode is requested', () => {
+    const startServer = vi.fn(() => Promise.resolve());
+    const deps = createFakeDeps({ startServer });
+
+    executeStart(false, true, undefined, deps);
+
+    expect(startServer).not.toHaveBeenCalled();
   });
 });
