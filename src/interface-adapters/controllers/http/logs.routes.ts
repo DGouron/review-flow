@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { getLogs, getErrorLogs } from '../../../services/logService.js';
+import { getLogs, getErrorLogs } from '../../../frameworks/logging/logBuffer.js';
 
 export const logsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/api/logs', async (request) => {

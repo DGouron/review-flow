@@ -15,7 +15,7 @@ import { projectConfigRoutes } from '../interface-adapters/controllers/http/proj
 import { registerWebSocketRoutes } from './websocket.js';
 import { handleGitLabWebhook } from '../interface-adapters/controllers/webhook/gitlab.controller.js';
 import { handleGitHubWebhook } from '../interface-adapters/controllers/webhook/github.controller.js';
-import { cancelJob, getJobStatus } from '../queue/reviewQueue.js';
+import { cancelJob, getJobStatus } from '../frameworks/queue/pQueueAdapter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

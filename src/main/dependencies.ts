@@ -9,7 +9,7 @@ import { FileSystemReviewFileGateway } from '../interface-adapters/gateways/file
 import { ReviewContextFileSystemGateway } from '../interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
 import { ReviewContextWatcherService } from '../services/reviewContextWatcher.service.js';
 import { ReviewContextProgressPresenter } from '../interface-adapters/presenters/reviewContextProgress.presenter.js';
-import { ProjectStatsCalculator } from '../interface-adapters/services/projectStats.calculator.js';
+import { ProjectStatsCalculator } from '../interface-adapters/presenters/projectStats.calculator.js';
 import { pino, type Logger } from 'pino';
 
 export interface Dependencies {

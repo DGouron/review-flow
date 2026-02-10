@@ -31,7 +31,7 @@ vi.mock('../../../../../security/verifier.js', () => ({
   getGitLabEventType: vi.fn(() => 'Merge Request Hook'),
 }));
 
-vi.mock('../../../../../queue/reviewQueue.js', () => ({
+vi.mock('../../../../../frameworks/queue/pQueueAdapter.js', () => ({
   createJobId: vi.fn(() => 'gitlab-test-org/test-project-42'),
   enqueueReview: vi.fn(() => Promise.resolve(true)),
   updateJobProgress: vi.fn(),

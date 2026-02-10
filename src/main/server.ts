@@ -4,7 +4,7 @@ import { loadConfig, type Config } from '../config/loader.js';
 import { createDependencies, type Dependencies } from './dependencies.js';
 import { registerRoutes } from './routes.js';
 import { setupWebSocketCallbacks } from './websocket.js';
-import { initQueue } from '../queue/reviewQueue.js';
+import { initQueue } from '../frameworks/queue/pQueueAdapter.js';
 
 export interface ServerOptions {
   config?: Config;

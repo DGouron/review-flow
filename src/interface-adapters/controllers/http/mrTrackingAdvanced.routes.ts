@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { RepositoryConfig } from '../../../config/loader.js';
-import { logInfo, logError } from '../../../services/logService.js';
-import { enqueueReview, createJobId, updateJobProgress } from '../../../queue/reviewQueue.js';
+import { logInfo, logError } from '../../../frameworks/logging/logBuffer.js';
+import { enqueueReview, createJobId, updateJobProgress } from '../../../frameworks/queue/pQueueAdapter.js';
 import { loadProjectConfig, getFollowupAgents } from '../../../config/projectConfig.js';
 import { DEFAULT_FOLLOWUP_AGENTS } from '../../../entities/progress/agentDefinition.type.js';
 import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js';

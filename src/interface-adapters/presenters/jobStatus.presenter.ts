@@ -1,4 +1,4 @@
-import type { JobStatus, ReviewJob } from '../../queue/reviewQueue.js'
+import type { JobStatus, ReviewJob } from '../../frameworks/queue/pQueueAdapter.js'
 import type { Presenter } from '../../shared/foundation/presenter.base.js'
 import { Duration } from '../../entities/shared/duration.valueObject.js'
 

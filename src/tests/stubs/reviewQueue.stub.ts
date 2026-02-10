@@ -1,4 +1,4 @@
-import type { ReviewJob } from '../../queue/reviewQueue.js';
+import type { ReviewJob } from '../../frameworks/queue/pQueueAdapter.js';
 import type { ReviewQueuePort } from '../../usecases/triggerReview.usecase.js';
 import type { CancelReviewQueuePort } from '../../usecases/cancelReview.usecase.js';
 

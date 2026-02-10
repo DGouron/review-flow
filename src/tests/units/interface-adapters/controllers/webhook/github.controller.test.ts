@@ -34,7 +34,7 @@ vi.mock('../../../../../security/verifier.js', () => ({
   getGitHubEventType: vi.fn(() => 'pull_request'),
 }));
 
-vi.mock('../../../../../queue/reviewQueue.js', () => ({
+vi.mock('../../../../../frameworks/queue/pQueueAdapter.js', () => ({
   createJobId: vi.fn(() => 'github-test-owner/test-repo-123'),
   enqueueReview: vi.fn(() => Promise.resolve(true)),
   updateJobProgress: vi.fn(),
@@ -55,7 +55,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { handleGitHubWebhook } from '../../../../../interface-adapters/controllers/webhook/github.controller.js';
 import { GitHubEventFactory } from '../../../../factories/gitHubEvent.factory.js';
 import { createStubLogger } from '../../../../stubs/logger.stub.js';
-import { enqueueReview } from '../../../../../queue/reviewQueue.js';
+import { enqueueReview } from '../../../../../frameworks/queue/pQueueAdapter.js';
 import { invokeClaudeReview } from '../../../../../claude/invoker.js';
 import { TrackedMrFactory } from '../../../../factories/trackedMr.factory.js';
 import type { TrackedMr } from '../../../../../entities/tracking/trackedMr.js';

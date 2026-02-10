@@ -3,15 +3,15 @@ import { writeFileSync, mkdirSync, existsSync, unlinkSync, readFileSync } from '
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Logger } from 'pino';
-import type { ReviewJob } from '../../queue/reviewQueue.js';
+import type { ReviewJob } from '../queue/pQueueAdapter.js';
 import type { ReviewProgress, ProgressEvent } from '../../entities/progress/progress.type.js';
 import { ProgressParser } from './progressParser.js';
-import { logInfo, logWarn, logError } from '../../services/logService.js';
-import { getModel } from '../../services/runtimeSettings.js';
+import { logInfo, logWarn, logError } from '../logging/logBuffer.js';
+import { getModel } from '../settings/runtimeSettings.js';
 import { getProjectAgents, getFollowupAgents } from '../../config/projectConfig.js';
 import { addReviewStats } from '../../services/statsService.js';
 import { FileSystemReviewRequestTrackingGateway } from '../../interface-adapters/gateways/fileSystem/reviewRequestTracking.fileSystem.js';
-import { ProjectStatsCalculator } from '../../interface-adapters/services/projectStats.calculator.js';
+import { ProjectStatsCalculator } from '../../interface-adapters/presenters/projectStats.calculator.js';
 import { resolveClaudePath } from '../../shared/services/claudePathResolver.js';
 import { getJobContextFilePath } from '../../shared/services/mcpJobContext.js';
 

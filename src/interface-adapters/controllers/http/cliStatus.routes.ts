@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { spawn } from 'node:child_process';
-import { logInfo, logWarn, logError } from '../../../services/logService.js';
+import { logInfo, logWarn, logError } from '../../../frameworks/logging/logBuffer.js';
 import { resolveClaudePath } from '../../../shared/services/claudePathResolver.js';
 
 export const cliStatusRoutes: FastifyPluginAsync = async (fastify) => {

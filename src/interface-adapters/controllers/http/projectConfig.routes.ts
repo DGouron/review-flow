@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { logInfo, logError } from '../../../services/logService.js';
+import { logInfo, logError } from '../../../frameworks/logging/logBuffer.js';
 
 export const projectConfigRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/api/project-config', async (request, reply) => {

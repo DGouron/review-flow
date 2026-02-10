@@ -10,7 +10,7 @@ import {
   updateJobProgress,
   cancelJob,
   type ReviewJob,
-} from '../../../queue/reviewQueue.js';
+} from '../../../frameworks/queue/pQueueAdapter.js';
 import { invokeClaudeReview, sendNotification } from '../../../claude/invoker.js';
 import type { ReviewRequestTrackingGateway } from '../../gateways/reviewRequestTracking.gateway.js';
 import { TrackAssignmentUseCase } from '../../../usecases/tracking/trackAssignment.usecase.js';

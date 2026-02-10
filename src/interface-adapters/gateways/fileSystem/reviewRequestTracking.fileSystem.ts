@@ -7,7 +7,7 @@ import type {
 import { createEmptyStats, type MrTrackingData } from '../../../entities/tracking/mrTrackingData.js';
 import type { TrackedMr } from '../../../entities/tracking/trackedMr.js';
 import type { ReviewEvent } from '../../../entities/tracking/reviewEvent.js';
-import type { ProjectStatsCalculator } from '../../services/projectStats.calculator.js';
+import type { ProjectStatsCalculator } from '../../presenters/projectStats.calculator.js';
 
 function getTrackingPath(projectPath: string): string {
   return join(projectPath, '.claude', 'reviews', 'mr-tracking.json');

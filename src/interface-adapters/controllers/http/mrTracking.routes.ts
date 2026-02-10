@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { ReviewRequestTrackingGateway } from '../../gateways/reviewRequestTracking.gateway.js';
 import { TransitionStateUseCase } from '../../../usecases/tracking/transitionState.usecase.js';
-import { logInfo, logError } from '../../../services/logService.js';
+import { logInfo, logError } from '../../../frameworks/logging/logBuffer.js';
 
 interface MrTrackingRoutesOptions {
   reviewRequestTrackingGateway: ReviewRequestTrackingGateway;

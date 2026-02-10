@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { getModel, setModel, getSettings, type ClaudeModel } from '../../../services/runtimeSettings.js';
+import { getModel, setModel, getSettings, type ClaudeModel } from '../../../frameworks/settings/runtimeSettings.js';
 
 export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/api/settings', async () => {

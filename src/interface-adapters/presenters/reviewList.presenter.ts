@@ -1,4 +1,4 @@
-import type { JobStatus } from '../../queue/reviewQueue.js'
+import type { JobStatus } from '../../frameworks/queue/pQueueAdapter.js'
 import type { JobStatusPresenter, JobStatusViewModel } from './jobStatus.presenter.js'
 
 export interface ReviewListViewModel {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ProjectStatsCalculator } from '../../../../interface-adapters/services/projectStats.calculator.js';
+import { ProjectStatsCalculator } from '../../../../interface-adapters/presenters/projectStats.calculator.js';
 import { TrackedMrFactory } from '../../../factories/trackedMr.factory.js';
 
 describe('ProjectStatsCalculator', () => {

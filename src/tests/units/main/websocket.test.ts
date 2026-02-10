@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../../queue/reviewQueue.js', () => ({
+vi.mock('../../../frameworks/queue/pQueueAdapter.js', () => ({
   setProgressChangeCallback: vi.fn(),
   setStateChangeCallback: vi.fn(),
   updateJobProgress: vi.fn(),
   getJobsStatus: vi.fn(() => ({ active: [], recent: [] })),
 }))
 
-vi.mock('../../../services/logService.js', () => ({
+vi.mock('../../../frameworks/logging/logBuffer.js', () => ({
   onLog: vi.fn(),
 }))
 
@@ -16,7 +16,7 @@ import {
   startWatchingReviewContext,
   stopWatchingReviewContext,
 } from '../../../main/websocket.js'
-import { updateJobProgress } from '../../../queue/reviewQueue.js'
+import { updateJobProgress } from '../../../frameworks/queue/pQueueAdapter.js'
 import type { ReviewContextProgress } from '../../../entities/reviewContext/reviewContext.js'
 import type { ReviewProgress } from '../../../entities/progress/progress.type.js'
 
