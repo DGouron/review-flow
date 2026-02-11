@@ -14,15 +14,26 @@ Get Reviewflow running in 5 minutes.
 
 ## 1. Installation
 
+### As a user (recommended)
+
 ```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/reviewflow.git
-cd reviewflow
+npm install -g reviewflow
+# or
+yarn global add reviewflow
+```
 
-# Install dependencies
+You can also run it without installing:
+
+```bash
+npx reviewflow start
+```
+
+### As a contributor
+
+```bash
+git clone https://github.com/DGouron/review-flow.git
+cd review-flow
 yarn install
-
-# Build
 yarn build
 ```
 
@@ -31,8 +42,9 @@ yarn build
 ### Environment variables
 
 ```bash
-# Copy the example
-cp .env.example .env
+# Create your .env from the bundled template
+cp node_modules/reviewflow/templates/.env.example .env 2>/dev/null \
+  || cp .env.example .env
 
 # Edit with your webhook secrets
 # Generate tokens with: openssl rand -hex 32
@@ -48,8 +60,9 @@ GITHUB_WEBHOOK_SECRET=your_generated_token_here
 ### Application config
 
 ```bash
-# Copy the example
-cp config.example.json config.json
+# Create your config from the bundled template
+cp node_modules/reviewflow/templates/config.json.template config.json 2>/dev/null \
+  || cp config.example.json config.json
 
 # Edit with your settings
 nano config.json
@@ -75,6 +88,14 @@ nano config.json
 ```
 
 ## 3. Start the server
+
+### Global install
+
+```bash
+reviewflow start
+```
+
+### Contributor mode
 
 ```bash
 # Development mode (with hot reload)
@@ -130,7 +151,7 @@ ngrok http 3000
 1. Create or open a Merge Request / Pull Request
 2. Assign yourself as **Reviewer**
 3. Open `http://localhost:3000/dashboard/`
-4. Watch the review appear! 🎉
+4. Watch the review appear!
 
 ## Next steps
 

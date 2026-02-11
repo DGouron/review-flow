@@ -4,6 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue.svg)](https://www.typescriptlang.org/)
+[![Documentation](https://img.shields.io/badge/Docs-VitePress-646cff.svg)](https://dgouron.github.io/review-flow/)
 
 Automated AI code reviews powered by [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Assign a reviewer on your merge request — Claude reviews the code, tracks progress in real time, and follows up when you push fixes.
 
@@ -152,9 +153,9 @@ reviewflow start
 # Dashboard at http://localhost:3847
 ```
 
-Then [configure a webhook](docs/QUICKSTART.md) on your GitLab/GitHub project pointing to your server.
+Then [configure a webhook](https://dgouron.github.io/review-flow/guide/quick-start) on your GitLab/GitHub project pointing to your server.
 
-For detailed setup, see the **[Quick Start Guide](docs/QUICKSTART.md)**.
+For detailed setup, see the **[Quick Start Guide](https://dgouron.github.io/review-flow/guide/quick-start)**.
 
 ---
 
@@ -162,15 +163,14 @@ For detailed setup, see the **[Quick Start Guide](docs/QUICKSTART.md)**.
 
 | Topic | Link |
 |-------|------|
-| Quick Start | [docs/QUICKSTART.md](docs/QUICKSTART.md) |
-| Configuration Reference | [docs/CONFIG-REFERENCE.md](docs/CONFIG-REFERENCE.md) |
-| Project Configuration | [docs/PROJECT_CONFIG.md](docs/PROJECT_CONFIG.md) |
-| Review Skills Guide | [docs/REVIEW-SKILLS-GUIDE.md](docs/REVIEW-SKILLS-GUIDE.md) |
-| MCP Tools Reference | [docs/MCP-TOOLS-REFERENCE.md](docs/MCP-TOOLS-REFERENCE.md) |
-| Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| Deployment | [docs/deployment/README.md](docs/deployment/README.md) |
-| Troubleshooting | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
-| Full Documentation Index | [docs/INDEX.md](docs/INDEX.md) |
+| Quick Start | [guide/quick-start](https://dgouron.github.io/review-flow/guide/quick-start) |
+| Configuration Reference | [reference/config](https://dgouron.github.io/review-flow/reference/config) |
+| Project Configuration | [guide/project-config](https://dgouron.github.io/review-flow/guide/project-config) |
+| Review Skills Guide | [guide/review-skills](https://dgouron.github.io/review-flow/guide/review-skills) |
+| MCP Tools Reference | [reference/mcp-tools](https://dgouron.github.io/review-flow/reference/mcp-tools) |
+| Architecture | [architecture](https://dgouron.github.io/review-flow/architecture/) |
+| Deployment | [deployment](https://dgouron.github.io/review-flow/deployment/) |
+| Troubleshooting | [guide/troubleshooting](https://dgouron.github.io/review-flow/guide/troubleshooting) |
 
 ---
 
