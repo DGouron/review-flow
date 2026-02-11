@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.1.0...reviewflow-v3.1.1) (2026-02-11)
+
+
+### Fixed
+
+* **cli:** resolve symlinks for global npm install detection ([5f70ee6](https://github.com/DGouron/review-flow/commit/5f70ee6763e24348aa9cfd07d78e0f0f33ab2c56))
+* **cli:** resolve symlinks for global npm install detection ([8ed3b45](https://github.com/DGouron/review-flow/commit/8ed3b45fecf07ce69a9c6eb3dc6d46bd240de317))
+
 ## [3.1.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.0.1...reviewflow-v3.1.0) (2026-02-11)
 
 
