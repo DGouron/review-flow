@@ -62,6 +62,24 @@ describe('parseCliArgs', () => {
       expect(result.command).toBe('start');
       expect((result as CliArgs & { command: 'start' }).port).toBeUndefined();
     });
+
+    it('should detect --open flag', () => {
+      const result = parseCliArgs(['start', '--open']);
+
+      expect(result).toEqual(expect.objectContaining({ command: 'start', open: true }));
+    });
+
+    it('should detect -o short flag for open', () => {
+      const result = parseCliArgs(['start', '-o']);
+
+      expect(result).toEqual(expect.objectContaining({ command: 'start', open: true }));
+    });
+
+    it('should default open to false when not specified', () => {
+      const result = parseCliArgs(['start']);
+
+      expect(result).toEqual(expect.objectContaining({ command: 'start', open: false }));
+    });
   });
 
   describe('stop command', () => {

@@ -3,6 +3,7 @@ interface StartArgs {
   skipDependencyCheck: boolean;
   daemon: boolean;
   port: number | undefined;
+  open: boolean;
 }
 
 interface StopArgs {
@@ -62,6 +63,7 @@ function parseStartArgs(args: string[]): StartArgs {
     skipDependencyCheck: hasFlag(args, '--skip-dependency-check'),
     daemon: hasFlag(args, '--daemon', '-d'),
     port: portValue !== undefined ? Number(portValue) : undefined,
+    open: hasFlag(args, '--open', '-o'),
   };
 }
 

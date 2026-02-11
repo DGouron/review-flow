@@ -24,6 +24,8 @@ function createFakeDeps(
     error: vi.fn(),
     log: vi.fn(),
     startDaemonDeps: createFakeStartDaemonDeps(),
+    loadStartupInfo: () => ({ enabledPlatforms: [], defaultPort: 3000 }),
+    openInBrowser: vi.fn(),
     ...overrides,
   };
 }
@@ -36,7 +38,7 @@ describe('executeStart', () => {
       ],
     });
 
-    executeStart(false, false, undefined, deps);
+    executeStart(false, false, undefined, false, deps);
 
     expect(deps.exit).toHaveBeenCalledWith(1);
     expect(deps.error).toHaveBeenCalledWith('Missing dependencies:');
@@ -50,7 +52,7 @@ describe('executeStart', () => {
       ],
     });
 
-    executeStart(false, false, undefined, deps);
+    executeStart(false, false, undefined, false, deps);
 
     expect(deps.error).toHaveBeenCalledWith(
       '  - Claude CLI: https://claude.example.com',
@@ -66,7 +68,7 @@ describe('executeStart', () => {
     ]);
     const deps = createFakeDeps({ validateDependencies });
 
-    executeStart(true, false, undefined, deps);
+    executeStart(true, false, undefined, false, deps);
 
     expect(validateDependencies).not.toHaveBeenCalled();
     expect(deps.exit).not.toHaveBeenCalled();
@@ -76,7 +78,7 @@ describe('executeStart', () => {
     const startServer = vi.fn(() => Promise.resolve());
     const deps = createFakeDeps({ startServer });
 
-    executeStart(false, false, undefined, deps);
+    executeStart(false, false, undefined, false, deps);
 
     expect(startServer).toHaveBeenCalled();
     expect(deps.exit).not.toHaveBeenCalled();
@@ -87,7 +89,7 @@ describe('executeStart', () => {
     const startServer = () => Promise.reject(serverError);
     const deps = createFakeDeps({ startServer });
 
-    executeStart(false, false, undefined, deps);
+    executeStart(false, false, undefined, false, deps);
 
     await vi.waitFor(() => {
       expect(deps.exit).toHaveBeenCalledWith(1);
@@ -101,7 +103,7 @@ describe('executeStart', () => {
       startDaemonDeps: createFakeStartDaemonDeps({ spawnDaemon }),
     });
 
-    executeStart(false, true, 4000, deps);
+    executeStart(false, true, 4000, false, deps);
 
     expect(spawnDaemon).toHaveBeenCalledWith(4000);
     expect(deps.log).toHaveBeenCalled();
@@ -111,8 +113,83 @@ describe('executeStart', () => {
     const startServer = vi.fn(() => Promise.resolve());
     const deps = createFakeDeps({ startServer });
 
-    executeStart(false, true, undefined, deps);
+    executeStart(false, true, undefined, false, deps);
 
     expect(startServer).not.toHaveBeenCalled();
+  });
+
+  it('should display startup banner in daemon mode', () => {
+    const spawnDaemon = vi.fn(() => 123);
+    const deps = createFakeDeps({
+      startDaemonDeps: createFakeStartDaemonDeps({ spawnDaemon }),
+      loadStartupInfo: () => ({ enabledPlatforms: ['gitlab'] as Array<'gitlab' | 'github'>, defaultPort: 3000 }),
+    });
+
+    executeStart(false, true, 4000, false, deps);
+
+    expect(deps.log).toHaveBeenCalledWith(expect.stringContaining('http://localhost:4000/dashboard/'));
+    expect(deps.log).toHaveBeenCalledWith(expect.stringContaining('/webhooks/gitlab'));
+  });
+
+  it('should open browser when open flag is true in daemon mode', () => {
+    const spawnDaemon = vi.fn(() => 123);
+    const openInBrowser = vi.fn();
+    const deps = createFakeDeps({
+      startDaemonDeps: createFakeStartDaemonDeps({ spawnDaemon }),
+      openInBrowser,
+    });
+
+    executeStart(false, true, 3000, true, deps);
+
+    expect(openInBrowser).toHaveBeenCalledWith('http://localhost:3000/dashboard/');
+  });
+
+  it('should not open browser when open flag is false', () => {
+    const spawnDaemon = vi.fn(() => 123);
+    const openInBrowser = vi.fn();
+    const deps = createFakeDeps({
+      startDaemonDeps: createFakeStartDaemonDeps({ spawnDaemon }),
+      openInBrowser,
+    });
+
+    executeStart(false, true, 3000, false, deps);
+
+    expect(openInBrowser).not.toHaveBeenCalled();
+  });
+
+  it('should display startup banner in foreground mode', async () => {
+    const deps = createFakeDeps({
+      loadStartupInfo: () => ({ enabledPlatforms: ['github'] as Array<'gitlab' | 'github'>, defaultPort: 3000 }),
+    });
+
+    executeStart(true, false, 5000, false, deps);
+
+    await vi.waitFor(() => {
+      expect(deps.log).toHaveBeenCalledWith(expect.stringContaining('http://localhost:5000/dashboard/'));
+      expect(deps.log).toHaveBeenCalledWith(expect.stringContaining('/webhooks/github'));
+    });
+  });
+
+  it('should open browser when open flag is true in foreground mode', async () => {
+    const openInBrowser = vi.fn();
+    const deps = createFakeDeps({ openInBrowser });
+
+    executeStart(true, false, 3000, true, deps);
+
+    await vi.waitFor(() => {
+      expect(openInBrowser).toHaveBeenCalledWith('http://localhost:3000/dashboard/');
+    });
+  });
+
+  it('should use default port from config when no port specified', async () => {
+    const deps = createFakeDeps({
+      loadStartupInfo: () => ({ enabledPlatforms: [] as Array<'gitlab' | 'github'>, defaultPort: 8080 }),
+    });
+
+    executeStart(true, false, undefined, false, deps);
+
+    await vi.waitFor(() => {
+      expect(deps.log).toHaveBeenCalledWith(expect.stringContaining('8080'));
+    });
   });
 });
