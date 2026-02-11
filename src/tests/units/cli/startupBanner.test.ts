@@ -7,7 +7,7 @@ describe('formatStartupBanner', () => {
   });
 
   afterEach(() => {
-    delete process.env.NO_COLOR;
+    process.env.NO_COLOR = undefined;
   });
 
   it('should return dashboard URL', () => {
