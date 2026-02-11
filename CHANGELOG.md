@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.0.1...reviewflow-v3.1.0) (2026-02-11)
+
+
+### Added
+
+* **ci:** auto-publish to npm on release + fix docs links ([f7ee456](https://github.com/DGouron/review-flow/commit/f7ee4568383335783c2a8211ab4cb8e58fc2f099))
+* **ci:** auto-publish to npm on release + fix docs links ([8bb40dd](https://github.com/DGouron/review-flow/commit/8bb40ddab87793c56c97398111211f0311abbc4e))
+* **cli:** add start, stop, status, logs commands with daemon support ([b85ec78](https://github.com/DGouron/review-flow/commit/b85ec78ec8459efaf59c5427ed7f0c231354c5fb))
+* **cli:** add start, stop, status, logs commands with daemon support ([abf21fe](https://github.com/DGouron/review-flow/commit/abf21fe46fde157ae8c532ac8907db7b553b95b6))
+* **cli:** display startup banner with URLs and --open flag ([8a39a60](https://github.com/DGouron/review-flow/commit/8a39a60775b9b806f66437a559918d2b10ce17b0))
+* **cli:** display startup banner with URLs and add --open flag ([2a5f60d](https://github.com/DGouron/review-flow/commit/2a5f60dd4cac4ac8fdf560fbd4e1a2b07202b3ba))
+
+
+### Fixed
+
+* **docs:** replace broken README links with VitePress URLs ([9eca8e2](https://github.com/DGouron/review-flow/commit/9eca8e23cb44b367a29d009ff0298c2f251051be))
+* **docs:** replace broken README links with VitePress URLs and update quick-start ([bc3fca8](https://github.com/DGouron/review-flow/commit/bc3fca8e82337a454480d84e498c9ac185bcfa16))
+* **lint:** replace delete operator with undefined assignment ([ca72a49](https://github.com/DGouron/review-flow/commit/ca72a4947db4e5af988e026253601b56531c4d03))
+* **security:** use execFileSync to prevent command injection in browserOpener ([ab056bc](https://github.com/DGouron/review-flow/commit/ab056bc47e0e8b043f5c37fd6677044bed96294d))
+
+
+### Changed
+
+* remove Strangler Fig re-exports and move ProjectStatsCalculator to presenters ([8f1ef13](https://github.com/DGouron/review-flow/commit/8f1ef130b7fc98dd544df3d12a61e73202774fb2))
+* remove Strangler Fig re-exports and relocate presenter ([8a9ac05](https://github.com/DGouron/review-flow/commit/8a9ac05d2073ff2d033db837c9929cfc37e3a436))
+
 ## [3.0.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.0.0...reviewflow-v3.0.1) (2026-02-09)
 
 
