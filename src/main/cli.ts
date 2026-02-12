@@ -12,6 +12,7 @@ import { StartDaemonUseCase, type StartDaemonDependencies } from '../usecases/cl
 import { StopDaemonUseCase, type StopDaemonDependencies } from '../usecases/cli/stopDaemon.usecase.js';
 import { QueryStatusUseCase, type QueryStatusDependencies } from '../usecases/cli/queryStatus.usecase.js';
 import { ReadLogsUseCase, type ReadLogsDependencies } from '../usecases/cli/readLogs.usecase.js';
+import { FollowupImportantsUseCase } from '../usecases/cli/followupImportants.usecase.js';
 import { readPidFile, writePidFile, removePidFile } from '../shared/services/pidFileManager.js';
 import { isProcessRunning } from '../shared/services/processChecker.js';
 import { PID_FILE_PATH, LOG_FILE_PATH } from '../shared/services/daemonPaths.js';
@@ -51,6 +52,7 @@ Commands:
   status                   Show server status
   logs                     Show daemon logs
   validate                 Validate configuration
+  followup-importants      Trigger followups for pending-approval MRs with Important issues
 
 Init options:
   -y, --yes                Accept all defaults (non-interactive)
@@ -76,6 +78,10 @@ Logs options:
 
 Validate options:
   --fix                    Auto-fix correctable issues
+
+Followup-importants options:
+  -p, --project <path>     Scan specific project only
+  -y, --yes                Skip confirmation prompt
 
 General options:
   -v, --version            Show version
@@ -244,6 +250,23 @@ export function executeLogs(follow: boolean, lines: number, deps: LogsDeps): voi
       });
       break;
   }
+}
+
+async function executeFollowupImportants(project: string | undefined): Promise<void> {
+  const pidData = readPidFile(PID_FILE_PATH);
+  if (!pidData || !isProcessRunning(pidData.pid)) {
+    console.error(red('Server is not running. Start with: reviewflow start'));
+    process.exit(1);
+  }
+
+  const usecase = new FollowupImportantsUseCase({
+    serverPort: pidData.port,
+    log: console.log,
+    error: console.error,
+    fetch: globalThis.fetch,
+  });
+
+  await usecase.execute({ project });
 }
 
 const DEFAULT_SCAN_PATHS = [
@@ -570,6 +593,10 @@ if (isDirectlyExecuted) {
 
     case 'validate':
       executeValidate(args.fix);
+      break;
+
+    case 'followup-importants':
+      executeFollowupImportants(args.project);
       break;
   }
 }

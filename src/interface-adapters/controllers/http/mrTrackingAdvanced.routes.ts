@@ -285,6 +285,71 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
     return { success: true, mr: result };
   });
 
+  fastify.post('/api/mr-tracking/followup-importants', async (request, reply) => {
+    const body = request.body as { projectPath?: string };
+
+    let repos: RepositoryConfig[];
+    if (body.projectPath) {
+      const validation = validateProjectPath(body.projectPath);
+      if (!validation.valid) {
+        reply.code(400);
+        return { success: false, error: validation.error };
+      }
+      const repo = getRepositories().find(r => r.localPath === validation.path && r.enabled);
+      if (!repo) {
+        reply.code(404);
+        return { success: false, error: 'Repository not configured' };
+      }
+      repos = [repo];
+    } else {
+      repos = getRepositories().filter(r => r.enabled);
+    }
+
+    const candidates: Array<{ mr: import('../../../entities/tracking/trackedMr.js').TrackedMr; projectPath: string }> = [];
+    for (const repo of repos) {
+      const mrs = reviewRequestTrackingGateway.getByState(repo.localPath, 'pending-approval');
+      for (const mr of mrs) {
+        if (mr.totalWarnings > 0) {
+          candidates.push({ mr, projectPath: repo.localPath });
+        }
+      }
+    }
+
+    if (candidates.length === 0) {
+      return { success: true, triggered: 0, candidates: [], failed: [] };
+    }
+
+    const failed: Array<{ mrId: string; error: string }> = [];
+    let triggered = 0;
+
+    for (const { mr, projectPath } of candidates) {
+      try {
+        const internalResponse = await fastify.inject({
+          method: 'POST',
+          url: '/api/mr-tracking/followup',
+          payload: { mrId: mr.id, projectPath },
+        });
+        const data = JSON.parse(internalResponse.body);
+        if (data.success) {
+          triggered++;
+        } else {
+          failed.push({ mrId: mr.id, error: data.error });
+        }
+      } catch (error) {
+        failed.push({ mrId: mr.id, error: error instanceof Error ? error.message : String(error) });
+      }
+    }
+
+    logInfo('Followup importants batch triggered', { triggered, failed: failed.length, total: candidates.length });
+
+    return {
+      success: true,
+      triggered,
+      candidates: candidates.map(c => ({ mrId: c.mr.id, mrNumber: c.mr.mrNumber, title: c.mr.title })),
+      failed,
+    };
+  });
+
   fastify.post('/api/mr-tracking/sync', async (request, reply) => {
     const body = request.body as { projectPath?: string; mrId?: string };
     const { projectPath, mrId } = body;
