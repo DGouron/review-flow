@@ -162,6 +162,91 @@ describe('parseCliArgs', () => {
     });
   });
 
+  describe('init command', () => {
+    it('should detect init command', () => {
+      const result = parseCliArgs(['init']);
+
+      expect(result.command).toBe('init');
+    });
+
+    it('should detect --yes flag', () => {
+      const result = parseCliArgs(['init', '--yes']);
+
+      expect(result.command).toBe('init');
+      expect((result as CliArgs & { command: 'init' }).yes).toBe(true);
+    });
+
+    it('should detect -y short flag for yes', () => {
+      const result = parseCliArgs(['init', '-y']);
+
+      expect(result.command).toBe('init');
+      expect((result as CliArgs & { command: 'init' }).yes).toBe(true);
+    });
+
+    it('should detect --skip-mcp flag', () => {
+      const result = parseCliArgs(['init', '--skip-mcp']);
+
+      expect(result.command).toBe('init');
+      expect((result as CliArgs & { command: 'init' }).skipMcp).toBe(true);
+    });
+
+    it('should detect --show-secrets flag', () => {
+      const result = parseCliArgs(['init', '--show-secrets']);
+
+      expect(result.command).toBe('init');
+      expect((result as CliArgs & { command: 'init' }).showSecrets).toBe(true);
+    });
+
+    it('should detect --scan-path with value', () => {
+      const result = parseCliArgs(['init', '--scan-path', '/custom/path']);
+
+      expect(result.command).toBe('init');
+      expect((result as CliArgs & { command: 'init' }).scanPaths).toEqual(['/custom/path']);
+    });
+
+    it('should collect multiple --scan-path values', () => {
+      const result = parseCliArgs([
+        'init', '--scan-path', '/path/a', '--scan-path', '/path/b',
+      ]);
+
+      expect(result.command).toBe('init');
+      expect((result as CliArgs & { command: 'init' }).scanPaths).toEqual(['/path/a', '/path/b']);
+    });
+
+    it('should default flags to false', () => {
+      const result = parseCliArgs(['init']);
+
+      expect(result.command).toBe('init');
+      const initArgs = result as CliArgs & { command: 'init' };
+      expect(initArgs.yes).toBe(false);
+      expect(initArgs.skipMcp).toBe(false);
+      expect(initArgs.showSecrets).toBe(false);
+      expect(initArgs.scanPaths).toEqual([]);
+    });
+  });
+
+  describe('validate command', () => {
+    it('should detect validate command', () => {
+      const result = parseCliArgs(['validate']);
+
+      expect(result.command).toBe('validate');
+    });
+
+    it('should detect --fix flag', () => {
+      const result = parseCliArgs(['validate', '--fix']);
+
+      expect(result.command).toBe('validate');
+      expect((result as CliArgs & { command: 'validate' }).fix).toBe(true);
+    });
+
+    it('should default fix to false', () => {
+      const result = parseCliArgs(['validate']);
+
+      expect(result.command).toBe('validate');
+      expect((result as CliArgs & { command: 'validate' }).fix).toBe(false);
+    });
+  });
+
   describe('version and help flags', () => {
     it('should detect --version flag', () => {
       const result = parseCliArgs(['--version']);
