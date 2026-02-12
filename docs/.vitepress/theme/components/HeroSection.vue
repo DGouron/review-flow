@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { VPButton } from "vitepress/theme";
-import { withBase } from "vitepress";
 </script>
 
 <template>
@@ -20,7 +19,7 @@ import { withBase } from "vitepress";
 					tag="a"
 					size="medium"
 					theme="brand"
-					:href="withBase('/guide/quick-start')"
+					href="/guide/quick-start"
 					text="Get Started"
 				/>
 				<VPButton

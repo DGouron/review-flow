@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { VPButton } from "vitepress/theme";
-import { withBase } from "vitepress";
 
 interface Step {
 	number: number;
@@ -42,7 +41,7 @@ const steps: Step[] = [
 				tag="a"
 				size="medium"
 				theme="alt"
-				:href="withBase('/guide/quick-start')"
+				href="/guide/quick-start"
 				text="View Full Quick Start →"
 			/>
 		</div>
