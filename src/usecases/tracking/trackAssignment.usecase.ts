@@ -93,7 +93,6 @@ export class TrackAssignmentUseCase implements UseCase<TrackAssignmentInput, Tra
       totalWarnings: 0,
       totalSuggestions: 0,
       totalDurationMs: 0,
-      averageScore: null,
       latestScore: null,
       autoFollowup: true,
     };

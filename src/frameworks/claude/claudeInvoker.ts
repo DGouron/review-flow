@@ -490,18 +490,19 @@ export async function invokeClaudeReview(
           outputLength: stdout.length,
         });
 
-        // Save review statistics
-        try {
-          // Look up assignor from MR tracking
-          const mrId = `${job.platform}-${job.projectPath}-${job.mrNumber}`;
-          const trackingGateway = new FileSystemReviewRequestTrackingGateway(new ProjectStatsCalculator());
-          const mrDetails = trackingGateway.getById(job.localPath, mrId);
-          const assignedBy = mrDetails?.assignment?.username;
+        // Save review statistics (followups are not counted as reviews)
+        if (job.jobType !== 'followup') {
+          try {
+            const mrId = `${job.platform}-${job.projectPath}-${job.mrNumber}`;
+            const trackingGateway = new FileSystemReviewRequestTrackingGateway(new ProjectStatsCalculator());
+            const mrDetails = trackingGateway.getById(job.localPath, mrId);
+            const assignedBy = mrDetails?.assignment?.username;
 
-          const reviewStats = addReviewStats(job.localPath, job.mrNumber, durationMs, stdout, assignedBy);
-          logger.info({ reviewStats }, 'Stats de review enregistrées');
-        } catch (statsError) {
-          logger.warn({ error: statsError }, 'Erreur lors de l\'enregistrement des stats');
+            const reviewStats = addReviewStats(job.localPath, job.mrNumber, durationMs, stdout, assignedBy);
+            logger.info({ reviewStats }, 'Stats de review enregistrées');
+          } catch (statsError) {
+            logger.warn({ error: statsError }, 'Erreur lors de l\'enregistrement des stats');
+          }
         }
         // Log stdout preview for debugging
         if (stdout.length > 0) {
