@@ -156,4 +156,4 @@ yarn add @modelcontextprotocol/sdk
 
 ## Next Steps
 
-See tickets in `.claude/backlog/tickets/`
+See [GitHub Issues](https://github.com/DGouron/review-flow/issues) and the [ReviewFlow Roadmap](https://github.com/users/DGouron/projects/3) project board.
