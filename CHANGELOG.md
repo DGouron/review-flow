@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.2.0...reviewflow-v3.3.0) (2026-02-12)
+
+
+### Added
+
+* **followup:** re-verify Important issues on pending-approval MRs ([7fe00b1](https://github.com/DGouron/review-flow/commit/7fe00b1eba4ab96973021b488c34fc8054b6dde4))
+* **followup:** re-verify Important issues on pending-approval MRs ([cb17aff](https://github.com/DGouron/review-flow/commit/cb17aff79827121c701b95706d36af2996cb85b6))
+
+
+### Fixed
+
+* **docs:** remove double base path in Get Started links ([7aa2f7d](https://github.com/DGouron/review-flow/commit/7aa2f7d22d186fce10521b1df7ae9c1f36917b15))
+* **docs:** remove withBase() causing double base path in links ([4944546](https://github.com/DGouron/review-flow/commit/4944546a2eac94b2955912ec5e425803f985a799))
+
 ## [3.2.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.1.1...reviewflow-v3.2.0) (2026-02-12)
 
 
