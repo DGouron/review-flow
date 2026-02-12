@@ -22,6 +22,19 @@ interface LogsArgs {
   lines: number;
 }
 
+interface InitArgs {
+  command: 'init';
+  yes: boolean;
+  skipMcp: boolean;
+  showSecrets: boolean;
+  scanPaths: string[];
+}
+
+interface ValidateArgs {
+  command: 'validate';
+  fix: boolean;
+}
+
 interface VersionArgs {
   command: 'version';
 }
@@ -30,9 +43,9 @@ interface HelpArgs {
   command: 'help';
 }
 
-export type CliArgs = StartArgs | StopArgs | StatusArgs | LogsArgs | VersionArgs | HelpArgs;
+export type CliArgs = StartArgs | StopArgs | StatusArgs | LogsArgs | InitArgs | ValidateArgs | VersionArgs | HelpArgs;
 
-const KNOWN_COMMANDS = ['start', 'stop', 'status', 'logs'] as const;
+const KNOWN_COMMANDS = ['start', 'stop', 'status', 'logs', 'init', 'validate'] as const;
 type KnownCommand = (typeof KNOWN_COMMANDS)[number];
 
 function hasFlag(args: string[], long: string, short?: string): boolean {
@@ -90,6 +103,33 @@ function parseLogsArgs(args: string[]): LogsArgs {
   };
 }
 
+function getAllFlagValues(args: string[], long: string): string[] {
+  const values: string[] = [];
+  for (let index = 0; index < args.length; index++) {
+    if (args[index] === long && args[index + 1] !== undefined) {
+      values.push(args[index + 1]);
+    }
+  }
+  return values;
+}
+
+function parseInitArgs(args: string[]): InitArgs {
+  return {
+    command: 'init',
+    yes: hasFlag(args, '--yes', '-y'),
+    skipMcp: hasFlag(args, '--skip-mcp'),
+    showSecrets: hasFlag(args, '--show-secrets'),
+    scanPaths: getAllFlagValues(args, '--scan-path'),
+  };
+}
+
+function parseValidateArgs(args: string[]): ValidateArgs {
+  return {
+    command: 'validate',
+    fix: hasFlag(args, '--fix'),
+  };
+}
+
 export function parseCliArgs(args: string[]): CliArgs {
   if (hasFlag(args, '--version', '-v')) {
     return { command: 'version' };
@@ -110,5 +150,9 @@ export function parseCliArgs(args: string[]): CliArgs {
       return parseStatusArgs(args);
     case 'logs':
       return parseLogsArgs(args);
+    case 'init':
+      return parseInitArgs(args);
+    case 'validate':
+      return parseValidateArgs(args);
   }
 }

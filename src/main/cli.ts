@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
-import { readFileSync, realpathSync } from 'node:fs';
+import { readFileSync, realpathSync, existsSync, mkdirSync, writeFileSync, readdirSync, copyFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
+import { homedir } from 'node:os';
 import { parseCliArgs } from '../cli/parseCliArgs.js';
-import { validateDependencies } from '../shared/services/dependencyChecker.js';
+import { validateDependencies, checkDependency } from '../shared/services/dependencyChecker.js';
 import { startServer } from './server.js';
 import { StartDaemonUseCase, type StartDaemonDependencies } from '../usecases/cli/startDaemon.usecase.js';
 import { StopDaemonUseCase, type StopDaemonDependencies } from '../usecases/cli/stopDaemon.usecase.js';
@@ -19,6 +21,14 @@ import { green, red, yellow, dim, bold } from '../shared/services/ansiColors.js'
 import { formatStartupBanner } from '../cli/startupBanner.js';
 import { openInBrowser } from '../shared/services/browserOpener.js';
 import { loadConfig } from '../frameworks/config/configLoader.js';
+import { getConfigDir } from '../shared/services/configDir.js';
+import { generateWebhookSecret, truncateSecret } from '../shared/services/secretGenerator.js';
+import { DiscoverRepositoriesUseCase } from '../usecases/cli/discoverRepositories.usecase.js';
+import { ConfigureMcpUseCase } from '../usecases/cli/configureMcp.usecase.js';
+import { WriteInitConfigUseCase } from '../usecases/cli/writeInitConfig.usecase.js';
+import { ValidateConfigUseCase } from '../usecases/cli/validateConfig.usecase.js';
+import { formatInitSummary } from '../cli/formatters/initSummary.js';
+import { resolveMcpServerPath } from '../frameworks/claude/claudeInvoker.js';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 
@@ -35,10 +45,18 @@ Usage:
   reviewflow [command] [options]
 
 Commands:
+  init                     Interactive setup wizard
   start                    Start the review server (default)
   stop                     Stop the running daemon
   status                   Show server status
   logs                     Show daemon logs
+  validate                 Validate configuration
+
+Init options:
+  -y, --yes                Accept all defaults (non-interactive)
+  --skip-mcp               Skip MCP server configuration
+  --show-secrets           Display full webhook secrets
+  --scan-path <path>       Custom scan path (repeatable)
 
 Start options:
   -d, --daemon             Run as background daemon
@@ -55,6 +73,9 @@ Status options:
 Logs options:
   -f, --follow             Follow log output (tail -f)
   -n, --lines <count>      Number of lines to show (default: 20)
+
+Validate options:
+  --fix                    Auto-fix correctable issues
 
 General options:
   -v, --version            Show version
@@ -225,6 +246,234 @@ export function executeLogs(follow: boolean, lines: number, deps: LogsDeps): voi
   }
 }
 
+const DEFAULT_SCAN_PATHS = [
+  join(homedir(), 'Documents'),
+  join(homedir(), 'Projects'),
+  join(homedir(), 'Development'),
+  join(homedir(), 'dev'),
+  join(homedir(), 'repos'),
+];
+
+function getGitRemoteUrl(localPath: string): string | null {
+  try {
+    const result = execSync('git remote get-url origin', {
+      cwd: localPath,
+      encoding: 'utf-8',
+      timeout: 5000,
+    });
+    return result.trim().replace(/\.git$/, '');
+  } catch {
+    return null;
+  }
+}
+
+export async function executeInit(
+  yes: boolean,
+  skipMcp: boolean,
+  showSecrets: boolean,
+  scanPaths: string[],
+): Promise<void> {
+  const configDir = getConfigDir();
+  const configPath = join(configDir, 'config.json');
+
+  if (existsSync(configPath) && !yes) {
+    const { confirm } = await import('@inquirer/prompts');
+    const overwrite = await confirm({
+      message: `Config already exists at ${configPath}. Overwrite?`,
+      default: false,
+    });
+    if (!overwrite) {
+      console.log(yellow('Init cancelled.'));
+      return;
+    }
+  }
+
+  let port = 3847;
+  let gitlabUsername = '';
+  let githubUsername = '';
+
+  if (yes) {
+    console.log(dim('Non-interactive mode: using defaults'));
+  } else {
+    const { input, number: numberPrompt } = await import('@inquirer/prompts');
+
+    const portAnswer = await numberPrompt({
+      message: 'Server port:',
+      default: 3847,
+      validate: (value) => {
+        if (value === undefined || value < 1 || value > 65535) return 'Port must be between 1 and 65535';
+        return true;
+      },
+    });
+    port = portAnswer ?? 3847;
+
+    gitlabUsername = await input({
+      message: 'GitLab username (optional):',
+      default: '',
+    });
+
+    githubUsername = await input({
+      message: 'GitHub username (optional):',
+      default: '',
+    });
+  }
+
+  const gitlabSecret = generateWebhookSecret();
+  const githubSecret = generateWebhookSecret();
+
+  console.log('');
+  console.log(bold('Webhook secrets generated:'));
+  if (showSecrets) {
+    console.log(`  GitLab: ${gitlabSecret}`);
+    console.log(`  GitHub: ${githubSecret}`);
+  } else {
+    console.log(`  GitLab: ${truncateSecret(gitlabSecret, 16)}`);
+    console.log(`  GitHub: ${truncateSecret(githubSecret, 16)}`);
+    console.log(dim('  Use --show-secrets to display full values'));
+  }
+
+  const pathsToScan = scanPaths.length > 0 ? scanPaths : DEFAULT_SCAN_PATHS;
+  let selectedRepos: Array<{ name: string; localPath: string; enabled: boolean }> = [];
+
+  const shouldScan = yes || (await (async () => {
+    const { confirm } = await import('@inquirer/prompts');
+    return confirm({ message: 'Scan for repositories?', default: true });
+  })());
+
+  if (shouldScan) {
+    console.log(dim('\nScanning for repositories...'));
+    const discoverer = new DiscoverRepositoriesUseCase({
+      existsSync,
+      readdirSync: (path: string) =>
+        readdirSync(path, { withFileTypes: true }).map(d => ({
+          name: d.name,
+          isDirectory: () => d.isDirectory(),
+        })),
+      getGitRemoteUrl,
+    });
+
+    const discovered = discoverer.execute({ scanPaths: pathsToScan, maxDepth: 3 });
+    console.log(`  Found ${discovered.repositories.length} repositories`);
+
+    if (discovered.repositories.length > 0) {
+      if (yes) {
+        selectedRepos = discovered.repositories.map(r => ({
+          name: r.name,
+          localPath: r.localPath,
+          enabled: true,
+        }));
+      } else {
+        const { checkbox } = await import('@inquirer/prompts');
+        const selected = await checkbox({
+          message: 'Select repositories to configure:',
+          choices: discovered.repositories.map(r => ({
+            name: `${r.name} ${dim(`(${r.localPath})`)}${r.hasReviewConfig ? green(' [configured]') : ''}`,
+            value: r,
+            checked: r.hasReviewConfig,
+          })),
+        });
+        selectedRepos = selected.map(r => ({
+          name: r.name,
+          localPath: r.localPath,
+          enabled: true,
+        }));
+      }
+    }
+  }
+
+  let mcpStatus: 'configured' | 'already-configured' | 'claude-not-found' | 'skipped' | 'failed' = 'skipped';
+  if (!skipMcp) {
+    console.log(dim('\nConfiguring MCP server...'));
+    try {
+      const mcpUseCase = new ConfigureMcpUseCase({
+        isClaudeInstalled: () => checkDependency({ name: 'Claude', command: 'claude --version' }),
+        readFileSync: (path, encoding) => readFileSync(path, encoding as BufferEncoding),
+        writeFileSync,
+        existsSync,
+        copyFileSync,
+        resolveMcpServerPath: () => {
+          try {
+            return resolveMcpServerPath();
+          } catch {
+            return join(dirname(fileURLToPath(import.meta.url)), '..', 'mcpServer.js');
+          }
+        },
+        settingsPath: join(homedir(), '.claude', 'settings.json'),
+      });
+      mcpStatus = mcpUseCase.execute();
+    } catch {
+      mcpStatus = 'failed';
+    }
+    console.log(`  MCP: ${mcpStatus}`);
+  }
+
+  const writer = new WriteInitConfigUseCase({ mkdirSync, writeFileSync });
+  const result = writer.execute({
+    configDir,
+    port,
+    gitlabUsername,
+    githubUsername,
+    repositories: selectedRepos,
+    gitlabWebhookSecret: gitlabSecret,
+    githubWebhookSecret: githubSecret,
+  });
+
+  const summary = formatInitSummary({
+    configPath: result.configPath,
+    envPath: result.envPath,
+    port,
+    repositoryCount: selectedRepos.length,
+    mcpStatus,
+    gitlabUsername,
+    githubUsername,
+  });
+  console.log(green(summary));
+}
+
+export function executeValidate(fix: boolean): void {
+  const configDir = getConfigDir();
+  const configPath = join(configDir, 'config.json');
+  const envPath = join(configDir, '.env');
+
+  const cwdConfigPath = join(process.cwd(), 'config.json');
+  const resolvedConfigPath = existsSync(cwdConfigPath) ? cwdConfigPath : configPath;
+  const resolvedEnvPath = existsSync(join(process.cwd(), '.env')) ? join(process.cwd(), '.env') : envPath;
+
+  const validator = new ValidateConfigUseCase({
+    existsSync,
+    readFileSync: (path, encoding) => readFileSync(path, encoding as BufferEncoding),
+  });
+
+  const result = validator.execute({ configPath: resolvedConfigPath, envPath: resolvedEnvPath });
+
+  switch (result.status) {
+    case 'not-found':
+      console.log(red('No configuration found.'));
+      console.log(dim(`Looked in: ${resolvedConfigPath}`));
+      console.log(`Run ${bold('reviewflow init')} to create one.`);
+      process.exit(1);
+      break;
+
+    case 'valid':
+      console.log(green(bold('Configuration is valid!')));
+      console.log(dim(`  Config: ${resolvedConfigPath}`));
+      console.log(dim(`  Env:    ${resolvedEnvPath}`));
+      break;
+
+    case 'invalid':
+      console.log(red(bold('Configuration has issues:')));
+      for (const issue of result.issues) {
+        const prefix = issue.severity === 'error' ? red('ERROR') : yellow('WARN');
+        console.log(`  ${prefix} [${issue.field}]: ${issue.message}`);
+      }
+      if (fix) {
+        console.log(dim('\n--fix flag detected, but no auto-fixable issues implemented yet.'));
+      }
+      process.exit(1);
+      break;
+  }
+}
+
 function createPidFileDeps() {
   return {
     readPidFile: () => readPidFile(PID_FILE_PATH),
@@ -313,6 +562,14 @@ if (isDirectlyExecuted) {
         error: console.error,
         exit: process.exit,
       });
+      break;
+
+    case 'init':
+      executeInit(args.yes, args.skipMcp, args.showSecrets, args.scanPaths);
+      break;
+
+    case 'validate':
+      executeValidate(args.fix);
       break;
   }
 }

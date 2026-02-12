@@ -125,37 +125,62 @@ Review behavior is defined by [Claude Code skills](https://docs.anthropic.com/en
 
 ## Quick Start
 
-### Install globally
+### 1. Install
 
 ```bash
 npm install -g reviewflow
-# or
-yarn global add reviewflow
 ```
 
-### Or run directly with npx
+### 2. Initialize
 
 ```bash
-npx reviewflow --help
-npx reviewflow start
+reviewflow init
 ```
 
-### Configure & run
+The interactive wizard will:
+- Configure server port and usernames
+- Generate webhook secrets
+- Scan your filesystem for git repositories
+- Set up MCP server integration with Claude Code
+
+For non-interactive setup: `reviewflow init --yes`
+
+### 3. Start
 
 ```bash
-# Configure
-cp .env.example .env
-cp config.example.json config.json
-# Edit config.json with your repositories
-
-# Start the server
 reviewflow start
 # Dashboard at http://localhost:3847
 ```
 
 Then [configure a webhook](https://dgouron.github.io/review-flow/guide/quick-start) on your GitLab/GitHub project pointing to your server.
 
+### Validate your setup
+
+```bash
+reviewflow validate
+```
+
 For detailed setup, see the **[Quick Start Guide](https://dgouron.github.io/review-flow/guide/quick-start)**.
+
+---
+
+## CLI Reference
+
+| Command | Description |
+|---------|-------------|
+| `reviewflow init` | Interactive setup wizard |
+| `reviewflow start` | Start the review server |
+| `reviewflow stop` | Stop the running daemon |
+| `reviewflow status` | Show server status |
+| `reviewflow logs` | Show daemon logs |
+| `reviewflow validate` | Validate configuration |
+
+| Init Flag | Description |
+|-----------|-------------|
+| `-y, --yes` | Accept all defaults (non-interactive) |
+| `--skip-mcp` | Skip MCP server configuration |
+| `--show-secrets` | Display full webhook secrets |
+| `--scan-path <path>` | Custom scan path (repeatable) |
 
 ---
 

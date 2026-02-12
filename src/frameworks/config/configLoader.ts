@@ -2,8 +2,16 @@ import { readFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { join } from 'node:path';
 import { config as loadEnv } from 'dotenv';
+import { getConfigDir } from '../../shared/services/configDir.js';
 
-loadEnv();
+const configDir = getConfigDir();
+const xdgEnvPath = join(configDir, '.env');
+
+if (existsSync(xdgEnvPath)) {
+  loadEnv({ path: xdgEnvPath });
+} else {
+  loadEnv();
+}
 
 // Types for simplified config input
 interface RepositoryInput {
@@ -214,13 +222,22 @@ function loadSecrets(): EnvSecrets {
 let cachedConfig: Config | null = null;
 let cachedSecrets: EnvSecrets | null = null;
 
+function resolveConfigPath(): string {
+  if (process.env.CONFIG_PATH) return process.env.CONFIG_PATH;
+  const cwdPath = join(process.cwd(), 'config.json');
+  if (existsSync(cwdPath)) return cwdPath;
+  const xdgPath = join(configDir, 'config.json');
+  if (existsSync(xdgPath)) return xdgPath;
+  return cwdPath;
+}
+
 export function loadConfig(): Config {
   if (cachedConfig) return cachedConfig;
 
-  const configPath = process.env.CONFIG_PATH || join(process.cwd(), 'config.json');
+  const configPath = resolveConfigPath();
 
   if (!existsSync(configPath)) {
-    throw new Error(`Fichier de configuration non trouvé : ${configPath}`);
+    throw new Error(`Configuration file not found: ${configPath}\nRun 'reviewflow init' to create one.`);
   }
 
   const rawContent = readFileSync(configPath, 'utf-8');
