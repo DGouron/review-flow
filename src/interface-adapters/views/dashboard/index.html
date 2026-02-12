@@ -844,7 +844,7 @@
       if (mr.totalBlocking > 0) statsBadges.push(`<span class="stat-badge blocking"><i data-lucide="octagon-alert"></i> ${mr.totalBlocking}</span>`);
       if (mr.totalWarnings > 0) statsBadges.push(`<span class="stat-badge warning"><i data-lucide="alert-triangle"></i> ${mr.totalWarnings}</span>`);
       if (mr.totalFollowups > 0) statsBadges.push(`<span class="stat-badge followup"><i data-lucide="refresh-cw"></i> ${mr.totalFollowups}</span>`);
-      if (mr.averageScore !== null) statsBadges.push(`<span class="stat-badge score"><i data-lucide="star"></i> ${mr.averageScore.toFixed(1)}/10</span>`);
+      if (mr.latestScore !== null) statsBadges.push(`<span class="stat-badge score"><i data-lucide="star"></i> ${mr.latestScore.toFixed(1)}/10</span>`);
 
       const durationFormatted = mr.totalDurationMs ? formatDuration(null, null, mr.totalDurationMs) : '';
 

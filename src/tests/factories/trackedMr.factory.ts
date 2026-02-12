@@ -28,7 +28,6 @@ export class TrackedMrFactory {
       totalWarnings: 0,
       totalSuggestions: 0,
       totalDurationMs: 0,
-      averageScore: null,
       latestScore: null,
       autoFollowup: true,
       ...overrides,

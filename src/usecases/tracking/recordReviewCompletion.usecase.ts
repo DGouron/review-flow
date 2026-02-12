@@ -56,19 +56,12 @@ export class RecordReviewCompletionUseCase implements UseCase<RecordReviewComple
       latestScore = reviewData.score;
     }
 
-    const reviewsWithScore = afterEvent.reviews.filter((r) => r.score !== null);
-    let averageScore: number | null = null;
-    if (reviewsWithScore.length > 0) {
-      averageScore = reviewsWithScore.reduce((sum, r) => sum + (r.score ?? 0), 0) / reviewsWithScore.length;
-    }
-
     const hasBlockingIssues = reviewData.blocking > 0 || openThreads > 0;
 
     this.trackingGateway.update(projectPath, mrId, {
       openThreads,
       totalThreads,
       latestScore,
-      averageScore,
       state: hasBlockingIssues ? 'pending-fix' : 'pending-approval',
     });
 

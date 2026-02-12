@@ -31,7 +31,6 @@ describe('RecordReviewCompletionUseCase', () => {
     expect(result?.totalSuggestions).toBe(1);
     expect(result?.totalDurationMs).toBe(60000);
     expect(result?.latestScore).toBe(8);
-    expect(result?.averageScore).toBe(8);
   });
 
   it('should transition to pending-fix when blocking issues exist', () => {
@@ -80,26 +79,6 @@ describe('RecordReviewCompletionUseCase', () => {
     expect(result?.totalThreads).toBe(3);
   });
 
-  it('should compute average score across reviews', () => {
-    const gateway = new InMemoryReviewRequestTrackingGateway();
-    const mr = TrackedMrFactory.create({
-      id: 'mr-1',
-      reviews: [{ type: 'review', timestamp: '2024-01-01T00:00:00Z', durationMs: 1000, score: 6, blocking: 0, warnings: 0, suggestions: 0, threadsClosed: 0, threadsOpened: 0 }],
-      totalReviews: 1,
-    });
-    gateway.create('/project', mr);
-    const useCase = new RecordReviewCompletionUseCase(gateway);
-
-    const result = useCase.execute({
-      projectPath: '/project',
-      mrId: 'mr-1',
-      reviewData: { ...reviewData, score: 10 },
-    });
-
-    expect(result?.averageScore).toBe(8);
-    expect(result?.latestScore).toBe(10);
-  });
-
   it('should record followup type separately', () => {
     const gateway = new InMemoryReviewRequestTrackingGateway();
     const mr = TrackedMrFactory.create({ id: 'mr-1' });
@@ -114,6 +93,60 @@ describe('RecordReviewCompletionUseCase', () => {
 
     expect(result?.totalFollowups).toBe(1);
     expect(result?.totalReviews).toBe(0);
+  });
+
+  it('should set latestScore to the most recent review score', () => {
+    const gateway = new InMemoryReviewRequestTrackingGateway();
+    const mr = TrackedMrFactory.create({
+      id: 'mr-1',
+      reviews: [
+        { type: 'review', timestamp: '2024-01-01T00:00:00Z', durationMs: 1000, score: 6, blocking: 0, warnings: 0, suggestions: 0, threadsClosed: 0, threadsOpened: 0 },
+      ],
+      totalReviews: 1,
+      latestScore: 6,
+    });
+    gateway.create('/project', mr);
+    const useCase = new RecordReviewCompletionUseCase(gateway);
+
+    const result = useCase.execute({
+      projectPath: '/project',
+      mrId: 'mr-1',
+      reviewData: { ...reviewData, score: 10 },
+    });
+
+    expect(result?.latestScore).toBe(10);
+  });
+
+  it('should update latestScore from followup', () => {
+    const gateway = new InMemoryReviewRequestTrackingGateway();
+    const mr = TrackedMrFactory.create({
+      id: 'mr-1',
+      reviews: [
+        { type: 'review', timestamp: '2024-01-01T00:00:00Z', durationMs: 1000, score: 5, blocking: 1, warnings: 0, suggestions: 0, threadsClosed: 0, threadsOpened: 1 },
+      ],
+      totalReviews: 1,
+      latestScore: 5,
+      openThreads: 1,
+      totalThreads: 1,
+    });
+    gateway.create('/project', mr);
+    const useCase = new RecordReviewCompletionUseCase(gateway);
+
+    const result = useCase.execute({
+      projectPath: '/project',
+      mrId: 'mr-1',
+      reviewData: {
+        type: 'followup',
+        durationMs: 30000,
+        score: 8,
+        blocking: 0,
+        warnings: 0,
+        suggestions: 0,
+        threadsClosed: 1,
+      },
+    });
+
+    expect(result?.latestScore).toBe(8);
   });
 
   it('should return null for unknown MR', () => {
