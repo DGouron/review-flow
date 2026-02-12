@@ -39,13 +39,19 @@ interface VersionArgs {
   command: 'version';
 }
 
+interface FollowupImportantsArgs {
+  command: 'followup-importants';
+  project: string | undefined;
+  yes: boolean;
+}
+
 interface HelpArgs {
   command: 'help';
 }
 
-export type CliArgs = StartArgs | StopArgs | StatusArgs | LogsArgs | InitArgs | ValidateArgs | VersionArgs | HelpArgs;
+export type CliArgs = StartArgs | StopArgs | StatusArgs | LogsArgs | InitArgs | ValidateArgs | FollowupImportantsArgs | VersionArgs | HelpArgs;
 
-const KNOWN_COMMANDS = ['start', 'stop', 'status', 'logs', 'init', 'validate'] as const;
+const KNOWN_COMMANDS = ['start', 'stop', 'status', 'logs', 'init', 'validate', 'followup-importants'] as const;
 type KnownCommand = (typeof KNOWN_COMMANDS)[number];
 
 function hasFlag(args: string[], long: string, short?: string): boolean {
@@ -91,6 +97,14 @@ function parseStatusArgs(args: string[]): StatusArgs {
   return {
     command: 'status',
     json: hasFlag(args, '--json'),
+  };
+}
+
+function parseFollowupImportantsArgs(args: string[]): FollowupImportantsArgs {
+  return {
+    command: 'followup-importants',
+    project: getFlagValue(args, '--project', '-p'),
+    yes: hasFlag(args, '--yes', '-y'),
   };
 }
 
@@ -154,5 +168,7 @@ export function parseCliArgs(args: string[]): CliArgs {
       return parseInitArgs(args);
     case 'validate':
       return parseValidateArgs(args);
+    case 'followup-importants':
+      return parseFollowupImportantsArgs(args);
   }
 }

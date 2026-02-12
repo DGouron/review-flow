@@ -822,11 +822,16 @@
       const mrPrefix = mr.platform === 'github' ? '#' : '!';
       const threadInfo = type === 'pending-fix'
         ? `<span class="mr-threads has-open"><i data-lucide="message-circle"></i> ${mr.openThreads} ouvert${mr.openThreads > 1 ? 's' : ''}</span>`
-        : `<span class="mr-threads all-resolved"><i data-lucide="check-circle"></i> Résolus</span>`;
+        : (type === 'pending-approval' && mr.totalWarnings > 0)
+          ? `<span class="mr-threads has-warnings"><i data-lucide="alert-triangle"></i> ${mr.totalWarnings} important${mr.totalWarnings > 1 ? 's' : ''}</span>`
+          : `<span class="mr-threads all-resolved"><i data-lucide="check-circle"></i> Résolus</span>`;
 
       const openBtn = `<a href="${mr.url}" target="_blank" class="btn-action open"><i data-lucide="external-link"></i> Ouvrir</a>`;
       const autoFollowupChecked = mr.autoFollowup !== false ? 'checked' : '';
-      const actions = type === 'pending-fix'
+      const showFollowupActions = type === 'pending-fix' ||
+        (type === 'pending-approval' && mr.totalWarnings > 0);
+
+      const actions = showFollowupActions
         ? `<label class="auto-followup-toggle" onclick="event.stopPropagation()" title="Active/désactive le followup automatique après un push">
              <input type="checkbox" ${autoFollowupChecked} onchange="toggleAutoFollowup('${mr.id}', this.checked)">
              Auto follow-up
@@ -855,7 +860,7 @@
       return `
         <div class="mr-item-accordion" data-mr-id="${mr.id}">
           <div class="mr-item-header" onclick="toggleMrAccordion('${accordionId}')">
-            <div class="review-status ${type === 'pending-fix' ? 'running' : 'completed'}"></div>
+            <div class="review-status ${type === 'pending-fix' ? 'running' : (type === 'pending-approval' && mr.totalWarnings > 0) ? 'warnings' : 'completed'}"></div>
             <div class="mr-info">
               <div class="mr-title">
                 <a href="${mr.url}" target="_blank" onclick="event.stopPropagation()">${mrPrefix}${mr.mrNumber}</a> - ${mr.title}

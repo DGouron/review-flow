@@ -276,6 +276,7 @@ h1 { font-size: 1.75rem; font-weight: 600; }
 .review-status.queued { background: #3b82f6; }
 .review-status.completed { background: #22c55e; }
 .review-status.failed { background: #ef4444; }
+.review-status.warnings { background: #f59e0b; }
 
 .review-info { flex: 1; min-width: 0; }
 .review-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -762,6 +763,7 @@ h1 { font-size: 1.75rem; font-weight: 600; }
 }
 .mr-threads.has-open { color: #ef4444; }
 .mr-threads.all-resolved { color: #22c55e; }
+.mr-threads.has-warnings { color: #f59e0b; }
 .mr-actions {
   display: flex;
   gap: 0.5rem;

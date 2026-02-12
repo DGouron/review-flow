@@ -25,14 +25,80 @@ describe('CheckFollowupNeededUseCase', () => {
     expect(result).toBe(true);
   });
 
-  it('should return false when MR is not in pending-fix state', () => {
+  it('should return false when MR is not in an eligible state', () => {
+    const gateway = new InMemoryReviewRequestTrackingGateway();
+    const mr = TrackedMrFactory.create({
+      mrNumber: 42,
+      platform: 'gitlab',
+      state: 'approved',
+      lastReviewAt: '2024-01-15T10:00:00Z',
+      lastPushAt: '2024-01-15T12:00:00Z',
+    });
+    gateway.create('/project', mr);
+    const useCase = new CheckFollowupNeededUseCase(gateway);
+
+    const result = useCase.execute({
+      projectPath: '/project',
+      mrNumber: 42,
+      platform: 'gitlab',
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it('should return true when pending-approval MR has warnings and push after review', () => {
     const gateway = new InMemoryReviewRequestTrackingGateway();
     const mr = TrackedMrFactory.create({
       mrNumber: 42,
       platform: 'gitlab',
       state: 'pending-approval',
+      totalWarnings: 3,
       lastReviewAt: '2024-01-15T10:00:00Z',
       lastPushAt: '2024-01-15T12:00:00Z',
+    });
+    gateway.create('/project', mr);
+    const useCase = new CheckFollowupNeededUseCase(gateway);
+
+    const result = useCase.execute({
+      projectPath: '/project',
+      mrNumber: 42,
+      platform: 'gitlab',
+    });
+
+    expect(result).toBe(true);
+  });
+
+  it('should return false when pending-approval MR has no warnings', () => {
+    const gateway = new InMemoryReviewRequestTrackingGateway();
+    const mr = TrackedMrFactory.create({
+      mrNumber: 42,
+      platform: 'gitlab',
+      state: 'pending-approval',
+      totalWarnings: 0,
+      lastReviewAt: '2024-01-15T10:00:00Z',
+      lastPushAt: '2024-01-15T12:00:00Z',
+    });
+    gateway.create('/project', mr);
+    const useCase = new CheckFollowupNeededUseCase(gateway);
+
+    const result = useCase.execute({
+      projectPath: '/project',
+      mrNumber: 42,
+      platform: 'gitlab',
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it('should return false when pending-approval MR has warnings but no push after review', () => {
+    const gateway = new InMemoryReviewRequestTrackingGateway();
+    const mr = TrackedMrFactory.create({
+      mrNumber: 42,
+      platform: 'gitlab',
+      state: 'pending-approval',
+      totalWarnings: 2,
+      lastReviewAt: '2024-01-15T12:00:00Z',
+      lastPushAt: '2024-01-15T10:00:00Z',
     });
     gateway.create('/project', mr);
     const useCase = new CheckFollowupNeededUseCase(gateway);
