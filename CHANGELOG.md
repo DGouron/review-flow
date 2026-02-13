@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.3.0...reviewflow-v3.3.1) (2026-02-13)
+
+
+### Fixed
+
+* **config:** allow empty usernames for single-platform users ([549de26](https://github.com/DGouron/review-flow/commit/549de268e33d2b041bd69e703b6b4f4978a681e7))
+* **config:** allow empty usernames for single-platform users ([853b71f](https://github.com/DGouron/review-flow/commit/853b71f0eb6c8d21ccfceb25c3b96cd3f0bcfb0f))
+* **tracking:** remove averageScore from TrackedMr, use latestScore for MR cards ([c2d6f93](https://github.com/DGouron/review-flow/commit/c2d6f93380580e91bb31bc4d39f08c7189632706)), closes [#43](https://github.com/DGouron/review-flow/issues/43)
+* **tracking:** remove averageScore, use latestScore for MR cards ([cb8f572](https://github.com/DGouron/review-flow/commit/cb8f5723e4184cfb3d64e13a4f314eec385dee96))
+* use node: prefix and explicit __dirname for ESM compatibility ([5774bfd](https://github.com/DGouron/review-flow/commit/5774bfdea08234d2fe60f5b7daccd6b32d25ba93))
+
+
+### Changed
+
+* configure TypeScript path aliases (@/) ([69810ab](https://github.com/DGouron/review-flow/commit/69810abeb3408ed5db15b15e8e120a6458bdad1f))
+* configure TypeScript path aliases (@/) ([063692a](https://github.com/DGouron/review-flow/commit/063692a605877320b4901201d223b0d96ac84653)), closes [#84](https://github.com/DGouron/review-flow/issues/84)
+
 ## [3.3.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.2.0...reviewflow-v3.3.0) (2026-02-12)
 
 
