@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.3.1...reviewflow-v3.4.0) (2026-02-13)
+
+
+### Added
+
+* **cli:** add post-write validation for MCP server configuration ([#54](https://github.com/DGouron/review-flow/issues/54)) ([8bb049c](https://github.com/DGouron/review-flow/commit/8bb049cf87c6251179416b370b61aacb684ad5b8))
+* **cli:** automatic MCP server configuration validation ([ce8ad3c](https://github.com/DGouron/review-flow/commit/ce8ad3cd11ed167819bce402622a4d1cbec81ebb))
+
+
+### Changed
+
+* **cli:** use createGuard, separate schema, fix test mocks ([#54](https://github.com/DGouron/review-flow/issues/54)) ([cf6f54a](https://github.com/DGouron/review-flow/commit/cf6f54a22bcf9969b9293ef2dff40b643da48977))
+
 ## [3.3.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.3.0...reviewflow-v3.3.1) (2026-02-13)
 
 
