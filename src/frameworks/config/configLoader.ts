@@ -115,7 +115,7 @@ function enrichRepository(input: RepositoryInput): RepositoryConfig | null {
   };
 }
 
-function validateAndEnrichConfig(data: unknown): Config {
+export function validateAndEnrichConfig(data: unknown): Config {
   if (!data || typeof data !== 'object') {
     throw new Error('Configuration invalide : objet attendu');
   }
@@ -136,11 +136,11 @@ function validateAndEnrichConfig(data: unknown): Config {
     throw new Error('Configuration invalide : section "user" manquante');
   }
   const user = config.user as Record<string, unknown>;
-  if (typeof user.gitlabUsername !== 'string' || !user.gitlabUsername) {
-    throw new Error('Configuration invalide : gitlabUsername manquant');
+  if (typeof user.gitlabUsername !== 'string') {
+    throw new Error('Invalid configuration: gitlabUsername must be a string');
   }
-  if (typeof user.githubUsername !== 'string' || !user.githubUsername) {
-    throw new Error('Configuration invalide : githubUsername manquant');
+  if (typeof user.githubUsername !== 'string') {
+    throw new Error('Invalid configuration: githubUsername must be a string');
   }
 
   // Validate queue

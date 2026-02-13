@@ -11,6 +11,7 @@ vi.mock('../../../../../config/loader.js', () => ({
   })),
 }))
 
+import { loadConfig } from '../../../../../config/loader.js'
 import {
   filterGitLabEvent,
   filterGitLabMrUpdate,
@@ -482,6 +483,32 @@ describe('filterGitHubLabelEvent', () => {
       expect(result.shouldProcess).toBe(false)
       expect(result.reason).toContain('closed')
     })
+  })
+})
+
+describe('filterGitLabEvent with empty gitlabUsername', () => {
+  it('should not process when gitlabUsername is empty', () => {
+    vi.mocked(loadConfig).mockReturnValueOnce({
+      user: { gitlabUsername: '', githubUsername: 'claude-reviewer' },
+    } as ReturnType<typeof loadConfig>)
+    const event = GitLabEventFactory.createWithReviewerAdded('claude-reviewer')
+
+    const result = filterGitLabEvent(event)
+
+    expect(result.shouldProcess).toBe(false)
+  })
+})
+
+describe('filterGitHubEvent with empty githubUsername', () => {
+  it('should not process when githubUsername is empty', () => {
+    vi.mocked(loadConfig).mockReturnValueOnce({
+      user: { gitlabUsername: 'claude-reviewer', githubUsername: '' },
+    } as ReturnType<typeof loadConfig>)
+    const event = GitHubEventFactory.createReviewRequestedPr('claude-reviewer')
+
+    const result = filterGitHubEvent(event)
+
+    expect(result.shouldProcess).toBe(false)
   })
 })
 
