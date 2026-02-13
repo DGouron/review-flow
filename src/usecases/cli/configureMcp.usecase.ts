@@ -1,4 +1,6 @@
-export type ConfigureMcpResult = 'configured' | 'already-configured' | 'claude-not-found' | 'failed';
+import { hasServerEntry, safeParseMcpSettings } from '@/entities/mcpSettings/mcpSettings.guard.js';
+
+export type ConfigureMcpResult = 'configured' | 'already-configured' | 'claude-not-found' | 'validation-failed' | 'failed';
 
 export interface ConfigureMcpDependencies {
   isClaudeInstalled: () => boolean;
@@ -28,12 +30,13 @@ export class ConfigureMcpUseCase {
       settings = {};
     }
 
-    const mcpServers = (settings.mcpServers ?? {}) as Record<string, unknown>;
-    const existing = mcpServers['review-progress'] as
-      | { command: string; args: string[] }
-      | undefined;
+    const parseResult = safeParseMcpSettings(settings);
+    const mcpServers = parseResult.success
+      ? parseResult.data.mcpServers
+      : {};
+    const existingArgs = mcpServers['review-progress']?.args;
 
-    if (existing?.args?.[0] === mcpServerPath) {
+    if (existingArgs?.[0] === mcpServerPath) {
       return 'already-configured';
     }
 
@@ -54,6 +57,15 @@ export class ConfigureMcpUseCase {
       this.deps.settingsPath,
       JSON.stringify(settings, null, 2),
     );
+
+    try {
+      const written = this.deps.readFileSync(this.deps.settingsPath, 'utf-8');
+      if (!hasServerEntry(JSON.parse(written), 'review-progress')) {
+        return 'validation-failed';
+      }
+    } catch {
+      return 'validation-failed';
+    }
 
     return 'configured';
   }

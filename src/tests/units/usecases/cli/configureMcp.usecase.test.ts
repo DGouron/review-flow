@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   ConfigureMcpUseCase,
   type ConfigureMcpDependencies,
-} from '../../../../usecases/cli/configureMcp.usecase.js';
+} from '@/usecases/cli/configureMcp.usecase.js';
 
 function createFakeDeps(
   overrides?: Partial<ConfigureMcpDependencies>,
@@ -31,9 +31,16 @@ describe('ConfigureMcpUseCase', () => {
   });
 
   it('should configure mcp when settings file does not exist', () => {
+    const validWrittenSettings = JSON.stringify({
+      mcpServers: {
+        'review-progress': { command: 'node', args: ['/path/to/dist/mcpServer.js'] },
+      },
+    });
     const deps = createFakeDeps({
       existsSync: vi.fn(() => false),
-      readFileSync: vi.fn(() => { throw new Error('ENOENT'); }),
+      readFileSync: vi.fn()
+        .mockImplementationOnce(() => { throw new Error('ENOENT'); })
+        .mockReturnValueOnce(validWrittenSettings),
     });
     const usecase = new ConfigureMcpUseCase(deps);
 
@@ -120,5 +127,36 @@ describe('ConfigureMcpUseCase', () => {
       '/home/user/.claude/settings.json',
       '/home/user/.claude/settings.json.bak',
     );
+  });
+
+  it('should return validation-failed when review-progress entry is missing after write', () => {
+    const settingsWithoutReviewProgress = JSON.stringify({
+      mcpServers: {
+        'some-other-server': { command: 'python', args: ['server.py'] },
+      },
+    });
+    const deps = createFakeDeps({
+      readFileSync: vi.fn()
+        .mockReturnValueOnce('{}')
+        .mockReturnValueOnce(settingsWithoutReviewProgress),
+    });
+    const usecase = new ConfigureMcpUseCase(deps);
+
+    const result = usecase.execute();
+
+    expect(result).toBe('validation-failed');
+  });
+
+  it('should return validation-failed when written file is not valid', () => {
+    const deps = createFakeDeps({
+      readFileSync: vi.fn()
+        .mockReturnValueOnce('{}')
+        .mockReturnValueOnce('not json'),
+    });
+    const usecase = new ConfigureMcpUseCase(deps);
+
+    const result = usecase.execute();
+
+    expect(result).toBe('validation-failed');
   });
 });
