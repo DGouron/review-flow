@@ -3,7 +3,7 @@ export interface InitSummaryInput {
   envPath: string;
   port: number;
   repositoryCount: number;
-  mcpStatus: 'configured' | 'already-configured' | 'claude-not-found' | 'skipped' | 'failed';
+  mcpStatus: 'configured' | 'already-configured' | 'claude-not-found' | 'validation-failed' | 'skipped' | 'failed';
   gitlabUsername: string;
   githubUsername: string;
 }
@@ -18,6 +18,8 @@ function mcpLine(status: InitSummaryInput['mcpStatus']): string {
       return '  MCP server:    skipped (Claude CLI not found)';
     case 'skipped':
       return '  MCP server:    skipped by user';
+    case 'validation-failed':
+      return '  MCP server:    configuration written but validation failed';
     case 'failed':
       return '  MCP server:    configuration failed';
   }

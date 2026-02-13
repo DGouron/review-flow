@@ -404,7 +404,7 @@ export async function executeInit(
     }
   }
 
-  let mcpStatus: 'configured' | 'already-configured' | 'claude-not-found' | 'skipped' | 'failed' = 'skipped';
+  let mcpStatus: 'configured' | 'already-configured' | 'claude-not-found' | 'validation-failed' | 'skipped' | 'failed' = 'skipped';
   if (!skipMcp) {
     console.log(dim('\nConfiguring MCP server...'));
     try {
