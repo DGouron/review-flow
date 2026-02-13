@@ -5,7 +5,7 @@ export {
   loadEnvSecrets,
   findRepositoryByRemoteUrl,
   findRepositoryByProjectPath,
-} from '../frameworks/config/configLoader.js';
+} from '@/frameworks/config/configLoader.js';
 
 export type {
   Config,
@@ -14,4 +14,4 @@ export type {
   UserConfig,
   QueueConfig,
   EnvSecrets,
-} from '../frameworks/config/configLoader.js';
+} from '@/frameworks/config/configLoader.js';

@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { FastifyRequest } from 'fastify';
-import { loadEnvSecrets } from '../config/loader.js';
+import { loadEnvSecrets } from '@/config/loader.js';
 
 export interface VerificationResult {
   valid: boolean;

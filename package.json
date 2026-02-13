@@ -39,7 +39,7 @@
   ],
   "scripts": {
     "dev": "tsx watch src/main/cli.ts start --skip-dependency-check",
-    "build": "tsc && node scripts/copyAssets.mjs",
+    "build": "tsc && tsc-alias && node scripts/copyAssets.mjs",
     "start": "node dist/main/cli.js start",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
@@ -71,6 +71,7 @@
     "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.18",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.7.0",
     "typescript": "^5.8.0",
     "vitepress": "^1.6.4",
