@@ -27,11 +27,11 @@
     </header>
 
     <div class="cards">
-      <div class="card">
+      <div class="card card-priority">
         <div class="card-label" id="i18n-card-running"></div>
         <div id="running-count" class="card-value running">-</div>
       </div>
-      <div class="card">
+      <div class="card card-priority">
         <div class="card-label" id="i18n-card-queued"></div>
         <div id="queued-count" class="card-value queued">-</div>
       </div>
@@ -73,6 +73,36 @@
       </div>
     </div>
 
+    <div class="focus-strip">
+      <div class="focus-chip focus-now">
+        <div class="focus-copy">
+          <span class="focus-label" id="i18n-strip-now"></span>
+          <span class="focus-meta" id="i18n-strip-now-meta"></span>
+        </div>
+        <span class="focus-value" id="focus-now-count">-</span>
+      </div>
+      <div class="focus-chip focus-next">
+        <div class="focus-copy">
+          <span class="focus-label" id="i18n-strip-next"></span>
+          <span class="focus-meta" id="i18n-strip-next-meta"></span>
+        </div>
+        <span class="focus-value" id="focus-next-count">-</span>
+      </div>
+      <div class="focus-chip focus-blocked">
+        <div class="focus-copy">
+          <span class="focus-label" id="i18n-strip-blocked"></span>
+          <span class="focus-meta" id="i18n-strip-blocked-meta"></span>
+        </div>
+        <span class="focus-value" id="focus-blocked-count">-</span>
+      </div>
+      <button id="focus-strip-toggle" class="focus-toggle-btn" onclick="toggleFocusStripMode()"></button>
+    </div>
+
+    <div id="data-loading-state" class="data-loading hidden" role="status" aria-live="polite">
+      <i data-lucide="loader-circle"></i>
+      <span id="i18n-loading-data"></span>
+    </div>
+
     <div class="project-loader">
       <select id="project-select" class="project-input" style="min-width: 350px;" onchange="onProjectSelect(this.value)">
         <option value="" id="i18n-project-placeholder"></option>
@@ -112,7 +142,7 @@
     </div>
 
     <div id="stats-section" class="section hidden">
-      <div class="section-header clickable" onclick="toggleStats()">
+      <div class="section-header clickable" onclick="toggleStats()" role="button" tabindex="0" onkeydown="activateOnKeydown(event)">
         <i data-lucide="bar-chart-3"></i> <span id="i18n-section-stats"></span>
         <span id="stats-toggle" class="toggle-icon collapsed"><i data-lucide="chevron-down"></i></span>
       </div>
@@ -132,9 +162,10 @@
     </div>
 
     <div class="section hidden" id="active-followups-section">
-      <div class="section-header">
+      <div class="section-header clickable" onclick="toggleSection('active-followups-section')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)">
         <i data-lucide="refresh-cw"></i> <span id="i18n-section-active-followups"></span>
         <span id="active-followups-count" class="badge-count hidden">0</span>
+        <span class="section-toggle collapsed"><i data-lucide="chevron-down"></i></span>
       </div>
       <div id="active-followups" class="section-content">
         <div class="empty-state" id="i18n-empty-active-followups"></div>
@@ -155,18 +186,20 @@
     </div>
 
     <div class="section hidden" id="pending-approval-section">
-      <div class="section-header">
+      <div class="section-header clickable" onclick="toggleSection('pending-approval-section')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)">
         <i data-lucide="circle-check"></i> <span id="i18n-section-pending-approval"></span>
         <span id="pending-approval-count" class="badge-count hidden">0</span>
+        <span class="section-toggle collapsed"><i data-lucide="chevron-down"></i></span>
       </div>
       <div id="pending-approval-reviews" class="section-content">
         <div class="empty-state" id="i18n-empty-pending-approval"></div>
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-header">
+    <div class="section" id="completed-reviews-section">
+      <div class="section-header clickable" onclick="toggleSection('completed-reviews-section')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)">
         <i data-lucide="file-check"></i> <span id="i18n-section-completed-reviews"></span>
+        <span class="section-toggle collapsed"><i data-lucide="chevron-down"></i></span>
       </div>
       <div id="recent-reviews" class="section-content">
         <div class="empty-state" id="i18n-empty-loading"></div>
@@ -175,6 +208,8 @@
 
     <div class="refresh-info">
       <span id="connection-mode"></span> • <span id="i18n-connection-fallback"></span>
+      <span class="refresh-separator"> • </span>
+      <span id="session-metrics"></span>
     </div>
   </div>
 
@@ -196,7 +231,14 @@
     import { formatTime, formatDuration, formatPhase, formatLogTime } from './modules/formatting.js';
     import { escapeHtml, markdownToHtml } from './modules/html.js';
     import { getAgentIcon, icon, refreshIcons } from './modules/icons.js';
-    import { MAX_RECONNECT_ATTEMPTS, RECONNECT_DELAY, STORAGE_KEY_PROJECTS, STORAGE_KEY_CURRENT } from './modules/constants.js';
+    import { MAX_RECONNECT_ATTEMPTS, RECONNECT_DELAY, STORAGE_KEY_PROJECTS, STORAGE_KEY_CURRENT, STORAGE_KEY_FOCUS_STRIP_MODE, QUALITY_TARGET_SCORE } from './modules/constants.js';
+    import { getDesktopNotificationPayload, shouldNotifyDesktop } from './modules/desktopNotifications.js';
+    import { getLoadingPresentation, getQuietRefreshSectionIdentifiers } from './modules/loading.js';
+    import { collectReviewNotifications, createReviewNotificationState } from './modules/notifications.js';
+    import { buildQueueLanesModel } from './modules/queueLanes.js';
+    import { rankPendingFixForNowLane } from './modules/priority.js';
+    import { getQualityProgress, getQualityTrend } from './modules/quality.js';
+    import { createSessionMetricsState, trackSessionAction, updatePriorityItemTracking, getSessionMetricsSnapshot } from './modules/sessionMetrics.js';
 
     const API_URL = window.location.origin;
     const WS_URL = `ws://${window.location.host}/ws`;
@@ -209,6 +251,260 @@
     let currentData = { activeReviews: [], recentReviews: [], logs: [], reviewFiles: [], pendingFix: [], pendingApproval: [] };
     let loadedReviews = {};
     let statsCollapsed = true;
+    let focusStripCompact = false;
+    const loadingState = { status: 0, reviewFiles: 0, stats: 0, mrTracking: 0 };
+    let hasLoadedStatusOnce = false;
+    const secondarySections = ['active-followups-section', 'pending-approval-section', 'completed-reviews-section'];
+    const sectionExpandedState = Object.fromEntries(secondarySections.map((sectionIdentifier) => [sectionIdentifier, false]));
+    const quietRefreshSections = [
+      'active-reviews-section',
+      'active-followups-section',
+      'completed-reviews-section',
+      'pending-fix-section',
+    ];
+    const loadingLabelBySource = {
+      status: 'loading.status',
+      reviewFiles: 'loading.reviewFiles',
+      stats: 'loading.stats',
+      mrTracking: 'loading.mrTracking',
+    };
+    let loadingShowTimeout = null;
+    let loadingHideTimeout = null;
+    let loadingVisibleSince = null;
+    const loadingDelayMs = 260;
+    const loadingMinimumVisibleMs = 420;
+
+    let sessionMetrics = createSessionMetricsState(Date.now());
+    let reviewNotificationState = createReviewNotificationState();
+
+    function applyFocusStripMode() {
+      const strip = document.querySelector('.focus-strip');
+      if (strip) {
+        strip.classList.toggle('compact', focusStripCompact);
+      }
+      document.body.classList.toggle('compact-density', focusStripCompact);
+      const toggleBtn = document.getElementById('focus-strip-toggle');
+      if (toggleBtn) {
+        toggleBtn.textContent = focusStripCompact ? t('strip.modeDetailed') : t('strip.modeCompact');
+        toggleBtn.setAttribute('aria-pressed', focusStripCompact ? 'true' : 'false');
+      }
+    }
+
+    function loadFocusStripMode() {
+      const mode = localStorage.getItem(STORAGE_KEY_FOCUS_STRIP_MODE);
+      focusStripCompact = mode === 'compact';
+      applyFocusStripMode();
+    }
+
+    function toggleFocusStripMode() {
+      focusStripCompact = !focusStripCompact;
+      localStorage.setItem(STORAGE_KEY_FOCUS_STRIP_MODE, focusStripCompact ? 'compact' : 'detailed');
+      applyFocusStripMode();
+    }
+
+    function applySectionExpansion(sectionIdentifier) {
+      const section = document.getElementById(sectionIdentifier);
+      if (!section) return;
+      const content = section.querySelector('.section-content');
+      const toggle = section.querySelector('.section-toggle');
+      if (!content) return;
+
+      const expanded = sectionExpandedState[sectionIdentifier] === true;
+      content.classList.toggle('hidden', !expanded);
+      section.classList.toggle('section-collapsed', !expanded);
+      if (toggle) {
+        toggle.classList.toggle('collapsed', !expanded);
+      }
+    }
+
+    function toggleSection(sectionIdentifier) {
+      if (!(sectionIdentifier in sectionExpandedState)) return;
+      sectionExpandedState[sectionIdentifier] = !sectionExpandedState[sectionIdentifier];
+      applySectionExpansion(sectionIdentifier);
+      refreshIcons();
+    }
+
+    function setLoadingFlag(source, isLoading) {
+      if (!(source in loadingState)) return;
+      const nextValue = isLoading
+        ? loadingState[source] + 1
+        : Math.max(0, loadingState[source] - 1);
+      loadingState[source] = nextValue;
+      updateLoadingStateUI();
+    }
+
+    function applyQuietRefreshSectionIndicators(sectionIdentifiers) {
+      quietRefreshSections.forEach((sectionIdentifier) => {
+        const section = document.getElementById(sectionIdentifier);
+        if (!section) return;
+        section.classList.toggle('is-refreshing', sectionIdentifiers.includes(sectionIdentifier));
+      });
+    }
+
+    function getLoadingMessageKey() {
+      const activeSource = Object.entries(loadingState).find(([, value]) => value > 0)?.[0];
+      return activeSource ? loadingLabelBySource[activeSource] : 'loading.data';
+    }
+
+    function updateLoadingStateUI() {
+      const isLoading = Object.values(loadingState).some((value) => value > 0);
+      const loadingPresentation = getLoadingPresentation(loadingState, { hasLoadedStatusOnce });
+      const loadingElement = document.getElementById('data-loading-state');
+      if (!loadingElement) return;
+
+      const loadingLabel = document.getElementById('i18n-loading-data');
+      if (loadingLabel) {
+        loadingLabel.textContent = t(getLoadingMessageKey());
+      }
+
+      if (isLoading) {
+        document.body.classList.toggle('is-quiet-refresh', loadingPresentation.isQuietRefresh);
+        const quietSectionIdentifiers = getQuietRefreshSectionIdentifiers(loadingState, { hasLoadedStatusOnce });
+        applyQuietRefreshSectionIndicators(quietSectionIdentifiers);
+        if (!loadingPresentation.showGlobalLoading) {
+          if (loadingShowTimeout) {
+            clearTimeout(loadingShowTimeout);
+            loadingShowTimeout = null;
+          }
+          if (loadingHideTimeout) {
+            clearTimeout(loadingHideTimeout);
+            loadingHideTimeout = null;
+          }
+          loadingVisibleSince = null;
+          loadingElement.classList.add('hidden');
+          document.body.classList.remove('is-loading-data');
+          return;
+        }
+
+        if (loadingHideTimeout) {
+          clearTimeout(loadingHideTimeout);
+          loadingHideTimeout = null;
+        }
+        if (!loadingVisibleSince && !loadingShowTimeout) {
+          loadingShowTimeout = setTimeout(() => {
+            loadingElement.classList.remove('hidden');
+            document.body.classList.add('is-loading-data');
+            loadingVisibleSince = Date.now();
+            loadingShowTimeout = null;
+            refreshIcons();
+          }, loadingDelayMs);
+        }
+      } else {
+        document.body.classList.remove('is-quiet-refresh');
+        applyQuietRefreshSectionIndicators([]);
+        if (loadingShowTimeout) {
+          clearTimeout(loadingShowTimeout);
+          loadingShowTimeout = null;
+        }
+        if (!loadingVisibleSince) {
+          loadingElement.classList.add('hidden');
+          document.body.classList.remove('is-loading-data');
+          return;
+        }
+        const elapsed = Date.now() - loadingVisibleSince;
+        const remaining = Math.max(0, loadingMinimumVisibleMs - elapsed);
+        loadingHideTimeout = setTimeout(() => {
+          loadingElement.classList.add('hidden');
+          document.body.classList.remove('is-loading-data');
+          loadingVisibleSince = null;
+          loadingHideTimeout = null;
+          updateUI();
+        }, remaining);
+      }
+    }
+
+    function formatSessionDuration(milliseconds) {
+      const seconds = Math.max(0, Math.floor(milliseconds / 1000));
+      if (seconds < 60) return `${seconds}s`;
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}m ${remainingSeconds}s`;
+    }
+
+    function formatActionBreakdown(actionBreakdown) {
+      return `${t('metrics.action.followup')} ${actionBreakdown.followup}, ${t('metrics.action.open')} ${actionBreakdown.open}, ${t('metrics.action.approve')} ${actionBreakdown.approve}, ${t('metrics.action.cancelReview')} ${actionBreakdown.cancelReview}, ${t('metrics.action.syncThreads')} ${actionBreakdown.syncThreads}`;
+    }
+
+    function updateSessionMetricsUI() {
+      const metricsElement = document.getElementById('session-metrics');
+      if (!metricsElement) return;
+
+      const metricsSnapshot = getSessionMetricsSnapshot(sessionMetrics);
+      const firstActionLabel = metricsSnapshot.firstUsefulActionDelayMs === null
+        ? t('metrics.pending')
+        : formatSessionDuration(metricsSnapshot.firstUsefulActionDelayMs);
+      const priorityResolutionLabel = metricsSnapshot.averagePriorityResolutionMs === null
+        ? t('metrics.pending')
+        : formatSessionDuration(metricsSnapshot.averagePriorityResolutionMs);
+      const actionBreakdownLabel = formatActionBreakdown(metricsSnapshot.actionBreakdown);
+      metricsElement.textContent = `${t('metrics.session')}: ${t('metrics.firstAction')} ${firstActionLabel} • ${metricsSnapshot.actionCount} ${t('metrics.actions')} • ${t('metrics.priorityResolution')} ${priorityResolutionLabel} • ${t('metrics.breakdown')} ${actionBreakdownLabel}`;
+    }
+
+    function trackUsefulAction(actionType = 'other') {
+      sessionMetrics = trackSessionAction(sessionMetrics, actionType, Date.now());
+      updateSessionMetricsUI();
+    }
+
+    function onUsefulLinkAction() {
+      trackUsefulAction('open');
+      return true;
+    }
+
+    function activateOnKeydown(event) {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      event.currentTarget.click();
+    }
+
+    function getNotificationMrNumber(review) {
+      return typeof review.mrNumber === 'number' ? String(review.mrNumber) : '?';
+    }
+
+    function mapNotificationToToast(notification) {
+      const mrNumber = getNotificationMrNumber(notification.review);
+      switch (notification.kind) {
+        case 'reviewStarted':
+          return { message: t('notify.reviewStarted', { mrNumber }), type: 'info' };
+        case 'followupStarted':
+          return { message: t('notify.followupStarted', { mrNumber }), type: 'info' };
+        case 'reviewCompleted':
+          return { message: t('notify.reviewCompleted', { mrNumber }), type: 'success' };
+        case 'followupCompleted':
+          return { message: t('notify.followupCompleted', { mrNumber }), type: 'success' };
+        case 'reviewFailed':
+          return { message: t('notify.reviewFailed', { mrNumber }), type: 'error' };
+        default:
+          return null;
+      }
+    }
+
+    function maybeShowDesktopNotification(notification) {
+      if (typeof Notification === 'undefined') return;
+
+      const shouldNotify = shouldNotifyDesktop({
+        permission: Notification.permission,
+        isDocumentHidden: document.visibilityState !== 'visible',
+      });
+      if (!shouldNotify) return;
+
+      const desktopPayload = getDesktopNotificationPayload(notification, t);
+      if (!desktopPayload) return;
+      new Notification(desktopPayload.title, {
+        body: desktopPayload.body,
+        tag: desktopPayload.tag,
+      });
+    }
+
+    function dispatchReviewNotifications(activeReviews, recentReviews) {
+      const result = collectReviewNotifications(reviewNotificationState, activeReviews, recentReviews);
+      reviewNotificationState = result.nextState;
+      result.notifications.forEach((notification) => {
+        const toastPayload = mapNotificationToToast(notification);
+        if (!toastPayload) return;
+        showToast(toastPayload.message, toastPayload.type);
+        maybeShowDesktopNotification(notification);
+      });
+    }
 
     function renderAgentTimeline(progress) {
       if (!progress?.agents?.length) return '';
@@ -236,8 +532,19 @@
       `;
     }
 
+    function getReviewStatusPresentation(status) {
+      const statusMap = {
+        running: { icon: 'activity', label: t('review.status.running') },
+        queued: { icon: 'clock-3', label: t('review.status.queued') },
+        completed: { icon: 'check-circle-2', label: t('review.status.completed') },
+        failed: { icon: 'triangle-alert', label: t('review.status.failed') },
+      };
+      return statusMap[status] || { icon: 'circle-help', label: status };
+    }
+
     function renderReview(review, isActive) {
       const statusClass = review.status;
+      const statusPresentation = getReviewStatusPresentation(statusClass);
       const mrNumber = review.mrNumber;
       const project = review.project.split('/').pop();
       const mrPrefix = review.id.startsWith('github') ? '#' : '!';
@@ -254,7 +561,7 @@
 
       const descriptionHtml = isActive && review.description ? `
         <div class="review-description-accordion">
-          <div class="review-description-toggle" onclick="toggleReviewDescription('${review.id}')">
+          <div class="review-description-toggle" onclick="toggleReviewDescription('${review.id}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)">
             <i data-lucide="chevron-right"></i> ${t('review.description')}
           </div>
           <div class="review-description-content" id="review-desc-${review.id.replace(/[^a-zA-Z0-9-]/g, '-')}">
@@ -268,13 +575,13 @@
       return `
         <div class="review-item" data-job-id="${review.id}">
           <div class="review-header">
-            <div class="review-status ${statusClass}"></div>
+            <div class="review-status ${statusClass}" title="${statusPresentation.label}"></div>
             <div class="review-info">
               <div class="review-title">
                 <a href="${review.mrUrl}" target="_blank">${mrPrefix}${mrNumber}</a> - ${displayTitle}
               </div>
               <div class="review-meta">
-                <span class="badge ${statusClass}">${review.status}</span>
+                <span class="badge ${statusClass}"><i data-lucide="${statusPresentation.icon}"></i> ${statusPresentation.label}</span>
                 ${isActive ? `<i data-lucide="clock"></i> ${formatDuration(review.startedAt)}` : ''}
               </div>
               ${review.error ? `<div class="error-message">${review.error}</div>` : ''}
@@ -331,18 +638,26 @@
 
       const running = currentData.activeReviews.filter(r => r.status === 'running').length;
       const queued = currentData.activeReviews.filter(r => r.status === 'queued').length;
+      const blocked = currentData.pendingFix.length;
+      const nowCount = running + blocked;
+      const nextCount = queued + currentData.pendingApproval.length;
       document.getElementById('running-count').textContent = running;
       document.getElementById('queued-count').textContent = queued;
       document.getElementById('completed-count').textContent = currentData.reviewFiles.length;
+      document.getElementById('focus-now-count').textContent = String(nowCount);
+      document.getElementById('focus-next-count').textContent = String(nextCount);
+      document.getElementById('focus-blocked-count').textContent = String(blocked);
 
       const activeReviewsSection = document.getElementById('active-reviews-section');
       const activeReviewsEl = document.getElementById('active-reviews');
       const activeReviewsCount = document.getElementById('active-reviews-count');
 
+      activeReviewsSection.classList.remove('hidden');
       if (reviews.length === 0) {
-        activeReviewsSection.classList.add('hidden');
+        const showInitialLoadingState = !hasLoadedStatusOnce && loadingState.status > 0;
+        activeReviewsEl.innerHTML = `<div class="empty-state">${showInitialLoadingState ? t('loading.section') : t('empty.activeReviews')}</div>`;
+        activeReviewsCount.classList.add('hidden');
       } else {
-        activeReviewsSection.classList.remove('hidden');
         activeReviewsEl.innerHTML = reviews.map(r => renderReview(r, true)).join('');
         activeReviewsCount.textContent = reviews.length;
         activeReviewsCount.classList.remove('hidden');
@@ -359,6 +674,7 @@
         activeFollowupsEl.innerHTML = followups.map(r => renderReview(r, true)).join('');
         activeFollowupsCount.textContent = followups.length;
         activeFollowupsCount.classList.remove('hidden');
+        applySectionExpansion('active-followups-section');
       }
 
       refreshIcons();
@@ -404,16 +720,16 @@
       return `
         <div class="review-accordion" data-filename="${review.filename}">
           <div class="review-accordion-header">
-            <div class="review-accordion-toggle" onclick="toggleReviewAccordion('${review.filename}')"><i data-lucide="chevron-right"></i></div>
-            <div class="review-status completed" onclick="toggleReviewAccordion('${review.filename}')"></div>
-            <div class="review-info" onclick="toggleReviewAccordion('${review.filename}')" style="cursor: pointer;">
+            <div class="review-accordion-toggle" onclick="toggleReviewAccordion('${review.filename}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)"><i data-lucide="chevron-right"></i></div>
+            <div class="review-status completed" onclick="toggleReviewAccordion('${review.filename}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)"></div>
+            <div class="review-info" onclick="toggleReviewAccordion('${review.filename}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)" style="cursor: pointer;">
               <div class="review-title">${mrLabel} ${review.mrNumber}${review.title ? ` - ${review.title}` : ''}</div>
               <div class="review-meta">
                 <span class="badge completed"><i data-lucide="${typeIcon}"></i> ${typeLabel}</span>
                 <span style="margin-left: 0.5rem; color: #71717a;">${sizeKb} KB</span>
               </div>
             </div>
-            <div class="review-time" onclick="toggleReviewAccordion('${review.filename}')" style="cursor: pointer;">${review.date}</div>
+            <div class="review-time" onclick="toggleReviewAccordion('${review.filename}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)" style="cursor: pointer;">${review.date}</div>
             <button class="btn-delete" onclick="deleteReviewFile('${review.filename}')" title="${t('button.delete')}"><i data-lucide="trash-2"></i></button>
           </div>
           <div class="review-accordion-content">
@@ -457,6 +773,7 @@
     }
 
     async function fetchReviewFiles() {
+      setLoadingFlag('reviewFiles', true);
       try {
         const url = currentProjectPath
           ? `${API_URL}/api/reviews?path=${encodeURIComponent(currentProjectPath)}`
@@ -467,14 +784,18 @@
         updateReviewFilesUI();
       } catch (error) {
         console.error('Error fetching review files:', error);
+      } finally {
+        setLoadingFlag('reviewFiles', false);
       }
     }
 
     async function fetchProjectStats() {
       const statsEl = document.getElementById('project-stats');
+      setLoadingFlag('stats', true);
 
       if (!currentProjectPath) {
         statsEl.innerHTML = `<div class="empty-state">${t('empty.statsNoProject')}</div>`;
+        setLoadingFlag('stats', false);
         return;
       }
 
@@ -519,18 +840,25 @@
       } catch (error) {
         console.error('Error fetching stats:', error);
         statsEl.innerHTML = `<div class="empty-state">${t('error.loadingStats')}</div>`;
+      } finally {
+        setLoadingFlag('stats', false);
       }
     }
 
     function updateReviewFilesUI() {
       const recentEl = document.getElementById('recent-reviews');
+      const completedSection = document.getElementById('completed-reviews-section');
 
       if (currentData.reviewFiles.length === 0) {
-        recentEl.innerHTML = `<div class="empty-state">${t('empty.reviewFiles')}</div>`;
+        completedSection?.classList.remove('hidden');
+        recentEl.innerHTML = `<div class="empty-state">${loadingState.reviewFiles ? t('loading.section') : t('empty.reviewFiles')}</div>`;
+        applySectionExpansion('completed-reviews-section');
         return;
       }
 
+      completedSection?.classList.remove('hidden');
       recentEl.innerHTML = currentData.reviewFiles.map(renderReviewFile).join('');
+      applySectionExpansion('completed-reviews-section');
       refreshIcons();
     }
 
@@ -719,12 +1047,12 @@
     function renderMrItem(mr, type) {
       const mrPrefix = mr.platform === 'github' ? '#' : '!';
       const threadInfo = type === 'pending-fix'
-        ? `<span class="mr-threads has-open"><i data-lucide="message-circle"></i> ${t('mr.threads.open', { count: mr.openThreads })}</span>`
+        ? `<span class="mr-threads has-open"><i data-lucide="message-circle"></i> ${t('mr.threads.openAction', { count: mr.openThreads })}</span>`
         : (type === 'pending-approval' && mr.totalWarnings > 0)
-          ? `<span class="mr-threads has-warnings"><i data-lucide="alert-triangle"></i> ${mr.totalWarnings} ${t('stats.warnings').toLowerCase()}</span>`
-          : `<span class="mr-threads all-resolved"><i data-lucide="check-circle"></i> ${t('mr.threads.resolved')}</span>`;
+          ? `<span class="mr-threads has-warnings"><i data-lucide="alert-triangle"></i> ${t('mr.threads.warningAction', { count: mr.totalWarnings })}</span>`
+          : `<span class="mr-threads all-resolved"><i data-lucide="check-circle"></i> ${t('mr.threads.resolvedAction')}</span>`;
 
-      const openBtn = `<a href="${mr.url}" target="_blank" class="btn-action open"><i data-lucide="external-link"></i> ${t('button.open')}</a>`;
+      const openBtn = `<a href="${mr.url}" target="_blank" class="btn-action open" onclick="return onUsefulLinkAction()"><i data-lucide="external-link"></i> ${t('button.open')}</a>`;
       const autoFollowupChecked = mr.autoFollowup !== false ? 'checked' : '';
       const showFollowupActions = type === 'pending-fix' ||
         (type === 'pending-approval' && mr.totalWarnings > 0);
@@ -754,7 +1082,7 @@
 
       return `
         <div class="mr-item-accordion" data-mr-id="${mr.id}">
-          <div class="mr-item-header" onclick="toggleMrAccordion('${accordionId}')">
+          <div class="mr-item-header" onclick="toggleMrAccordion('${accordionId}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)">
             <div class="review-status ${type === 'pending-fix' ? 'running' : (type === 'pending-approval' && mr.totalWarnings > 0) ? 'warnings' : 'completed'}"></div>
             <div class="mr-info">
               <div class="mr-title">
@@ -819,6 +1147,120 @@
       `;
     }
 
+    function renderNowLane(mr) {
+      const mrPrefix = mr.platform === 'github' ? '#' : '!';
+      const assigneeUsername = mr.assignment?.username || 'unknown';
+      const assigneeDisplay = mr.assignment?.displayName || assigneeUsername;
+      const qualityScore = typeof mr.latestScore === 'number' ? mr.latestScore : null;
+      const qualityProgress = getQualityProgress(qualityScore, QUALITY_TARGET_SCORE);
+      const qualityTarget = qualityProgress.qualityTarget;
+      const qualityDelta = qualityProgress.targetDelta;
+      const qualityState = qualityScore === null
+        ? 'unknown'
+        : qualityScore >= QUALITY_TARGET_SCORE
+          ? 'excellent'
+          : qualityScore >= 6
+            ? 'warning'
+            : 'critical';
+      const qualityLabel = qualityScore === null
+        ? t('quality.notAvailable')
+        : qualityScore >= 10
+          ? t('quality.perfect')
+          : qualityScore >= QUALITY_TARGET_SCORE
+            ? t('quality.onTarget')
+            : qualityScore >= 6
+              ? t('quality.belowTarget')
+              : t('quality.lovableQuality');
+      const deltaLabel = qualityProgress.targetDeltaLabel;
+      const qualityTrend = getQualityTrend(mr);
+      const qualityTrendLabel = qualityTrend.direction === 'up'
+        ? t('quality.trendUp', { delta: qualityTrend.label })
+        : qualityTrend.direction === 'down'
+          ? t('quality.trendDown', { delta: qualityTrend.label })
+          : qualityTrend.direction === 'flat'
+            ? t('quality.trendFlat')
+            : t('quality.trendUnknown');
+      const qualityTrendIcon = qualityTrend.direction === 'up'
+        ? 'trending-up'
+        : qualityTrend.direction === 'down'
+          ? 'trending-down'
+          : qualityTrend.direction === 'flat'
+            ? 'minus'
+            : 'circle-help';
+
+      return `
+        <div class="now-lane">
+          <div class="now-lane-copy">
+            <span class="now-lane-kicker">${t('lane.nowKicker')}</span>
+            <div class="now-lane-title">${mrPrefix}${mr.mrNumber} - ${mr.title}</div>
+            <div class="now-lane-meta">${t('lane.nowMeta', { count: mr.openThreads })}</div>
+            <div class="now-lane-owner">${t('lane.owner', { owner: assigneeDisplay })}</div>
+          </div>
+          <div class="now-lane-quality ${qualityState}">
+            <span class="quality-kicker">${t('quality.kicker')}</span>
+            <div class="quality-main">
+              <span class="quality-score">${qualityScore !== null ? qualityScore.toFixed(1) : '-'}</span>
+              <span class="quality-over">/10</span>
+            </div>
+            <div class="quality-target">${t('quality.target', { target: qualityTarget })} ${deltaLabel ? `(${deltaLabel})` : ''}</div>
+            <div class="quality-progress">
+              <div class="quality-progress-track">
+                <div class="quality-progress-fill ${qualityState}" style="width: ${qualityProgress.clampedProgressPercent}%"></div>
+              </div>
+              <span class="quality-progress-value">${qualityProgress.progressPercent !== null ? `${qualityProgress.clampedProgressPercent.toFixed(0)}%` : '-'}</span>
+            </div>
+            <div class="quality-label">${qualityLabel}</div>
+            <div class="quality-trend ${qualityTrend.direction}">
+              <i data-lucide="${qualityTrendIcon}"></i>
+              <span>${qualityTrendLabel}</span>
+            </div>
+            <div class="now-lane-actions">
+              <button class="btn-action" onclick="triggerFollowup('${mr.id}')"><i data-lucide="refresh-cw"></i> ${t('button.followup')}</button>
+              <a href="${mr.url}" target="_blank" class="btn-action open" onclick="return onUsefulLinkAction()"><i data-lucide="external-link"></i> ${t('button.open')}</a>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderQueueLanes(queueLanesModel) {
+      const nowLaneContent = queueLanesModel.nowLaneItem
+        ? renderNowLane(queueLanesModel.nowLaneItem)
+        : `<div class="empty-state">${t('queueLane.emptyNow')}</div>`;
+      const needsFixContent = queueLanesModel.needsFixItems.length > 0
+        ? queueLanesModel.needsFixItems.map((mergeRequest) => renderMrItem(mergeRequest, 'pending-fix')).join('')
+        : `<div class="empty-state">${t('queueLane.emptyNeedsFix')}</div>`;
+      const readyToApproveContent = queueLanesModel.readyToApproveItems.length > 0
+        ? queueLanesModel.readyToApproveItems.map((mergeRequest) => renderMrItem(mergeRequest, 'pending-approval')).join('')
+        : `<div class="empty-state">${t('queueLane.emptyReadyToApprove')}</div>`;
+
+      return `
+        <div class="queue-lanes-grid">
+          <div class="queue-lane">
+            <div class="queue-lane-header">
+              <span class="queue-lane-title">${t('queueLane.now')}</span>
+              <span class="queue-lane-count">${queueLanesModel.nowLaneCount}</span>
+            </div>
+            <div class="queue-lane-body">${nowLaneContent}</div>
+          </div>
+          <div class="queue-lane">
+            <div class="queue-lane-header">
+              <span class="queue-lane-title">${t('queueLane.needsFix')}</span>
+              <span class="queue-lane-count">${queueLanesModel.needsFixCount}</span>
+            </div>
+            <div class="queue-lane-body">${needsFixContent}</div>
+          </div>
+          <div class="queue-lane">
+            <div class="queue-lane-header">
+              <span class="queue-lane-title">${t('queueLane.readyToApprove')}</span>
+              <span class="queue-lane-count">${queueLanesModel.readyToApproveCount}</span>
+            </div>
+            <div class="queue-lane-body">${readyToApproveContent}</div>
+          </div>
+        </div>
+      `;
+    }
+
     function toggleMrAccordion(accordionId) {
       const content = document.getElementById(`mr-content-${accordionId}`);
       const accordion = content?.closest('.mr-item-accordion');
@@ -844,39 +1286,40 @@
       const pendingFixSection = document.getElementById('pending-fix-section');
       const pendingFixEl = document.getElementById('pending-fix-reviews');
       const pendingApprovalSection = document.getElementById('pending-approval-section');
-      const pendingApprovalEl = document.getElementById('pending-approval-reviews');
       const pendingFixCount = document.getElementById('pending-fix-count');
       const pendingApprovalCount = document.getElementById('pending-approval-count');
 
-      if (currentData.pendingFix.length === 0) {
-        pendingFixSection.classList.add('hidden');
-        pendingFixCount.classList.add('hidden');
+      pendingFixSection.classList.remove('hidden');
+      const rankedPendingFix = rankPendingFixForNowLane(currentData.pendingFix);
+      const queueLanesModel = buildQueueLanesModel(rankedPendingFix, currentData.pendingApproval);
+      sessionMetrics = updatePriorityItemTracking(sessionMetrics, {
+        nowLaneItemId: queueLanesModel.nowLaneItem?.id ?? null,
+        pendingFixIds: rankedPendingFix.map((mergeRequest) => String(mergeRequest.id)),
+        nowMs: Date.now(),
+      });
+      updateSessionMetricsUI();
+      if (queueLanesModel.nowLaneCount + queueLanesModel.needsFixCount + queueLanesModel.readyToApproveCount === 0) {
+        pendingFixEl.innerHTML = `<div class="empty-state">${loadingState.mrTracking ? t('loading.section') : t('empty.pendingFix')}</div>`;
       } else {
-        pendingFixSection.classList.remove('hidden');
-        pendingFixEl.innerHTML = currentData.pendingFix.map(mr => renderMrItem(mr, 'pending-fix')).join('');
-        pendingFixCount.textContent = currentData.pendingFix.length;
-        pendingFixCount.classList.remove('hidden');
+        pendingFixEl.innerHTML = renderQueueLanes(queueLanesModel);
       }
+      pendingFixCount.textContent = String(queueLanesModel.nowLaneCount + queueLanesModel.needsFixCount + queueLanesModel.readyToApproveCount);
+      pendingFixCount.classList.remove('hidden');
 
-      if (currentData.pendingApproval.length === 0) {
-        pendingApprovalSection.classList.add('hidden');
-        pendingApprovalCount.classList.add('hidden');
-      } else {
-        pendingApprovalSection.classList.remove('hidden');
-        pendingApprovalEl.innerHTML = currentData.pendingApproval.map(mr => renderMrItem(mr, 'pending-approval')).join('');
-        pendingApprovalCount.textContent = currentData.pendingApproval.length;
-        pendingApprovalCount.classList.remove('hidden');
-      }
+      pendingApprovalSection.classList.add('hidden');
+      pendingApprovalCount.classList.add('hidden');
 
       refreshIcons();
     }
 
     async function fetchMrTracking() {
+      setLoadingFlag('mrTracking', true);
       if (!currentProjectPath) {
         currentData.pendingFix = [];
         currentData.pendingApproval = [];
         document.getElementById('pending-fix-section').classList.add('hidden');
         document.getElementById('pending-approval-section').classList.add('hidden');
+        setLoadingFlag('mrTracking', false);
         return;
       }
 
@@ -890,10 +1333,13 @@
         updateMrTrackingUI();
       } catch (error) {
         console.error('Error fetching MR tracking:', error);
+      } finally {
+        setLoadingFlag('mrTracking', false);
       }
     }
 
     async function triggerFollowup(mrId) {
+      trackUsefulAction('followup');
       try {
         const response = await fetch(`${API_URL}/api/mr-tracking/followup`, {
           method: 'POST',
@@ -903,6 +1349,7 @@
         const data = await response.json();
         if (data.success) {
           console.log('Followup triggered for MR:', mrId);
+          showToast(t('notify.followupRequested', { mrNumber: String(data.mrNumber ?? '?') }), 'info');
         } else {
           alert(t('error.triggerFollowup') + ': ' + data.error);
         }
@@ -931,6 +1378,7 @@
 
     async function approveMr(mrId) {
       if (!confirm(t('confirm.approveMr', { label: getMrLabel() }))) return;
+      trackUsefulAction('approve');
 
       try {
         const response = await fetch(`${API_URL}/api/mr-tracking/approve`, {
@@ -956,6 +1404,7 @@
         alert(t('error.projectNotLoaded'));
         return;
       }
+      trackUsefulAction('syncThreads');
 
       const btn = document.getElementById('sync-threads-btn');
       const iconEl = btn.querySelector('i');
@@ -1034,6 +1483,7 @@
                 console.log(`[WS] ${message.type}: ${message.activeReviews?.length || 0} active reviews`, message.activeReviews);
                 currentData.activeReviews = message.activeReviews || [];
                 currentData.recentReviews = message.recentReviews || [];
+                dispatchReviewNotifications(currentData.activeReviews, currentData.recentReviews);
                 updateUI();
                 if (message.type === 'state') {
                   fetchMrTracking();
@@ -1078,11 +1528,13 @@
     }, 30000);
 
     async function fetchStatus() {
+      setLoadingFlag('status', true);
       try {
         const response = await fetch(`${API_URL}/api/status`);
         const data = await response.json();
         currentData.activeReviews = data.jobs?.active || [];
         currentData.recentReviews = data.jobs?.recent || [];
+        dispatchReviewNotifications(currentData.activeReviews, currentData.recentReviews);
         if (!wsConnected) updateConnectionStatus('online', 'connection.onlinePolling');
         updateUI();
       } catch (error) {
@@ -1094,6 +1546,9 @@
           document.getElementById('active-reviews').innerHTML = `<div class="empty-state">${t('empty.serverNotAccessible')}</div>`;
           document.getElementById('recent-reviews').innerHTML = `<div class="empty-state">${t('empty.serverNotAccessible')}</div>`;
         }
+      } finally {
+        hasLoadedStatusOnce = true;
+        setLoadingFlag('status', false);
       }
     }
 
@@ -1134,6 +1589,7 @@
         if (select && data.language) {
           select.value = data.language;
           setLanguage(data.language);
+          document.documentElement.lang = data.language;
           renderStaticLabels();
         }
       } catch (error) {
@@ -1143,6 +1599,7 @@
 
     async function changeLanguage(language) {
       setLanguage(language);
+      document.documentElement.lang = language;
       renderStaticLabels();
       // Re-render all dynamic content
       updateUI();
@@ -1358,6 +1815,7 @@
 
     async function confirmCancelReview() {
       if (!cancelModalJobId) return;
+      trackUsefulAction('cancelReview');
 
       const jobId = cancelModalJobId;
       closeCancelModal();
@@ -1444,6 +1902,26 @@
       const cardLanguage = document.getElementById('i18n-card-language');
       if (cardLanguage) cardLanguage.textContent = t('card.language');
 
+      const stripNow = document.getElementById('i18n-strip-now');
+      if (stripNow) stripNow.textContent = t('strip.now');
+      const stripNowMeta = document.getElementById('i18n-strip-now-meta');
+      if (stripNowMeta) stripNowMeta.textContent = t('strip.nowMeta');
+
+      const stripNext = document.getElementById('i18n-strip-next');
+      if (stripNext) stripNext.textContent = t('strip.next');
+      const stripNextMeta = document.getElementById('i18n-strip-next-meta');
+      if (stripNextMeta) stripNextMeta.textContent = t('strip.nextMeta');
+
+      const stripBlocked = document.getElementById('i18n-strip-blocked');
+      if (stripBlocked) stripBlocked.textContent = t('strip.blocked');
+      const stripBlockedMeta = document.getElementById('i18n-strip-blocked-meta');
+      if (stripBlockedMeta) stripBlockedMeta.textContent = t('strip.blockedMeta');
+      applyFocusStripMode();
+
+      const loadingDataLabel = document.getElementById('i18n-loading-data');
+      if (loadingDataLabel) loadingDataLabel.textContent = t(getLoadingMessageKey());
+      updateSessionMetricsUI();
+
       // Model options
       const modelOpus = document.getElementById('i18n-model-opus');
       if (modelOpus) modelOpus.textContent = t('model.opus');
@@ -1491,7 +1969,7 @@
       if (sectionActiveFollowups) sectionActiveFollowups.textContent = t('section.activeFollowups');
 
       const sectionPendingFix = document.getElementById('i18n-section-pending-fix');
-      if (sectionPendingFix) sectionPendingFix.textContent = t('section.pendingFix');
+      if (sectionPendingFix) sectionPendingFix.textContent = t('section.queueLanes');
 
       const sectionPendingApproval = document.getElementById('i18n-section-pending-approval');
       if (sectionPendingApproval) sectionPendingApproval.textContent = t('section.pendingApproval');
@@ -1563,9 +2041,18 @@
     window.showCancelModal = showCancelModal;
     window.closeCancelModal = closeCancelModal;
     window.confirmCancelReview = confirmCancelReview;
+    window.toggleFocusStripMode = toggleFocusStripMode;
+    window.toggleSection = toggleSection;
+    window.onUsefulLinkAction = onUsefulLinkAction;
+    window.activateOnKeydown = activateOnKeydown;
 
     // Init
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+    loadFocusStripMode();
     renderStaticLabels();
+    updateSessionMetricsUI();
     connectWebSocket();
     fetchStatus();
     checkClaudeStatus();
