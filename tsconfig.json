@@ -11,6 +11,7 @@
     "paths": {
       "@/*": ["./*"]
     },
+    "allowJs": true /* Required for dashboard JS modules (browser-served, not compiled by tsc) */,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
