@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,56 +14,56 @@
       <h1>Reviewflow</h1>
       <div class="header-actions">
         <button id="check-claude-btn" class="btn btn-primary" onclick="checkClaudeStatus()">
-          <i data-lucide="search"></i> Vérifier Claude
+          <i data-lucide="search"></i> <span id="i18n-check-claude"></span>
         </button>
         <button id="toggle-logs-btn" class="btn btn-secondary" onclick="toggleLogs()">
-          <i data-lucide="scroll-text"></i> Logs
+          <i data-lucide="scroll-text"></i> <span id="i18n-logs-btn"></span>
         </button>
         <div id="server-status" class="status-indicator connecting">
           <span class="status-dot"></span>
-          <span>Connexion...</span>
+          <span id="i18n-server-status"></span>
         </div>
       </div>
     </header>
 
     <div class="cards">
       <div class="card">
-        <div class="card-label">En cours</div>
+        <div class="card-label" id="i18n-card-running"></div>
         <div id="running-count" class="card-value running">-</div>
       </div>
       <div class="card">
-        <div class="card-label">En attente</div>
+        <div class="card-label" id="i18n-card-queued"></div>
         <div id="queued-count" class="card-value queued">-</div>
       </div>
       <div class="card">
-        <div class="card-label">Terminées</div>
+        <div class="card-label" id="i18n-card-completed"></div>
         <div id="completed-count" class="card-value">-</div>
       </div>
       <div class="card">
-        <div class="card-label">Claude CLI</div>
+        <div class="card-label" id="i18n-card-claude-cli"></div>
         <div id="claude-status" class="card-claude checking">
-          <span class="status">Vérification...</span>
+          <span class="status" id="i18n-claude-checking"></span>
           <span class="version"></span>
         </div>
       </div>
       <div class="card" id="git-cli-card">
-        <div class="card-label" id="git-cli-label">Git CLI</div>
+        <div class="card-label" id="git-cli-label"></div>
         <div id="git-cli-status" class="card-claude checking">
-          <span class="status">Charger un projet...</span>
+          <span class="status" id="i18n-git-load-project"></span>
           <span class="version"></span>
         </div>
       </div>
       <div class="card">
-        <div class="card-label">Modèle</div>
+        <div class="card-label" id="i18n-card-model"></div>
         <div class="card-model">
           <select id="model-select" class="model-select" onchange="changeModel(this.value)">
-            <option value="opus">Opus (puissant)</option>
-            <option value="sonnet">Sonnet (rapide)</option>
+            <option value="opus" id="i18n-model-opus"></option>
+            <option value="sonnet" id="i18n-model-sonnet"></option>
           </select>
         </div>
       </div>
       <div class="card">
-        <div class="card-label">Langue</div>
+        <div class="card-label" id="i18n-card-language"></div>
         <div class="card-model">
           <select id="language-select" class="model-select" onchange="changeLanguage(this.value)">
             <option value="en">English</option>
@@ -75,15 +75,14 @@
 
     <div class="project-loader">
       <select id="project-select" class="project-input" style="min-width: 350px;" onchange="onProjectSelect(this.value)">
-        <option value="">-- Sélectionner un projet --</option>
+        <option value="" id="i18n-project-placeholder"></option>
       </select>
       <input type="text" id="project-path-input" class="project-input" style="min-width: 250px;"
-             placeholder="Ou entrer un nouveau chemin..."
              value="">
       <button class="btn btn-primary" onclick="loadProjectConfig()">
-        <i data-lucide="folder-open"></i> Charger
+        <i data-lucide="folder-open"></i> <span id="i18n-project-load"></span>
       </button>
-      <button class="btn btn-secondary" onclick="removeCurrentProject()" title="Retirer de la liste">
+      <button id="remove-project-btn" class="btn btn-secondary" onclick="removeCurrentProject()">
         <i data-lucide="trash-2"></i>
       </button>
       <span id="config-status" class="config-status hidden"></span>
@@ -91,108 +90,114 @@
     <div id="config-info" class="config-info hidden"></div>
 
     <div id="claude-login-section" class="login-instructions hidden">
-      <strong><i data-lucide="alert-triangle"></i> Claude n'est pas authentifié</strong>
-      <p style="margin-top: 0.5rem;">Exécutez cette commande dans un terminal :</p>
+      <strong><i data-lucide="alert-triangle"></i> <span id="i18n-claude-login-title"></span></strong>
+      <p style="margin-top: 0.5rem;" id="i18n-claude-login-instruction"></p>
       <p style="margin-top: 0.5rem;"><code>claude login</code></p>
-      <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #a1a1aa;">Puis rechargez cette page.</p>
+      <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #a1a1aa;" id="i18n-claude-login-reload"></p>
     </div>
 
     <div id="git-login-section" class="login-instructions hidden">
-      <strong id="git-login-title"><i data-lucide="alert-triangle"></i> CLI non authentifié</strong>
+      <strong id="git-login-title"><i data-lucide="alert-triangle"></i> <span id="i18n-git-login-title"></span></strong>
       <div style="margin-top: 0.75rem;" id="git-login-instructions"></div>
     </div>
 
     <div id="logs-section" class="section hidden">
       <div class="section-header">
-        <i data-lucide="scroll-text"></i> Logs récents
-        <span id="error-count" class="badge-count hidden">0 erreurs</span>
+        <i data-lucide="scroll-text"></i> <span id="i18n-section-logs"></span>
+        <span id="error-count" class="badge-count hidden"></span>
       </div>
       <div id="logs-content" class="section-content logs">
-        <div class="empty-state">Aucun log</div>
+        <div class="empty-state" id="i18n-empty-logs"></div>
       </div>
     </div>
 
     <div id="stats-section" class="section hidden">
       <div class="section-header clickable" onclick="toggleStats()">
-        <i data-lucide="bar-chart-3"></i> Statistiques du projet
+        <i data-lucide="bar-chart-3"></i> <span id="i18n-section-stats"></span>
         <span id="stats-toggle" class="toggle-icon collapsed"><i data-lucide="chevron-down"></i></span>
       </div>
       <div id="project-stats" class="section-content stats-grid hidden">
-        <div class="empty-state">Charger un projet pour voir les stats</div>
+        <div class="empty-state" id="i18n-empty-stats"></div>
       </div>
     </div>
 
     <div class="section" id="active-reviews-section">
       <div class="section-header">
-        <i data-lucide="file-search"></i> Reviews actives
+        <i data-lucide="file-search"></i> <span id="i18n-section-active-reviews"></span>
         <span id="active-reviews-count" class="badge-count hidden">0</span>
       </div>
       <div id="active-reviews" class="section-content">
-        <div class="empty-state">Aucune review en cours</div>
+        <div class="empty-state" id="i18n-empty-active-reviews"></div>
       </div>
     </div>
 
     <div class="section hidden" id="active-followups-section">
       <div class="section-header">
-        <i data-lucide="refresh-cw"></i> Followups actifs
+        <i data-lucide="refresh-cw"></i> <span id="i18n-section-active-followups"></span>
         <span id="active-followups-count" class="badge-count hidden">0</span>
       </div>
       <div id="active-followups" class="section-content">
-        <div class="empty-state">Aucun followup en cours</div>
+        <div class="empty-state" id="i18n-empty-active-followups"></div>
       </div>
     </div>
 
     <div class="section hidden" id="pending-fix-section">
       <div class="section-header">
-        <i data-lucide="wrench"></i> En attente de correctif
+        <i data-lucide="wrench"></i> <span id="i18n-section-pending-fix"></span>
         <span id="pending-fix-count" class="badge-count hidden">0</span>
-        <button id="sync-threads-btn" class="btn-icon btn-sync" title="Synchroniser les threads GitLab" onclick="syncGitLabThreads()">
+        <button id="sync-threads-btn" class="btn-icon btn-sync" onclick="syncGitLabThreads()">
           <i data-lucide="refresh-cw"></i>
         </button>
       </div>
       <div id="pending-fix-reviews" class="section-content">
-        <div class="empty-state">Aucune MR en attente de correctif</div>
+        <div class="empty-state" id="i18n-empty-pending-fix"></div>
       </div>
     </div>
 
     <div class="section hidden" id="pending-approval-section">
       <div class="section-header">
-        <i data-lucide="circle-check"></i> En attente d'approbation
+        <i data-lucide="circle-check"></i> <span id="i18n-section-pending-approval"></span>
         <span id="pending-approval-count" class="badge-count hidden">0</span>
       </div>
       <div id="pending-approval-reviews" class="section-content">
-        <div class="empty-state">Aucune MR en attente d'approbation</div>
+        <div class="empty-state" id="i18n-empty-pending-approval"></div>
       </div>
     </div>
 
     <div class="section">
       <div class="section-header">
-        <i data-lucide="file-check"></i> Reviews terminées
+        <i data-lucide="file-check"></i> <span id="i18n-section-completed-reviews"></span>
       </div>
       <div id="recent-reviews" class="section-content">
-        <div class="empty-state">Chargement...</div>
+        <div class="empty-state" id="i18n-empty-loading"></div>
       </div>
     </div>
 
     <div class="refresh-info">
-      <span id="connection-mode">WebSocket temps réel</span> • Fallback polling 5s
+      <span id="connection-mode"></span> • <span id="i18n-connection-fallback"></span>
     </div>
   </div>
 
   <div id="cancel-modal" class="modal-overlay hidden" onclick="closeCancelModal(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
       <div class="modal-title" id="cancel-modal-title"></div>
-      <div class="modal-message">Cette action est irréversible. La review sera arrêtée immédiatement.</div>
+      <div class="modal-message" id="i18n-modal-message"></div>
       <div class="modal-actions">
-        <button class="btn-modal-back" onclick="closeCancelModal()">Revenir</button>
-        <button class="btn-modal-confirm" id="cancel-modal-confirm" onclick="confirmCancelReview()">Confirmer</button>
+        <button class="btn-modal-back" onclick="closeCancelModal()" id="i18n-modal-back"></button>
+        <button class="btn-modal-confirm" id="cancel-modal-confirm" onclick="confirmCancelReview()"></button>
       </div>
     </div>
   </div>
 
   <div id="toast-container" class="toast-container"></div>
 
-  <script>
+  <script type="module">
+    import { t, setLanguage, getLanguage } from './modules/i18n.js';
+    import { formatTime, formatDuration, formatPhase, formatLogTime } from './modules/formatting.js';
+    import { escapeHtml, markdownToHtml } from './modules/html.js';
+    import { getAgentIcon, icon, refreshIcons } from './modules/icons.js';
+    import { MAX_RECONNECT_ATTEMPTS, RECONNECT_DELAY, STORAGE_KEY_PROJECTS, STORAGE_KEY_CURRENT } from './modules/constants.js';
+
     const API_URL = window.location.origin;
     const WS_URL = `ws://${window.location.host}/ws`;
 
@@ -200,59 +205,10 @@
     let wsConnected = false;
     let reconnectAttempts = 0;
     let logsVisible = false;
-    const MAX_RECONNECT_ATTEMPTS = 10;
-    const RECONNECT_DELAY = 3000;
 
     let currentData = { activeReviews: [], recentReviews: [], logs: [], reviewFiles: [], pendingFix: [], pendingApproval: [] };
-    let loadedReviews = {}; // Cache for loaded review content
-    let statsCollapsed = true; // Track stats section state (collapsed by default)
-
-    // Agent status icons (will be replaced with Lucide icons after render)
-    const agentIconNames = { pending: 'clock', running: 'loader', completed: 'check', failed: 'x' };
-    const getAgentIcon = (status) => `<i data-lucide="${agentIconNames[status] || 'help-circle'}"></i>`;
-
-    function formatTime(dateStr) {
-      if (!dateStr) return '-';
-      const date = new Date(dateStr);
-      const now = new Date();
-      const diff = now - date;
-      if (diff < 60000) return "À l'instant";
-      if (diff < 3600000) return `Il y a ${Math.floor(diff / 60000)} min`;
-      if (diff < 86400000) return `Il y a ${Math.floor(diff / 3600000)}h`;
-      return date.toLocaleDateString('fr-FR');
-    }
-
-    function formatDuration(startStr, endStr, totalMs) {
-      let diff;
-      if (totalMs !== undefined && totalMs !== null) {
-        diff = Math.floor(totalMs / 1000);
-      } else if (startStr) {
-        const start = new Date(startStr);
-        const end = endStr ? new Date(endStr) : new Date();
-        diff = Math.floor((end - start) / 1000);
-      } else {
-        return '';
-      }
-      if (diff < 60) return `${diff}s`;
-      if (diff < 3600) return `${Math.floor(diff / 60)}m ${diff % 60}s`;
-      return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
-    }
-
-    function formatPhase(phase) {
-      const labels = {
-        'initializing': 'Initialisation',
-        'agents-running': 'Agents en cours',
-        'synthesizing': 'Synthèse',
-        'publishing': 'Publication',
-        'completed': 'Terminé'
-      };
-      return labels[phase] || phase;
-    }
-
-    function formatLogTime(timestamp) {
-      const date = new Date(timestamp);
-      return date.toLocaleTimeString('fr-FR');
-    }
+    let loadedReviews = {};
+    let statsCollapsed = true;
 
     function renderAgentTimeline(progress) {
       if (!progress?.agents?.length) return '';
@@ -292,16 +248,14 @@
         ${renderProgressBar(review.progress)}
       ` : '';
 
-      // Assignee info with avatar
       const assignerUsername = review.assignedBy?.username || 'unknown';
       const assignerDisplay = review.assignedBy?.displayName || assignerUsername;
       const assignerInitial = assignerDisplay.charAt(0).toUpperCase();
 
-      // Description accordion (for active reviews)
       const descriptionHtml = isActive && review.description ? `
         <div class="review-description-accordion">
           <div class="review-description-toggle" onclick="toggleReviewDescription('${review.id}')">
-            <i data-lucide="chevron-right"></i> Description
+            <i data-lucide="chevron-right"></i> ${t('review.description')}
           </div>
           <div class="review-description-content" id="review-desc-${review.id.replace(/[^a-zA-Z0-9-]/g, '-')}">
             <div class="review-description-text">${escapeHtml(review.description)}</div>
@@ -309,7 +263,6 @@
         </div>
       ` : '';
 
-      // Title: use MR title if available, else fallback to project name
       const displayTitle = review.title || project;
 
       return `
@@ -326,7 +279,7 @@
               </div>
               ${review.error ? `<div class="error-message">${review.error}</div>` : ''}
             </div>
-            ${isActive ? `<button class="btn-cancel-review" onclick="event.stopPropagation(); showCancelModal('${review.id}', ${mrNumber}, '${review.jobType || 'review'}')" title="Annuler"><i data-lucide="x"></i> Annuler</button>` : ''}
+            ${isActive ? `<button class="btn-cancel-review" onclick="event.stopPropagation(); showCancelModal('${review.id}', ${mrNumber}, '${review.jobType || 'review'}')" title="${t('button.cancel')}"><i data-lucide="x"></i> ${t('button.cancel')}</button>` : ''}
             <div class="review-assigner">
               <div class="review-assigner-info">
                 <span class="review-assigner-name">${assignerDisplay}</span>
@@ -358,13 +311,6 @@
       }
     }
 
-    function escapeHtml(text) {
-      if (!text) return '';
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
     function renderLog(log) {
       const dataStr = log.data ? JSON.stringify(log.data, null, 2) : '';
       return `
@@ -380,7 +326,6 @@
     }
 
     function updateUI() {
-      // Separate reviews and followups
       const reviews = currentData.activeReviews.filter(r => r.jobType !== 'followup');
       const followups = currentData.activeReviews.filter(r => r.jobType === 'followup');
 
@@ -390,7 +335,6 @@
       document.getElementById('queued-count').textContent = queued;
       document.getElementById('completed-count').textContent = currentData.reviewFiles.length;
 
-      // Update Reviews section
       const activeReviewsSection = document.getElementById('active-reviews-section');
       const activeReviewsEl = document.getElementById('active-reviews');
       const activeReviewsCount = document.getElementById('active-reviews-count');
@@ -404,7 +348,6 @@
         activeReviewsCount.classList.remove('hidden');
       }
 
-      // Update Followups section
       const activeFollowupsSection = document.getElementById('active-followups-section');
       const activeFollowupsEl = document.getElementById('active-followups');
       const activeFollowupsCount = document.getElementById('active-followups-count');
@@ -419,7 +362,6 @@
       }
 
       refreshIcons();
-      // Note: recent-reviews is managed by updateReviewFilesUI() - don't overwrite here
     }
 
     function updateLogs() {
@@ -428,80 +370,34 @@
       const errorBadge = document.getElementById('error-count');
 
       if (errorCount > 0) {
-        errorBadge.textContent = `${errorCount} erreurs`;
+        errorBadge.textContent = t('logs.errorCount', { count: errorCount });
         errorBadge.classList.remove('hidden');
       } else {
         errorBadge.classList.add('hidden');
       }
 
       if (currentData.logs.length === 0) {
-        logsEl.innerHTML = '<div class="empty-state">Aucun log</div>';
+        logsEl.innerHTML = `<div class="empty-state">${t('empty.logs')}</div>`;
       } else {
         logsEl.innerHTML = currentData.logs.slice().reverse().map(renderLog).join('');
       }
     }
 
-    function updateConnectionStatus(status, text) {
+    function updateConnectionStatus(status, textKey, textFallback) {
       const statusEl = document.getElementById('server-status');
       statusEl.className = `status-indicator ${status}`;
-      statusEl.innerHTML = `<span class="status-dot"></span><span>${text}</span>`;
+      const displayText = textKey ? t(textKey) : textFallback;
+      statusEl.innerHTML = `<span class="status-dot"></span><span>${displayText}</span>`;
 
       const modeEl = document.getElementById('connection-mode');
       modeEl.textContent = status === 'online' && wsConnected
-        ? 'WebSocket temps réel'
-        : status === 'online' ? 'Mode polling' : 'Déconnecté';
-    }
-
-    // Simple markdown to HTML converter
-    function markdownToHtml(md) {
-      let html = md
-        // Escape HTML
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        // Code blocks
-        .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-        // Inline code
-        .replace(/`([^`]+)`/g, '<code>$1</code>')
-        // Headers
-        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-        // Bold
-        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-        // Italic
-        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-        // Links
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
-        // Blockquotes
-        .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-        // Unordered lists
-        .replace(/^- (.+)$/gm, '<li>$1</li>')
-        // Ordered lists
-        .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-        // Horizontal rules
-        .replace(/^---$/gm, '<hr>')
-        // Tables (simple)
-        .replace(/^\|(.+)\|$/gm, (match, content) => {
-          const cells = content.split('|').map(c => c.trim());
-          if (cells.every(c => c.match(/^-+$/))) return '';
-          const cellTag = match.includes('---') ? 'th' : 'td';
-          return '<tr>' + cells.map(c => `<${cellTag}>${c}</${cellTag}>`).join('') + '</tr>';
-        })
-        // Wrap consecutive table rows
-        .replace(/(<tr>[\s\S]*?<\/tr>)+/g, '<table>$&</table>')
-        // Wrap consecutive list items
-        .replace(/(<li>[\s\S]*?<\/li>)+/g, '<ul>$&</ul>')
-        // Paragraphs
-        .replace(/\n\n/g, '</p><p>')
-        .replace(/\n/g, '<br>');
-
-      return '<p>' + html + '</p>';
+        ? t('connection.websocket')
+        : status === 'online' ? t('connection.polling') : t('connection.disconnected');
     }
 
     function renderReviewFile(review) {
       const typeIcon = review.type === 'review' ? 'file-text' : review.type === 'followup' ? 'refresh-cw' : 'file';
-      const typeLabel = review.type === 'review' ? 'Review' : review.type === 'followup' ? 'Followup' : review.type;
+      const typeLabel = review.type === 'review' ? t('review.type.review') : review.type === 'followup' ? t('review.type.followup') : review.type;
       const sizeKb = (review.size / 1024).toFixed(1);
       const mrLabel = getMrLabel();
 
@@ -518,11 +414,11 @@
               </div>
             </div>
             <div class="review-time" onclick="toggleReviewAccordion('${review.filename}')" style="cursor: pointer;">${review.date}</div>
-            <button class="btn-delete" onclick="deleteReviewFile('${review.filename}')" title="Supprimer"><i data-lucide="trash-2"></i></button>
+            <button class="btn-delete" onclick="deleteReviewFile('${review.filename}')" title="${t('button.delete')}"><i data-lucide="trash-2"></i></button>
           </div>
           <div class="review-accordion-content">
             <div class="markdown-content" id="review-content-${review.filename.replace(/\./g, '-')}">
-              <div class="empty-state">Chargement...</div>
+              <div class="empty-state">${t('status.loading')}</div>
             </div>
           </div>
         </div>
@@ -533,7 +429,6 @@
       const accordion = document.querySelector(`.review-accordion[data-filename="${filename}"]`);
       const isOpen = accordion.classList.contains('open');
 
-      // Close all other accordions
       document.querySelectorAll('.review-accordion.open').forEach(el => {
         if (el !== accordion) el.classList.remove('open');
       });
@@ -547,14 +442,13 @@
       const contentId = `review-content-${filename.replace(/\./g, '-')}`;
       const contentEl = document.getElementById(contentId);
 
-      // Load content if not cached
       if (!loadedReviews[filename]) {
         try {
           const response = await fetch(`${API_URL}/api/reviews/${filename}`);
           const data = await response.json();
           loadedReviews[filename] = data.content;
         } catch (error) {
-          contentEl.innerHTML = '<div class="empty-state">Erreur de chargement</div>';
+          contentEl.innerHTML = `<div class="empty-state">${t('error.loading')}</div>`;
           return;
         }
       }
@@ -564,7 +458,6 @@
 
     async function fetchReviewFiles() {
       try {
-        // Fetch reviews for current project if loaded, otherwise all
         const url = currentProjectPath
           ? `${API_URL}/api/reviews?path=${encodeURIComponent(currentProjectPath)}`
           : `${API_URL}/api/reviews`;
@@ -581,7 +474,7 @@
       const statsEl = document.getElementById('project-stats');
 
       if (!currentProjectPath) {
-        statsEl.innerHTML = '<div class="empty-state">Charger un projet pour voir les stats</div>';
+        statsEl.innerHTML = `<div class="empty-state">${t('empty.statsNoProject')}</div>`;
         return;
       }
 
@@ -591,41 +484,41 @@
 
         if (data.summary) {
           const s = data.summary;
-          const trendIcon = (t) => t === 'up' ? '<i data-lucide="trending-up"></i>' : t === 'down' ? '<i data-lucide="trending-down"></i>' : '<i data-lucide="minus"></i>';
+          const trendIcon = (trend) => trend === 'up' ? '<i data-lucide="trending-up"></i>' : trend === 'down' ? '<i data-lucide="trending-down"></i>' : '<i data-lucide="minus"></i>';
 
           statsEl.innerHTML = `
             <div class="stat-card">
               <div class="stat-value">${s.totalReviews}</div>
-              <div class="stat-label"><i data-lucide="file-search"></i> Reviews</div>
+              <div class="stat-label"><i data-lucide="file-search"></i> ${t('stats.reviews')}</div>
             </div>
             <div class="stat-card">
               <div class="stat-value">${s.averageScore}/10 ${trendIcon(s.trend.score)}</div>
-              <div class="stat-label"><i data-lucide="star"></i> Score moyen</div>
+              <div class="stat-label"><i data-lucide="star"></i> ${t('stats.averageScore')}</div>
             </div>
             <div class="stat-card">
               <div class="stat-value">${s.totalTime}</div>
-              <div class="stat-label"><i data-lucide="timer"></i> Temps total</div>
+              <div class="stat-label"><i data-lucide="timer"></i> ${t('stats.totalTime')}</div>
             </div>
             <div class="stat-card">
               <div class="stat-value">${s.averageTime}</div>
-              <div class="stat-label"><i data-lucide="clock"></i> Durée moyenne</div>
+              <div class="stat-label"><i data-lucide="clock"></i> ${t('stats.averageTime')}</div>
             </div>
             <div class="stat-card warning">
               <div class="stat-value">${s.totalBlocking} ${trendIcon(s.trend.blocking)}</div>
-              <div class="stat-label"><i data-lucide="octagon-alert"></i> Bloquants</div>
+              <div class="stat-label"><i data-lucide="octagon-alert"></i> ${t('stats.blocking')}</div>
             </div>
             <div class="stat-card">
               <div class="stat-value">${s.totalWarnings}</div>
-              <div class="stat-label"><i data-lucide="alert-triangle"></i> Importants</div>
+              <div class="stat-label"><i data-lucide="alert-triangle"></i> ${t('stats.warnings')}</div>
             </div>
           `;
           refreshIcons();
         } else {
-          statsEl.innerHTML = '<div class="empty-state">Aucune statistique disponible</div>';
+          statsEl.innerHTML = `<div class="empty-state">${t('empty.statsNoData')}</div>`;
         }
       } catch (error) {
         console.error('Error fetching stats:', error);
-        statsEl.innerHTML = '<div class="empty-state">Erreur de chargement des stats</div>';
+        statsEl.innerHTML = `<div class="empty-state">${t('error.loadingStats')}</div>`;
       }
     }
 
@@ -633,7 +526,7 @@
       const recentEl = document.getElementById('recent-reviews');
 
       if (currentData.reviewFiles.length === 0) {
-        recentEl.innerHTML = '<div class="empty-state">Aucun fichier de review</div>';
+        recentEl.innerHTML = `<div class="empty-state">${t('empty.reviewFiles')}</div>`;
         return;
       }
 
@@ -642,7 +535,7 @@
     }
 
     async function deleteReviewFile(filename) {
-      if (!confirm(`Supprimer ${filename} ?`)) return;
+      if (!confirm(t('confirm.deleteReview', { filename }))) return;
 
       try {
         const response = await fetch(`${API_URL}/api/reviews/${filename}`, {
@@ -651,18 +544,16 @@
         const data = await response.json();
 
         if (data.success) {
-          // Remove from cache
           delete loadedReviews[filename];
-          // Remove from list and update UI
           currentData.reviewFiles = currentData.reviewFiles.filter(r => r.filename !== filename);
           updateReviewFilesUI();
-          updateUI(); // Update count
+          updateUI();
         } else {
-          alert('Erreur: ' + data.error);
+          alert(t('error.deleteReview') + ': ' + data.error);
         }
       } catch (error) {
         console.error('Error deleting review:', error);
-        alert('Erreur lors de la suppression');
+        alert(t('error.deleteReview'));
       }
     }
 
@@ -671,7 +562,7 @@
       const loginSection = document.getElementById('claude-login-section');
 
       claudeEl.className = 'card-claude checking';
-      claudeEl.innerHTML = '<span class="status">Vérification...</span>';
+      claudeEl.innerHTML = `<span class="status">${t('status.checking')}</span>`;
 
       try {
         const response = await fetch(`${API_URL}/api/claude/status`);
@@ -680,7 +571,7 @@
         if (data.available) {
           claudeEl.className = 'card-claude available';
           claudeEl.innerHTML = `
-            <span class="status"><i data-lucide="check-circle"></i> Opérationnel</span>
+            <span class="status"><i data-lucide="check-circle"></i> ${t('status.operational')}</span>
             <span class="version">${data.version}</span>
           `;
           loginSection.classList.add('hidden');
@@ -691,18 +582,17 @@
             <span class="status"><i data-lucide="x-circle"></i> ${data.message}</span>
           `;
           refreshIcons();
-          if (data.message.includes('authentifié') || data.message.includes('login')) {
+          if (data.message.includes('authentifié') || data.message.includes('login') || data.message.includes('authenticated')) {
             loginSection.classList.remove('hidden');
           }
         }
       } catch (error) {
         claudeEl.className = 'card-claude unavailable';
-        claudeEl.innerHTML = '<span class="status"><i data-lucide="x-circle"></i> Erreur de vérification</span>';
+        claudeEl.innerHTML = `<span class="status"><i data-lucide="x-circle"></i> ${t('error.checkStatus')}</span>`;
         refreshIcons();
       }
     }
 
-    // Active platform from config (gitlab or github)
     let activePlatform = null;
 
     function updateGitCliUI() {
@@ -711,44 +601,43 @@
       const loginSection = document.getElementById('git-login-section');
 
       if (!activePlatform) {
-        labelEl.textContent = 'Git CLI';
+        labelEl.textContent = t('card.gitCli');
         statusEl.className = 'card-claude checking';
-        statusEl.innerHTML = '<span class="status">Charger un projet...</span>';
+        statusEl.innerHTML = `<span class="status">${t('status.loadProject')}</span>`;
         loginSection.classList.add('hidden');
         return;
       }
 
       const isGitlab = activePlatform === 'gitlab';
-      labelEl.textContent = isGitlab ? 'GitLab CLI' : 'GitHub CLI';
+      labelEl.textContent = isGitlab ? t('card.gitlabCli') : t('card.githubCli');
 
-      // Update login section with CLI + Webhook instructions
       const titleEl = document.getElementById('git-login-title');
       const instructionsEl = document.getElementById('git-login-instructions');
 
       if (isGitlab) {
-        titleEl.innerHTML = '<i data-lucide="alert-triangle"></i> GitLab CLI non authentifié';
+        titleEl.innerHTML = `<i data-lucide="alert-triangle"></i> ${t('login.gitlab.title')}`;
         instructionsEl.innerHTML = `
-          <p><strong>1. Installer et authentifier glab :</strong></p>
+          <p><strong>${t('setup.installAndAuth', { cli: 'glab' })}</strong></p>
           <p style="margin: 0.5rem 0;"><code>sudo apt install glab</code></p>
           <p style="margin: 0.5rem 0;"><code>glab auth login</code></p>
-          <p style="margin-top: 1rem;"><strong>2. Configurer le webhook GitLab :</strong></p>
-          <p style="margin: 0.5rem 0; font-size: 0.8rem;">Settings → Webhooks → Add webhook</p>
+          <p style="margin-top: 1rem;"><strong>${t('setup.configureWebhook', { platform: 'GitLab' })}</strong></p>
+          <p style="margin: 0.5rem 0; font-size: 0.8rem;">${t('setup.webhookPath')}</p>
           <p style="margin: 0.25rem 0; font-size: 0.8rem;">URL: <code>http://&lt;your-server&gt;:3847/webhooks/gitlab</code></p>
-          <p style="margin: 0.25rem 0; font-size: 0.8rem;">Trigger: Merge request events</p>
-          <p style="margin-top: 0.75rem; font-size: 0.75rem; color: #a1a1aa;">Puis rechargez cette page.</p>
+          <p style="margin: 0.25rem 0; font-size: 0.8rem;">${t('setup.gitlab.trigger')}</p>
+          <p style="margin-top: 0.75rem; font-size: 0.75rem; color: #a1a1aa;">${t('setup.reload')}</p>
         `;
       } else {
-        titleEl.innerHTML = '<i data-lucide="alert-triangle"></i> GitHub CLI non authentifié';
+        titleEl.innerHTML = `<i data-lucide="alert-triangle"></i> ${t('login.github.title')}`;
         instructionsEl.innerHTML = `
-          <p><strong>1. Installer et authentifier gh :</strong></p>
+          <p><strong>${t('setup.installAndAuth', { cli: 'gh' })}</strong></p>
           <p style="margin: 0.5rem 0;"><code>sudo apt install gh</code></p>
           <p style="margin: 0.5rem 0;"><code>gh auth login</code></p>
-          <p style="margin-top: 1rem;"><strong>2. Configurer le webhook GitHub :</strong></p>
-          <p style="margin: 0.5rem 0; font-size: 0.8rem;">Settings → Webhooks → Add webhook</p>
+          <p style="margin-top: 1rem;"><strong>${t('setup.configureWebhook', { platform: 'GitHub' })}</strong></p>
+          <p style="margin: 0.5rem 0; font-size: 0.8rem;">${t('setup.webhookPath')}</p>
           <p style="margin: 0.25rem 0; font-size: 0.8rem;">Payload URL: <code>http://&lt;your-server&gt;:3847/webhooks/github</code></p>
-          <p style="margin: 0.25rem 0; font-size: 0.8rem;">Content type: application/json</p>
-          <p style="margin: 0.25rem 0; font-size: 0.8rem;">Events: Pull requests</p>
-          <p style="margin-top: 0.75rem; font-size: 0.75rem; color: #a1a1aa;">Puis rechargez cette page.</p>
+          <p style="margin: 0.25rem 0; font-size: 0.8rem;">${t('setup.github.contentType')}</p>
+          <p style="margin: 0.25rem 0; font-size: 0.8rem;">${t('setup.github.events')}</p>
+          <p style="margin-top: 0.75rem; font-size: 0.75rem; color: #a1a1aa;">${t('setup.reload')}</p>
         `;
       }
 
@@ -765,7 +654,7 @@
       const endpoint = isGitlab ? '/api/gitlab/status' : '/api/github/status';
 
       statusEl.className = 'card-claude checking';
-      statusEl.innerHTML = '<span class="status">Vérification...</span>';
+      statusEl.innerHTML = `<span class="status">${t('status.checking')}</span>`;
 
       try {
         const response = await fetch(`${API_URL}${endpoint}`);
@@ -774,7 +663,7 @@
         if (data.available && data.authenticated) {
           statusEl.className = 'card-claude available';
           statusEl.innerHTML = `
-            <span class="status"><i data-lucide="check-circle"></i> Opérationnel</span>
+            <span class="status"><i data-lucide="check-circle"></i> ${t('status.operational')}</span>
             <span class="version">@${data.username}</span>
           `;
           loginSection.classList.add('hidden');
@@ -792,7 +681,7 @@
         }
       } catch (error) {
         statusEl.className = 'card-claude unavailable';
-        statusEl.innerHTML = '<span class="status"><i data-lucide="x-circle"></i> Erreur de vérification</span>';
+        statusEl.innerHTML = `<span class="status"><i data-lucide="x-circle"></i> ${t('error.checkStatus')}</span>`;
         refreshIcons();
       }
     }
@@ -804,11 +693,11 @@
 
       if (logsVisible) {
         logsSection.classList.remove('hidden');
-        btn.innerHTML = '<i data-lucide="scroll-text"></i> Masquer Logs';
+        btn.innerHTML = `<i data-lucide="scroll-text"></i> ${t('header.hideLogs')}`;
         fetchLogs();
       } else {
         logsSection.classList.add('hidden');
-        btn.innerHTML = '<i data-lucide="scroll-text"></i> Logs';
+        btn.innerHTML = `<i data-lucide="scroll-text"></i> ${t('header.logs')}`;
       }
       refreshIcons();
     }
@@ -830,25 +719,24 @@
     function renderMrItem(mr, type) {
       const mrPrefix = mr.platform === 'github' ? '#' : '!';
       const threadInfo = type === 'pending-fix'
-        ? `<span class="mr-threads has-open"><i data-lucide="message-circle"></i> ${mr.openThreads} ouvert${mr.openThreads > 1 ? 's' : ''}</span>`
+        ? `<span class="mr-threads has-open"><i data-lucide="message-circle"></i> ${t('mr.threads.open', { count: mr.openThreads })}</span>`
         : (type === 'pending-approval' && mr.totalWarnings > 0)
-          ? `<span class="mr-threads has-warnings"><i data-lucide="alert-triangle"></i> ${mr.totalWarnings} important${mr.totalWarnings > 1 ? 's' : ''}</span>`
-          : `<span class="mr-threads all-resolved"><i data-lucide="check-circle"></i> Résolus</span>`;
+          ? `<span class="mr-threads has-warnings"><i data-lucide="alert-triangle"></i> ${mr.totalWarnings} ${t('stats.warnings').toLowerCase()}</span>`
+          : `<span class="mr-threads all-resolved"><i data-lucide="check-circle"></i> ${t('mr.threads.resolved')}</span>`;
 
-      const openBtn = `<a href="${mr.url}" target="_blank" class="btn-action open"><i data-lucide="external-link"></i> Ouvrir</a>`;
+      const openBtn = `<a href="${mr.url}" target="_blank" class="btn-action open"><i data-lucide="external-link"></i> ${t('button.open')}</a>`;
       const autoFollowupChecked = mr.autoFollowup !== false ? 'checked' : '';
       const showFollowupActions = type === 'pending-fix' ||
         (type === 'pending-approval' && mr.totalWarnings > 0);
 
       const actions = showFollowupActions
-        ? `<label class="auto-followup-toggle" onclick="event.stopPropagation()" title="Active/désactive le followup automatique après un push">
+        ? `<label class="auto-followup-toggle" onclick="event.stopPropagation()" title="${t('button.autoFollowup')}">
              <input type="checkbox" ${autoFollowupChecked} onchange="toggleAutoFollowup('${mr.id}', this.checked)">
-             Auto follow-up
+             ${t('button.autoFollowup')}
            </label>
-           <button class="btn-action" onclick="triggerFollowup('${mr.id}')"><i data-lucide="refresh-cw"></i> Followup</button>${openBtn}`
+           <button class="btn-action" onclick="triggerFollowup('${mr.id}')"><i data-lucide="refresh-cw"></i> ${t('button.followup')}</button>${openBtn}`
         : openBtn;
 
-      // Stats badges
       const statsBadges = [];
       if (mr.totalBlocking > 0) statsBadges.push(`<span class="stat-badge blocking"><i data-lucide="octagon-alert"></i> ${mr.totalBlocking}</span>`);
       if (mr.totalWarnings > 0) statsBadges.push(`<span class="stat-badge warning"><i data-lucide="alert-triangle"></i> ${mr.totalWarnings}</span>`);
@@ -857,13 +745,11 @@
 
       const durationFormatted = mr.totalDurationMs ? formatDuration(null, null, mr.totalDurationMs) : '';
 
-      // Assigner info with avatar
       const assignerUsername = mr.assignment?.username || 'unknown';
       const assignerDisplay = mr.assignment?.displayName || assignerUsername;
       const assignerInitial = assignerDisplay.charAt(0).toUpperCase();
       const assignedAt = mr.assignment?.assignedAt ? formatTime(mr.assignment.assignedAt) : '';
 
-      // Sanitize ID for accordion toggle
       const accordionId = mr.id.replace(/[^a-zA-Z0-9-]/g, '-');
 
       return `
@@ -892,33 +778,33 @@
           <div class="mr-item-content" id="mr-content-${accordionId}">
             <div class="mr-details">
               <div class="mr-detail-row">
-                <span class="mr-detail-label"><i data-lucide="git-branch"></i> Source:</span>
+                <span class="mr-detail-label"><i data-lucide="git-branch"></i> ${t('mr.detail.source')}</span>
                 <span class="mr-detail-value">${mr.sourceBranch}</span>
               </div>
               <div class="mr-detail-row">
-                <span class="mr-detail-label"><i data-lucide="git-merge"></i> Target:</span>
+                <span class="mr-detail-label"><i data-lucide="git-merge"></i> ${t('mr.detail.target')}</span>
                 <span class="mr-detail-value">${mr.targetBranch}</span>
               </div>
               <div class="mr-detail-row">
-                <span class="mr-detail-label"><i data-lucide="calendar"></i> Créée:</span>
+                <span class="mr-detail-label"><i data-lucide="calendar"></i> ${t('mr.detail.created')}</span>
                 <span class="mr-detail-value">${formatTime(mr.createdAt)}</span>
               </div>
               ${mr.lastReviewAt ? `
               <div class="mr-detail-row">
-                <span class="mr-detail-label"><i data-lucide="file-search"></i> Dernière review:</span>
+                <span class="mr-detail-label"><i data-lucide="file-search"></i> ${t('mr.detail.lastReview')}</span>
                 <span class="mr-detail-value">${formatTime(mr.lastReviewAt)}</span>
               </div>
               ` : ''}
               ${mr.reviews?.length ? `
               <div class="mr-reviews-history">
-                <div class="mr-detail-label"><i data-lucide="history"></i> Historique (${mr.reviews.length}):</div>
+                <div class="mr-detail-label"><i data-lucide="history"></i> ${t('mr.detail.history', { count: mr.reviews.length })}</div>
                 <div class="mr-reviews-list">
                   ${mr.reviews.slice(-5).reverse().map(r => `
                     <div class="mr-review-event ${r.type}">
-                      <span class="review-event-type">${r.type === 'review' ? 'Review' : 'Followup'}</span>
+                      <span class="review-event-type">${r.type === 'review' ? t('review.type.review') : t('review.type.followup')}</span>
                       <span class="review-event-time">${formatTime(r.timestamp)}</span>
                       ${r.score !== null ? `<span class="review-event-score">${r.score}/10</span>` : ''}
-                      ${r.blocking > 0 ? `<span class="review-event-blocking">${r.blocking} bloquant${r.blocking > 1 ? 's' : ''}</span>` : ''}
+                      ${r.blocking > 0 ? `<span class="review-event-blocking">${t('mr.review.blocking', { count: r.blocking })}</span>` : ''}
                     </div>
                   `).join('')}
                 </div>
@@ -940,7 +826,6 @@
 
       const isOpen = accordion.classList.contains('open');
 
-      // Close all other MR accordions
       document.querySelectorAll('.mr-item-accordion.open').forEach(el => {
         if (el !== accordion) {
           el.classList.remove('open');
@@ -962,9 +847,7 @@
       const pendingApprovalEl = document.getElementById('pending-approval-reviews');
       const pendingFixCount = document.getElementById('pending-fix-count');
       const pendingApprovalCount = document.getElementById('pending-approval-count');
-      const mrLabel = getMrLabel();
 
-      // Pending fix - show/hide section dynamically
       if (currentData.pendingFix.length === 0) {
         pendingFixSection.classList.add('hidden');
         pendingFixCount.classList.add('hidden');
@@ -975,7 +858,6 @@
         pendingFixCount.classList.remove('hidden');
       }
 
-      // Pending approval - show/hide section dynamically
       if (currentData.pendingApproval.length === 0) {
         pendingApprovalSection.classList.add('hidden');
         pendingApprovalCount.classList.add('hidden');
@@ -993,7 +875,6 @@
       if (!currentProjectPath) {
         currentData.pendingFix = [];
         currentData.pendingApproval = [];
-        // Hide sections when no project loaded
         document.getElementById('pending-fix-section').classList.add('hidden');
         document.getElementById('pending-approval-section').classList.add('hidden');
         return;
@@ -1023,11 +904,11 @@
         if (data.success) {
           console.log('Followup triggered for MR:', mrId);
         } else {
-          alert('Erreur: ' + data.error);
+          alert(t('error.triggerFollowup') + ': ' + data.error);
         }
       } catch (error) {
         console.error('Error triggering followup:', error);
-        alert('Erreur lors du déclenchement du followup');
+        alert(t('error.triggerFollowup'));
       }
     }
 
@@ -1040,16 +921,16 @@
         });
         const data = await response.json();
         if (!data.success) {
-          alert('Erreur: ' + data.error);
+          alert(t('error.toggleAutoFollowup') + ': ' + data.error);
         }
       } catch (error) {
         console.error('Error toggling auto-followup:', error);
-        alert('Erreur lors du changement de auto follow-up');
+        alert(t('error.toggleAutoFollowup'));
       }
     }
 
     async function approveMr(mrId) {
-      if (!confirm(`Marquer cette ${getMrLabel()} comme approuvée ?`)) return;
+      if (!confirm(t('confirm.approveMr', { label: getMrLabel() }))) return;
 
       try {
         const response = await fetch(`${API_URL}/api/mr-tracking/approve`, {
@@ -1059,30 +940,28 @@
         });
         const data = await response.json();
         if (data.success) {
-          // Remove from pending approval list
           currentData.pendingApproval = currentData.pendingApproval.filter(mr => mr.id !== mrId);
           updateMrTrackingUI();
         } else {
-          alert('Erreur: ' + data.error);
+          alert(t('error.approveMr') + ': ' + data.error);
         }
       } catch (error) {
         console.error('Error approving MR:', error);
-        alert('Erreur lors de l\'approbation');
+        alert(t('error.approveMr'));
       }
     }
 
     async function syncGitLabThreads() {
       if (!currentProjectPath) {
-        alert('Charger un projet d\'abord');
+        alert(t('error.projectNotLoaded'));
         return;
       }
 
       const btn = document.getElementById('sync-threads-btn');
-      const icon = btn.querySelector('i');
+      const iconEl = btn.querySelector('i');
 
-      // Add spinning animation
       btn.disabled = true;
-      icon.classList.add('spinning');
+      iconEl.classList.add('spinning');
 
       try {
         const response = await fetch(`${API_URL}/api/mr-tracking/sync`, {
@@ -1092,18 +971,17 @@
         });
         const data = await response.json();
         if (data.success) {
-          // Refresh MR tracking data
           await fetchMrTracking();
           console.log('Threads synchronized successfully');
         } else {
-          alert('Erreur: ' + data.error);
+          alert(t('error.syncThreads') + ': ' + data.error);
         }
       } catch (error) {
         console.error('Error syncing threads:', error);
-        alert('Erreur lors de la synchronisation des threads');
+        alert(t('error.syncThreads'));
       } finally {
         btn.disabled = false;
-        icon.classList.remove('spinning');
+        iconEl.classList.remove('spinning');
       }
     }
 
@@ -1136,7 +1014,7 @@
     function connectWebSocket() {
       if (ws?.readyState === WebSocket.OPEN) return;
 
-      updateConnectionStatus('connecting', 'Connexion...');
+      updateConnectionStatus('connecting', 'status.connecting');
 
       try {
         ws = new WebSocket(WS_URL);
@@ -1144,7 +1022,7 @@
         ws.onopen = () => {
           wsConnected = true;
           reconnectAttempts = 0;
-          updateConnectionStatus('online', 'En ligne');
+          updateConnectionStatus('online', 'connection.online');
         };
 
         ws.onmessage = (event) => {
@@ -1157,7 +1035,6 @@
                 currentData.activeReviews = message.activeReviews || [];
                 currentData.recentReviews = message.recentReviews || [];
                 updateUI();
-                // Also refresh MR tracking when state changes
                 if (message.type === 'state') {
                   fetchMrTracking();
                 }
@@ -1179,7 +1056,7 @@
         ws.onclose = () => {
           wsConnected = false;
           ws = null;
-          updateConnectionStatus('offline', 'Hors ligne');
+          updateConnectionStatus('offline', 'connection.offline');
           if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
             reconnectAttempts++;
             setTimeout(connectWebSocket, RECONNECT_DELAY);
@@ -1206,16 +1083,16 @@
         const data = await response.json();
         currentData.activeReviews = data.jobs?.active || [];
         currentData.recentReviews = data.jobs?.recent || [];
-        if (!wsConnected) updateConnectionStatus('online', 'En ligne (polling)');
+        if (!wsConnected) updateConnectionStatus('online', 'connection.onlinePolling');
         updateUI();
       } catch (error) {
         if (!wsConnected) {
-          updateConnectionStatus('offline', 'Hors ligne');
+          updateConnectionStatus('offline', 'connection.offline');
           document.getElementById('running-count').textContent = '-';
           document.getElementById('queued-count').textContent = '-';
           document.getElementById('completed-count').textContent = '-';
-          document.getElementById('active-reviews').innerHTML = '<div class="empty-state">Serveur non accessible</div>';
-          document.getElementById('recent-reviews').innerHTML = '<div class="empty-state">Serveur non accessible</div>';
+          document.getElementById('active-reviews').innerHTML = `<div class="empty-state">${t('empty.serverNotAccessible')}</div>`;
+          document.getElementById('recent-reviews').innerHTML = `<div class="empty-state">${t('empty.serverNotAccessible')}</div>`;
         }
       }
     }
@@ -1256,6 +1133,8 @@
         const select = document.getElementById('language-select');
         if (select && data.language) {
           select.value = data.language;
+          setLanguage(data.language);
+          renderStaticLabels();
         }
       } catch (error) {
         console.error('Error loading language setting:', error);
@@ -1263,6 +1142,15 @@
     }
 
     async function changeLanguage(language) {
+      setLanguage(language);
+      renderStaticLabels();
+      // Re-render all dynamic content
+      updateUI();
+      updateLogs();
+      updateReviewFilesUI();
+      updateMrTrackingUI();
+      updateGitCliUI();
+      // Also persist on server
       try {
         const response = await fetch(`${API_URL}/api/settings/language`, {
           method: 'POST',
@@ -1278,9 +1166,6 @@
       }
     }
 
-    // Project config loader with persistence
-    const STORAGE_KEY_PROJECTS = 'review-flow-projects';
-    const STORAGE_KEY_CURRENT = 'review-flow-current-project';
     let currentProjectConfig = null;
     let currentProjectPath = null;
 
@@ -1298,11 +1183,8 @@
 
     function addProjectToHistory(path) {
       const projects = getStoredProjects();
-      // Remove if already exists (to move to top)
       const filtered = projects.filter(p => p !== path);
-      // Add to beginning
       filtered.unshift(path);
-      // Keep max 10 projects
       saveProjects(filtered.slice(0, 10));
       updateProjectSelect();
     }
@@ -1318,7 +1200,7 @@
       const projects = getStoredProjects();
       const current = localStorage.getItem(STORAGE_KEY_CURRENT) || '';
 
-      select.innerHTML = '<option value="">-- Sélectionner un projet --</option>';
+      select.innerHTML = `<option value="">${t('project.selectPlaceholder')}</option>`;
       for (const path of projects) {
         const shortName = path.split('/').slice(-2).join('/');
         const option = document.createElement('option');
@@ -1340,11 +1222,10 @@
     async function loadProjectConfig() {
       const input = document.getElementById('project-path-input');
       const select = document.getElementById('project-select');
-      // Prioritize input field, fallback to select
       const projectPath = input.value.trim() || select.value;
 
       if (!projectPath) {
-        showConfigStatus('Sélectionnez ou entrez un chemin', 'error');
+        showConfigStatus(t('error.selectOrEnterPath'), 'error');
         return;
       }
 
@@ -1355,7 +1236,7 @@
       const status = document.getElementById('config-status');
       const info = document.getElementById('config-info');
 
-      showConfigStatus('Chargement...', 'loading');
+      showConfigStatus(t('status.loading'), 'loading');
       info.classList.add('hidden');
 
       try {
@@ -1366,11 +1247,9 @@
           currentProjectConfig = data.config;
           currentProjectPath = projectPath;
 
-          // Save to history and set as current
           addProjectToHistory(projectPath);
           localStorage.setItem(STORAGE_KEY_CURRENT, projectPath);
 
-          // Update select to show current project
           document.getElementById('project-select').value = projectPath;
           document.getElementById('project-path-input').value = '';
 
@@ -1378,7 +1257,6 @@
           showConfigStatus(`<i data-lucide="check-circle"></i> ${shortName}`, 'success');
           refreshIcons();
 
-          // Update model selector if defaultModel is set
           if (data.config.defaultModel) {
             const modelSelect = document.getElementById('model-select');
             if (modelSelect) {
@@ -1387,23 +1265,19 @@
             }
           }
 
-          // Update active platform and check CLI
           activePlatform = data.config.gitlab ? 'gitlab' : (data.config.github ? 'github' : null);
           updateGitCliUI();
 
-          // Reload reviews, stats, and MR tracking for this project
           fetchReviewFiles();
           fetchProjectStats();
           fetchMrTracking();
 
-          // Show stats section when project is loaded
           document.getElementById('stats-section').classList.remove('hidden');
 
-          // Display config info (only show active platform)
           const platformIcon = activePlatform === 'gitlab' ? '<i data-lucide="gitlab"></i> GitLab' : '<i data-lucide="github"></i> GitHub';
           info.innerHTML = `
             <span>${platformIcon}</span>
-            <span><i data-lucide="bot"></i> ${data.config.defaultModel || 'non défini'}</span>
+            <span><i data-lucide="bot"></i> ${data.config.defaultModel || t('status.undefined')}</span>
             <span><i data-lucide="file-text"></i> ${data.config.reviewSkill}</span>
             <span><i data-lucide="refresh-cw"></i> ${data.config.reviewFollowupSkill}</span>
           `;
@@ -1414,7 +1288,7 @@
           refreshIcons();
         }
       } catch (error) {
-        showConfigStatus('<i data-lucide="x-circle"></i> Erreur de chargement', 'error');
+        showConfigStatus(`<i data-lucide="x-circle"></i> ${t('error.loadingConfig')}`, 'error');
         refreshIcons();
         console.error('Error loading project config:', error);
       }
@@ -1432,56 +1306,43 @@
       const select = document.getElementById('project-select');
       const path = select.value;
       if (!path) {
-        showConfigStatus('Aucun projet sélectionné', 'error');
+        showConfigStatus(t('project.noProjectSelected'), 'error');
         return;
       }
-      if (confirm(`Retirer "${path.split('/').slice(-2).join('/')}" de la liste ?`)) {
+      const shortName = path.split('/').slice(-2).join('/');
+      if (confirm(t('confirm.removeProject', { name: shortName }))) {
         removeProjectFromHistory(path);
         localStorage.removeItem(STORAGE_KEY_CURRENT);
         currentProjectPath = null;
         currentProjectConfig = null;
         document.getElementById('config-info').classList.add('hidden');
-        showConfigStatus('Projet retiré', 'success');
+        showConfigStatus(t('project.removed'), 'success');
       }
     }
 
     function initProjectLoader() {
       updateProjectSelect();
-      // Auto-load last project
       const lastProject = localStorage.getItem(STORAGE_KEY_CURRENT);
       if (lastProject) {
         loadProjectConfigFromPath(lastProject);
       } else {
-        // No project loaded - show empty state
         document.getElementById('recent-reviews').innerHTML =
-          '<div class="empty-state">Charger un projet pour voir les reviews</div>';
+          `<div class="empty-state">${t('empty.reviewsNoProject')}</div>`;
         document.getElementById('project-stats').innerHTML =
-          '<div class="empty-state">Charger un projet pour voir les stats</div>';
+          `<div class="empty-state">${t('empty.statsNoProject')}</div>`;
       }
     }
 
-    // Lucide icon helper - call after dynamic content is added
-    function refreshIcons() {
-      lucide.createIcons();
-    }
-
-    // Icon helper for dynamic HTML
-    function icon(name, className = '') {
-      return `<i data-lucide="${name}" class="${className}"></i>`;
-    }
-
-    // Platform-aware MR/PR label
     function getMrLabel(platform = activePlatform) {
       return platform === 'github' ? 'PR' : 'MR';
     }
 
-    // Cancel review modal state
     let cancelModalJobId = null;
 
     function showCancelModal(jobId, mrNumber, jobType) {
       cancelModalJobId = jobId;
-      const typeLabel = jobType === 'followup' ? 'followup' : 'review';
-      document.getElementById('cancel-modal-title').textContent = `Annuler la ${typeLabel} de la ${getMrLabel()} !${mrNumber} (${typeLabel}) ?`;
+      const typeLabel = jobType === 'followup' ? t('review.type.followup').toLowerCase() : t('review.type.review').toLowerCase();
+      document.getElementById('cancel-modal-title').textContent = t('modal.cancel.title', { type: typeLabel, label: getMrLabel(), number: mrNumber });
       const modal = document.getElementById('cancel-modal');
       modal.classList.remove('hidden');
       requestAnimationFrame(() => modal.classList.add('visible'));
@@ -1515,17 +1376,17 @@
         if (data.success) {
           const card = document.querySelector(`.review-item[data-job-id="${jobId}"]`);
           if (card) card.remove();
-          showToast('Review annulée', 'success');
+          showToast(t('success.reviewCancelled'), 'success');
           fetchStatus();
         } else if (data.status === 'already-completed') {
-          showToast('Cette review est déjà terminée', 'info');
+          showToast(t('success.reviewAlreadyCompleted'), 'info');
           fetchStatus();
         } else {
-          showToast(data.error || 'Erreur lors de l\'annulation', 'error');
+          showToast(data.error || t('error.cancelReview'), 'error');
         }
       } catch (error) {
         console.error('Error cancelling review:', error);
-        showToast('Erreur lors de l\'annulation', 'error');
+        showToast(t('error.cancelReview'), 'error');
       }
     }
 
@@ -1544,13 +1405,173 @@
       }, 3000);
     }
 
+    function renderStaticLabels() {
+      // Header buttons
+      const checkClaudeSpan = document.getElementById('i18n-check-claude');
+      if (checkClaudeSpan) checkClaudeSpan.textContent = t('header.checkClaude');
+
+      const logsBtnSpan = document.getElementById('i18n-logs-btn');
+      if (logsBtnSpan) logsBtnSpan.textContent = logsVisible ? t('header.hideLogs') : t('header.logs');
+
+      const serverStatusSpan = document.getElementById('i18n-server-status');
+      if (serverStatusSpan) serverStatusSpan.textContent = t('status.connecting');
+
+      // Cards
+      const cardRunning = document.getElementById('i18n-card-running');
+      if (cardRunning) cardRunning.textContent = t('card.running');
+
+      const cardQueued = document.getElementById('i18n-card-queued');
+      if (cardQueued) cardQueued.textContent = t('card.queued');
+
+      const cardCompleted = document.getElementById('i18n-card-completed');
+      if (cardCompleted) cardCompleted.textContent = t('card.completed');
+
+      const cardClaudeCli = document.getElementById('i18n-card-claude-cli');
+      if (cardClaudeCli) cardClaudeCli.textContent = t('card.claudeCli');
+
+      const claudeChecking = document.getElementById('i18n-claude-checking');
+      if (claudeChecking) claudeChecking.textContent = t('status.checking');
+
+      const gitLoadProject = document.getElementById('i18n-git-load-project');
+      if (gitLoadProject) gitLoadProject.textContent = t('status.loadProject');
+
+      const gitCliLabel = document.getElementById('git-cli-label');
+      if (gitCliLabel && !activePlatform) gitCliLabel.textContent = t('card.gitCli');
+
+      const cardModel = document.getElementById('i18n-card-model');
+      if (cardModel) cardModel.textContent = t('card.model');
+
+      const cardLanguage = document.getElementById('i18n-card-language');
+      if (cardLanguage) cardLanguage.textContent = t('card.language');
+
+      // Model options
+      const modelOpus = document.getElementById('i18n-model-opus');
+      if (modelOpus) modelOpus.textContent = t('model.opus');
+
+      const modelSonnet = document.getElementById('i18n-model-sonnet');
+      if (modelSonnet) modelSonnet.textContent = t('model.sonnet');
+
+      // Project loader
+      const projectPlaceholder = document.getElementById('i18n-project-placeholder');
+      if (projectPlaceholder) projectPlaceholder.textContent = t('project.selectPlaceholder');
+
+      const projectPathInput = document.getElementById('project-path-input');
+      if (projectPathInput) projectPathInput.placeholder = t('project.inputPlaceholder');
+
+      const projectLoad = document.getElementById('i18n-project-load');
+      if (projectLoad) projectLoad.textContent = t('project.load');
+
+      const removeProjectBtn = document.getElementById('remove-project-btn');
+      if (removeProjectBtn) removeProjectBtn.title = t('project.removeTooltip');
+
+      // Login sections
+      const claudeLoginTitle = document.getElementById('i18n-claude-login-title');
+      if (claudeLoginTitle) claudeLoginTitle.textContent = t('login.claude.title');
+
+      const claudeLoginInstruction = document.getElementById('i18n-claude-login-instruction');
+      if (claudeLoginInstruction) claudeLoginInstruction.textContent = t('login.claude.instruction');
+
+      const claudeLoginReload = document.getElementById('i18n-claude-login-reload');
+      if (claudeLoginReload) claudeLoginReload.textContent = t('login.claude.reload');
+
+      const gitLoginTitle = document.getElementById('i18n-git-login-title');
+      if (gitLoginTitle) gitLoginTitle.textContent = t('login.git.title');
+
+      // Section headers
+      const sectionLogs = document.getElementById('i18n-section-logs');
+      if (sectionLogs) sectionLogs.textContent = t('section.logs');
+
+      const sectionStats = document.getElementById('i18n-section-stats');
+      if (sectionStats) sectionStats.textContent = t('section.stats');
+
+      const sectionActiveReviews = document.getElementById('i18n-section-active-reviews');
+      if (sectionActiveReviews) sectionActiveReviews.textContent = t('section.activeReviews');
+
+      const sectionActiveFollowups = document.getElementById('i18n-section-active-followups');
+      if (sectionActiveFollowups) sectionActiveFollowups.textContent = t('section.activeFollowups');
+
+      const sectionPendingFix = document.getElementById('i18n-section-pending-fix');
+      if (sectionPendingFix) sectionPendingFix.textContent = t('section.pendingFix');
+
+      const sectionPendingApproval = document.getElementById('i18n-section-pending-approval');
+      if (sectionPendingApproval) sectionPendingApproval.textContent = t('section.pendingApproval');
+
+      const sectionCompletedReviews = document.getElementById('i18n-section-completed-reviews');
+      if (sectionCompletedReviews) sectionCompletedReviews.textContent = t('section.completedReviews');
+
+      // Empty states
+      const emptyLogs = document.getElementById('i18n-empty-logs');
+      if (emptyLogs) emptyLogs.textContent = t('empty.logs');
+
+      const emptyStats = document.getElementById('i18n-empty-stats');
+      if (emptyStats) emptyStats.textContent = t('empty.stats');
+
+      const emptyActiveReviews = document.getElementById('i18n-empty-active-reviews');
+      if (emptyActiveReviews) emptyActiveReviews.textContent = t('empty.activeReviews');
+
+      const emptyActiveFollowups = document.getElementById('i18n-empty-active-followups');
+      if (emptyActiveFollowups) emptyActiveFollowups.textContent = t('empty.activeFollowups');
+
+      const emptyPendingFix = document.getElementById('i18n-empty-pending-fix');
+      if (emptyPendingFix) emptyPendingFix.textContent = t('empty.pendingFix');
+
+      const emptyPendingApproval = document.getElementById('i18n-empty-pending-approval');
+      if (emptyPendingApproval) emptyPendingApproval.textContent = t('empty.pendingApproval');
+
+      const emptyLoading = document.getElementById('i18n-empty-loading');
+      if (emptyLoading) emptyLoading.textContent = t('status.loading');
+
+      // Sync threads button
+      const syncThreadsBtn = document.getElementById('sync-threads-btn');
+      if (syncThreadsBtn) syncThreadsBtn.title = t('button.syncThreads');
+
+      // Connection footer
+      const connectionFallback = document.getElementById('i18n-connection-fallback');
+      if (connectionFallback) connectionFallback.textContent = t('connection.fallback');
+
+      // Modal
+      const modalMessage = document.getElementById('i18n-modal-message');
+      if (modalMessage) modalMessage.textContent = t('modal.cancel.message');
+
+      const modalBack = document.getElementById('i18n-modal-back');
+      if (modalBack) modalBack.textContent = t('modal.back');
+
+      const modalConfirm = document.getElementById('cancel-modal-confirm');
+      if (modalConfirm) modalConfirm.textContent = t('modal.confirm');
+
+      // Update project select placeholder (re-render the select)
+      updateProjectSelect();
+    }
+
+    // Expose functions to HTML onclick handlers
+    window.checkClaudeStatus = checkClaudeStatus;
+    window.toggleLogs = toggleLogs;
+    window.toggleStats = toggleStats;
+    window.changeModel = changeModel;
+    window.changeLanguage = changeLanguage;
+    window.onProjectSelect = onProjectSelect;
+    window.loadProjectConfig = loadProjectConfig;
+    window.removeCurrentProject = removeCurrentProject;
+    window.toggleReviewAccordion = toggleReviewAccordion;
+    window.toggleReviewDescription = toggleReviewDescription;
+    window.deleteReviewFile = deleteReviewFile;
+    window.toggleMrAccordion = toggleMrAccordion;
+    window.triggerFollowup = triggerFollowup;
+    window.toggleAutoFollowup = toggleAutoFollowup;
+    window.approveMr = approveMr;
+    window.syncGitLabThreads = syncGitLabThreads;
+    window.showCancelModal = showCancelModal;
+    window.closeCancelModal = closeCancelModal;
+    window.confirmCancelReview = confirmCancelReview;
+
     // Init
+    renderStaticLabels();
     connectWebSocket();
     fetchStatus();
     checkClaudeStatus();
     loadModelSetting();
     loadLanguageSetting();
-    initProjectLoader(); // Will check git CLI and load reviews/stats after loading project config
+    initProjectLoader();
 
     // Initialize Lucide icons
     refreshIcons();
@@ -1560,7 +1581,7 @@
       fetchReviewFiles();
       fetchProjectStats();
       fetchMrTracking();
-    }, 30000); // Refresh review files, stats and MR tracking every 30s
+    }, 30000);
 
     setInterval(() => {
       document.querySelectorAll('.review-item').forEach(el => {
