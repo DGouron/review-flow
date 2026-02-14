@@ -6,6 +6,22 @@ title: Troubleshooting
 
 Common issues and solutions for Reviewflow.
 
+## CLI Diagnostics
+
+Before diving into specific issues, use these built-in commands:
+
+| Command | What it checks |
+|---------|---------------|
+| `reviewflow validate` | Config and `.env` correctness |
+| `reviewflow status` | Server running state, PID, port |
+| `reviewflow logs -f` | Live server logs (follow mode) |
+| `reviewflow logs -n 50` | Last 50 log lines |
+
+```bash
+# Quick health check
+reviewflow validate && reviewflow status
+```
+
 ## Webhooks
 
 ### Webhook returns 401

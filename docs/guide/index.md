@@ -4,7 +4,7 @@ title: Guide
 
 # Guide
 
-Everything you need to get started with Claude Review Automation and configure it for your projects.
+Everything you need to get started with Reviewflow and configure it for your projects.
 
 ## Suggested Reading Order
 

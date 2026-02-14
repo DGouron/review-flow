@@ -12,7 +12,7 @@ The system uses two configuration files:
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `config.json` | Server root | Server configuration, repositories |
+| `config.json` | `~/.claude-review/` (created by `reviewflow init`) | Server configuration, repositories |
 | `.claude/reviews/config.json` | Each project | Project-specific review settings |
 
 ---
@@ -21,14 +21,14 @@ The system uses two configuration files:
 
 ### Location
 
-`config.json` in the server's root directory (or `config.example.json` as template).
+`~/.claude-review/config.json`, created automatically by `reviewflow init`.
 
 ### Schema
 
 ```json
 {
   "server": {
-    "port": 3000
+    "port": 3847
   },
   "user": {
     "gitlabUsername": "your-gitlab-username",
@@ -57,7 +57,7 @@ The system uses two configuration files:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `port` | number | `3000` | HTTP server port |
+| `port` | number | `3847` | HTTP server port |
 
 #### `user`
 
@@ -169,7 +169,7 @@ The automation server creates these files in `.claude/reviews/`:
 
 ## Validation
 
-Configuration files are validated at startup. Common errors: missing required fields, invalid model name (use `"sonnet"` or `"opus"`), nonexistent `localPath`, or missing skill file in `.claude/skills/`.
+Configuration files are validated at startup. Run `reviewflow validate` to check your configuration without starting the server. Common errors: missing required fields, invalid model name (use `"sonnet"` or `"opus"`), nonexistent `localPath`, or missing skill file in `.claude/skills/`.
 
 ---
 

@@ -12,7 +12,7 @@ Get Reviewflow running in 5 minutes.
 - A GitLab or GitHub account with webhook access
 - [Claude Code CLI](https://claude.ai/claude-code) installed and authenticated
 
-## 1. Installation
+## 1. Install
 
 ### As a user (recommended)
 
@@ -37,120 +37,93 @@ yarn install
 yarn build
 ```
 
-## 2. Configuration
+## 2. Initialize
 
-### Environment variables
-
-```bash
-# Create your .env from the bundled template
-cp node_modules/reviewflow/templates/.env.example .env 2>/dev/null \
-  || cp .env.example .env
-
-# Edit with your webhook secrets
-# Generate tokens with: openssl rand -hex 32
-nano .env
-```
+Run the interactive setup wizard:
 
 ```bash
-# .env
-GITLAB_WEBHOOK_TOKEN=your_generated_token_here
-GITHUB_WEBHOOK_SECRET=your_generated_token_here
+reviewflow init
 ```
 
-### Application config
+The wizard walks you through:
+1. Choosing your platform (GitLab, GitHub, or both)
+2. Entering your username(s) for @mention filtering
+3. Scanning for local repositories to register
+4. Generating webhook secrets automatically
 
-```bash
-# Create your config from the bundled template
-cp node_modules/reviewflow/templates/config.json.template config.json 2>/dev/null \
-  || cp config.example.json config.json
+Your configuration is saved to `~/.claude-review/config.json` and `~/.claude-review/.env`.
 
-# Edit with your settings
-nano config.json
-```
+::: tip Non-interactive mode
+Use `reviewflow init --yes` to accept all defaults. You can also pass `--scan-path /path/to/projects` to target specific directories.
+:::
 
-```json
-{
-  "server": { "port": 3000 },
-  "user": {
-    "gitlabUsername": "YOUR_GITLAB_USERNAME",
-    "githubUsername": "YOUR_GITHUB_USERNAME"
-  },
-  "repositories": [
-    {
-      "platform": "gitlab",
-      "remoteUrl": "https://gitlab.com/your-org/your-project",
-      "localPath": "/path/to/your/local/clone",
-      "skill": "review-code",
-      "enabled": true
-    }
-  ]
-}
-```
+::: tip Add repositories later
+Use `reviewflow discover` to scan for and add new repositories to your existing configuration.
+:::
 
-## 3. Start the server
-
-### Global install
-
-```bash
-reviewflow start
-```
-
-### Contributor mode
-
-```bash
-# Development mode (with hot reload)
-yarn dev
-
-# Or production mode
-yarn start
-```
-
-The server runs at `http://localhost:3000` (or your configured port).
-
-## 4. Expose for webhooks
-
-GitLab/GitHub need to reach your server. Options:
-
-### Option A: Cloudflare Tunnel (recommended)
-
-```bash
-cloudflared tunnel --url http://localhost:3000
-```
-
-Copy the generated URL (e.g., `https://xxx-xxx.trycloudflare.com`).
-
-### Option B: ngrok
-
-```bash
-ngrok http 3000
-```
-
-## 5. Configure webhook
+## 3. Configure webhook
 
 ### GitLab
 
-1. Go to your project → **Settings** → **Webhooks**
+1. Go to your project &rarr; **Settings** &rarr; **Webhooks**
 2. Add webhook:
    - **URL**: `https://YOUR_TUNNEL_URL/webhooks/gitlab`
-   - **Secret token**: (same as `GITLAB_WEBHOOK_TOKEN` in your `.env`)
-   - **Trigger**: ☑ Merge request events
+   - **Secret token**: (shown during `reviewflow init`, or run `reviewflow init --show-secrets` to view)
+   - **Trigger**: &#9745; Merge request events
 3. Click **Add webhook**
 
 ### GitHub
 
-1. Go to your repo → **Settings** → **Webhooks**
+1. Go to your repo &rarr; **Settings** &rarr; **Webhooks**
 2. Add webhook:
    - **Payload URL**: `https://YOUR_TUNNEL_URL/webhooks/github`
    - **Content type**: `application/json`
-   - **Secret**: (same as `GITHUB_WEBHOOK_SECRET` in your `.env`)
-   - **Events**: ☑ Pull requests
+   - **Secret**: (shown during `reviewflow init`, or run `reviewflow init --show-secrets` to view)
+   - **Events**: &#9745; Pull requests
 3. Click **Add webhook**
 
-## 6. Test it!
+::: info Expose for webhooks
+GitLab/GitHub need to reach your server. Use a tunnel:
+
+```bash
+# Cloudflare Tunnel (recommended)
+cloudflared tunnel --url http://localhost:3847
+
+# Or ngrok
+ngrok http 3847
+```
+:::
+
+## 4. Start & verify
+
+```bash
+# Start the server
+reviewflow start
+
+# Or as a background daemon
+reviewflow start --daemon
+
+# Open the dashboard automatically
+reviewflow start --open
+```
+
+The server runs at `http://localhost:3847` (or your configured port).
+
+### Verify your setup
+
+```bash
+# Check configuration is valid
+reviewflow validate
+
+# Check server status
+reviewflow status
+```
+
+## 5. Test it!
 
 1. Create or open a Merge Request / Pull Request
 2. Assign yourself as **Reviewer**
-3. Open `http://localhost:3000/dashboard/`
+3. Open `http://localhost:3847/dashboard/`
 4. Watch the review appear!
 
 ## Next steps
@@ -161,4 +134,4 @@ ngrok http 3000
 
 ## Troubleshooting
 
-See [Troubleshooting](./troubleshooting.md) for common issues (webhooks, reviews, Claude Code).
+See [Troubleshooting](./troubleshooting.md) for common issues and CLI diagnostics.
