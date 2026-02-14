@@ -31,6 +31,44 @@ const translations = {
     'card.gitlabCli': 'GitLab CLI',
     'card.githubCli': 'GitHub CLI',
 
+    // Focus strip
+    'strip.now': 'To handle now',
+    'strip.nowMeta': 'Running reviews + MRs pending fix',
+    'strip.next': 'Up next',
+    'strip.nextMeta': 'Queued reviews + MRs pending approval',
+    'strip.blocked': 'Blocking feedback',
+    'strip.blockedMeta': 'MRs with unresolved threads',
+    'strip.modeCompact': 'Compact view',
+    'strip.modeDetailed': 'Detailed view',
+
+    // Priority lane
+    'lane.nowKicker': 'Take action now',
+    'lane.nowMeta': '{{count}} open thread(s) to resolve',
+    'lane.owner': 'Owner: {{owner}}',
+
+    // Quality score
+    'quality.kicker': 'Quality score',
+    'quality.target': 'Target {{target}}/10',
+    'quality.notAvailable': 'No score yet',
+    'quality.perfect': 'Perfect quality',
+    'quality.onTarget': 'On target',
+    'quality.belowTarget': 'Needs improvements',
+    'quality.lovableQuality': 'Lovable quality',
+
+    // Loading
+    'loading.data': 'Syncing dashboard data...',
+    'loading.section': 'Loading...',
+    'loading.status': 'Refreshing live status...',
+    'loading.reviewFiles': 'Loading review files...',
+    'loading.stats': 'Loading project stats...',
+    'loading.mrTracking': 'Refreshing MR tracking...',
+
+    // Session metrics
+    'metrics.session': 'Session',
+    'metrics.firstAction': 'First useful action',
+    'metrics.actions': 'actions',
+    'metrics.pending': 'pending',
+
     // Model options
     'model.opus': 'Opus (powerful)',
     'model.sonnet': 'Sonnet (fast)',
@@ -111,6 +149,10 @@ const translations = {
     'review.type.review': 'Review',
     'review.type.followup': 'Followup',
     'review.description': 'Description',
+    'review.status.running': 'In review now',
+    'review.status.queued': 'Queued up',
+    'review.status.completed': 'Completed',
+    'review.status.failed': 'Needs attention',
 
     // Buttons
     'button.cancel': 'Cancel',
@@ -123,6 +165,9 @@ const translations = {
     // MR details
     'mr.threads.open': '{{count}} open',
     'mr.threads.resolved': 'Resolved',
+    'mr.threads.openAction': '{{count}} open - fix now',
+    'mr.threads.warningAction': '{{count}} important - review before approve',
+    'mr.threads.resolvedAction': 'All resolved - ready to approve',
     'mr.detail.source': 'Source:',
     'mr.detail.target': 'Target:',
     'mr.detail.created': 'Created:',
@@ -190,6 +235,44 @@ const translations = {
     'card.gitCli': 'Git CLI',
     'card.gitlabCli': 'GitLab CLI',
     'card.githubCli': 'GitHub CLI',
+
+    // Focus strip
+    'strip.now': 'À traiter',
+    'strip.nowMeta': 'Reviews en cours + MR en attente de correctif',
+    'strip.next': 'À venir',
+    'strip.nextMeta': 'Reviews en file + MR en attente d’approbation',
+    'strip.blocked': 'Retours bloquants',
+    'strip.blockedMeta': 'MR avec threads non résolus',
+    'strip.modeCompact': 'Vue compacte',
+    'strip.modeDetailed': 'Vue détaillée',
+
+    // Priority lane
+    'lane.nowKicker': 'Action prioritaire',
+    'lane.nowMeta': '{{count}} thread(s) ouverts à résoudre',
+    'lane.owner': 'Responsable: {{owner}}',
+
+    // Quality score
+    'quality.kicker': 'Score qualité',
+    'quality.target': 'Cible {{target}}/10',
+    'quality.notAvailable': 'Score indisponible',
+    'quality.perfect': 'Qualité parfaite',
+    'quality.onTarget': 'Objectif atteint',
+    'quality.belowTarget': 'Améliorations requises',
+    'quality.lovableQuality': 'Qualité lovable',
+
+    // Loading
+    'loading.data': 'Synchronisation des données du dashboard...',
+    'loading.section': 'Chargement...',
+    'loading.status': 'Rafraîchissement du statut en direct...',
+    'loading.reviewFiles': 'Chargement des fichiers de review...',
+    'loading.stats': 'Chargement des statistiques projet...',
+    'loading.mrTracking': 'Rafraîchissement du suivi MR...',
+
+    // Session metrics
+    'metrics.session': 'Session',
+    'metrics.firstAction': '1ère action utile',
+    'metrics.actions': 'actions',
+    'metrics.pending': 'en attente',
 
     // Model options
     'model.opus': 'Opus (puissant)',
@@ -271,6 +354,10 @@ const translations = {
     'review.type.review': 'Review',
     'review.type.followup': 'Followup',
     'review.description': 'Description',
+    'review.status.running': 'En review maintenant',
+    'review.status.queued': 'En file',
+    'review.status.completed': 'Terminée',
+    'review.status.failed': 'Attention requise',
 
     // Buttons
     'button.cancel': 'Annuler',
@@ -283,6 +370,9 @@ const translations = {
     // MR details
     'mr.threads.open': '{{count}} ouvert(s)',
     'mr.threads.resolved': 'Résolus',
+    'mr.threads.openAction': '{{count}} ouvert(s) - corriger maintenant',
+    'mr.threads.warningAction': '{{count}} important(s) - vérifier avant approbation',
+    'mr.threads.resolvedAction': 'Tout résolu - prêt à approuver',
     'mr.detail.source': 'Source :',
     'mr.detail.target': 'Target :',
     'mr.detail.created': 'Créée :',
