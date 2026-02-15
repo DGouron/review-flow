@@ -84,4 +84,19 @@ describe('collectReviewNotifications', () => {
 
     expect(result.notifications[0]?.kind).toBe('reviewFailed');
   });
+
+  it('should not notify twice for the same recent review event', () => {
+    const initializedState = collectReviewNotifications(
+      createReviewNotificationState(),
+      [],
+      [],
+    ).nextState;
+
+    const reviewEvent = { id: 'r-4', type: 'review', status: 'completed', completedAt: '2026-02-14T14:00:00Z' };
+    const firstPass = collectReviewNotifications(initializedState, [], [reviewEvent]);
+    const secondPass = collectReviewNotifications(firstPass.nextState, [], [reviewEvent]);
+
+    expect(firstPass.notifications).toHaveLength(1);
+    expect(secondPass.notifications).toHaveLength(0);
+  });
 });

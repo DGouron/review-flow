@@ -25,6 +25,13 @@ describe('trackSessionAction', () => {
 
     expect(nextState.actionBreakdown.other).toBe(1);
   });
+
+  it('should clamp first useful action delay to zero when nowMs is before session start', () => {
+    const initialState = createSessionMetricsState(2000);
+    const nextState = trackSessionAction(initialState, 'followup', 1500);
+
+    expect(nextState.firstUsefulActionDelayMs).toBe(0);
+  });
 });
 
 describe('updatePriorityItemTracking', () => {

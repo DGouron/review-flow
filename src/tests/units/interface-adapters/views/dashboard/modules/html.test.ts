@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { escapeHtml, markdownToHtml } from '@/interface-adapters/views/dashboard/modules/html.js';
+import { escapeHtml, markdownToHtml, sanitizeHttpUrl } from '@/interface-adapters/views/dashboard/modules/html.js';
 
 describe('escapeHtml', () => {
   it('should return empty string for null or undefined', () => {
@@ -51,5 +51,19 @@ describe('markdownToHtml', () => {
   it('should escape HTML in markdown input', () => {
     const result = markdownToHtml('<script>alert("xss")</script>');
     expect(result).not.toContain('<script>');
+  });
+});
+
+describe('sanitizeHttpUrl', () => {
+  it('should keep https URLs untouched', () => {
+    expect(sanitizeHttpUrl('https://example.com/path')).toBe('https://example.com/path');
+  });
+
+  it('should block non-http schemes', () => {
+    expect(sanitizeHttpUrl('javascript:alert(1)')).toBe('#');
+  });
+
+  it('should return fallback for invalid URLs', () => {
+    expect(sanitizeHttpUrl('http://[::1')).toBe('#');
   });
 });

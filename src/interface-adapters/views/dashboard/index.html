@@ -229,12 +229,13 @@
   <script type="module">
     import { t, setLanguage, getLanguage } from './modules/i18n.js';
     import { formatTime, formatDuration, formatPhase, formatLogTime } from './modules/formatting.js';
-    import { escapeHtml, markdownToHtml } from './modules/html.js';
+    import { escapeHtml, markdownToHtml, sanitizeHttpUrl } from './modules/html.js';
     import { getAgentIcon, icon, refreshIcons } from './modules/icons.js';
     import { MAX_RECONNECT_ATTEMPTS, RECONNECT_DELAY, STORAGE_KEY_PROJECTS, STORAGE_KEY_CURRENT, STORAGE_KEY_FOCUS_STRIP_MODE, QUALITY_TARGET_SCORE } from './modules/constants.js';
     import { getDesktopNotificationPayload, shouldNotifyDesktop } from './modules/desktopNotifications.js';
     import { getLoadingPresentation, getQuietRefreshSectionIdentifiers } from './modules/loading.js';
     import { collectReviewNotifications, createReviewNotificationState } from './modules/notifications.js';
+    import { resolveReviewAssigneeDisplay } from './modules/assignee.js';
     import { buildQueueLanesModel } from './modules/queueLanes.js';
     import { rankPendingFixForNowLane } from './modules/priority.js';
     import { getQualityProgress, getQualityTrend } from './modules/quality.js';
@@ -456,6 +457,14 @@
       event.currentTarget.click();
     }
 
+    function safeDecodeURIComponent(value) {
+      try {
+        return decodeURIComponent(String(value ?? ''));
+      } catch {
+        return String(value ?? '');
+      }
+    }
+
     function getNotificationMrNumber(review) {
       return typeof review.mrNumber === 'number' ? String(review.mrNumber) : '?';
     }
@@ -508,10 +517,11 @@
 
     function renderAgentTimeline(progress) {
       if (!progress?.agents?.length) return '';
+      const allowedAgentStatuses = new Set(['running', 'completed', 'failed', 'pending', 'queued']);
       const agentsHtml = progress.agents.map(agent => `
-        <div class="agent-box ${agent.status}" title="${agent.displayName}: ${agent.status}">
+        <div class="agent-box ${allowedAgentStatuses.has(agent.status) ? agent.status : 'queued'}" title="${escapeHtml(agent.displayName)}: ${escapeHtml(agent.status)}">
           <span class="agent-icon">${getAgentIcon(agent.status)}</span>
-          <span class="agent-name">${agent.displayName}</span>
+          <span class="agent-name">${escapeHtml(agent.displayName)}</span>
         </div>
       `).join('');
       return `<div class="agent-timeline">${agentsHtml}</div>`;
@@ -519,13 +529,16 @@
 
     function renderProgressBar(progress) {
       if (!progress) return '';
+      const overallProgress = typeof progress.overallProgress === 'number'
+        ? Math.max(0, Math.min(100, progress.overallProgress))
+        : 0;
       return `
         <div class="progress-container">
           <div class="progress-bar-wrapper">
             <div class="progress-bar">
-              <div class="progress-bar-fill" style="width: ${progress.overallProgress}%"></div>
+              <div class="progress-bar-fill" style="width: ${overallProgress}%"></div>
             </div>
-            <span class="progress-percent">${progress.overallProgress}%</span>
+            <span class="progress-percent">${overallProgress}%</span>
           </div>
           <div class="progress-phase">${formatPhase(progress.currentPhase)}</div>
         </div>
@@ -543,28 +556,34 @@
     }
 
     function renderReview(review, isActive) {
-      const statusClass = review.status;
+      const statusClass = typeof review.status === 'string' ? review.status : 'queued';
+      const safeStatusClass = ['running', 'queued', 'completed', 'failed'].includes(statusClass) ? statusClass : 'queued';
       const statusPresentation = getReviewStatusPresentation(statusClass);
       const mrNumber = review.mrNumber;
-      const project = review.project.split('/').pop();
-      const mrPrefix = review.id.startsWith('github') ? '#' : '!';
-      const mrLabel = getMrLabel(review.id.startsWith('github') ? 'github' : 'gitlab');
+      const project = typeof review.project === 'string' ? review.project.split('/').pop() : '';
+      const reviewId = typeof review.id === 'string' ? review.id : '';
+      const reviewIsGitHub = reviewId.startsWith('github');
+      const mrPrefix = reviewIsGitHub ? '#' : '!';
+      const mrLabel = getMrLabel(reviewIsGitHub ? 'github' : 'gitlab');
+      const safeMrUrl = sanitizeHttpUrl(typeof review.mrUrl === 'string' ? review.mrUrl : null);
 
       const progressHtml = isActive && review.progress ? `
         ${renderAgentTimeline(review.progress)}
         ${renderProgressBar(review.progress)}
       ` : '';
 
-      const assignerUsername = review.assignedBy?.username || 'unknown';
-      const assignerDisplay = review.assignedBy?.displayName || assignerUsername;
+      const trackedMergeRequests = [...currentData.pendingFix, ...currentData.pendingApproval];
+      const assignerDisplay = resolveReviewAssigneeDisplay(review, trackedMergeRequests);
       const assignerInitial = assignerDisplay.charAt(0).toUpperCase();
+      const safeReviewAccordionId = reviewId.replace(/[^a-zA-Z0-9-]/g, '-');
+      const safeJobType = review.jobType === 'followup' ? 'followup' : 'review';
 
       const descriptionHtml = isActive && review.description ? `
         <div class="review-description-accordion">
-          <div class="review-description-toggle" onclick="toggleReviewDescription('${review.id}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)">
+          <div class="review-description-toggle" onclick="toggleReviewDescription('${safeReviewAccordionId}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)">
             <i data-lucide="chevron-right"></i> ${t('review.description')}
           </div>
-          <div class="review-description-content" id="review-desc-${review.id.replace(/[^a-zA-Z0-9-]/g, '-')}">
+          <div class="review-description-content" id="review-desc-${safeReviewAccordionId}">
             <div class="review-description-text">${escapeHtml(review.description)}</div>
           </div>
         </div>
@@ -573,26 +592,26 @@
       const displayTitle = review.title || project;
 
       return `
-        <div class="review-item" data-job-id="${review.id}">
+        <div class="review-item" data-job-id="${escapeHtml(reviewId)}">
           <div class="review-header">
-            <div class="review-status ${statusClass}" title="${statusPresentation.label}"></div>
+            <div class="review-status ${safeStatusClass}" title="${escapeHtml(statusPresentation.label)}"></div>
             <div class="review-info">
               <div class="review-title">
-                <a href="${review.mrUrl}" target="_blank">${mrPrefix}${mrNumber}</a> - ${displayTitle}
+                <a href="${safeMrUrl}" target="_blank" rel="noopener noreferrer">${mrPrefix}${mrNumber}</a> - ${escapeHtml(displayTitle)}
               </div>
               <div class="review-meta">
-                <span class="badge ${statusClass}"><i data-lucide="${statusPresentation.icon}"></i> ${statusPresentation.label}</span>
+                <span class="badge ${safeStatusClass}"><i data-lucide="${statusPresentation.icon}"></i> ${escapeHtml(statusPresentation.label)}</span>
                 ${isActive ? `<i data-lucide="clock"></i> ${formatDuration(review.startedAt)}` : ''}
               </div>
-              ${review.error ? `<div class="error-message">${review.error}</div>` : ''}
+              ${review.error ? `<div class="error-message">${escapeHtml(review.error)}</div>` : ''}
             </div>
-            ${isActive ? `<button class="btn-cancel-review" onclick="event.stopPropagation(); showCancelModal('${review.id}', ${mrNumber}, '${review.jobType || 'review'}')" title="${t('button.cancel')}"><i data-lucide="x"></i> ${t('button.cancel')}</button>` : ''}
+            ${isActive ? `<button class="btn-cancel-review" onclick="event.stopPropagation(); showCancelModal('${encodeURIComponent(reviewId)}', ${mrNumber}, '${safeJobType}')" title="${t('button.cancel')}"><i data-lucide="x"></i> ${t('button.cancel')}</button>` : ''}
             <div class="review-assigner">
               <div class="review-assigner-info">
-                <span class="review-assigner-name">${assignerDisplay}</span>
+                <span class="review-assigner-name">${escapeHtml(assignerDisplay)}</span>
                 <span class="review-assigner-time">${isActive ? formatTime(review.startedAt) : formatTime(review.completedAt)}</span>
               </div>
-              <div class="review-avatar" title="${assignerDisplay}">${assignerInitial}</div>
+              <div class="review-avatar" title="${escapeHtml(assignerDisplay)}">${escapeHtml(assignerInitial)}</div>
             </div>
           </div>
           ${descriptionHtml}
@@ -619,13 +638,15 @@
     }
 
     function renderLog(log) {
-      const dataStr = log.data ? JSON.stringify(log.data, null, 2) : '';
+      const dataStr = log.data ? escapeHtml(JSON.stringify(log.data, null, 2)) : '';
+      const logLevel = typeof log.level === 'string' ? log.level : 'info';
+      const safeLogLevelClass = logLevel.replace(/[^a-zA-Z0-9-]/g, '-');
       return `
         <div class="log-entry">
           <span class="log-time">${formatLogTime(log.timestamp)}</span>
-          <span class="log-level ${log.level}">${log.level.toUpperCase()}</span>
+          <span class="log-level ${safeLogLevelClass}">${escapeHtml(logLevel.toUpperCase())}</span>
           <div class="log-message">
-            ${log.message}
+            ${escapeHtml(String(log.message ?? ''))}
             ${dataStr ? `<div class="log-data">${dataStr}</div>` : ''}
           </div>
         </div>
@@ -703,7 +724,7 @@
       const statusEl = document.getElementById('server-status');
       statusEl.className = `status-indicator ${status}`;
       const displayText = textKey ? t(textKey) : textFallback;
-      statusEl.innerHTML = `<span class="status-dot"></span><span>${displayText}</span>`;
+      statusEl.innerHTML = `<span class="status-dot"></span><span>${escapeHtml(String(displayText ?? ''))}</span>`;
 
       const modeEl = document.getElementById('connection-mode');
       modeEl.textContent = status === 'online' && wsConnected
@@ -716,24 +737,26 @@
       const typeLabel = review.type === 'review' ? t('review.type.review') : review.type === 'followup' ? t('review.type.followup') : review.type;
       const sizeKb = (review.size / 1024).toFixed(1);
       const mrLabel = getMrLabel();
+      const encodedFilename = encodeURIComponent(String(review.filename ?? ''));
+      const filenameDomId = encodedFilename.replace(/[^a-zA-Z0-9-]/g, '-');
 
       return `
-        <div class="review-accordion" data-filename="${review.filename}">
+        <div class="review-accordion" data-filename="${encodedFilename}">
           <div class="review-accordion-header">
-            <div class="review-accordion-toggle" onclick="toggleReviewAccordion('${review.filename}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)"><i data-lucide="chevron-right"></i></div>
-            <div class="review-status completed" onclick="toggleReviewAccordion('${review.filename}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)"></div>
-            <div class="review-info" onclick="toggleReviewAccordion('${review.filename}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)" style="cursor: pointer;">
-              <div class="review-title">${mrLabel} ${review.mrNumber}${review.title ? ` - ${review.title}` : ''}</div>
+            <div class="review-accordion-toggle" onclick="toggleReviewAccordion('${encodedFilename}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)"><i data-lucide="chevron-right"></i></div>
+            <div class="review-status completed" onclick="toggleReviewAccordion('${encodedFilename}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)"></div>
+            <div class="review-info" onclick="toggleReviewAccordion('${encodedFilename}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)" style="cursor: pointer;">
+              <div class="review-title">${mrLabel} ${review.mrNumber}${review.title ? ` - ${escapeHtml(String(review.title))}` : ''}</div>
               <div class="review-meta">
                 <span class="badge completed"><i data-lucide="${typeIcon}"></i> ${typeLabel}</span>
                 <span style="margin-left: 0.5rem; color: #71717a;">${sizeKb} KB</span>
               </div>
             </div>
-            <div class="review-time" onclick="toggleReviewAccordion('${review.filename}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)" style="cursor: pointer;">${review.date}</div>
-            <button class="btn-delete" onclick="deleteReviewFile('${review.filename}')" title="${t('button.delete')}"><i data-lucide="trash-2"></i></button>
+            <div class="review-time" onclick="toggleReviewAccordion('${encodedFilename}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)" style="cursor: pointer;">${escapeHtml(String(review.date ?? ''))}</div>
+            <button class="btn-delete" onclick="deleteReviewFile('${encodedFilename}')" title="${t('button.delete')}"><i data-lucide="trash-2"></i></button>
           </div>
           <div class="review-accordion-content">
-            <div class="markdown-content" id="review-content-${review.filename.replace(/\./g, '-')}">
+            <div class="markdown-content" id="review-content-${filenameDomId}">
               <div class="empty-state">${t('status.loading')}</div>
             </div>
           </div>
@@ -741,8 +764,9 @@
       `;
     }
 
-    async function toggleReviewAccordion(filename) {
-      const accordion = document.querySelector(`.review-accordion[data-filename="${filename}"]`);
+    async function toggleReviewAccordion(encodedFilename) {
+      const filename = safeDecodeURIComponent(encodedFilename);
+      const accordion = document.querySelector(`.review-accordion[data-filename="${encodedFilename}"]`);
       const isOpen = accordion.classList.contains('open');
 
       document.querySelectorAll('.review-accordion.open').forEach(el => {
@@ -755,7 +779,7 @@
       }
 
       accordion.classList.add('open');
-      const contentId = `review-content-${filename.replace(/\./g, '-')}`;
+      const contentId = `review-content-${encodedFilename.replace(/[^a-zA-Z0-9-]/g, '-')}`;
       const contentEl = document.getElementById(contentId);
 
       if (!loadedReviews[filename]) {
@@ -866,7 +890,8 @@
       refreshIcons();
     }
 
-    async function deleteReviewFile(filename) {
+    async function deleteReviewFile(encodedFilename) {
+      const filename = safeDecodeURIComponent(encodedFilename);
       if (!confirm(t('confirm.deleteReview', { filename }))) return;
 
       try {
@@ -904,14 +929,14 @@
           claudeEl.className = 'card-claude available';
           claudeEl.innerHTML = `
             <span class="status"><i data-lucide="check-circle"></i> ${t('status.operational')}</span>
-            <span class="version">${data.version}</span>
+            <span class="version">${escapeHtml(String(data.version ?? ''))}</span>
           `;
           loginSection.classList.add('hidden');
           refreshIcons();
         } else {
           claudeEl.className = 'card-claude unavailable';
           claudeEl.innerHTML = `
-            <span class="status"><i data-lucide="x-circle"></i> ${data.message}</span>
+            <span class="status"><i data-lucide="x-circle"></i> ${escapeHtml(String(data.message ?? ''))}</span>
           `;
           refreshIcons();
           if (data.message.includes('authentifié') || data.message.includes('login') || data.message.includes('authenticated')) {
@@ -996,18 +1021,18 @@
           statusEl.className = 'card-claude available';
           statusEl.innerHTML = `
             <span class="status"><i data-lucide="check-circle"></i> ${t('status.operational')}</span>
-            <span class="version">@${data.username}</span>
+            <span class="version">@${escapeHtml(String(data.username ?? ''))}</span>
           `;
           loginSection.classList.add('hidden');
           refreshIcons();
         } else if (data.available && !data.authenticated) {
           statusEl.className = 'card-claude unavailable';
-          statusEl.innerHTML = `<span class="status"><i data-lucide="x-circle"></i> ${data.message}</span>`;
+          statusEl.innerHTML = `<span class="status"><i data-lucide="x-circle"></i> ${escapeHtml(String(data.message ?? ''))}</span>`;
           loginSection.classList.remove('hidden');
           refreshIcons();
         } else {
           statusEl.className = 'card-claude unavailable';
-          statusEl.innerHTML = `<span class="status"><i data-lucide="x-circle"></i> ${data.message}</span>`;
+          statusEl.innerHTML = `<span class="status"><i data-lucide="x-circle"></i> ${escapeHtml(String(data.message ?? ''))}</span>`;
           loginSection.classList.remove('hidden');
           refreshIcons();
         }
@@ -1050,23 +1075,24 @@
 
     function renderMrItem(mr, type) {
       const mrPrefix = mr.platform === 'github' ? '#' : '!';
+      const encodedMrId = encodeURIComponent(String(mr.id ?? ''));
       const threadInfo = type === 'pending-fix'
         ? `<span class="mr-threads has-open"><i data-lucide="message-circle"></i> ${t('mr.threads.openAction', { count: mr.openThreads })}</span>`
         : (type === 'pending-approval' && mr.totalWarnings > 0)
           ? `<span class="mr-threads has-warnings"><i data-lucide="alert-triangle"></i> ${t('mr.threads.warningAction', { count: mr.totalWarnings })}</span>`
           : `<span class="mr-threads all-resolved"><i data-lucide="check-circle"></i> ${t('mr.threads.resolvedAction')}</span>`;
 
-      const openBtn = `<a href="${mr.url}" target="_blank" class="btn-action open" onclick="return onUsefulLinkAction()"><i data-lucide="external-link"></i> ${t('button.open')}</a>`;
+      const openBtn = `<a href="${sanitizeHttpUrl(mr.url)}" target="_blank" rel="noopener noreferrer" class="btn-action open" onclick="return onUsefulLinkAction()"><i data-lucide="external-link"></i> ${t('button.open')}</a>`;
       const autoFollowupChecked = mr.autoFollowup !== false ? 'checked' : '';
       const showFollowupActions = type === 'pending-fix' ||
         (type === 'pending-approval' && mr.totalWarnings > 0);
 
       const actions = showFollowupActions
         ? `<label class="auto-followup-toggle" onclick="event.stopPropagation()" title="${t('button.autoFollowup')}">
-             <input type="checkbox" ${autoFollowupChecked} onchange="toggleAutoFollowup('${mr.id}', this.checked)">
+             <input type="checkbox" ${autoFollowupChecked} onchange="toggleAutoFollowup('${encodedMrId}', this.checked)">
              ${t('button.autoFollowup')}
            </label>
-           <button class="btn-action" onclick="triggerFollowup('${mr.id}')"><i data-lucide="refresh-cw"></i> ${t('button.followup')}</button>${openBtn}`
+           <button class="btn-action" onclick="triggerFollowup('${encodedMrId}')"><i data-lucide="refresh-cw"></i> ${t('button.followup')}</button>${openBtn}`
         : openBtn;
 
       const statsBadges = [];
@@ -1090,7 +1116,7 @@
             <div class="review-status ${type === 'pending-fix' ? 'running' : (type === 'pending-approval' && mr.totalWarnings > 0) ? 'warnings' : 'completed'}"></div>
             <div class="mr-info">
               <div class="mr-title">
-                <a href="${mr.url}" target="_blank" onclick="event.stopPropagation()">${mrPrefix}${mr.mrNumber}</a> - ${mr.title}
+                <a href="${sanitizeHttpUrl(mr.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">${mrPrefix}${mr.mrNumber}</a> - ${escapeHtml(String(mr.title ?? ''))}
               </div>
               <div class="mr-meta">
                 ${threadInfo}
@@ -1100,10 +1126,10 @@
             </div>
             <div class="mr-assigner">
               <div class="mr-assigner-info">
-                <span class="mr-assigner-name">${assignerDisplay}</span>
+                <span class="mr-assigner-name">${escapeHtml(assignerDisplay)}</span>
                 <span class="mr-assigner-time">${assignedAt}</span>
               </div>
-              <div class="mr-avatar" title="${assignerDisplay}">${assignerInitial}</div>
+              <div class="mr-avatar" title="${escapeHtml(assignerDisplay)}">${escapeHtml(assignerInitial)}</div>
             </div>
             <div class="mr-toggle"><i data-lucide="chevron-down"></i></div>
           </div>
@@ -1111,11 +1137,11 @@
             <div class="mr-details">
               <div class="mr-detail-row">
                 <span class="mr-detail-label"><i data-lucide="git-branch"></i> ${t('mr.detail.source')}</span>
-                <span class="mr-detail-value">${mr.sourceBranch}</span>
+                <span class="mr-detail-value">${escapeHtml(String(mr.sourceBranch ?? ''))}</span>
               </div>
               <div class="mr-detail-row">
                 <span class="mr-detail-label"><i data-lucide="git-merge"></i> ${t('mr.detail.target')}</span>
-                <span class="mr-detail-value">${mr.targetBranch}</span>
+                <span class="mr-detail-value">${escapeHtml(String(mr.targetBranch ?? ''))}</span>
               </div>
               <div class="mr-detail-row">
                 <span class="mr-detail-label"><i data-lucide="calendar"></i> ${t('mr.detail.created')}</span>
@@ -1155,6 +1181,7 @@
       const mrPrefix = mr.platform === 'github' ? '#' : '!';
       const assigneeUsername = mr.assignment?.username || 'unknown';
       const assigneeDisplay = mr.assignment?.displayName || assigneeUsername;
+      const ownerLabel = t('lane.owner', { owner: assigneeDisplay });
       const qualityScore = typeof mr.latestScore === 'number' ? mr.latestScore : null;
       const qualityProgress = getQualityProgress(qualityScore, QUALITY_TARGET_SCORE);
       const qualityTarget = qualityProgress.qualityTarget;
@@ -1196,9 +1223,9 @@
         <div class="now-lane">
           <div class="now-lane-copy">
             <span class="now-lane-kicker">${t('lane.nowKicker')}</span>
-            <div class="now-lane-title">${mrPrefix}${mr.mrNumber} - ${mr.title}</div>
+            <div class="now-lane-title">${mrPrefix}${mr.mrNumber} - ${escapeHtml(String(mr.title ?? ''))}</div>
             <div class="now-lane-meta">${t('lane.nowMeta', { count: mr.openThreads })}</div>
-            <div class="now-lane-owner">${t('lane.owner', { owner: assigneeDisplay })}</div>
+            <div class="now-lane-owner">${escapeHtml(ownerLabel)}</div>
           </div>
           <div class="now-lane-quality ${qualityState}">
             <span class="quality-kicker">${t('quality.kicker')}</span>
@@ -1219,8 +1246,8 @@
               <span>${qualityTrendLabel}</span>
             </div>
             <div class="now-lane-actions">
-              <button class="btn-action" onclick="triggerFollowup('${mr.id}')"><i data-lucide="refresh-cw"></i> ${t('button.followup')}</button>
-              <a href="${mr.url}" target="_blank" class="btn-action open" onclick="return onUsefulLinkAction()"><i data-lucide="external-link"></i> ${t('button.open')}</a>
+              <button class="btn-action" onclick="triggerFollowup('${encodeURIComponent(String(mr.id ?? ''))}')"><i data-lucide="refresh-cw"></i> ${t('button.followup')}</button>
+              <a href="${sanitizeHttpUrl(mr.url)}" target="_blank" rel="noopener noreferrer" class="btn-action open" onclick="return onUsefulLinkAction()"><i data-lucide="external-link"></i> ${t('button.open')}</a>
             </div>
           </div>
         </div>
@@ -1342,7 +1369,8 @@
       }
     }
 
-    async function triggerFollowup(mrId) {
+    async function triggerFollowup(encodedMrId) {
+      const mrId = safeDecodeURIComponent(encodedMrId);
       trackUsefulAction('followup');
       try {
         const response = await fetch(`${API_URL}/api/mr-tracking/followup`, {
@@ -1363,7 +1391,8 @@
       }
     }
 
-    async function toggleAutoFollowup(mrId, enabled) {
+    async function toggleAutoFollowup(encodedMrId, enabled) {
+      const mrId = safeDecodeURIComponent(encodedMrId);
       try {
         const response = await fetch(`${API_URL}/api/mr-tracking/auto-followup`, {
           method: 'POST',
@@ -1380,7 +1409,8 @@
       }
     }
 
-    async function approveMr(mrId) {
+    async function approveMr(encodedMrId) {
+      const mrId = safeDecodeURIComponent(encodedMrId);
       if (!confirm(t('confirm.approveMr', { label: getMrLabel() }))) return;
       trackUsefulAction('approve');
 
@@ -1715,7 +1745,7 @@
           document.getElementById('project-path-input').value = '';
 
           const shortName = projectPath.split('/').slice(-2).join('/');
-          showConfigStatus(`<i data-lucide="check-circle"></i> ${shortName}`, 'success');
+          showConfigStatus(`<i data-lucide="check-circle"></i> ${escapeHtml(shortName)}`, 'success');
           refreshIcons();
 
           if (data.config.defaultModel) {
@@ -1738,14 +1768,14 @@
           const platformIcon = activePlatform === 'gitlab' ? '<i data-lucide="gitlab"></i> GitLab' : '<i data-lucide="github"></i> GitHub';
           info.innerHTML = `
             <span>${platformIcon}</span>
-            <span><i data-lucide="bot"></i> ${data.config.defaultModel || t('status.undefined')}</span>
-            <span><i data-lucide="file-text"></i> ${data.config.reviewSkill}</span>
-            <span><i data-lucide="refresh-cw"></i> ${data.config.reviewFollowupSkill}</span>
+            <span><i data-lucide="bot"></i> ${escapeHtml(String(data.config.defaultModel || t('status.undefined')))}</span>
+            <span><i data-lucide="file-text"></i> ${escapeHtml(String(data.config.reviewSkill ?? ''))}</span>
+            <span><i data-lucide="refresh-cw"></i> ${escapeHtml(String(data.config.reviewFollowupSkill ?? ''))}</span>
           `;
           info.classList.remove('hidden');
           refreshIcons();
         } else {
-          showConfigStatus('<i data-lucide="x-circle"></i> ' + data.error, 'error');
+          showConfigStatus('<i data-lucide="x-circle"></i> ' + escapeHtml(String(data.error ?? '')), 'error');
           refreshIcons();
         }
       } catch (error) {
@@ -1800,8 +1830,8 @@
 
     let cancelModalJobId = null;
 
-    function showCancelModal(jobId, mrNumber, jobType) {
-      cancelModalJobId = jobId;
+    function showCancelModal(encodedJobId, mrNumber, jobType) {
+      cancelModalJobId = safeDecodeURIComponent(encodedJobId);
       const typeLabel = jobType === 'followup' ? t('review.type.followup').toLowerCase() : t('review.type.review').toLowerCase();
       document.getElementById('cancel-modal-title').textContent = t('modal.cancel.title', { type: typeLabel, label: getMrLabel(), number: mrNumber });
       const modal = document.getElementById('cancel-modal');

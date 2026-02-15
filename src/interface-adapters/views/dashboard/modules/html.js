@@ -13,6 +13,26 @@ export function escapeHtml(text) {
 }
 
 /**
+ * @param {string | null | undefined} url
+ * @returns {string}
+ */
+export function sanitizeHttpUrl(url) {
+  if (!url) return '#';
+
+  try {
+    const fallbackOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+    const parsedUrl = new URL(url, fallbackOrigin);
+    if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
+      return parsedUrl.href;
+    }
+  } catch {
+    return '#';
+  }
+
+  return '#';
+}
+
+/**
  * @param {string} md
  * @returns {string}
  */

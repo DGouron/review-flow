@@ -24,4 +24,12 @@ describe('buildQueueLanesModel', () => {
     expect(result.needsFixCount).toBe(0);
     expect(result.readyToApproveCount).toBe(0);
   });
+
+  it('should keep one pending fix item only in now lane', () => {
+    const result = buildQueueLanesModel([{ id: 'mr-only' }], []);
+
+    expect(result.nowLaneItem?.id).toBe('mr-only');
+    expect(result.needsFixItems).toEqual([]);
+    expect(result.nowLaneCount).toBe(1);
+  });
 });

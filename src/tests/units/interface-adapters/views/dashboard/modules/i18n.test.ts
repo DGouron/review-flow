@@ -36,21 +36,30 @@ describe('i18n', () => {
     expect(result).toBe('Cancel the review of MR !42 (review)?');
   });
 
-  it('should translate focus strip labels in both languages', () => {
+  it('should translate focus strip labels in English', () => {
     expect(t('strip.now')).toBe('To handle now');
     expect(t('strip.nowMeta')).toBe('Running reviews + MRs pending fix');
     expect(t('strip.modeCompact')).toBe('Compact view');
     expect(t('lane.nowKicker')).toBe('Take action now');
+  });
+
+  it('should translate quality labels in English', () => {
     expect(t('quality.onTarget')).toBe('On target');
     expect(t('quality.progress')).toBe('Progress');
     expect(t('quality.trendUp', { delta: '+1.0' })).toBe('Improving +1.0');
     expect(t('quality.trendUnknown')).toBe('No trend yet');
+  });
+
+  it('should translate queue and metrics labels in English', () => {
     expect(t('section.queueLanes')).toBe('Priority lanes');
     expect(t('queueLane.readyToApprove')).toBe('Ready for approval');
     expect(t('metrics.priorityResolution')).toBe('Priority resolution');
     expect(t('metrics.breakdown')).toBe('Action breakdown');
     expect(t('metrics.action.followup')).toBe('Followup');
     expect(t('metrics.action.cancelReview')).toBe('Cancel');
+  });
+
+  it('should translate notification and review labels in English', () => {
     expect(t('loading.data')).toBe('Syncing dashboard data...');
     expect(t('review.status.running')).toBe('Review in progress');
     expect(t('button.followup')).toBe('Run follow-up');
@@ -60,21 +69,36 @@ describe('i18n', () => {
     expect(t('notify.desktopTitle')).toBe('Reviewflow alert');
     expect(t('mr.threads.openAction', { count: 2 })).toBe('2 open - fix now');
     expect(t('loading.status')).toBe('Refreshing live status...');
+  });
+
+  it('should translate focus strip labels in French', () => {
     setLanguage('fr');
     expect(t('strip.now')).toBe('À traiter');
     expect(t('strip.nowMeta')).toBe('Reviews en cours + MR en attente de correctif');
     expect(t('strip.modeCompact')).toBe('Vue compacte');
     expect(t('lane.nowKicker')).toBe('Action prioritaire');
+  });
+
+  it('should translate quality labels in French', () => {
+    setLanguage('fr');
     expect(t('quality.onTarget')).toBe('Objectif atteint');
     expect(t('quality.progress')).toBe('Progression');
     expect(t('quality.trendUp', { delta: '+1.0' })).toBe('En amélioration +1.0');
     expect(t('quality.trendUnknown')).toBe('Pas de tendance');
+  });
+
+  it('should translate queue and metrics labels in French', () => {
+    setLanguage('fr');
     expect(t('section.queueLanes')).toBe('Priorité');
     expect(t('queueLane.readyToApprove')).toBe('Prêtes pour approbation');
     expect(t('metrics.priorityResolution')).toBe('Résolution des priorités');
     expect(t('metrics.breakdown')).toBe('Détail des actions');
     expect(t('metrics.action.followup')).toBe('Followup');
     expect(t('metrics.action.cancelReview')).toBe('Annuler');
+  });
+
+  it('should translate notification and review labels in French', () => {
+    setLanguage('fr');
     expect(t('loading.data')).toBe('Synchronisation des données du dashboard...');
     expect(t('review.status.running')).toBe('Review en cours');
     expect(t('button.followup')).toBe('Lancer le follow-up');
