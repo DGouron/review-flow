@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.4.0...reviewflow-v3.5.0) (2026-02-15)
+
+
+### Added
+
+* **cli:** add `reviewflow discover` command for repository discovery ([#53](https://github.com/DGouron/review-flow/issues/53)) ([6e90e12](https://github.com/DGouron/review-flow/commit/6e90e128600c28875e815068079c84efd0f4a160))
+* **cli:** add reviewflow discover command ([395b4a2](https://github.com/DGouron/review-flow/commit/395b4a2f0795e62403c99a6b78f6d444e0805160))
+* **cli:** refactor executeInit with dependency injection and prerequisites check ([#29](https://github.com/DGouron/review-flow/issues/29)) ([425e4e1](https://github.com/DGouron/review-flow/commit/425e4e1f23b6476aea83935ee7611d72a986734c))
+* **dashboard:** deliver night-shift calm UX refinement and actionable review focus ([8b9d699](https://github.com/DGouron/review-flow/commit/8b9d699efe39a14965f8923b62212c76c9f1b319))
+* **dashboard:** extract utility modules and add i18n support ([dfae1d3](https://github.com/DGouron/review-flow/commit/dfae1d317d007e654800133af87338fc7cd76e24))
+* **dashboard:** extract utility modules and add i18n support ([#69](https://github.com/DGouron/review-flow/issues/69)) ([3df84fd](https://github.com/DGouron/review-flow/commit/3df84fdc06790f1ebef8ac6a3d8462c0513e13f0))
+* **dashboard:** finalize priority UX, notifications, and responsive polish ([75f6e84](https://github.com/DGouron/review-flow/commit/75f6e8429576efa5e96d989152870a991e7e21e1))
+* **dashboard:** finalize priority-first UX and notifications ([909b7f5](https://github.com/DGouron/review-flow/commit/909b7f500189cd4e74fdbfda3015a4700c27459b))
+* **dashboard:** polish stats panel hierarchy and mobile density ([8c0ef37](https://github.com/DGouron/review-flow/commit/8c0ef371b333ab564c0524efa50f66de8bf7433c))
+* **dashboard:** refine project stats panel visual hierarchy ([fdfe792](https://github.com/DGouron/review-flow/commit/fdfe7928cdfe5d2be56dc51240a395cd5976bc07))
+* **i18n:** add internationalization support FR/EN ([#45](https://github.com/DGouron/review-flow/issues/45)) ([c41f4fe](https://github.com/DGouron/review-flow/commit/c41f4fe56364abf3934458e7dcc108902f3c73a0))
+* **i18n:** internationalization support FR/EN ([b7cfcc1](https://github.com/DGouron/review-flow/commit/b7cfcc102e0c6739516f1d3837bf1686048ea2ac))
+
+
+### Fixed
+
+* **cli:** address auto-review blocking and important corrections ([#53](https://github.com/DGouron/review-flow/issues/53)) ([b68951a](https://github.com/DGouron/review-flow/commit/b68951a573a3380aab707b06fa05d425157d7839))
+* **dashboard:** harden rendered data and resolve follow-up assignee ([2336a9c](https://github.com/DGouron/review-flow/commit/2336a9ce6e48e7e4e21a370517303fa02c0ba2a1))
+
 ## [3.4.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.3.1...reviewflow-v3.4.0) (2026-02-13)
 
 
