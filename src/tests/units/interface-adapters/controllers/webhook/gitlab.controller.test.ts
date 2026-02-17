@@ -81,7 +81,6 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { handleGitLabWebhook } from '@/interface-adapters/controllers/webhook/gitlab.controller.js';
 import { enqueueReview } from '@/frameworks/queue/pQueueAdapter.js';
 import { invokeClaudeReview } from '@/claude/invoker.js';
-import { GitLabThreadFetchGateway } from '@/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
 import { GitLabEventFactory } from '@/tests/factories/gitLabEvent.factory.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
@@ -127,7 +126,11 @@ function createStubContextGateway() {
 describe('handleGitLabWebhook', () => {
   let mockReply: FastifyReply;
   let mockGateway: ReturnType<typeof createMockTrackingGateway>;
-  const defaultDeps = { reviewContextGateway: createStubContextGateway() };
+  const defaultDeps = {
+    reviewContextGateway: createStubContextGateway(),
+    threadFetchGateway: { fetchThreads: vi.fn(() => []) },
+    diffMetadataFetchGateway: { fetchDiffMetadata: vi.fn(() => ({ baseSha: 'abc', headSha: 'def', startSha: 'ghi' })) },
+  };
 
   const logger = createStubLogger();
 
@@ -292,7 +295,11 @@ describe('handleGitLabWebhook', () => {
   describe('dependency injection: reviewContextGateway', () => {
     it('should delete review context via injected gateway when MR is closed', async () => {
       const contextGateway = createStubContextGateway();
-      const deps = { reviewContextGateway: contextGateway };
+      const deps = {
+        reviewContextGateway: contextGateway,
+        threadFetchGateway: { fetchThreads: vi.fn(() => []) },
+        diffMetadataFetchGateway: { fetchDiffMetadata: vi.fn(() => ({ baseSha: 'a', headSha: 'b', startSha: 'c' })) },
+      };
 
       const event = GitLabEventFactory.createClosedMr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
@@ -306,9 +313,43 @@ describe('handleGitLabWebhook', () => {
     });
 
     it('should create review context via injected gateway when review is enqueued', async () => {
-      vi.mocked(GitLabThreadFetchGateway).mockImplementation(function () {
-        return { fetchThreads: vi.fn(() => []) } as any;
+      vi.mocked(invokeClaudeReview).mockResolvedValue({
+        success: false,
+        cancelled: true,
+        stdout: '',
+        stderr: '',
+        exitCode: null,
+        durationMs: 0,
       });
+      vi.mocked(enqueueReview).mockImplementation(async (job, callback) => {
+        await callback(job, new AbortController().signal);
+        return true;
+      });
+
+      const contextGateway = createStubContextGateway();
+      const deps = {
+        reviewContextGateway: contextGateway,
+        threadFetchGateway: { fetchThreads: vi.fn(() => []) },
+        diffMetadataFetchGateway: { fetchDiffMetadata: vi.fn(() => ({ baseSha: 'a', headSha: 'b', startSha: 'c' })) },
+      };
+
+      const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
+      const request = { body: event, headers: {} } as unknown as FastifyRequest;
+
+      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+
+      expect(contextGateway.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          platform: 'gitlab',
+          projectPath: 'test-org/test-project',
+          mergeRequestNumber: 42,
+        })
+      );
+    });
+
+    it('should use injected threadFetchGateway to fetch threads when review is enqueued', async () => {
+      const stubThreadFetch = { fetchThreads: vi.fn(() => []) };
+      const stubDiffMetadataFetch = { fetchDiffMetadata: vi.fn(() => ({ baseSha: 'a', headSha: 'b', startSha: 'c' })) };
 
       vi.mocked(invokeClaudeReview).mockResolvedValue({
         success: false,
@@ -324,19 +365,20 @@ describe('handleGitLabWebhook', () => {
       });
 
       const contextGateway = createStubContextGateway();
-      const deps = { reviewContextGateway: contextGateway };
+      const deps = {
+        reviewContextGateway: contextGateway,
+        threadFetchGateway: stubThreadFetch,
+        diffMetadataFetchGateway: stubDiffMetadataFetch,
+      };
 
       const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
       await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
 
-      expect(contextGateway.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          platform: 'gitlab',
-          projectPath: 'test-org/test-project',
-          mergeRequestNumber: 42,
-        })
+      expect(stubThreadFetch.fetchThreads).toHaveBeenCalledWith(
+        'test-org/test-project',
+        42
       );
     });
   });

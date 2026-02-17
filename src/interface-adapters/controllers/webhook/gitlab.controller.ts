@@ -25,13 +25,15 @@ import { parseReviewOutput } from '../../../services/statsService.js';
 import { parseThreadActions } from '../../../services/threadActionsParser.js';
 import { executeThreadActions, defaultCommandExecutor } from '../../../services/threadActionsExecutor.js';
 import { executeActionsFromContext } from '../../../services/contextActionsExecutor.js';
-import { GitLabThreadFetchGateway, defaultGitLabExecutor } from '../../gateways/threadFetch.gitlab.gateway.js';
-import { GitLabDiffMetadataFetchGateway } from '../../gateways/diffMetadataFetch.gitlab.gateway.js';
 import { startWatchingReviewContext, stopWatchingReviewContext } from '../../../main/websocket.js';
 import type { ReviewContextGateway } from '../../../entities/reviewContext/reviewContext.gateway.js';
+import type { ThreadFetchGateway } from '@/entities/threadFetch/threadFetch.gateway.js';
+import type { DiffMetadataFetchGateway } from '@/entities/diffMetadata/diffMetadata.gateway.js';
 
 export interface GitLabWebhookDependencies {
   reviewContextGateway: ReviewContextGateway;
+  threadFetchGateway: ThreadFetchGateway;
+  diffMetadataFetchGateway: DiffMetadataFetchGateway;
 }
 
 export async function handleGitLabWebhook(
@@ -228,14 +230,14 @@ export async function handleGitLabWebhook(
             // Create review context file with pre-fetched threads and diff metadata
             const mergeRequestId = `gitlab-${j.projectPath}-${j.mrNumber}`;
             const contextGateway = deps.reviewContextGateway;
-            const threadFetchGateway = new GitLabThreadFetchGateway(defaultGitLabExecutor);
-            const diffMetadataFetchGateway = new GitLabDiffMetadataFetchGateway(defaultGitLabExecutor);
+            const threadFetchGw = deps.threadFetchGateway;
+            const diffMetadataFetchGw = deps.diffMetadataFetchGateway;
 
             try {
-              const threads = threadFetchGateway.fetchThreads(j.projectPath, j.mrNumber);
+              const threads = threadFetchGw.fetchThreads(j.projectPath, j.mrNumber);
               let diffMetadata: import('../../../entities/reviewContext/reviewContext.js').DiffMetadata | undefined;
               try {
-                diffMetadata = diffMetadataFetchGateway.fetchDiffMetadata(j.projectPath, j.mrNumber);
+                diffMetadata = diffMetadataFetchGw.fetchDiffMetadata(j.projectPath, j.mrNumber);
               } catch (error) {
                 logger.warn(
                   { mrNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },
@@ -330,7 +332,7 @@ export async function handleGitLabWebhook(
 
               // Sync threads from GitLab FIRST to get real state after followup resolves threads
               const mrId = `gitlab-${j.projectPath}-${j.mrNumber}`;
-              const syncUseCase = new SyncThreadsUseCase(trackingGateway, threadFetchGateway);
+              const syncUseCase = new SyncThreadsUseCase(trackingGateway, threadFetchGw);
               const updatedMr = syncUseCase.execute({ projectPath: j.localPath, mrId });
 
               // Record followup completion with parsed stats
@@ -457,14 +459,14 @@ export async function handleGitLabWebhook(
     // Create review context file with pre-fetched threads and diff metadata
     const mergeRequestId = `gitlab-${j.projectPath}-${j.mrNumber}`;
     const contextGateway = deps.reviewContextGateway;
-    const threadFetchGateway = new GitLabThreadFetchGateway(defaultGitLabExecutor);
-    const diffMetadataFetchGateway = new GitLabDiffMetadataFetchGateway(defaultGitLabExecutor);
+    const threadFetchGw = deps.threadFetchGateway;
+    const diffMetadataFetchGw = deps.diffMetadataFetchGateway;
 
     try {
-      const threads = threadFetchGateway.fetchThreads(j.projectPath, j.mrNumber);
+      const threads = threadFetchGw.fetchThreads(j.projectPath, j.mrNumber);
       let diffMetadata: import('../../../entities/reviewContext/reviewContext.js').DiffMetadata | undefined;
       try {
-        diffMetadata = diffMetadataFetchGateway.fetchDiffMetadata(j.projectPath, j.mrNumber);
+        diffMetadata = diffMetadataFetchGw.fetchDiffMetadata(j.projectPath, j.mrNumber);
       } catch (error) {
         logger.warn(
           { mrNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },

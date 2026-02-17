@@ -16,6 +16,8 @@ import { registerWebSocketRoutes } from './websocket.js';
 import { handleGitLabWebhook } from '../interface-adapters/controllers/webhook/gitlab.controller.js';
 import { handleGitHubWebhook } from '../interface-adapters/controllers/webhook/github.controller.js';
 import { cancelJob, getJobStatus } from '../frameworks/queue/pQueueAdapter.js';
+import { GitLabThreadFetchGateway, defaultGitLabExecutor } from '../interface-adapters/gateways/threadFetch.gitlab.gateway.js';
+import { GitLabDiffMetadataFetchGateway } from '../interface-adapters/gateways/diffMetadataFetch.gitlab.gateway.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -67,6 +69,8 @@ export async function registerRoutes(
   app.post('/webhooks/gitlab', async (request, reply) => {
     await handleGitLabWebhook(request, reply, deps.logger, deps.reviewRequestTrackingGateway, {
       reviewContextGateway: deps.reviewContextGateway,
+      threadFetchGateway: new GitLabThreadFetchGateway(defaultGitLabExecutor),
+      diffMetadataFetchGateway: new GitLabDiffMetadataFetchGateway(defaultGitLabExecutor),
     });
   });
 
