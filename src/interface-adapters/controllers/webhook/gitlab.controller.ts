@@ -25,16 +25,21 @@ import { parseReviewOutput } from '../../../services/statsService.js';
 import { parseThreadActions } from '../../../services/threadActionsParser.js';
 import { executeThreadActions, defaultCommandExecutor } from '../../../services/threadActionsExecutor.js';
 import { executeActionsFromContext } from '../../../services/contextActionsExecutor.js';
-import { ReviewContextFileSystemGateway } from '../../gateways/reviewContext.fileSystem.gateway.js';
 import { GitLabThreadFetchGateway, defaultGitLabExecutor } from '../../gateways/threadFetch.gitlab.gateway.js';
 import { GitLabDiffMetadataFetchGateway } from '../../gateways/diffMetadataFetch.gitlab.gateway.js';
 import { startWatchingReviewContext, stopWatchingReviewContext } from '../../../main/websocket.js';
+import type { ReviewContextGateway } from '../../../entities/reviewContext/reviewContext.gateway.js';
+
+export interface GitLabWebhookDependencies {
+  reviewContextGateway: ReviewContextGateway;
+}
 
 export async function handleGitLabWebhook(
   request: FastifyRequest,
   reply: FastifyReply,
   logger: Logger,
-  trackingGateway: ReviewRequestTrackingGateway
+  trackingGateway: ReviewRequestTrackingGateway,
+  deps: GitLabWebhookDependencies
 ): Promise<void> {
   const trackAssignment = new TrackAssignmentUseCase(trackingGateway);
   const recordCompletion = new RecordReviewCompletionUseCase(trackingGateway);
@@ -84,7 +89,7 @@ export async function handleGitLabWebhook(
       const archived = trackingGateway.archive(repoConfig.localPath, mrId);
 
       // Delete review context file
-      const contextGateway = new ReviewContextFileSystemGateway();
+      const contextGateway = deps.reviewContextGateway;
       const contextDeleted = contextGateway.delete(repoConfig.localPath, mrId);
 
       logger.info(
@@ -222,7 +227,7 @@ export async function handleGitLabWebhook(
 
             // Create review context file with pre-fetched threads and diff metadata
             const mergeRequestId = `gitlab-${j.projectPath}-${j.mrNumber}`;
-            const contextGateway = new ReviewContextFileSystemGateway();
+            const contextGateway = deps.reviewContextGateway;
             const threadFetchGateway = new GitLabThreadFetchGateway(defaultGitLabExecutor);
             const diffMetadataFetchGateway = new GitLabDiffMetadataFetchGateway(defaultGitLabExecutor);
 
@@ -451,7 +456,7 @@ export async function handleGitLabWebhook(
 
     // Create review context file with pre-fetched threads and diff metadata
     const mergeRequestId = `gitlab-${j.projectPath}-${j.mrNumber}`;
-    const contextGateway = new ReviewContextFileSystemGateway();
+    const contextGateway = deps.reviewContextGateway;
     const threadFetchGateway = new GitLabThreadFetchGateway(defaultGitLabExecutor);
     const diffMetadataFetchGateway = new GitLabDiffMetadataFetchGateway(defaultGitLabExecutor);
 

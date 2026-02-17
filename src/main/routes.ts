@@ -65,7 +65,9 @@ export async function registerRoutes(
   await registerWebSocketRoutes(app, deps);
 
   app.post('/webhooks/gitlab', async (request, reply) => {
-    await handleGitLabWebhook(request, reply, deps.logger, deps.reviewRequestTrackingGateway);
+    await handleGitLabWebhook(request, reply, deps.logger, deps.reviewRequestTrackingGateway, {
+      reviewContextGateway: deps.reviewContextGateway,
+    });
   });
 
   app.post('/webhooks/github', async (request, reply) => {
