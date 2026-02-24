@@ -305,10 +305,13 @@ export async function invokeClaudeReview(
     let stderr = '';
     let cancelled = false;
 
+    const childEnv = { ...process.env };
+    // Remove CLAUDECODE to allow spawning Claude from within a Claude session
+    delete childEnv.CLAUDECODE;
     const child = spawn(resolveClaudePath(), args, {
       cwd: job.localPath,
       env: {
-        ...process.env,
+        ...childEnv,
         // Ensure non-interactive mode
         TERM: 'dumb',
         CI: 'true',

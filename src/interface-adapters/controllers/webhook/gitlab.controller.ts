@@ -30,6 +30,24 @@ import type { ReviewContextGateway } from '@/entities/reviewContext/reviewContex
 import type { ThreadFetchGateway } from '@/entities/threadFetch/threadFetch.gateway.js';
 import type { DiffMetadataFetchGateway } from '@/entities/diffMetadata/diffMetadata.gateway.js';
 
+function extractBaseUrl(remoteUrl: string): string | undefined {
+  try {
+    // Handle HTTPS URLs: https://gitlab.example.com/group/project.git
+    if (remoteUrl.startsWith('http')) {
+      const url = new URL(remoteUrl)
+      return `${url.protocol}//${url.host}`
+    }
+    // Handle SSH URLs: git@gitlab.example.com:group/project.git
+    const sshMatch = remoteUrl.match(/@([^:]+):/)
+    if (sshMatch) {
+      return `https://${sshMatch[1]}`
+    }
+  } catch {
+    // Invalid URL — return undefined
+  }
+  return undefined
+}
+
 export interface GitLabWebhookDependencies {
   reviewContextGateway: ReviewContextGateway;
   threadFetchGateway: ThreadFetchGateway;
@@ -299,11 +317,13 @@ export async function handleGitLabWebhook(
               const reviewContext = contextGateway.read(j.localPath, mergeRequestId);
               if (reviewContext && reviewContext.actions.length > 0) {
                 threadResolveCount = reviewContext.actions.filter(a => a.type === 'THREAD_RESOLVE').length;
+                const followupBaseUrl = extractBaseUrl(updateRepoConfig.remoteUrl);
                 const contextActionResult = await executeActionsFromContext(
                   reviewContext,
                   j.localPath,
                   logger,
-                  defaultCommandExecutor
+                  defaultCommandExecutor,
+                  followupBaseUrl,
                 );
                 logger.info(
                   { ...contextActionResult, threadResolveCount, mrNumber: j.mrNumber },
@@ -533,11 +553,13 @@ export async function handleGitLabWebhook(
       // PRIMARY: Execute actions from context file (agent writes actions here)
       const reviewContext = contextGateway.read(j.localPath, mergeRequestId);
       if (reviewContext && reviewContext.actions.length > 0) {
+        const reviewBaseUrl = extractBaseUrl(repoConfig.remoteUrl);
         const contextActionResult = await executeActionsFromContext(
           reviewContext,
           j.localPath,
           logger,
-          defaultCommandExecutor
+          defaultCommandExecutor,
+          reviewBaseUrl,
         );
         logger.info(
           { ...contextActionResult, mrNumber: j.mrNumber },

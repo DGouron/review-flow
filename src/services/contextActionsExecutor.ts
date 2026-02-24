@@ -25,13 +25,15 @@ export async function executeActionsFromContext(
   context: ReviewContext,
   localPath: string,
   _logger: Logger,
-  executor: CommandExecutor
+  executor: CommandExecutor,
+  baseUrl?: string,
 ): Promise<ExecutionResult> {
   const gatewayContext = {
     projectPath: context.projectPath,
     mrNumber: context.mergeRequestNumber,
     localPath,
     diffMetadata: context.diffMetadata,
+    baseUrl,
   }
 
   const gateway =
