@@ -1,7 +1,7 @@
-import type { ReviewAction } from '../../../entities/reviewAction/reviewAction.js'
-import type { ReviewActionGateway, ExecutionContext } from '../../../entities/reviewAction/reviewAction.gateway.js'
-import { ExecutionGatewayBase, type CommandInfo } from '../../../shared/foundation/executionGateway.base.js'
-import { enrichCommentWithLinks } from '../../../services/commentLinkEnricher.js'
+import type { ReviewAction } from '@/entities/reviewAction/reviewAction.js'
+import type { ReviewActionGateway, ExecutionContext } from '@/entities/reviewAction/reviewAction.gateway.js'
+import { ExecutionGatewayBase, type CommandInfo } from '@/shared/foundation/executionGateway.base.js'
+import { enrichCommentWithLinks } from '@/services/commentLinkEnricher.js'
 
 export class GitLabReviewActionCliGateway
   extends ExecutionGatewayBase<ReviewAction, ExecutionContext>

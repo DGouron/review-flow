@@ -26,7 +26,7 @@ export async function executeActionsFromContext(
   localPath: string,
   _logger: Logger,
   executor: CommandExecutor,
-  baseUrl?: string,
+  baseUrl: string | null = null,
 ): Promise<ExecutionResult> {
   const gatewayContext = {
     projectPath: context.projectPath,

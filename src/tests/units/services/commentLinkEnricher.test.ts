@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { enrichCommentWithLinks } from '../../../services/commentLinkEnricher.js'
+import { enrichCommentWithLinks } from '@/services/commentLinkEnricher.js'
 
 const BASE_URL = 'https://gitlab.example.com'
 const PROJECT_PATH = 'my-org/my-project'
@@ -82,5 +82,24 @@ describe('enrichCommentWithLinks', () => {
     const result = enrich('- **Blocking**: Missing validation in `users/api.py:247`')
     expect(result).toContain('[`users/api.py:247`]')
     expect(result).toContain('https://gitlab.example.com/my-org/my-project/-/blob/abc123def456/users/api.py#L247')
+  })
+
+  it('should use /-/blob/ pattern by default (GitLab)', () => {
+    const result = enrichCommentWithLinks('See file.py:42', BASE_URL, PROJECT_PATH, HEAD_SHA)
+    expect(result).toContain('/-/blob/')
+  })
+
+  it('should use /blob/ pattern for GitHub platform', () => {
+    const result = enrichCommentWithLinks('See file.py:42', BASE_URL, PROJECT_PATH, HEAD_SHA, 'github')
+    expect(result).toBe(
+      'See [`file.py:42`](https://gitlab.example.com/my-org/my-project/blob/abc123def456/file.py#L42)'
+    )
+  })
+
+  it('should use /-/blob/ pattern for explicit GitLab platform', () => {
+    const result = enrichCommentWithLinks('See file.py:42', BASE_URL, PROJECT_PATH, HEAD_SHA, 'gitlab')
+    expect(result).toBe(
+      'See [`file.py:42`](https://gitlab.example.com/my-org/my-project/-/blob/abc123def456/file.py#L42)'
+    )
   })
 })

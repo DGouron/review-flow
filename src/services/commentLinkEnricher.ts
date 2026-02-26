@@ -25,6 +25,7 @@ export function enrichCommentWithLinks(
   baseUrl: string,
   projectPath: string,
   headSha: string,
+  platform: 'gitlab' | 'github' = 'gitlab',
 ): string {
   return body.replace(FILE_LINE_PATTERN, (match, prefix, filePath, line, suffix, offset) => {
     // Skip if preceded by :// (URL pattern like https://example.com:443)
@@ -39,7 +40,8 @@ export function enrichCommentWithLinks(
       return match
     }
 
-    const blobUrl = `${baseUrl}/${projectPath}/-/blob/${headSha}/${filePath}#L${line}`
+    const blobPrefix = platform === 'github' ? 'blob' : '-/blob'
+    const blobUrl = `${baseUrl}/${projectPath}/${blobPrefix}/${headSha}/${filePath}#L${line}`
     // When wrapped in backticks, the link markdown already includes backticks — don't double them
     const outerPrefix = prefix === '`' ? '' : prefix
     const outerSuffix = suffix === '`' ? '' : suffix

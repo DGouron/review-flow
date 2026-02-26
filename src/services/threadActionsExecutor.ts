@@ -42,6 +42,7 @@ export async function executeThreadActions(
     mrNumber: context.mrNumber,
     localPath: context.localPath,
     diffMetadata: context.diffMetadata,
+    baseUrl: null as string | null,
   }
 
   const gateway =

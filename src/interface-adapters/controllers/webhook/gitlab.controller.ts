@@ -30,7 +30,7 @@ import type { ReviewContextGateway } from '@/entities/reviewContext/reviewContex
 import type { ThreadFetchGateway } from '@/entities/threadFetch/threadFetch.gateway.js';
 import type { DiffMetadataFetchGateway } from '@/entities/diffMetadata/diffMetadata.gateway.js';
 
-function extractBaseUrl(remoteUrl: string): string | undefined {
+export function extractBaseUrl(remoteUrl: string): string | null {
   try {
     // Handle HTTPS URLs: https://gitlab.example.com/group/project.git
     if (remoteUrl.startsWith('http')) {
@@ -43,9 +43,9 @@ function extractBaseUrl(remoteUrl: string): string | undefined {
       return `https://${sshMatch[1]}`
     }
   } catch {
-    // Invalid URL — return undefined
+    // Invalid URL — return null
   }
-  return undefined
+  return null
 }
 
 export interface GitLabWebhookDependencies {

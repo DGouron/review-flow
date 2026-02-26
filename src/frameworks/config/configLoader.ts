@@ -75,7 +75,7 @@ function loadProjectConfig(localPath: string): ProjectConfig | null {
   }
 }
 
-function normalizeGitUrl(url: string): string {
+export function normalizeGitUrl(url: string): string {
   // Convert SSH URLs (git@host:org/repo.git) to HTTPS (https://host/org/repo)
   const sshMatch = url.match(/^git@([^:]+):(.+)$/);
   if (sshMatch) {
