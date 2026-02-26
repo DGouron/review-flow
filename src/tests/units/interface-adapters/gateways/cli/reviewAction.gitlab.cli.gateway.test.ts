@@ -14,6 +14,7 @@ describe('GitLabReviewActionCliGateway', () => {
       projectPath: 'mentor-goal/main-app',
       mrNumber: 4658,
       localPath: '/tmp/repo',
+      baseUrl: null as string | null,
     }
 
     const result = await gateway.execute(actions, context)
@@ -30,7 +31,7 @@ describe('GitLabReviewActionCliGateway', () => {
     const executor = vi.fn()
     const gateway = new GitLabReviewActionCliGateway(executor)
     const actions: ReviewAction[] = [{ type: 'POST_COMMENT', body: '## Review done' }]
-    const context = { projectPath: 'group/project', mrNumber: 123, localPath: '/tmp' }
+    const context = { projectPath: 'group/project', mrNumber: 123, localPath: '/tmp', baseUrl: null as string | null }
 
     const result = await gateway.execute(actions, context)
 
@@ -42,7 +43,7 @@ describe('GitLabReviewActionCliGateway', () => {
     const executor = vi.fn()
     const gateway = new GitLabReviewActionCliGateway(executor)
     const actions: ReviewAction[] = [{ type: 'THREAD_REPLY', threadId: 'abc', message: 'Fixed!' }]
-    const context = { projectPath: 'group/project', mrNumber: 123, localPath: '/tmp' }
+    const context = { projectPath: 'group/project', mrNumber: 123, localPath: '/tmp', baseUrl: null as string | null }
 
     const result = await gateway.execute(actions, context)
 
@@ -54,7 +55,7 @@ describe('GitLabReviewActionCliGateway', () => {
     const executor = vi.fn()
     const gateway = new GitLabReviewActionCliGateway(executor)
     const actions: ReviewAction[] = [{ type: 'ADD_LABEL', label: 'needs-review' }]
-    const context = { projectPath: 'group/project', mrNumber: 123, localPath: '/tmp' }
+    const context = { projectPath: 'group/project', mrNumber: 123, localPath: '/tmp', baseUrl: null as string | null }
 
     const result = await gateway.execute(actions, context)
 
@@ -73,6 +74,7 @@ describe('GitLabReviewActionCliGateway', () => {
       mrNumber: 123,
       localPath: '/tmp',
       diffMetadata: { baseSha: 'base111', headSha: 'head222', startSha: 'start333' },
+      baseUrl: null as string | null,
     }
 
     const result = await gateway.execute(actions, context)
@@ -100,7 +102,7 @@ describe('GitLabReviewActionCliGateway', () => {
     const actions: ReviewAction[] = [
       { type: 'POST_INLINE_COMMENT', filePath: 'src/app.ts', line: 42, body: 'Test' }
     ]
-    const context = { projectPath: 'group/project', mrNumber: 123, localPath: '/tmp' }
+    const context = { projectPath: 'group/project', mrNumber: 123, localPath: '/tmp', baseUrl: null as string | null }
 
     const result = await gateway.execute(actions, context)
 
@@ -112,7 +114,7 @@ describe('GitLabReviewActionCliGateway', () => {
     const executor = vi.fn()
     const gateway = new GitLabReviewActionCliGateway(executor)
     const actions: ReviewAction[] = [{ type: 'FETCH_THREADS' }]
-    const context = { projectPath: 'group/project', mrNumber: 123, localPath: '/tmp' }
+    const context = { projectPath: 'group/project', mrNumber: 123, localPath: '/tmp', baseUrl: null as string | null }
 
     const result = await gateway.execute(actions, context)
 

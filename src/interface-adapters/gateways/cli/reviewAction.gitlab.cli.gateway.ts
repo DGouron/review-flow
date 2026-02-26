@@ -1,6 +1,7 @@
-import type { ReviewAction } from '../../../entities/reviewAction/reviewAction.js'
-import type { ReviewActionGateway, ExecutionContext } from '../../../entities/reviewAction/reviewAction.gateway.js'
-import { ExecutionGatewayBase, type CommandInfo } from '../../../shared/foundation/executionGateway.base.js'
+import type { ReviewAction } from '@/entities/reviewAction/reviewAction.js'
+import type { ReviewActionGateway, ExecutionContext } from '@/entities/reviewAction/reviewAction.gateway.js'
+import { ExecutionGatewayBase, type CommandInfo } from '@/shared/foundation/executionGateway.base.js'
+import { enrichCommentWithLinks } from '@/services/commentLinkEnricher.js'
 
 export class GitLabReviewActionCliGateway
   extends ExecutionGatewayBase<ReviewAction, ExecutionContext>
@@ -17,11 +18,15 @@ export class GitLabReviewActionCliGateway
           args: ['api', '--method', 'PUT', `${baseUrl}/discussions/${action.threadId}`, '--field', 'resolved=true'],
         }
 
-      case 'POST_COMMENT':
+      case 'POST_COMMENT': {
+        const enrichedBody = context.baseUrl && context.diffMetadata
+          ? enrichCommentWithLinks(action.body, context.baseUrl, context.projectPath, context.diffMetadata.headSha)
+          : action.body
         return {
           command: 'glab',
-          args: ['api', '--method', 'POST', `${baseUrl}/notes`, '--field', `body=${action.body}`],
+          args: ['api', '--method', 'POST', `${baseUrl}/notes`, '--field', `body=${enrichedBody}`],
         }
+      }
 
       case 'THREAD_REPLY':
         return {

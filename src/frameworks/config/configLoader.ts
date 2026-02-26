@@ -75,6 +75,15 @@ function loadProjectConfig(localPath: string): ProjectConfig | null {
   }
 }
 
+export function normalizeGitUrl(url: string): string {
+  // Convert SSH URLs (git@host:org/repo.git) to HTTPS (https://host/org/repo)
+  const sshMatch = url.match(/^git@([^:]+):(.+)$/);
+  if (sshMatch) {
+    return `https://${sshMatch[1]}/${sshMatch[2].replace(/\.git$/, '')}`;
+  }
+  return url.replace(/\.git$/, '');
+}
+
 function getGitRemoteUrl(localPath: string): string | null {
   try {
     const result = execSync('git remote get-url origin', {
@@ -82,7 +91,7 @@ function getGitRemoteUrl(localPath: string): string | null {
       encoding: 'utf-8',
       timeout: 5000,
     });
-    return result.trim().replace(/\.git$/, '');
+    return normalizeGitUrl(result.trim());
   } catch {
     return null;
   }

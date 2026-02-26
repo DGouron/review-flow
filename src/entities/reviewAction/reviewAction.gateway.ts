@@ -6,6 +6,7 @@ export interface ExecutionContext {
   mrNumber: number
   localPath: string
   diffMetadata?: DiffMetadata
+  baseUrl: string | null
 }
 
 export interface ExecutionResult {

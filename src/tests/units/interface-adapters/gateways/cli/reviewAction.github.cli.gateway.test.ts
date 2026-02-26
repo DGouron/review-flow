@@ -8,7 +8,7 @@ describe('GitHubReviewActionCliGateway', () => {
     const gateway = new GitHubReviewActionCliGateway(executor)
 
     const actions: ReviewAction[] = [{ type: 'THREAD_RESOLVE', threadId: 'PRRT_abc123' }]
-    const context = { projectPath: 'owner/repo', mrNumber: 42, localPath: '/tmp/repo' }
+    const context = { projectPath: 'owner/repo', mrNumber: 42, localPath: '/tmp/repo', baseUrl: null as string | null }
 
     const result = await gateway.execute(actions, context)
 
@@ -24,7 +24,7 @@ describe('GitHubReviewActionCliGateway', () => {
     const executor = vi.fn()
     const gateway = new GitHubReviewActionCliGateway(executor)
     const actions: ReviewAction[] = [{ type: 'POST_COMMENT', body: '## Review complete' }]
-    const context = { projectPath: 'owner/repo', mrNumber: 42, localPath: '/tmp' }
+    const context = { projectPath: 'owner/repo', mrNumber: 42, localPath: '/tmp', baseUrl: null as string | null }
 
     const result = await gateway.execute(actions, context)
 
@@ -40,7 +40,7 @@ describe('GitHubReviewActionCliGateway', () => {
     const executor = vi.fn()
     const gateway = new GitHubReviewActionCliGateway(executor)
     const actions: ReviewAction[] = [{ type: 'THREAD_REPLY', threadId: '123456', message: 'Done!' }]
-    const context = { projectPath: 'owner/repo', mrNumber: 42, localPath: '/tmp' }
+    const context = { projectPath: 'owner/repo', mrNumber: 42, localPath: '/tmp', baseUrl: null as string | null }
 
     const result = await gateway.execute(actions, context)
 
@@ -56,7 +56,7 @@ describe('GitHubReviewActionCliGateway', () => {
     const executor = vi.fn()
     const gateway = new GitHubReviewActionCliGateway(executor)
     const actions: ReviewAction[] = [{ type: 'ADD_LABEL', label: 'reviewed' }]
-    const context = { projectPath: 'owner/repo', mrNumber: 42, localPath: '/tmp' }
+    const context = { projectPath: 'owner/repo', mrNumber: 42, localPath: '/tmp', baseUrl: null as string | null }
 
     const result = await gateway.execute(actions, context)
 
@@ -79,6 +79,7 @@ describe('GitHubReviewActionCliGateway', () => {
       mrNumber: 42,
       localPath: '/tmp',
       diffMetadata: { baseSha: 'base111', headSha: 'head222', startSha: 'start333' },
+      baseUrl: null as string | null,
     }
 
     const result = await gateway.execute(actions, context)
@@ -103,7 +104,7 @@ describe('GitHubReviewActionCliGateway', () => {
     const actions: ReviewAction[] = [
       { type: 'POST_INLINE_COMMENT', filePath: 'src/app.ts', line: 42, body: 'Test' }
     ]
-    const context = { projectPath: 'owner/repo', mrNumber: 42, localPath: '/tmp' }
+    const context = { projectPath: 'owner/repo', mrNumber: 42, localPath: '/tmp', baseUrl: null as string | null }
 
     const result = await gateway.execute(actions, context)
 
@@ -115,7 +116,7 @@ describe('GitHubReviewActionCliGateway', () => {
     const executor = vi.fn()
     const gateway = new GitHubReviewActionCliGateway(executor)
     const actions: ReviewAction[] = [{ type: 'FETCH_THREADS' }]
-    const context = { projectPath: 'owner/repo', mrNumber: 42, localPath: '/tmp' }
+    const context = { projectPath: 'owner/repo', mrNumber: 42, localPath: '/tmp', baseUrl: null as string | null }
 
     const result = await gateway.execute(actions, context)
 
