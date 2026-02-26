@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.5.0...reviewflow-v3.5.1) (2026-02-26)
+
+
+### Changed
+
+* **gitlab-controller:** inject ReviewContextGateway via deps parameter ([619c95c](https://github.com/DGouron/review-flow/commit/619c95c28bac047ece3761a00bef8a81459ec154)), closes [#74](https://github.com/DGouron/review-flow/issues/74)
+* **gitlab-controller:** inject ThreadFetchGateway and DiffMetadataFetchGateway via deps ([04438a9](https://github.com/DGouron/review-flow/commit/04438a9c2b1e4940f24a7cce18bd824002a8d698))
+* **gitlab-controller:** inject use cases and migrate all imports to @/ alias ([bbc3598](https://github.com/DGouron/review-flow/commit/bbc3598d38119056a48c2acfd640607833362aed))
+* inject gateways and use cases in GitLab webhook controller ([#74](https://github.com/DGouron/review-flow/issues/74)) ([f6314ab](https://github.com/DGouron/review-flow/commit/f6314abfd279eccf574ee6292b00f4c0d97bf4ef))
+
 ## [3.5.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.4.0...reviewflow-v3.5.0) (2026-02-15)
 
 
