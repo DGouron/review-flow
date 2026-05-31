@@ -201,4 +201,21 @@ describe('setupWizard routes', () => {
     expect(response.statusCode).toBe(400);
     expect(processGateway.lastWrittenLine).toBeNull();
   });
+
+  it('cancels the active run and returns 200', async () => {
+    await application.inject({ method: 'POST', url: '/api/setup/start' });
+
+    const response = await application.inject({ method: 'POST', url: '/api/setup/cancel' });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body).status).toBe('cancelled');
+    expect(processGateway.killed).toBe(true);
+    expect(registry.hasActiveRun()).toBe(false);
+  });
+
+  it('returns 409 when cancelling with no active run', async () => {
+    const response = await application.inject({ method: 'POST', url: '/api/setup/cancel' });
+
+    expect(response.statusCode).toBe(409);
+  });
 });
