@@ -28,6 +28,7 @@ const mockRepoConfig: RepositoryConfig = {
 vi.mock('../../../../../config/loader.js', () => ({
   loadConfig: vi.fn(() => mockConfig),
   findRepositoryByRemoteUrl: vi.fn(() => mockRepoConfig),
+  findRepositoryByProjectPath: vi.fn(() => mockRepoConfig),
 }));
 
 vi.mock('../../../../../security/verifier.js', () => ({

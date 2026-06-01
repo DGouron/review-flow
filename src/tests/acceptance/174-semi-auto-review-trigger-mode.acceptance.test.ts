@@ -114,6 +114,7 @@ describe('Acceptance — SPEC-174: Semi-automatic review trigger mode', () => {
         queuePort: { hasActiveJob: (id) => activeJobIds.has(id), getJobStatus: () => null },
         enqueue: fakeEnqueue,
         resolveProcessor: () => fakeProcessor,
+        isProjectRunnable: () => true,
         logger,
       });
       const confirmResult = await confirmUseCase.execute({ pendingId });

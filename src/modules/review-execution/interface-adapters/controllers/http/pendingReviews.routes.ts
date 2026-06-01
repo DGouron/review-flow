@@ -33,11 +33,15 @@ export const pendingReviewsRoutes: FastifyPluginAsync<PendingReviewsRoutesOption
       const result = await confirmPendingReview.execute({ pendingId });
       if (result.status === 'not-found') {
         reply.code(404);
-        return { status: 'not-found' };
+        return { status: 'not-found', message: 'Cette review en attente est introuvable' };
       }
       if (result.status === 'already-running') {
         reply.code(409);
         return { status: 'already-running', message: result.message };
+      }
+      if (result.status === 'project-not-configured') {
+        reply.code(422);
+        return { status: 'project-not-configured', message: result.message };
       }
       return { status: 'confirmed', jobId: result.jobId };
     },

@@ -1,5 +1,7 @@
 # Run the real review when a parked request is confirmed
 
+## Status: implemented
+
 ## Context
 
 In semi-auto mode a review is parked and waits for a human to confirm it from the dashboard. Today confirming does nothing useful: the job finishes instantly without ever running the review. Confirming must actually run the full review — analysis and publication — even when the server has been restarted between parking and confirmation.
@@ -38,6 +40,16 @@ In semi-auto mode a review is parked and waits for a human to confirm it from th
 | Confirmation | The human action (from the dashboard) that approves running a parked review. |
 | Semi-auto mode | Trigger mode where reviews are parked and require human confirmation before running. |
 | Run / review run | The full execution: analysis by the assistant plus publication of the result on the merge/pull request. |
+
+## Implementation
+
+**Artefacts**: confirm use case (`project-not-configured` variant + injected `isProjectRunnable`), `ProcessorRegistry` instantiated at the composition root with GitLab + GitHub builders registered at boot, `buildGitHubReviewProcessor` extracted from the inline controller closure (full-auto behaviour unchanged), HTTP route status mapping.
+
+**Endpoint**: POST `/api/pending-reviews/:id/confirm` → ConfirmPendingReviewUseCase — 200 confirmed · 404 not-found · 409 already-running · 422 project-not-configured (French messages).
+
+**Decisions**: confirmation rebuilds the real processor from the persisted snapshot via the registry (survives a server restart); GitHub repo resolved via `findRepositoryByProjectPath(job.projectPath)` — no schema change, no migration; the V0 no-op `resolveProcessor` was removed.
+
+See [report](../reports/202-confirm-pending-review-runs-review.report.md).
 
 ## INVEST Evaluation
 
