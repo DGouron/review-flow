@@ -1525,6 +1525,81 @@ body.is-quiet-refresh .refresh-info::after {
   background: rgba(59, 130, 246, 0.2);
 }
 
+/* Pending reviews awaiting human confirmation (semi-auto trigger mode) */
+.pending-review-card {
+  background: var(--bg-2);
+  border: 1px solid var(--nsc-border-soft);
+  border-radius: 8px;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.pending-review-card + .pending-review-card {
+  margin-top: var(--space-3);
+}
+.pending-review-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.pending-review-title {
+  font-size: var(--type-base);
+  font-weight: 600;
+  color: var(--ink-0);
+}
+.pending-review-title a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.pending-review-title a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+.pending-review-meta {
+  font-family: var(--font-mono);
+  font-size: var(--type-xs);
+  color: var(--ink-2);
+}
+.pending-review-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+.btn-confirm-pending,
+.btn-dismiss-pending {
+  font-family: var(--font-sans);
+  font-size: var(--type-sm);
+  font-weight: 600;
+  padding: var(--space-2) var(--space-4);
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-confirm-pending {
+  background: var(--accent-ghost);
+  border-color: var(--accent-active);
+  color: var(--accent);
+}
+.btn-confirm-pending:hover {
+  background: rgba(244, 169, 61, 0.2);
+  border-color: var(--accent);
+}
+.btn-dismiss-pending {
+  background: transparent;
+  border-color: var(--nsc-border-soft);
+  color: var(--ink-2);
+}
+.btn-dismiss-pending:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.btn-confirm-pending:disabled,
+.btn-dismiss-pending:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Stat badges in MR items */
 .stat-badge {
   display: inline-flex;
