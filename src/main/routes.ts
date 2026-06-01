@@ -42,8 +42,8 @@ import { defaultProcessRunner } from '@/frameworks/claude/claudeInvoker.js';
 import { ProcessEnvironmentGateway } from '@/modules/claude-invocation/interface-adapters/gateways/environment.process.gateway.js';
 import { getConfigDir } from '@/shared/services/configDir.js';
 import { homedir } from 'node:os';
-import { handleGitLabWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
-import { handleGitHubWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
+import { handleGitLabWebhook, buildGitLabReviewProcessor } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
+import { handleGitHubWebhook, buildGitHubReviewProcessor } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
 import { InMemoryIdempotencyStore } from '@/modules/platform-integration/interface-adapters/gateways/inMemoryIdempotencyStore.gateway.js';
 import { transportGuardMiddleware } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
 import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
@@ -103,6 +103,8 @@ import { ListPendingReviewsUseCase } from '@/modules/review-execution/usecases/l
 import { ConfirmPendingReviewUseCase } from '@/modules/review-execution/usecases/confirmPendingReview.usecase.js';
 import { DismissPendingReviewUseCase } from '@/modules/review-execution/usecases/dismissPendingReview.usecase.js';
 import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
+import { ProcessorRegistry } from '@/modules/review-execution/services/processorRegistry.js';
+import { findRepositoryByProjectPath } from '@/config/loader.js';
 import { PendingReviewPresenter } from '@/modules/review-execution/interface-adapters/presenters/pendingReview.presenter.js';
 import { pendingReviewsRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/pendingReviews.routes.js';
 import {
@@ -259,28 +261,6 @@ export async function registerRoutes(
 
   const pendingReviewRequestGateway = new PendingReviewRequestFileSystemGateway();
   const listPendingReviews = new ListPendingReviewsUseCase({ pendingReviewRequestGateway });
-  const confirmPendingReview = new ConfirmPendingReviewUseCase({
-    pendingReviewRequestGateway,
-    queuePort: {
-      hasActiveJob: (jobId: string) => {
-        const status = getJobStatus(jobId);
-        return status === 'queued' || status === 'running';
-      },
-      getJobStatus,
-    },
-    enqueue: enqueueReview,
-    // The persisted ReviewJob snapshot lets us re-enqueue with the SAME inline
-    // processor used at webhook time (rehydrated on confirm). No registry is
-    // needed in V0 because all pending requests are confirmed by the SAME
-    // running process; surviving restart simply means the user must re-trigger
-    // the webhook after a restart if they want the original processor closure.
-    resolveProcessor: () => async () => {
-      deps.logger.warn(
-        'Pending review confirmed across processor rehydration — Claude invocation skipped (V0 limitation).',
-      );
-    },
-    logger: deps.logger,
-  });
   const dismissPendingReview = new DismissPendingReviewUseCase({
     pendingReviewRequestGateway,
     queuePort: {
@@ -303,13 +283,6 @@ export async function registerRoutes(
   // scoped GitLab executor, cached per username, fail-closed.
   const gitLabMemberAccessGateway = new GitLabMemberAccessCliGateway(defaultGitLabExecutor);
   const isTrustedActor = new IsTrustedActorUseCase(gitLabMemberAccessGateway);
-
-  await app.register(pendingReviewsRoutes, {
-    listPendingReviews,
-    confirmPendingReview,
-    dismissPendingReview,
-    presenter: new PendingReviewPresenter(),
-  });
 
   const claudeInvokerDeps: ClaudeInvokerDependencies = {
     ...createDefaultClaudeInvokerDependencies(),
@@ -398,6 +371,70 @@ export async function registerRoutes(
 
   const egressScanner = createEgressScanner(defaultEgressScanConfig);
   const egressTraceGateway = new LoggerEgressTraceGateway(deps.logger);
+
+  // Confirming a parked review rebuilds the real review processor from a code-side
+  // registry: the builders close over framework gateways re-created at boot, so a
+  // confirmation survives a server restart and is driven only by the persisted
+  // ReviewJob snapshot. One builder per platform, registered across every trigger
+  // source and job type (the registry keys on platform × triggerSource × jobType).
+  const processorRegistry = new ProcessorRegistry();
+  const gitLabReviewProcessorDeps = {
+    reviewContextGateway: deps.reviewContextGateway,
+    threadFetchGateway: new GitLabThreadFetchGateway(defaultGitLabExecutor),
+    diffMetadataFetchGateway: new GitLabDiffMetadataFetchGateway(defaultGitLabExecutor),
+    diffStatsFetchGateway: new GitLabDiffStatsFetchGateway(defaultGitLabExecutor),
+    recordCompletion: new RecordReviewCompletionUseCase(trackingGw),
+    claudeInvokerDeps,
+    noteCommentPostGateway: new EgressScannedNoteCommentPostGateway(
+      new GitLabNoteCommentPostCliGateway(defaultGitLabExecutor),
+      egressScanner,
+      egressTraceGateway,
+    ),
+  };
+  const gitHubReviewProcessorDeps = {
+    reviewContextGateway: deps.reviewContextGateway,
+    threadFetchGateway: new GitHubThreadFetchGateway(defaultGitHubExecutor),
+    diffMetadataFetchGateway: new GitHubDiffMetadataFetchGateway(defaultGitHubExecutor),
+    diffStatsFetchGateway: new GitHubDiffStatsFetchGateway(defaultGitHubExecutor),
+    recordCompletion: new RecordReviewCompletionUseCase(trackingGw),
+    claudeInvokerDeps,
+    noteCommentPostGateway: new EgressScannedNoteCommentPostGateway(
+      new GitHubNoteCommentPostCliGateway(defaultGitHubExecutor),
+      egressScanner,
+      egressTraceGateway,
+    ),
+  };
+  const gitLabReviewProcessorBuilder = buildGitLabReviewProcessor(gitLabReviewProcessorDeps, deps.logger);
+  const gitHubReviewProcessorBuilder = buildGitHubReviewProcessor(gitHubReviewProcessorDeps, deps.logger);
+  for (const triggerSource of ['webhook-initial', 'webhook-followup', 'dashboard-manual'] as const) {
+    for (const jobType of ['review', 'followup'] as const) {
+      processorRegistry.register({ triggerSource, platform: 'gitlab', jobType }, gitLabReviewProcessorBuilder);
+      processorRegistry.register({ triggerSource, platform: 'github', jobType }, gitHubReviewProcessorBuilder);
+    }
+  }
+
+  const confirmPendingReview = new ConfirmPendingReviewUseCase({
+    pendingReviewRequestGateway,
+    queuePort: {
+      hasActiveJob: (jobId: string) => {
+        const status = getJobStatus(jobId);
+        return status === 'queued' || status === 'running';
+      },
+      getJobStatus,
+    },
+    enqueue: enqueueReview,
+    resolveProcessor: (pending) => processorRegistry.resolve(pending),
+    isProjectRunnable: (pending) =>
+      findRepositoryByProjectPath(pending.job.projectPath) !== undefined,
+    logger: deps.logger,
+  });
+
+  await app.register(pendingReviewsRoutes, {
+    listPendingReviews,
+    confirmPendingReview,
+    dismissPendingReview,
+    presenter: new PendingReviewPresenter(),
+  });
 
   // TTL must be >= the platform's maximum webhook retry window so a
   // legitimately re-delivered event past that window is reprocessed, while any

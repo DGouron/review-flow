@@ -2032,15 +2032,29 @@
         countBadge.classList.remove('hidden');
       }
 
+      const disablePendingCardActions = (fromButton) => {
+        const card = fromButton.closest('.pending-review-card');
+        if (!card) return;
+        card.querySelectorAll('.btn-confirm-pending, .btn-dismiss-pending').forEach((action) => {
+          action.disabled = true;
+        });
+      };
+
       container.querySelectorAll('.btn-confirm-pending').forEach((btn) => {
         const pendingId = btn.getAttribute('data-pending-id');
         if (!pendingId) return;
-        btn.addEventListener('click', () => confirmPendingReview(pendingId), { once: true });
+        btn.addEventListener('click', (event) => {
+          disablePendingCardActions(event.currentTarget);
+          confirmPendingReview(pendingId);
+        }, { once: true });
       });
       container.querySelectorAll('.btn-dismiss-pending').forEach((btn) => {
         const pendingId = btn.getAttribute('data-pending-id');
         if (!pendingId) return;
-        btn.addEventListener('click', () => dismissPendingReview(pendingId), { once: true });
+        btn.addEventListener('click', (event) => {
+          disablePendingCardActions(event.currentTarget);
+          dismissPendingReview(pendingId);
+        }, { once: true });
       });
 
       refreshIcons();

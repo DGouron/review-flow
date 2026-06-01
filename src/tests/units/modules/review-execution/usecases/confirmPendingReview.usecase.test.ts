@@ -42,6 +42,7 @@ describe('ConfirmPendingReviewUseCase', () => {
       },
       enqueue: enqueueSuccess,
       resolveProcessor: () => fakeProcessor,
+      isProjectRunnable: () => true,
       logger,
     });
   }
@@ -94,12 +95,39 @@ describe('ConfirmPendingReviewUseCase', () => {
         queuePort: { hasActiveJob: () => false, getJobStatus: () => null },
         enqueue: async () => false,
         resolveProcessor: () => fakeProcessor,
+        isProjectRunnable: () => true,
         logger,
       });
 
       const result = await useCase.execute({ pendingId: pending.pendingReviewRequestId });
 
       expect(result.status).toBe('already-running');
+    });
+  });
+
+  describe('Rule: confirming a request whose project is no longer configured is rejected', () => {
+    it('returns project-not-configured with the exact French message and keeps the pending entry', async () => {
+      const pending = PendingReviewRequestFactory.create();
+      gateway.prepopulate(pending);
+      const useCase = new ConfirmPendingReviewUseCase({
+        pendingReviewRequestGateway: gateway,
+        queuePort: { hasActiveJob: (id) => activeJobs.has(id), getJobStatus: () => null },
+        enqueue: enqueueSuccess,
+        resolveProcessor: () => fakeProcessor,
+        isProjectRunnable: () => false,
+        logger,
+      });
+
+      const result = await useCase.execute({ pendingId: pending.pendingReviewRequestId });
+
+      expect(result.status).toBe('project-not-configured');
+      if (result.status === 'project-not-configured') {
+        expect(result.message).toBe("Le projet associé n'est plus configuré");
+      }
+      expect(enqueueCalls).toHaveLength(0);
+      expect(processorRuns).toBe(0);
+      expect(gateway.deleteCount).toBe(0);
+      expect(await gateway.listAll()).toHaveLength(1);
     });
   });
 });

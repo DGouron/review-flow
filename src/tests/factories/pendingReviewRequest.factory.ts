@@ -23,4 +23,27 @@ export const PendingReviewRequestFactory = {
       ...overrides,
     };
   },
+
+  github(overrides: Partial<PendingReviewRequest> = {}): PendingReviewRequest {
+    return {
+      pendingReviewRequestId: 'pending-github-owner-repo-7',
+      job: {
+        id: 'github:owner/repo:7',
+        platform: 'github',
+        projectPath: 'owner/repo',
+        localPath: '/home/user/projects/github-test',
+        mrNumber: 7,
+        skill: 'review-code',
+        mrUrl: 'https://github.com/owner/repo/pull/7',
+        sourceBranch: 'feature/y',
+        targetBranch: 'main',
+        jobType: 'review',
+      },
+      jobType: 'review',
+      platform: 'github',
+      triggerSource: 'webhook-initial',
+      createdAt: '2026-05-23T10:00:00.000Z',
+      ...overrides,
+    };
+  },
 };
