@@ -14,6 +14,9 @@ const realFileWriter: ExecutorFileWriter = {
     mkdirSync(dirname(path), { recursive: true })
     writeFileSync(path, contents, { mode: 0o600 })
   },
+  ensureDir(path: string): void {
+    mkdirSync(path, { recursive: true })
+  },
 }
 
 const scopedSpawn = (command: string, env: ScopedExecutorEnv, cwd: string): string =>

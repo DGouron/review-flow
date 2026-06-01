@@ -7,8 +7,12 @@ import {
 
 class RecordingFileWriter {
   public readonly writes: Array<{ path: string; contents: string }> = []
+  public readonly ensuredDirs: string[] = []
   write(path: string, contents: string): void {
     this.writes.push({ path, contents })
+  }
+  ensureDir(path: string): void {
+    this.ensuredDirs.push(path)
   }
 }
 
@@ -135,5 +139,15 @@ describe('scoped executor environment (AC1/AC2/AC3/AC4)', () => {
     for (const write of fileWriter.writes) {
       expect(write.path.startsWith(TEMP_ROOT)).toBe(true)
     }
+  })
+
+  it('AC4: creates the isolated HOME directory so the spawn cwd exists', () => {
+    const fileWriter = new RecordingFileWriter()
+    const { env } = buildScopedExecutorEnvironment({
+      parentEnv: { REVIEWFLOW_EXECUTOR_TOKEN: TOKEN, PATH: '/usr/bin' },
+      isolatedDir: TEMP_ROOT,
+      fileWriter,
+    })
+    expect(fileWriter.ensuredDirs).toContain(env.HOME)
   })
 })
