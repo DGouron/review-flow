@@ -106,6 +106,15 @@ describe('generateAiInsightsViaSession', () => {
     expect(session.runCalls[0]).toContain('Synthèse Exécutive');
   });
 
+  it('forwards the project path to the session so it dispatches in the target project', async () => {
+    seedReviews();
+    session.setResult({ status: 'completed', answer: JSON.stringify(validAiResult) });
+
+    await generateAiInsightsViaSession(input());
+
+    expect(session.projectPaths).toEqual(['/test/project']);
+  });
+
   it('refuses when an Anthropic API key is present (subscription-only safeguard)', async () => {
     seedReviews();
     environment.setHasAnthropicApiKey(true);

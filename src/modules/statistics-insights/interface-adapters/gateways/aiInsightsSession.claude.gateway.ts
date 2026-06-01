@@ -43,7 +43,7 @@ export class AiInsightsSessionClaudeGateway implements AiInsightsSessionGateway 
     private readonly options: AiInsightsSessionClaudeGatewayOptions,
   ) {}
 
-  async run(prompt: string): Promise<AiInsightsSessionResult> {
+  async run(prompt: string, projectPath: string): Promise<AiInsightsSessionResult> {
     const dispatch = await this.sessionGateway.dispatch({
       prompt,
       flags: {
@@ -54,7 +54,7 @@ export class AiInsightsSessionClaudeGateway implements AiInsightsSessionGateway 
         allowedTools: 'Read,Glob,Grep',
         disallowedTools: 'Edit,Write,Bash,Task',
       },
-      localPath: this.options.homeDir,
+      localPath: projectPath,
       jobId: `insights-${Date.now()}`,
       jobType: 'insights',
     });
@@ -64,7 +64,7 @@ export class AiInsightsSessionClaudeGateway implements AiInsightsSessionGateway 
     }
 
     const sessionId = dispatch.sessionId;
-    const slug = this.options.homeDir.replace(/\//g, '-');
+    const slug = projectPath.replace(/\//g, '-');
     const projectDir = join(this.options.homeDir, '.claude', 'projects', slug);
 
     try {
