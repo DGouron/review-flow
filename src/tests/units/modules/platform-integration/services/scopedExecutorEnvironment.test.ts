@@ -119,14 +119,14 @@ describe('scoped executor environment (AC1/AC2/AC3/AC4)', () => {
     expect(env.GLAB_CONFIG_DIR?.startsWith(TEMP_ROOT)).toBe(true)
   })
 
-  it('AC4: the config file is written under GLAB_CONFIG_DIR/glab-cli/config.yml', () => {
+  it('AC4: the config file is written at GLAB_CONFIG_DIR/config.yml (glab ignores a glab-cli subdir when GLAB_CONFIG_DIR is set)', () => {
     const fileWriter = new RecordingFileWriter()
     const { env } = buildScopedExecutorEnvironment({
       parentEnv: { REVIEWFLOW_EXECUTOR_TOKEN: TOKEN, PATH: '/usr/bin' },
       isolatedDir: TEMP_ROOT,
       fileWriter,
     })
-    expect(fileWriter.writes[0]?.path).toBe(`${env.GLAB_CONFIG_DIR}/glab-cli/config.yml`)
+    expect(fileWriter.writes[0]?.path).toBe(`${env.GLAB_CONFIG_DIR}/config.yml`)
   })
 
   it('AC4: every written path stays under the isolated temp root', () => {

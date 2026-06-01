@@ -70,7 +70,9 @@ export function buildScopedExecutorEnvironment(
   input.fileWriter.ensureDir(home)
   input.fileWriter.ensureDir(glabConfigDir)
 
-  const configFilePath = join(glabConfigDir, 'glab-cli', 'config.yml')
+  // When GLAB_CONFIG_DIR is set, glab reads its config at the root of that dir
+  // (config.yml directly); the glab-cli/ subdir only applies under HOME.
+  const configFilePath = join(glabConfigDir, 'config.yml')
   input.fileWriter.write(configFilePath, renderGlabConfig(token))
 
   return { env, configFilePath }
