@@ -56,6 +56,26 @@ describe('AiInsightsSessionClaudeGateway (integration with real filesystem)', ()
     expect(sessionGateway.removeCalls).toEqual(['stub-session']);
   });
 
+  it('skips a leading thinking turn and returns the JSON answer that follows', async () => {
+    const dir = transcriptDir(homeDir, PROJECT_PATH);
+    const lines = [
+      JSON.stringify({
+        type: 'assistant',
+        message: { content: [{ type: 'thinking' }], stop_reason: 'end_turn' },
+      }),
+      JSON.stringify({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: '{"ok":true}' }], stop_reason: 'end_turn' },
+      }),
+    ];
+    writeFileSync(join(dir, 'stub-session-abc.jsonl'), lines.join('\n') + '\n');
+
+    const gateway = new AiInsightsSessionClaudeGateway(sessionGateway, FAST_OPTIONS(homeDir));
+    const result = await gateway.run('insights prompt', PROJECT_PATH);
+
+    expect(result).toEqual({ status: 'completed', answer: '{"ok":true}' });
+  });
+
   it('returns unavailable without cleanup when the dispatch fails', async () => {
     sessionGateway.setDispatchResult({ status: 'failed', rawStderr: 'not logged in' });
 
