@@ -1,3 +1,5 @@
+import { join } from 'node:path'
+
 export const EXECUTOR_TOKEN_ENV_KEY = 'REVIEWFLOW_EXECUTOR_TOKEN'
 
 export const ENV_ALLOWLIST = ['PATH', 'HOME', 'GLAB_CONFIG_DIR', 'LANG'] as const
@@ -17,6 +19,7 @@ export class MissingExecutorTokenError extends Error {
 
 export interface ExecutorFileWriter {
   write(path: string, contents: string): void
+  ensureDir(path: string): void
 }
 
 export interface BuildScopedExecutorEnvironmentInput {
@@ -48,8 +51,8 @@ export function buildScopedExecutorEnvironment(
     throw new MissingExecutorTokenError()
   }
 
-  const home = `${input.isolatedDir}/home`
-  const glabConfigDir = `${input.isolatedDir}/glab-config`
+  const home = join(input.isolatedDir, 'home')
+  const glabConfigDir = join(input.isolatedDir, 'glab-config')
 
   const env: ScopedExecutorEnv = {
     HOME: home,
@@ -62,7 +65,12 @@ export function buildScopedExecutorEnvironment(
   const lang = input.parentEnv.LANG
   if (lang) env.LANG = lang
 
-  const configFilePath = `${glabConfigDir}/glab-cli/config.yml`
+  // cwd at spawn time is HOME and glab reads GLAB_CONFIG_DIR; both directories
+  // must exist on disk before the spawn, else execSync fails with ENOENT.
+  input.fileWriter.ensureDir(home)
+  input.fileWriter.ensureDir(glabConfigDir)
+
+  const configFilePath = join(glabConfigDir, 'glab-cli', 'config.yml')
   input.fileWriter.write(configFilePath, renderGlabConfig(token))
 
   return { env, configFilePath }
