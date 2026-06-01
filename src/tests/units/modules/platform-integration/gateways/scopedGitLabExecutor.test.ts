@@ -8,8 +8,12 @@ const TOKEN = 'glpat-scoped-exec-1'
 
 class RecordingFileWriter {
   public readonly writes: Array<{ path: string; contents: string }> = []
+  public readonly ensuredDirs: string[] = []
   write(path: string, contents: string): void {
     this.writes.push({ path, contents })
+  }
+  ensureDir(path: string): void {
+    this.ensuredDirs.push(path)
   }
 }
 
