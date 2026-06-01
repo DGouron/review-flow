@@ -13,6 +13,7 @@ import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 async function buildApp(
   gateway: StubPendingReviewRequestGateway,
   activeJobs: Set<string>,
+  isProjectRunnable: () => boolean = () => true,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const logger = createStubLogger();
@@ -26,6 +27,7 @@ async function buildApp(
         return true;
       },
       resolveProcessor: () => async () => {},
+      isProjectRunnable,
       logger,
     }),
     dismissPendingReview: new DismissPendingReviewUseCase({
@@ -86,7 +88,10 @@ describe('pendingReviewsRoutes', () => {
     });
 
     expect(response.statusCode).toBe(404);
-    expect(response.json()).toEqual({ status: 'not-found' });
+    expect(response.json()).toEqual({
+      status: 'not-found',
+      message: 'Cette review en attente est introuvable',
+    });
   });
 
   it('POST .../confirm returns 409 with French message when already running', async () => {
@@ -103,6 +108,24 @@ describe('pendingReviewsRoutes', () => {
     expect(response.json()).toEqual({
       status: 'already-running',
       message: 'Cette review est déjà en cours',
+    });
+  });
+
+  it('POST .../confirm returns 422 with French message when the project is no longer configured', async () => {
+    const pending = PendingReviewRequestFactory.create();
+    gateway.prepopulate(pending);
+    await app.close();
+    app = await buildApp(gateway, activeJobs, () => false);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/pending-reviews/${pending.pendingReviewRequestId}/confirm`,
+    });
+
+    expect(response.statusCode).toBe(422);
+    expect(response.json()).toEqual({
+      status: 'project-not-configured',
+      message: "Le projet associé n'est plus configuré",
     });
   });
 

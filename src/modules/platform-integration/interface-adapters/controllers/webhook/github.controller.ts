@@ -5,7 +5,7 @@ import { filterGitHubEvent, filterGitHubLabelEvent, filterGitHubPrClose, filterG
 import { gitHubPullRequestEventGuard } from '@/modules/platform-integration/entities/github/githubPullRequestEvent.guard.js';
 import { gitHubIssueCommentEventGuard } from '@/modules/platform-integration/entities/github/githubIssueCommentEvent.guard.js';
 import { gitHubPullRequestReviewEventGuard } from '@/modules/platform-integration/entities/github/githubPullRequestReviewEvent.guard.js';
-import { findRepositoryByRemoteUrl, type RepositoryConfig } from '@/config/loader.js';
+import { findRepositoryByRemoteUrl, findRepositoryByProjectPath, type RepositoryConfig } from '@/config/loader.js';
 import {
   enqueueReview,
   createJobId,
@@ -33,6 +33,7 @@ import { executeActionsFromContext } from '@/modules/review-execution/services/c
 import { invokeClaudeReview, sendNotification } from '@/claude/invoker.js';
 import type { ClaudeInvokerDependencies } from '@/frameworks/claude/claudeInvoker.js';
 import type { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
+import type { ProcessorBuilder } from '@/modules/review-execution/services/processorRegistry.js';
 import { startWatchingReviewContext, stopWatchingReviewContext } from '@/main/websocket.js';
 import { loadProjectConfig, getProjectAgentsOrFocusDefaults, getFollowupAgents, getProjectLanguage } from '@/config/projectConfig.js';
 import { DEFAULT_AGENTS, DEFAULT_FOLLOWUP_AGENTS } from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
@@ -786,7 +787,75 @@ export async function handleGitHubWebhook(
     return;
   }
 
-  const reviewProcessor = async (j: ReviewJob, signal: AbortSignal): Promise<void> => {
+  const reviewProcessor = buildGitHubReviewProcessor(deps, logger)(job);
+
+  if (deps.gateClaudeInvocation) {
+    const gateResult = await deps.gateClaudeInvocation.execute({
+      job,
+      triggerSource: 'webhook-initial',
+      processor: reviewProcessor,
+    });
+    if (gateResult.status === 'pending') {
+      reply.status(202).send({
+        status: 'pending-confirmation',
+        pendingId: gateResult.pendingId,
+        prNumber: filterResult.mergeRequestNumber,
+      });
+      return;
+    }
+    if (gateResult.status === 'enqueued') {
+      reply.status(202).send({
+        status: 'queued',
+        jobId,
+        prNumber: filterResult.mergeRequestNumber,
+      });
+      return;
+    }
+    reply.status(200).send({
+      status: 'deduplicated',
+      jobId,
+      reason: 'Review already in progress or recently completed',
+    });
+    return;
+  }
+
+  const enqueued = await enqueueReview(job, reviewProcessor);
+
+  if (enqueued) {
+    reply.status(202).send({
+      status: 'queued',
+      jobId,
+      prNumber: filterResult.mergeRequestNumber,
+    });
+  } else {
+    reply.status(200).send({
+      status: 'deduplicated',
+      jobId,
+      reason: 'Review already in progress or recently completed',
+    });
+  }
+}
+
+type GitHubReviewProcessorDeps = Pick<GitHubWebhookDependencies,
+  | 'reviewContextGateway'
+  | 'threadFetchGateway'
+  | 'diffMetadataFetchGateway'
+  | 'diffStatsFetchGateway'
+  | 'recordCompletion'
+  | 'claudeInvokerDeps'
+  | 'noteCommentPostGateway'
+>;
+
+export function buildGitHubReviewProcessor(
+  deps: GitHubReviewProcessorDeps,
+  logger: Logger,
+): ProcessorBuilder {
+  const { recordCompletion } = deps;
+  return (_job: ReviewJob) => async (j: ReviewJob, signal: AbortSignal): Promise<void> => {
+    const repoConfig = findRepositoryByProjectPath(j.projectPath);
+    if (!repoConfig) {
+      throw new Error(`No GitHub repository configured for projectPath "${j.projectPath}"`);
+    }
     // Send start notification
     sendNotification(
       'Review démarrée',
@@ -959,50 +1028,4 @@ export async function handleGitHubWebhook(
       );
     }
   };
-
-  if (deps.gateClaudeInvocation) {
-    const gateResult = await deps.gateClaudeInvocation.execute({
-      job,
-      triggerSource: 'webhook-initial',
-      processor: reviewProcessor,
-    });
-    if (gateResult.status === 'pending') {
-      reply.status(202).send({
-        status: 'pending-confirmation',
-        pendingId: gateResult.pendingId,
-        prNumber: filterResult.mergeRequestNumber,
-      });
-      return;
-    }
-    if (gateResult.status === 'enqueued') {
-      reply.status(202).send({
-        status: 'queued',
-        jobId,
-        prNumber: filterResult.mergeRequestNumber,
-      });
-      return;
-    }
-    reply.status(200).send({
-      status: 'deduplicated',
-      jobId,
-      reason: 'Review already in progress or recently completed',
-    });
-    return;
-  }
-
-  const enqueued = await enqueueReview(job, reviewProcessor);
-
-  if (enqueued) {
-    reply.status(202).send({
-      status: 'queued',
-      jobId,
-      prNumber: filterResult.mergeRequestNumber,
-    });
-  } else {
-    reply.status(200).send({
-      status: 'deduplicated',
-      jobId,
-      reason: 'Review already in progress or recently completed',
-    });
-  }
 }
