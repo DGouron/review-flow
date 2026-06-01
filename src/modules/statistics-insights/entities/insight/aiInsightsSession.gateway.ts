@@ -4,5 +4,5 @@ export type AiInsightsSessionResult =
   | { status: 'timed-out' };
 
 export interface AiInsightsSessionGateway {
-  run(prompt: string): Promise<AiInsightsSessionResult>;
+  run(prompt: string, projectPath: string): Promise<AiInsightsSessionResult>;
 }

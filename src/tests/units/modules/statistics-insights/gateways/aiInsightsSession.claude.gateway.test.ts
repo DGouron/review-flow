@@ -12,8 +12,10 @@ const FAST_OPTIONS = (homeDir: string) => ({
   maxAttempts: 20,
 });
 
-function transcriptDir(homeDir: string): string {
-  const slug = homeDir.replace(/\//g, '-');
+const PROJECT_PATH = '/home/dev/Documents/Projets/target-project';
+
+function transcriptDir(homeDir: string, projectPath: string): string {
+  const slug = projectPath.replace(/\//g, '-');
   const dir = join(homeDir, '.claude', 'projects', slug);
   mkdirSync(dir, { recursive: true });
   return dir;
@@ -32,8 +34,8 @@ describe('AiInsightsSessionClaudeGateway (integration with real filesystem)', ()
     rmSync(homeDir, { recursive: true, force: true });
   });
 
-  it('dispatches --bg, accumulates the transcript answer, and cleans up the session', async () => {
-    const dir = transcriptDir(homeDir);
+  it('dispatches --bg in the target project, accumulates the transcript answer, and cleans up the session', async () => {
+    const dir = transcriptDir(homeDir, PROJECT_PATH);
     const lines = [
       JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: '{"part":' }] } }),
       JSON.stringify({
@@ -44,9 +46,10 @@ describe('AiInsightsSessionClaudeGateway (integration with real filesystem)', ()
     writeFileSync(join(dir, 'stub-session-abc.jsonl'), lines.join('\n') + '\n');
 
     const gateway = new AiInsightsSessionClaudeGateway(sessionGateway, FAST_OPTIONS(homeDir));
-    const result = await gateway.run('insights prompt');
+    const result = await gateway.run('insights prompt', PROJECT_PATH);
 
     expect(result).toEqual({ status: 'completed', answer: '{"part":1}' });
+    expect(sessionGateway.dispatchCalls[0].localPath).toBe(PROJECT_PATH);
     expect(sessionGateway.dispatchCalls[0].jobType).toBe('insights');
     expect(sessionGateway.dispatchCalls[0].flags.mcpConfigJson).toBe('{"mcpServers":{}}');
     expect(sessionGateway.stopCalls).toEqual(['stub-session']);
@@ -57,7 +60,7 @@ describe('AiInsightsSessionClaudeGateway (integration with real filesystem)', ()
     sessionGateway.setDispatchResult({ status: 'failed', rawStderr: 'not logged in' });
 
     const gateway = new AiInsightsSessionClaudeGateway(sessionGateway, FAST_OPTIONS(homeDir));
-    const result = await gateway.run('insights prompt');
+    const result = await gateway.run('insights prompt', PROJECT_PATH);
 
     expect(result).toEqual({ status: 'unavailable', reason: 'failed' });
     expect(sessionGateway.stopCalls).toEqual([]);
@@ -66,7 +69,7 @@ describe('AiInsightsSessionClaudeGateway (integration with real filesystem)', ()
 
   it('times out and still cleans up when no transcript turn completes', async () => {
     const gateway = new AiInsightsSessionClaudeGateway(sessionGateway, FAST_OPTIONS(homeDir));
-    const result = await gateway.run('insights prompt');
+    const result = await gateway.run('insights prompt', PROJECT_PATH);
 
     expect(result).toEqual({ status: 'timed-out' });
     expect(sessionGateway.stopCalls).toEqual(['stub-session']);

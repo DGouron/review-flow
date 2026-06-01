@@ -72,7 +72,7 @@ export async function generateAiInsightsViaSession(
 
   logger.info({ promptLength: prompt.length }, 'Dispatching --bg session for AI insights');
 
-  const sessionResult = await session.run(prompt);
+  const sessionResult = await session.run(prompt, projectPath);
 
   if (sessionResult.status === 'unavailable') {
     logger.error({ reason: sessionResult.reason }, 'AI insights session unavailable');

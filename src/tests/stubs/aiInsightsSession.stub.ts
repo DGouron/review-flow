@@ -5,6 +5,7 @@ import type {
 
 export class StubAiInsightsSessionGateway implements AiInsightsSessionGateway {
   runCalls: string[] = [];
+  projectPaths: string[] = [];
 
   private result: AiInsightsSessionResult = {
     status: 'completed',
@@ -15,8 +16,9 @@ export class StubAiInsightsSessionGateway implements AiInsightsSessionGateway {
     this.result = result;
   }
 
-  async run(prompt: string): Promise<AiInsightsSessionResult> {
+  async run(prompt: string, projectPath: string): Promise<AiInsightsSessionResult> {
     this.runCalls.push(prompt);
+    this.projectPaths.push(projectPath);
     return this.result;
   }
 }
