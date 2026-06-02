@@ -12,6 +12,32 @@ import { filterAutoExecutorActions } from '@/modules/platform-integration/servic
  */
 export type { ReviewAction as ReviewContextAction }
 
+/**
+ * The auto-path capability filter drops THREAD_RESOLVE (it requires a privileged role).
+ * Context actions, however, travel with `context.threads` — the authenticated thread inventory
+ * written at job creation, never reachable by the LLM (which can only append to `actions` via MCP).
+ * Re-admit a dropped THREAD_RESOLVE only when its target id belongs to that inventory, so genuine
+ * resolves run while forged or out-of-MR ids stay dropped (fail-closed on an empty inventory).
+ */
+function selectExecutableContextActions(
+  actions: ReviewAction[],
+  authenticatedThreadIds: ReadonlySet<string>,
+): { allowed: ReviewAction[]; dropped: ReviewAction[] } {
+  const { allowed, dropped } = filterAutoExecutorActions(actions)
+
+  const reinstated: ReviewAction[] = []
+  const stillDropped: ReviewAction[] = []
+  for (const action of dropped) {
+    if (action.type === 'THREAD_RESOLVE' && authenticatedThreadIds.has(action.threadId.trim())) {
+      reinstated.push({ ...action, threadId: action.threadId.trim() })
+    } else {
+      stillDropped.push(action)
+    }
+  }
+
+  return { allowed: [...allowed, ...reinstated], dropped: stillDropped }
+}
+
 export type { ExecutionResult, CommandExecutor }
 
 interface Logger {
@@ -40,7 +66,11 @@ export async function executeActionsFromContext(
     baseUrl,
   }
 
-  const { allowed, dropped } = filterAutoExecutorActions(context.actions as ReviewAction[])
+  const authenticatedThreadIds = new Set(context.threads.map(thread => thread.id))
+  const { allowed, dropped } = selectExecutableContextActions(
+    context.actions as ReviewAction[],
+    authenticatedThreadIds,
+  )
 
   if (dropped.length > 0) {
     logger.warn(
