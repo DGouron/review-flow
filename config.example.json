@@ -1,4 +1,5 @@
 {
+  "triggerMode": "full-auto",
   "server": {
     "port": 3000
   },

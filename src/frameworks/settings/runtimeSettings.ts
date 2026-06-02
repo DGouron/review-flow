@@ -4,6 +4,10 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { z } from 'zod';
 import { languageSchema, type Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
+import {
+  triggerModeSchema,
+  type TriggerMode,
+} from '@/modules/shared-kernel/entities/triggerMode/triggerMode.schema.js';
 
 export const claudeModelSchema = z.enum(['haiku', 'sonnet', 'opus']);
 export type ClaudeModel = z.infer<typeof claudeModelSchema>;
@@ -14,6 +18,7 @@ const runtimeSettingsSchema = z.object({
   language: languageSchema,
   model: claudeModelSchema,
   worktreeStaleThresholdHours: worktreeStaleThresholdHoursSchema.default(24),
+  triggerMode: triggerModeSchema.nullable().default(null),
 });
 
 type RuntimeSettings = z.infer<typeof runtimeSettingsSchema>;
@@ -26,6 +31,7 @@ const DEFAULT_SETTINGS: RuntimeSettings = {
   model: 'opus',
   language: 'en',
   worktreeStaleThresholdHours: 24,
+  triggerMode: null,
 };
 
 let settings: RuntimeSettings = { ...DEFAULT_SETTINGS };
@@ -137,6 +143,19 @@ export async function setWorktreeStaleThresholdHours(hours: number): Promise<voi
     throw new Error(`Invalid stale threshold (hours): ${hours}`);
   }
   settings.worktreeStaleThresholdHours = result.data;
+  await persistAsync();
+}
+
+export function getTriggerMode(): TriggerMode | null {
+  return settings.triggerMode;
+}
+
+export async function setTriggerMode(triggerMode: TriggerMode): Promise<void> {
+  const result = triggerModeSchema.safeParse(triggerMode);
+  if (!result.success) {
+    throw new Error(`Invalid trigger mode: ${triggerMode}`);
+  }
+  settings.triggerMode = result.data;
   await persistAsync();
 }
 

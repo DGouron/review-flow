@@ -554,7 +554,7 @@ describe('handleGitLabWebhook', () => {
       pendingGateway: StubPendingReviewRequestGateway,
     ) {
       const gateClaudeInvocation = new GateClaudeInvocationUseCase({
-        triggerMode: 'full-auto',
+        getTriggerMode: () => 'full-auto',
         pendingReviewRequestGateway: pendingGateway,
         enqueue: enqueueReview,
         broadcastPendingChanged: () => {},
