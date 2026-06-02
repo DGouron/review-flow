@@ -33,10 +33,11 @@
     <div id="setup-disconnect" class="setup-disconnect" hidden role="alert">
       <span class="setup-banner-title">// CONNEXION PERDUE</span>
       <span class="setup-disconnect-detail">Lecture dégradée via interrogation périodique de l'état.</span>
-      <a class="btn btn-secondary" href="/setup">Relancer le wizard</a>
     </div>
 
     <div id="setup-readonly" class="setup-readonly" hidden role="status"></div>
+
+    <button type="button" id="setup-relaunch" class="btn btn-secondary" hidden>Relancer le wizard</button>
 
     <div id="setup-avatar" class="setup-avatar" hidden>
       <span class="setup-corner setup-corner--tl" aria-hidden="true"></span>
@@ -84,6 +85,7 @@
     const bannersContainer = document.getElementById('setup-banners');
     const disconnectBanner = document.getElementById('setup-disconnect');
     const readOnlyBanner = document.getElementById('setup-readonly');
+    const relaunchButton = document.getElementById('setup-relaunch');
     const liveRegion = document.getElementById('setup-live');
     const shell = document.querySelector('.setup-shell');
     const headingElement = document.getElementById('setup-heading');
@@ -260,11 +262,25 @@
 
     function showDisconnect() {
       disconnectBanner.hidden = false;
+      relaunchButton.hidden = false;
     }
 
     function showReadOnly(notice) {
       readOnlyBanner.hidden = false;
       readOnlyBanner.textContent = notice;
+      relaunchButton.hidden = false;
+    }
+
+    if (relaunchButton) {
+      relaunchButton.addEventListener('click', async () => {
+        relaunchButton.disabled = true;
+        try {
+          await fetch('/api/setup/cancel', { method: 'POST' });
+        } catch {
+          /* a failed cancel still lets the reload retry a fresh /start */
+        }
+        window.location.href = '/setup';
+      });
     }
 
     async function pollOnce() {
