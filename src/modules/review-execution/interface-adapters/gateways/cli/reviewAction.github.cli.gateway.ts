@@ -37,10 +37,12 @@ export class GitHubReviewActionCliGateway
           command: 'gh',
           args: [
             'api',
-            '--method',
-            'POST',
-            `repos/${context.projectPath}/pulls/${context.mrNumber}/comments/${action.threadId}/replies`,
-            '--field',
+            'graphql',
+            '-f',
+            'query=mutation($threadId: ID!, $body: String!) { addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId: $threadId, body: $body }) { comment { id } } }',
+            '-f',
+            `threadId=${action.threadId}`,
+            '-f',
             `body=${action.message}`,
           ],
         }

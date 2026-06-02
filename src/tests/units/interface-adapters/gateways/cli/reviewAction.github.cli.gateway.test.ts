@@ -36,19 +36,22 @@ describe('GitHubReviewActionCliGateway', () => {
     expect(result.succeeded).toBe(1)
   })
 
-  it('should execute THREAD_REPLY action with gh api', async () => {
+  it('should execute THREAD_REPLY action with the gh graphql addPullRequestReviewThreadReply mutation', async () => {
     const executor = vi.fn()
     const gateway = new GitHubReviewActionCliGateway(executor)
-    const actions: ReviewAction[] = [{ type: 'THREAD_REPLY', threadId: '123456', message: 'Done!' }]
+    const actions: ReviewAction[] = [{ type: 'THREAD_REPLY', threadId: 'PRRT_node123', message: 'Done!' }]
     const context = { projectPath: 'owner/repo', mrNumber: 42, localPath: '/tmp', baseUrl: null as string | null }
 
     const result = await gateway.execute(actions, context)
 
-    expect(executor).toHaveBeenCalledWith(
-      'gh',
-      expect.arrayContaining(['repos/owner/repo/pulls/42/comments/123456/replies', 'body=Done!']),
-      '/tmp'
-    )
+    const call = executor.mock.calls[0]
+    expect(call[0]).toBe('gh')
+    const args: string[] = call[1]
+    expect(args).toContain('graphql')
+    expect(args.some((arg) => arg.includes('addPullRequestReviewThreadReply'))).toBe(true)
+    expect(args).toContain('threadId=PRRT_node123')
+    expect(args).toContain('body=Done!')
+    expect(call[2]).toBe('/tmp')
     expect(result.succeeded).toBe(1)
   })
 
