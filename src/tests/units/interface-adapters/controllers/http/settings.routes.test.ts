@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify from 'fastify'
 import type { FastifyInstance } from 'fastify'
 import { settingsRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/settings.routes.js'
-import { setModel } from '@/frameworks/settings/runtimeSettings.js'
+import { setModel, setTriggerMode } from '@/frameworks/settings/runtimeSettings.js'
 
 describe('settings routes', () => {
   let application: FastifyInstance
@@ -25,6 +25,48 @@ describe('settings routes', () => {
       const body = JSON.parse(response.body)
       expect(response.statusCode).toBe(200)
       expect(body.model).toBe('sonnet')
+    })
+  })
+
+  describe('GET /api/settings/triggerMode', () => {
+    it('should return the current trigger mode', async () => {
+      await setTriggerMode('semi-auto')
+
+      const response = await application.inject({
+        method: 'GET',
+        url: '/api/settings/triggerMode',
+      })
+
+      const body = JSON.parse(response.body)
+      expect(response.statusCode).toBe(200)
+      expect(body.triggerMode).toBe('semi-auto')
+    })
+  })
+
+  describe('POST /api/settings/triggerMode', () => {
+    it('should persist a valid trigger mode', async () => {
+      const response = await application.inject({
+        method: 'POST',
+        url: '/api/settings/triggerMode',
+        payload: { triggerMode: 'full-auto' },
+      })
+
+      const body = JSON.parse(response.body)
+      expect(response.statusCode).toBe(200)
+      expect(body.success).toBe(true)
+      expect(body.triggerMode).toBe('full-auto')
+    })
+
+    it('should reject an unknown trigger mode with 400', async () => {
+      const response = await application.inject({
+        method: 'POST',
+        url: '/api/settings/triggerMode',
+        payload: { triggerMode: 'manual' },
+      })
+
+      const body = JSON.parse(response.body)
+      expect(response.statusCode).toBe(400)
+      expect(body.success).toBe(false)
     })
   })
 })

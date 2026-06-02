@@ -26,6 +26,7 @@ const translations = {
     'card.completed': 'Completed',
     'card.claudeCli': 'Claude CLI',
     'card.model': 'Model',
+    'card.triggerMode': 'Trigger',
     'card.language': 'Language',
     'card.gitCli': 'Git CLI',
     'card.gitlabCli': 'GitLab CLI',
@@ -101,6 +102,10 @@ const translations = {
     // Model options
     'model.opus': 'Opus (powerful)',
     'model.sonnet': 'Sonnet (fast)',
+
+    // Trigger mode options
+    'triggerMode.fullAuto': 'Full auto',
+    'triggerMode.semiAuto': 'Semi auto (confirm)',
 
     // Status
     'status.connecting': 'Connecting...',
@@ -458,6 +463,7 @@ const translations = {
     'card.completed': 'Terminées',
     'card.claudeCli': 'Claude CLI',
     'card.model': 'Modèle',
+    'card.triggerMode': 'Déclenchement',
     'card.language': 'Langue',
     'card.gitCli': 'Git CLI',
     'card.gitlabCli': 'GitLab CLI',
@@ -533,6 +539,10 @@ const translations = {
     // Model options
     'model.opus': 'Opus (puissant)',
     'model.sonnet': 'Sonnet (rapide)',
+
+    // Trigger mode options
+    'triggerMode.fullAuto': 'Auto complet',
+    'triggerMode.semiAuto': 'Semi-auto (confirmation)',
 
     // Status
     'status.connecting': 'Connexion...',

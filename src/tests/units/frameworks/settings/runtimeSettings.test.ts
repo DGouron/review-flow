@@ -10,10 +10,13 @@ import {
   setDefaultLanguage,
   getModel,
   setModel,
+  getTriggerMode,
+  setTriggerMode,
   getSettings,
   __resetForTestsOnly,
   type ClaudeModel,
 } from '@/frameworks/settings/runtimeSettings.js';
+import type { TriggerMode } from '@/modules/shared-kernel/entities/triggerMode/triggerMode.schema.js';
 
 describe('runtimeSettings', () => {
   describe('in-memory API (no path configured)', () => {
@@ -67,7 +70,12 @@ describe('runtimeSettings', () => {
 
         expect(existsSync(settingsPath)).toBe(true);
         const written = JSON.parse(readFileSync(settingsPath, 'utf-8'));
-        expect(written).toEqual({ language: 'en', model: 'opus', worktreeStaleThresholdHours: 24 });
+        expect(written).toEqual({
+          language: 'en',
+          model: 'opus',
+          worktreeStaleThresholdHours: 24,
+          triggerMode: null,
+        });
       });
 
       it('falls back to defaults silently when file is malformed JSON', async () => {
@@ -143,7 +151,69 @@ describe('runtimeSettings', () => {
         await Promise.all([setModel('sonnet'), setDefaultLanguage('fr')]);
 
         const written = JSON.parse(readFileSync(settingsPath, 'utf-8'));
-        expect(written).toEqual({ language: 'fr', model: 'sonnet', worktreeStaleThresholdHours: 24 });
+        expect(written).toEqual({
+          language: 'fr',
+          model: 'sonnet',
+          worktreeStaleThresholdHours: 24,
+          triggerMode: null,
+        });
+      });
+    });
+
+    describe('triggerMode', () => {
+      it('defaults to null when no settings file exists', async () => {
+        await loadSettingsFromDisk();
+
+        expect(getTriggerMode()).toBeNull();
+      });
+
+      it('restores triggerMode from an existing file', async () => {
+        writeFileSync(
+          settingsPath,
+          JSON.stringify({ language: 'en', model: 'opus', triggerMode: 'semi-auto' }),
+        );
+
+        await loadSettingsFromDisk();
+
+        expect(getTriggerMode()).toBe('semi-auto');
+      });
+
+      it('falls back to null when the persisted trigger mode is unknown', async () => {
+        writeFileSync(
+          settingsPath,
+          JSON.stringify({ language: 'en', model: 'opus', triggerMode: 'manual' }),
+        );
+
+        await loadSettingsFromDisk();
+
+        expect(getTriggerMode()).toBeNull();
+      });
+
+      it('persists triggerMode to disk after setTriggerMode', async () => {
+        await loadSettingsFromDisk();
+
+        await setTriggerMode('semi-auto');
+
+        const written = JSON.parse(readFileSync(settingsPath, 'utf-8'));
+        expect(written.triggerMode).toBe('semi-auto');
+        expect(getTriggerMode()).toBe('semi-auto');
+      });
+
+      it('survives a simulated process restart', async () => {
+        await loadSettingsFromDisk();
+        await setTriggerMode('semi-auto');
+
+        __resetForTestsOnly();
+        configureSettingsPath(settingsPath);
+        await loadSettingsFromDisk();
+
+        expect(getTriggerMode()).toBe('semi-auto');
+      });
+
+      it('throws when setTriggerMode receives an unknown trigger mode', async () => {
+        await loadSettingsFromDisk();
+
+        await expect(setTriggerMode('manual' as TriggerMode)).rejects.toThrow(/Invalid trigger mode/);
       });
     });
 

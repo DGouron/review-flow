@@ -50,7 +50,7 @@ describe('GateClaudeInvocationUseCase', () => {
   describe('Rule: full-auto delegates directly to enqueue', () => {
     it('returns enqueued status and invokes the processor', async () => {
       const useCase = new GateClaudeInvocationUseCase({
-        triggerMode: 'full-auto',
+        getTriggerMode: () => 'full-auto',
         pendingReviewRequestGateway: gateway,
         enqueue: enqueueSuccess,
         broadcastPendingChanged: () => {},
@@ -71,7 +71,7 @@ describe('GateClaudeInvocationUseCase', () => {
     it('returns rejected status when enqueue refuses the job', async () => {
       const enqueueRejects = async (): Promise<boolean> => false;
       const useCase = new GateClaudeInvocationUseCase({
-        triggerMode: 'full-auto',
+        getTriggerMode: () => 'full-auto',
         pendingReviewRequestGateway: gateway,
         enqueue: enqueueRejects,
         broadcastPendingChanged: () => {},
@@ -91,7 +91,7 @@ describe('GateClaudeInvocationUseCase', () => {
   describe('Rule: semi-auto persists a pending request and skips enqueue', () => {
     it('saves the pending request and never calls enqueue', async () => {
       const useCase = new GateClaudeInvocationUseCase({
-        triggerMode: 'semi-auto',
+        getTriggerMode: () => 'semi-auto',
         pendingReviewRequestGateway: gateway,
         enqueue: enqueueSuccess,
         broadcastPendingChanged: () => {
@@ -115,7 +115,7 @@ describe('GateClaudeInvocationUseCase', () => {
 
     it('persists followup job type when triggered from webhook-followup source', async () => {
       const useCase = new GateClaudeInvocationUseCase({
-        triggerMode: 'semi-auto',
+        getTriggerMode: () => 'semi-auto',
         pendingReviewRequestGateway: gateway,
         enqueue: enqueueSuccess,
         broadcastPendingChanged: () => {},
@@ -136,7 +136,7 @@ describe('GateClaudeInvocationUseCase', () => {
 
     it('full-auto followup is unchanged: delegates to enqueue and invokes Claude', async () => {
       const useCase = new GateClaudeInvocationUseCase({
-        triggerMode: 'full-auto',
+        getTriggerMode: () => 'full-auto',
         pendingReviewRequestGateway: gateway,
         enqueue: enqueueSuccess,
         broadcastPendingChanged: () => {},
@@ -155,10 +155,41 @@ describe('GateClaudeInvocationUseCase', () => {
     });
   });
 
+  describe('Rule: trigger mode is read live on every gate (runtime-mutable)', () => {
+    it('reflects a trigger-mode change between two executions without reconstruction', async () => {
+      let mode: 'full-auto' | 'semi-auto' = 'semi-auto';
+      const useCase = new GateClaudeInvocationUseCase({
+        getTriggerMode: () => mode,
+        pendingReviewRequestGateway: gateway,
+        enqueue: enqueueSuccess,
+        broadcastPendingChanged: () => {},
+        logger,
+      });
+
+      const first = await useCase.execute({
+        job: buildReviewJob(),
+        triggerSource: 'webhook-initial',
+        processor,
+      });
+      expect(first.status).toBe('pending');
+      expect(enqueueCalls).toHaveLength(0);
+
+      mode = 'full-auto';
+
+      const second = await useCase.execute({
+        job: buildReviewJob(),
+        triggerSource: 'webhook-initial',
+        processor,
+      });
+      expect(second.status).toBe('enqueued');
+      expect(enqueueCalls).toHaveLength(1);
+    });
+  });
+
   describe('Rule: a non-trusted actor parks pending even in full-auto (SPEC-197)', () => {
     it('parks the job and never enqueues when actorTrusted is false', async () => {
       const useCase = new GateClaudeInvocationUseCase({
-        triggerMode: 'full-auto',
+        getTriggerMode: () => 'full-auto',
         pendingReviewRequestGateway: gateway,
         enqueue: enqueueSuccess,
         broadcastPendingChanged: () => {
@@ -183,7 +214,7 @@ describe('GateClaudeInvocationUseCase', () => {
 
     it('enqueues normally in full-auto when actorTrusted is true', async () => {
       const useCase = new GateClaudeInvocationUseCase({
-        triggerMode: 'full-auto',
+        getTriggerMode: () => 'full-auto',
         pendingReviewRequestGateway: gateway,
         enqueue: enqueueSuccess,
         broadcastPendingChanged: () => {},

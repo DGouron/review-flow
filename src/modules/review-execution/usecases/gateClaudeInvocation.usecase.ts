@@ -6,8 +6,9 @@ import type {
   PendingReviewRequest,
   TriggerSource,
 } from '@/modules/review-execution/entities/pendingReviewRequest/pendingReviewRequest.schema.js';
+import type { TriggerMode } from '@/modules/shared-kernel/entities/triggerMode/triggerMode.schema.js';
 
-export type TriggerMode = 'full-auto' | 'semi-auto';
+export type { TriggerMode };
 
 export type GateClaudeInvocationProcessor = (
   job: ReviewJob,
@@ -20,7 +21,7 @@ export type EnqueueReviewFunction = (
 ) => Promise<boolean>;
 
 export interface GateClaudeInvocationDependencies {
-  triggerMode: TriggerMode;
+  getTriggerMode: () => TriggerMode;
   pendingReviewRequestGateway: PendingReviewRequestGateway;
   enqueue: EnqueueReviewFunction;
   broadcastPendingChanged: (pending: PendingReviewRequest) => void;
@@ -53,8 +54,9 @@ export class GateClaudeInvocationUseCase {
   constructor(private readonly deps: GateClaudeInvocationDependencies) {}
 
   async execute(input: GateClaudeInvocationInput): Promise<GateClaudeInvocationResult> {
-    const { triggerMode, pendingReviewRequestGateway, enqueue, broadcastPendingChanged, logger } = this.deps;
+    const { getTriggerMode, pendingReviewRequestGateway, enqueue, broadcastPendingChanged, logger } = this.deps;
 
+    const triggerMode = getTriggerMode();
     const actorParks = input.actorTrusted === false;
 
     if (triggerMode === 'full-auto' && !actorParks) {

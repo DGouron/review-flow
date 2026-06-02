@@ -119,7 +119,13 @@ import { SelfUpdateCliGateway } from '@/modules/cli-configuration/interface-adap
 import { InstallTypeDetectorFsGateway } from '@/modules/cli-configuration/interface-adapters/gateways/installTypeDetector.fs.gateway.js';
 import { broadcastBackfillProgress } from '@/main/websocket.js';
 import { AiInsightsSessionClaudeGateway } from '@/modules/statistics-insights/interface-adapters/gateways/aiInsightsSession.claude.gateway.js';
-import { getDefaultLanguage, getModel, getWorktreeStaleThresholdHours } from '@/frameworks/settings/runtimeSettings.js';
+import {
+  getDefaultLanguage,
+  getModel,
+  getTriggerMode,
+  getWorktreeStaleThresholdHours,
+  setTriggerMode,
+} from '@/frameworks/settings/runtimeSettings.js';
 import { detectDegradedWorktrees } from '@/modules/worktree-management/usecases/detectDegradedWorktrees.usecase.js';
 import type {
   RemoveResult,
@@ -271,8 +277,13 @@ export async function registerRoutes(
     },
     logger: deps.logger,
   });
+  // Seed the runtime-mutable trigger mode from config.json on first boot. From
+  // then on the dashboard setting is authoritative; config.json is the default.
+  if (getTriggerMode() === null) {
+    await setTriggerMode(deps.config.triggerMode);
+  }
   const gateClaudeInvocation = new GateClaudeInvocationUseCase({
-    triggerMode: deps.config.triggerMode,
+    getTriggerMode: () => getTriggerMode() ?? deps.config.triggerMode,
     pendingReviewRequestGateway,
     enqueue: enqueueReview,
     broadcastPendingChanged: () => broadcastPendingChanged(),

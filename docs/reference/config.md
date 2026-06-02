@@ -27,6 +27,7 @@ The system uses two configuration files:
 
 ```json
 {
+  "triggerMode": "full-auto",
   "server": {
     "port": 3847
   },
@@ -52,6 +53,14 @@ The system uses two configuration files:
 ```
 
 ### Fields
+
+#### `triggerMode`
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `triggerMode` | `"full-auto"` \| `"semi-auto"` | `"full-auto"` | When a review/follow-up is triggered. `full-auto` enqueues it immediately; `semi-auto` parks it as **pending** and waits for manual confirmation (dashboard or `POST /api/pending-reviews/:id/confirm`). |
+
+The value in `config.json` is the **boot default**. It can be changed at runtime from the dashboard (the `Trigger` chip); the dashboard choice is persisted to `~/.claude-review/settings.json` and takes effect immediately without a restart, overriding `config.json` from then on. A non-trusted actor is always parked regardless of mode (SPEC-197).
 
 #### `server`
 

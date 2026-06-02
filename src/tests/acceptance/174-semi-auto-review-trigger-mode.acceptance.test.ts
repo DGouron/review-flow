@@ -64,7 +64,7 @@ describe('Acceptance — SPEC-174: Semi-automatic review trigger mode', () => {
   describe('Rule: semi-auto initial review parks the job instead of invoking Claude', () => {
     it('produces a persisted pending review and never invokes Claude', async () => {
       const useCase = new GateClaudeInvocationUseCase({
-        triggerMode: 'semi-auto',
+        getTriggerMode: () => 'semi-auto',
         pendingReviewRequestGateway: gateway,
         enqueue: fakeEnqueue,
         broadcastPendingChanged: () => {},
@@ -95,7 +95,7 @@ describe('Acceptance — SPEC-174: Semi-automatic review trigger mode', () => {
   describe('Rule: confirming a pending job invokes Claude exactly once', () => {
     it('confirms then enqueues + invokes Claude + deletes the pending file', async () => {
       const gateUseCase = new GateClaudeInvocationUseCase({
-        triggerMode: 'semi-auto',
+        getTriggerMode: () => 'semi-auto',
         pendingReviewRequestGateway: gateway,
         enqueue: fakeEnqueue,
         broadcastPendingChanged: () => {},
@@ -132,7 +132,7 @@ describe('Acceptance — SPEC-174: Semi-automatic review trigger mode', () => {
   describe('Rule: dismissing a pending job removes it without invoking Claude', () => {
     it('dismisses then deletes the pending file and never invokes Claude', async () => {
       const gateUseCase = new GateClaudeInvocationUseCase({
-        triggerMode: 'semi-auto',
+        getTriggerMode: () => 'semi-auto',
         pendingReviewRequestGateway: gateway,
         enqueue: fakeEnqueue,
         broadcastPendingChanged: () => {},
