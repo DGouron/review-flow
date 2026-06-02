@@ -75,6 +75,17 @@ export const setupWizardRoutes: FastifyPluginAsync<SetupWizardRoutesOptions> = a
     return { status: 'written' };
   });
 
+  fastify.post('/api/setup/cancel', async (_request, reply) => {
+    const result = registry.cancel();
+    if (result.status === 'no-active-run') {
+      reply.code(409);
+      return { error: 'no-active-run' };
+    }
+
+    logger.info('Setup wizard run cancelled');
+    return { status: 'cancelled' };
+  });
+
   fastify.get('/api/setup/state', async () => {
     const loaded = setupStateGateway.load();
     return { state: loaded.state, corrupted: loaded.corrupted };

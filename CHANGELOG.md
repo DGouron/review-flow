@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.36.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.35.0...reviewflow-v3.36.0) (2026-06-02)
+
+
+### Added
+
+* **settings:** expose trigger mode as a dashboard-editable runtime setting ([6319e2f](https://github.com/DGouron/review-flow/commit/6319e2fadb29cda62f308eadf7b47abb7bf726d1))
+
+## [3.35.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.34.0...reviewflow-v3.35.0) (2026-06-02)
+
+
+### Added
+
+* **review:** implement spec-202 confirm pending review runs real review ([9fe4cd8](https://github.com/DGouron/review-flow/commit/9fe4cd8221d0f890ae126b98dd425784549b324c))
+* **review:** spec-202 confirm pending review runs the real review (+ A-ux double-click guard) ([4e3c645](https://github.com/DGouron/review-flow/commit/4e3c645ff64f3cbf624df2f95e767c8b10bff224))
+
+
+### Fixed
+
+* [#270](https://github.com/DGouron/review-flow/issues/270) create isolated HOME/config dirs for the scoped GitLab executor ([86729a2](https://github.com/DGouron/review-flow/commit/86729a2da784bdc081a0c8beafe6b154b1bf3a96))
+* [#270](https://github.com/DGouron/review-flow/issues/270) create isolated HOME/config dirs for the scoped GitLab executor (ENOENT) ([e77a7bb](https://github.com/DGouron/review-flow/commit/e77a7bbfe5e57b29f10276cf9f1cb6b1437ecb5a))
+* [#273](https://github.com/DGouron/review-flow/issues/273) write scoped glab config at GLAB_CONFIG_DIR root (was 401) ([a96ef94](https://github.com/DGouron/review-flow/commit/a96ef9449d32196163971c0a69151df82ae484c4))
+* [#273](https://github.com/DGouron/review-flow/issues/273) write scoped glab config at GLAB_CONFIG_DIR root, not a glab-cli subdir ([a53a183](https://github.com/DGouron/review-flow/commit/a53a1837316308d19644d41e5c641f04cbd62d95))
+* [#276](https://github.com/DGouron/review-flow/issues/276) shell-quote comment body so the review report posts (no more /bin/sh error) ([dba8a5f](https://github.com/DGouron/review-flow/commit/dba8a5f60b5dbfa9ac3909d5c29d2e4e8b77a398))
+* [#276](https://github.com/DGouron/review-flow/issues/276) shell-quote the comment body so the review report can be posted ([68f369d](https://github.com/DGouron/review-flow/commit/68f369dca4e5ef0f7c9e7698ad9656370093f56c))
+* **dashboard:** add missing styles for pending review card and actions ([5bf8bf6](https://github.com/DGouron/review-flow/commit/5bf8bf696f2cdf234e30a69ae340b9c0ea914ef2))
+* **dashboard:** guard pending review actions against double submit ([edc1256](https://github.com/DGouron/review-flow/commit/edc12566032f2b3e03ae2ea8e5d16e247f87b2c0))
+* **dashboard:** style pending review card and confirm/dismiss buttons ([c4a203c](https://github.com/DGouron/review-flow/commit/c4a203c72275b99ce07b05b836235f4c50267451))
+* resolve follow-up threads and post GitHub replies in-thread ([4040bd4](https://github.com/DGouron/review-flow/commit/4040bd4d5dee74658a917eb145b3e212d1c34636))
+* resolve follow-up threads and post GitHub replies in-thread ([44ca36e](https://github.com/DGouron/review-flow/commit/44ca36e7e4e84a7e76ce16fc57e42989319b8e78))
+
 ## [3.34.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.33.0...reviewflow-v3.34.0) (2026-05-30)
 
 

@@ -76,6 +76,13 @@
             <option value="sonnet" id="i18n-model-sonnet"></option>
           </select>
         </div>
+        <div class="toolchain-chip toolchain-chip-model">
+          <span class="toolchain-chip-label" id="i18n-card-trigger-mode"></span>
+          <select id="trigger-mode-select" class="model-select" onchange="changeTriggerMode(this.value)">
+            <option value="full-auto" id="i18n-trigger-mode-full-auto"></option>
+            <option value="semi-auto" id="i18n-trigger-mode-semi-auto"></option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -2428,6 +2435,35 @@
       }
     }
 
+    async function loadTriggerModeSetting() {
+      try {
+        const response = await fetch(`${API_URL}/api/settings/triggerMode`);
+        const data = await response.json();
+        const select = document.getElementById('trigger-mode-select');
+        if (select && data.triggerMode) {
+          select.value = data.triggerMode;
+        }
+      } catch (error) {
+        console.error('Error loading trigger mode setting:', error);
+      }
+    }
+
+    async function changeTriggerMode(triggerMode) {
+      try {
+        const response = await fetch(`${API_URL}/api/settings/triggerMode`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ triggerMode })
+        });
+        const data = await response.json();
+        if (data.success) {
+          console.log('Trigger mode changed to:', triggerMode);
+        }
+      } catch (error) {
+        console.error('Error changing trigger mode:', error);
+      }
+    }
+
     async function loadLanguageSetting() {
       try {
         const response = await fetch(`${API_URL}/api/settings`);
@@ -3204,6 +3240,9 @@
       const cardModel = document.getElementById('i18n-card-model');
       if (cardModel) cardModel.textContent = t('card.model');
 
+      const cardTriggerMode = document.getElementById('i18n-card-trigger-mode');
+      if (cardTriggerMode) cardTriggerMode.textContent = t('card.triggerMode');
+
       const cardLanguage = document.getElementById('i18n-card-language');
       if (cardLanguage) cardLanguage.textContent = t('card.language');
 
@@ -3233,6 +3272,13 @@
 
       const modelSonnet = document.getElementById('i18n-model-sonnet');
       if (modelSonnet) modelSonnet.textContent = t('model.sonnet');
+
+      // Trigger mode options
+      const triggerModeFullAuto = document.getElementById('i18n-trigger-mode-full-auto');
+      if (triggerModeFullAuto) triggerModeFullAuto.textContent = t('triggerMode.fullAuto');
+
+      const triggerModeSemiAuto = document.getElementById('i18n-trigger-mode-semi-auto');
+      if (triggerModeSemiAuto) triggerModeSemiAuto.textContent = t('triggerMode.semiAuto');
 
       // Login sections
       const claudeLoginTitle = document.getElementById('i18n-claude-login-title');
@@ -3543,6 +3589,7 @@
     fetchStatus();
     checkClaudeStatus();
     loadModelSetting();
+    loadTriggerModeSetting();
     loadLanguageSetting();
     initOverviewAndTabs();
     refreshBudgetTile();
