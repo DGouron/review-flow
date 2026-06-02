@@ -13,6 +13,7 @@ import type { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/sy
 import { parseReviewOutput } from '@/modules/statistics-insights/services/statsService.js';
 import { parseThreadActions } from '@/modules/review-execution/services/threadActionsParser.js';
 import { executeThreadActions, defaultCommandExecutor } from '@/modules/review-execution/services/threadActionsExecutor.js';
+import { executeActionsFromContext } from '@/modules/review-execution/services/contextActionsExecutor.js';
 import type { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
 import type { GitHubThreadFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.github.gateway.js';
 import type { GitLabThreadFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
@@ -248,18 +249,34 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
         const mcpActions = reviewContext?.actions ?? [];
         const markerActions = parseThreadActions(result.stdout);
 
-        // Combine actions (MCP takes priority, markers as fallback)
-        const threadActions = mcpActions.length > 0 ? mcpActions : markerActions;
-
         let threadResolveCount = 0;
-        if (threadActions.length > 0) {
-          threadResolveCount = threadActions.filter(a => a.type === 'THREAD_RESOLVE').length;
+        if (reviewContext && mcpActions.length > 0) {
+          // Primary path: MCP actions execute against the authenticated context inventory,
+          // which re-admits THREAD_RESOLVE for threads owned by this MR (forged ids stay dropped).
+          threadResolveCount = mcpActions.filter(a => a.type === 'THREAD_RESOLVE').length;
           logger.info(
-            { mcpActionsCount: mcpActions.length, markerActionsCount: markerActions.length, mrNumber: job.mrNumber },
+            { mcpActionsCount: mcpActions.length, mrNumber: job.mrNumber },
+            'Executing thread actions'
+          );
+          const actionResult = await executeActionsFromContext(
+            reviewContext,
+            job.localPath,
+            logger,
+            defaultCommandExecutor
+          );
+          logger.info(
+            { ...actionResult, threadResolveCount, mrNumber: job.mrNumber },
+            'Thread actions executed for manual followup'
+          );
+        } else if (markerActions.length > 0) {
+          // Legacy fallback: stdout markers carry no authenticated inventory, so resolves stay dropped.
+          threadResolveCount = markerActions.filter(a => a.type === 'THREAD_RESOLVE').length;
+          logger.info(
+            { markerActionsCount: markerActions.length, mrNumber: job.mrNumber },
             'Executing thread actions'
           );
           const actionResult = await executeThreadActions(
-            threadActions,
+            markerActions,
             {
               platform: job.platform,
               projectPath: job.projectPath,

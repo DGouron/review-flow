@@ -117,6 +117,90 @@ describe('executeActionsFromContext (auto path, capability-bounded)', () => {
     )
   })
 
+  describe('inventory-gated THREAD_RESOLVE re-admission', () => {
+    const thread = (id: string) => ({
+      id,
+      file: null,
+      line: null,
+      status: 'open' as const,
+      body: 'previous review note',
+    })
+
+    it('executes THREAD_RESOLVE when the threadId is in the authenticated thread inventory', async () => {
+      const context: ReviewContext = {
+        ...baseContext,
+        platform: 'gitlab',
+        projectPath: 'group/proj',
+        mergeRequestNumber: 5,
+        threads: [thread('disc-1')],
+        actions: [{ type: 'THREAD_RESOLVE', threadId: 'disc-1' }],
+      }
+
+      const result = await executeActionsFromContext(context, '/tmp/repo', mockLogger, mockExecutor)
+
+      expect(result.total).toBe(1)
+      expect(result.succeeded).toBe(1)
+      expect(mockExecutor).toHaveBeenCalledWith(
+        'glab',
+        expect.arrayContaining(['resolved=true']),
+        '/tmp/repo'
+      )
+    })
+
+    it('drops THREAD_RESOLVE whose threadId is not in the authenticated inventory (forged id)', async () => {
+      const context: ReviewContext = {
+        ...baseContext,
+        platform: 'gitlab',
+        threads: [thread('disc-1')],
+        actions: [{ type: 'THREAD_RESOLVE', threadId: 'forged-999' }],
+      }
+
+      const result = await executeActionsFromContext(context, '/tmp/repo', mockLogger, mockExecutor)
+
+      expect(result.total).toBe(0)
+      expect(mockExecutor).not.toHaveBeenCalled()
+    })
+
+    it('trims the threadId before checking inventory membership', async () => {
+      const context: ReviewContext = {
+        ...baseContext,
+        platform: 'gitlab',
+        threads: [thread('disc-1')],
+        actions: [{ type: 'THREAD_RESOLVE', threadId: 'disc-1 ' }],
+      }
+
+      const result = await executeActionsFromContext(context, '/tmp/repo', mockLogger, mockExecutor)
+
+      expect(result.succeeded).toBe(1)
+      const resolveArgs = mockExecutor.mock.calls[0][1] as string[]
+      const discussionArg = resolveArgs.find(arg => arg.includes('/discussions/'))
+      expect(discussionArg?.endsWith('discussions/disc-1')).toBe(true)
+      expect(resolveArgs).toContain('resolved=true')
+    })
+
+    it('posts the reply before resolving, then resolves the in-inventory thread', async () => {
+      const context: ReviewContext = {
+        ...baseContext,
+        platform: 'gitlab',
+        threads: [thread('disc-1')],
+        actions: [
+          { type: 'THREAD_RESOLVE', threadId: 'disc-1' },
+          { type: 'THREAD_REPLY', threadId: 'disc-1', message: 'Fixed' },
+        ],
+      }
+
+      const result = await executeActionsFromContext(context, '/tmp/repo', mockLogger, mockExecutor)
+
+      expect(result.total).toBe(2)
+      expect(result.succeeded).toBe(2)
+      const commands = mockExecutor.mock.calls.map((call) => (call[1] as string[]).join(' '))
+      const replyIndex = commands.findIndex((command) => command.includes('discussions/disc-1/notes'))
+      const resolveIndex = commands.findIndex((command) => command.includes('resolved=true'))
+      expect(replyIndex).toBeGreaterThanOrEqual(0)
+      expect(resolveIndex).toBeGreaterThan(replyIndex)
+    })
+  })
+
   it('continues executing when one allowed action fails', async () => {
     mockExecutor.mockImplementationOnce(() => {
       throw new Error('API error')
