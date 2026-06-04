@@ -27,9 +27,14 @@ export class ClaudeAuthCliGateway implements ClaudeAuthGateway {
       return false;
     }
     try {
-      const output = this.executor('claude /status', { stdio: 'pipe' });
-      const text = output.toString().toLowerCase();
-      return !text.includes('not logged in') && !text.includes('please login');
+      const output = this.executor('claude auth status', { stdio: 'pipe' });
+      const parsed: unknown = JSON.parse(output.toString());
+      return (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        'loggedIn' in parsed &&
+        parsed.loggedIn === true
+      );
     } catch {
       return false;
     }
