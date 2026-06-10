@@ -31,12 +31,7 @@ export interface CleanupResult {
   warning: string | null;
 }
 
-export type AgentStatusValue =
-  | 'running'
-  | 'completed'
-  | 'failed'
-  | 'stopped'
-  | 'unknown';
+export type AgentStatusValue = 'running' | 'completed' | 'failed' | 'stopped' | 'unknown';
 
 export interface AgentStatusEntry {
   sessionId: SessionId;

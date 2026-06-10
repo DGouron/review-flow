@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { checkSupervisorHealth } from '@/modules/claude-invocation/usecases/checkSupervisorHealth.usecase.js';
 import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
 import { StubSupervisorHealthGateway } from '@/tests/stubs/supervisorHealth.stub.js';

@@ -1,9 +1,10 @@
 import type { Logger } from 'pino';
-import type { GetBudgetStatusUseCase } from '@/modules/token-accounting/usecases/getBudgetStatus/getBudgetStatus.usecase.js';
+
 import type {
   BudgetStatusPresenter,
   BudgetStatusViewModel,
 } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
+import type { GetBudgetStatusUseCase } from '@/modules/token-accounting/usecases/getBudgetStatus/getBudgetStatus.usecase.js';
 
 export interface BroadcastBudgetDependencies {
   getBudgetStatus: Pick<GetBudgetStatusUseCase, 'execute'>;

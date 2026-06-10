@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   ReadLogsUseCase,
   type ReadLogsDependencies,
@@ -13,9 +14,7 @@ function createFakeInput(overrides?: Partial<ReadLogsInput>): ReadLogsInput {
   };
 }
 
-function createFakeDeps(
-  overrides?: Partial<ReadLogsDependencies>,
-): ReadLogsDependencies {
+function createFakeDeps(overrides?: Partial<ReadLogsDependencies>): ReadLogsDependencies {
   return {
     logFileExists: vi.fn(() => false),
     readLastLines: vi.fn(() => []),

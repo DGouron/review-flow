@@ -43,9 +43,7 @@ export function buildHeaderCapacityViewModel(input) {
  * @returns {string}
  */
 export function renderHeaderCapacityBadgeHtml(viewModel) {
-  const saturatedClass = viewModel.isSaturated
-    ? ' header-capacity-badge--saturated'
-    : '';
+  const saturatedClass = viewModel.isSaturated ? ' header-capacity-badge--saturated' : '';
   const titleText = viewModel.isSaturated
     ? 'Capacité saturée — les prochaines reviews sont mises en attente'
     : 'Reviews en cours / capacité totale (toutes projets confondus)';

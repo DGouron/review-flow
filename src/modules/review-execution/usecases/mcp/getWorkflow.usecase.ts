@@ -1,29 +1,29 @@
-import type { ReviewProgressGateway } from "../../entities/progress/progress.gateway.js";
-import type { ReviewPhase } from "../../entities/progress/progress.type.js";
+import type { ReviewProgressGateway } from '../../entities/progress/progress.gateway.js';
+import type { ReviewPhase } from '../../entities/progress/progress.type.js';
 
 export interface WorkflowAgent {
-	name: string;
-	displayName: string;
-	status: string;
+  name: string;
+  displayName: string;
+  status: string;
 }
 
 export interface WorkflowCurrentState {
-	phase: ReviewPhase;
-	overallProgress: number;
+  phase: ReviewPhase;
+  overallProgress: number;
 }
 
 export interface Workflow {
-	agents: WorkflowAgent[];
-	instructions: string;
-	currentState: WorkflowCurrentState;
+  agents: WorkflowAgent[];
+  instructions: string;
+  currentState: WorkflowCurrentState;
 }
 
 export type GetWorkflowResult =
-	| { success: true; workflow: Workflow }
-	| { success: false; error: string };
+  | { success: true; workflow: Workflow }
+  | { success: false; error: string };
 
 export interface GetWorkflowDependencies {
-	progressGateway: ReviewProgressGateway;
+  progressGateway: ReviewProgressGateway;
 }
 
 const MCP_INSTRUCTIONS = `## MCP Review Workflow Instructions
@@ -36,36 +36,33 @@ const MCP_INSTRUCTIONS = `## MCP Review Workflow Instructions
 
 Always process agents in the order provided.`;
 
-export function getWorkflow(
-	jobId: string,
-	deps: GetWorkflowDependencies,
-): GetWorkflowResult {
-	const { progressGateway } = deps;
+export function getWorkflow(jobId: string, deps: GetWorkflowDependencies): GetWorkflowResult {
+  const { progressGateway } = deps;
 
-	const progress = progressGateway.getProgress(jobId);
+  const progress = progressGateway.getProgress(jobId);
 
-	if (!progress) {
-		return {
-			success: false,
-			error: `Workflow not found: ${jobId}`,
-		};
-	}
+  if (!progress) {
+    return {
+      success: false,
+      error: `Workflow not found: ${jobId}`,
+    };
+  }
 
-	const workflow: Workflow = {
-		agents: progress.agents.map((agent) => ({
-			name: agent.name,
-			displayName: agent.displayName,
-			status: agent.status,
-		})),
-		instructions: MCP_INSTRUCTIONS,
-		currentState: {
-			phase: progress.currentPhase,
-			overallProgress: progress.overallProgress,
-		},
-	};
+  const workflow: Workflow = {
+    agents: progress.agents.map((agent) => ({
+      name: agent.name,
+      displayName: agent.displayName,
+      status: agent.status,
+    })),
+    instructions: MCP_INSTRUCTIONS,
+    currentState: {
+      phase: progress.currentPhase,
+      overallProgress: progress.overallProgress,
+    },
+  };
 
-	return {
-		success: true,
-		workflow,
-	};
+  return {
+    success: true,
+    workflow,
+  };
 }

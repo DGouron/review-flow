@@ -1,6 +1,6 @@
-import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
 import type { BackfillProgress } from '@/modules/statistics-insights/entities/backfill/backfillProgress.js';
+import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import { backfillDiffStats } from '@/modules/statistics-insights/usecases/stats/backfillDiffStats.usecase.js';
 import { recalculateProjectStats } from '@/modules/statistics-insights/usecases/stats/recalculateProjectStats.usecase.js';
 
@@ -14,7 +14,10 @@ export interface RecalculateWithBackfillDependencies {
   statsGateway: StatsGateway;
   diffStatsFetchGateways: { gitlab: DiffStatsFetchGateway; github: DiffStatsFetchGateway } | null;
   onProgress: (progress: BackfillProgress) => void;
-  logger: { warn: (message: string, data?: unknown) => void; error: (message: string, data?: unknown) => void };
+  logger: {
+    warn: (message: string, data?: unknown) => void;
+    error: (message: string, data?: unknown) => void;
+  };
 }
 
 export async function recalculateWithBackfill(

@@ -10,11 +10,9 @@ vi.mock('@/frameworks/config/configLoader.js', () => ({
 }));
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import {
-  enqueueReview,
-  initQueue,
-  type ReviewJob,
-} from '@/frameworks/queue/pQueueAdapter.js';
+
+import { enqueueReview, initQueue } from '@/frameworks/queue/pQueueAdapter.js';
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 
 function createJob(overrides: Partial<ReviewJob>): ReviewJob {
@@ -34,7 +32,7 @@ function createJob(overrides: Partial<ReviewJob>): ReviewJob {
 }
 
 function nextTick(): Promise<void> {
-  return new Promise<void>(resolve => setImmediate(resolve));
+  return new Promise<void>((resolve) => setImmediate(resolve));
 }
 
 describe('pQueueAdapter - MR-scoped concurrency chain', () => {
@@ -44,24 +42,19 @@ describe('pQueueAdapter - MR-scoped concurrency chain', () => {
 
   it('serializes two enqueues with the same MR key (different job ids)', async () => {
     const events: string[] = [];
-    let releaseFirst: (() => void) | null = null;
-    const firstStarted = new Promise<void>(resolve => {
+    let releaseFirst: () => void = () => {};
+    const firstStarted = new Promise<void>((resolve) => {
       releaseFirst = resolve;
     });
 
     const freshJob = createJob({ id: 'gitlab:test-org/test-project:42', jobType: 'review' });
-    const followupJob = createJob({ id: 'gitlab-followup:test-org/test-project:42', jobType: 'followup' });
+    const followupJob = createJob({
+      id: 'gitlab-followup:test-org/test-project:42',
+      jobType: 'followup',
+    });
 
     const freshEnqueued = await enqueueReview(freshJob, async () => {
       events.push('fresh:start');
-      await new Promise<void>(resolve => {
-        const interval = setInterval(() => {
-          if (releaseFirst) {
-            clearInterval(interval);
-            resolve();
-          }
-        }, 5);
-      });
       await firstStarted;
       events.push('fresh:end');
     });
@@ -79,9 +72,9 @@ describe('pQueueAdapter - MR-scoped concurrency chain', () => {
     await nextTick();
     expect(events).toEqual(['fresh:start']);
 
-    releaseFirst!();
+    releaseFirst();
 
-    await new Promise<void>(resolve => setTimeout(resolve, 50));
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
     expect(events).toEqual(['fresh:start', 'fresh:end', 'followup:start', 'followup:end']);
   });
@@ -90,7 +83,7 @@ describe('pQueueAdapter - MR-scoped concurrency chain', () => {
     const events: string[] = [];
     const releases: Array<() => void> = [];
     const waitForRelease = (index: number): Promise<void> =>
-      new Promise<void>(resolve => {
+      new Promise<void>((resolve) => {
         releases[index] = resolve;
       });
 
@@ -117,14 +110,14 @@ describe('pQueueAdapter - MR-scoped concurrency chain', () => {
       events.push('B:end');
     });
 
-    await new Promise<void>(resolve => setTimeout(resolve, 20));
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
 
     expect(events).toContain('A:start');
     expect(events).toContain('B:start');
 
     releases[0]?.();
     releases[1]?.();
-    await new Promise<void>(resolve => setTimeout(resolve, 20));
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
 
     expect(events).toContain('A:end');
     expect(events).toContain('B:end');
@@ -141,7 +134,7 @@ describe('pQueueAdapter - MR-scoped concurrency chain', () => {
 
     await enqueueReview(job, async () => {});
 
-    await new Promise<void>(resolve => setTimeout(resolve, 20));
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
 
     expect(__getMrChainsSize()).toBe(0);
   });
@@ -154,12 +147,9 @@ describe('pQueueAdapter - SPEC-186 per-project concurrency cap', () => {
     __resetProjectConcurrencyState();
   });
 
-
-
   it('exposes getRunningCount and getTotalCapacity that reflect setProjectConcurrencyCap', async () => {
-    const { setProjectConcurrencyCap, getRunningCount, getTotalCapacity } = await import(
-      '@/frameworks/queue/pQueueAdapter.js'
-    );
+    const { setProjectConcurrencyCap, getRunningCount, getTotalCapacity } =
+      await import('@/frameworks/queue/pQueueAdapter.js');
     setProjectConcurrencyCap('/repos/A', 3);
     setProjectConcurrencyCap('/repos/B', 2);
 
@@ -168,9 +158,8 @@ describe('pQueueAdapter - SPEC-186 per-project concurrency cap', () => {
   });
 
   it('queues a third review for a project capped at 2 while the first two run', async () => {
-    const { setProjectConcurrencyCap, setGlobalConcurrency, getRunningCount } = await import(
-      '@/frameworks/queue/pQueueAdapter.js'
-    );
+    const { setProjectConcurrencyCap, setGlobalConcurrency, getRunningCount } =
+      await import('@/frameworks/queue/pQueueAdapter.js');
     setProjectConcurrencyCap('test-org/cap-2', 2);
     setGlobalConcurrency(10);
 
@@ -178,7 +167,7 @@ describe('pQueueAdapter - SPEC-186 per-project concurrency cap', () => {
     const completed: string[] = [];
 
     const makeProcessor = (label: string) => async () => {
-      await new Promise<void>(resolve => releases.push(resolve));
+      await new Promise<void>((resolve) => releases.push(resolve));
       completed.push(label);
     };
 
@@ -202,22 +191,22 @@ describe('pQueueAdapter - SPEC-186 per-project concurrency cap', () => {
     await enqueueReview(jobB, makeProcessor('B'));
     await enqueueReview(jobC, makeProcessor('C'));
 
-    await new Promise<void>(resolve => setTimeout(resolve, 40));
+    await new Promise<void>((resolve) => setTimeout(resolve, 40));
 
     expect(getRunningCount()).toBe(2);
     expect(completed).toEqual([]);
 
     releases[0]?.();
     releases[1]?.();
-    await new Promise<void>(resolve => setTimeout(resolve, 40));
+    await new Promise<void>((resolve) => setTimeout(resolve, 40));
 
-    expect(completed.sort()).toEqual(['A', 'B']);
+    expect(completed.toSorted()).toEqual(['A', 'B']);
     expect(getRunningCount()).toBe(1);
 
     releases[2]?.();
-    await new Promise<void>(resolve => setTimeout(resolve, 40));
+    await new Promise<void>((resolve) => setTimeout(resolve, 40));
 
-    expect(completed.sort()).toEqual(['A', 'B', 'C']);
+    expect(completed.toSorted()).toEqual(['A', 'B', 'C']);
     expect(getRunningCount()).toBe(0);
   });
 });
@@ -225,9 +214,8 @@ describe('pQueueAdapter - SPEC-186 per-project concurrency cap', () => {
 describe('pQueueAdapter - persist job record callback (SPEC-176)', () => {
   beforeEach(async () => {
     initQueue(createStubLogger());
-    const { setPersistJobRecordCallback, replaceCompletedJobs } = await import(
-      '@/frameworks/queue/pQueueAdapter.js'
-    );
+    const { setPersistJobRecordCallback, replaceCompletedJobs } =
+      await import('@/frameworks/queue/pQueueAdapter.js');
     setPersistJobRecordCallback(null);
     replaceCompletedJobs([]);
   });
@@ -243,7 +231,7 @@ describe('pQueueAdapter - persist job record callback (SPEC-176)', () => {
 
     await enqueueReview(job, async () => {});
 
-    await new Promise<void>(resolve => setTimeout(resolve, 30));
+    await new Promise<void>((resolve) => setTimeout(resolve, 30));
 
     expect(recorded).toEqual([{ jobId: 'gitlab:cb-success:1', aborted: false }]);
   });
@@ -261,7 +249,7 @@ describe('pQueueAdapter - persist job record callback (SPEC-176)', () => {
       throw new Error('boom');
     });
 
-    await new Promise<void>(resolve => setTimeout(resolve, 30));
+    await new Promise<void>((resolve) => setTimeout(resolve, 30));
 
     expect(recorded).toEqual([{ jobId: 'gitlab:cb-failed:1', status: 'failed' }]);
   });
@@ -276,7 +264,7 @@ describe('pQueueAdapter - persist job record callback (SPEC-176)', () => {
 
     await expect(enqueueReview(job, async () => {})).resolves.toBe(true);
 
-    await new Promise<void>(resolve => setTimeout(resolve, 30));
+    await new Promise<void>((resolve) => setTimeout(resolve, 30));
   });
 });
 
@@ -288,7 +276,8 @@ describe('pQueueAdapter - replaceCompletedJobs (SPEC-176)', () => {
   });
 
   it('seeds the in-memory completed list, capped at 20', async () => {
-    const { replaceCompletedJobs, getJobsStatus } = await import('@/frameworks/queue/pQueueAdapter.js');
+    const { replaceCompletedJobs, getJobsStatus } =
+      await import('@/frameworks/queue/pQueueAdapter.js');
     const records = Array.from({ length: 25 }, (_, index) => ({
       job: createJob({ id: `seed:${index}`, mrNumber: index }),
       status: 'completed' as const,
@@ -302,14 +291,11 @@ describe('pQueueAdapter - replaceCompletedJobs (SPEC-176)', () => {
   });
 
   it('clears the previous list before seeding', async () => {
-    const { replaceCompletedJobs, getJobsStatus } = await import('@/frameworks/queue/pQueueAdapter.js');
+    const { replaceCompletedJobs, getJobsStatus } =
+      await import('@/frameworks/queue/pQueueAdapter.js');
 
-    replaceCompletedJobs([
-      { job: createJob({ id: 'first', mrNumber: 1 }), status: 'completed' },
-    ]);
-    replaceCompletedJobs([
-      { job: createJob({ id: 'second', mrNumber: 2 }), status: 'completed' },
-    ]);
+    replaceCompletedJobs([{ job: createJob({ id: 'first', mrNumber: 1 }), status: 'completed' }]);
+    replaceCompletedJobs([{ job: createJob({ id: 'second', mrNumber: 2 }), status: 'completed' }]);
 
     const snapshot = getJobsStatus();
     expect(snapshot.recent.map((entry) => entry.id)).toEqual(['second']);

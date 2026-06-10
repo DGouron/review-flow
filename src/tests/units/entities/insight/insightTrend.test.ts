@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { insightTrendSchema, INSIGHT_TRENDS } from '@/modules/statistics-insights/entities/insight/insightTrend.js';
+
+import {
+  insightTrendSchema,
+  INSIGHT_TRENDS,
+} from '@/modules/statistics-insights/entities/insight/insightTrend.js';
 
 describe('InsightTrend', () => {
   it('should define three trend values', () => {

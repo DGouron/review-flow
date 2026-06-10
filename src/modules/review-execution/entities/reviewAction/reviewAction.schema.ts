@@ -1,37 +1,37 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
 export const threadResolveActionSchema = z.object({
   type: z.literal('THREAD_RESOLVE'),
   threadId: z.string(),
   message: z.string().optional(),
-})
+});
 
 export const postCommentActionSchema = z.object({
   type: z.literal('POST_COMMENT'),
   body: z.string(),
-})
+});
 
 export const threadReplyActionSchema = z.object({
   type: z.literal('THREAD_REPLY'),
   threadId: z.string(),
   message: z.string(),
-})
+});
 
 export const addLabelActionSchema = z.object({
   type: z.literal('ADD_LABEL'),
   label: z.string(),
-})
+});
 
 export const postInlineCommentActionSchema = z.object({
   type: z.literal('POST_INLINE_COMMENT'),
   filePath: z.string(),
   line: z.number(),
   body: z.string(),
-})
+});
 
 export const fetchThreadsActionSchema = z.object({
   type: z.literal('FETCH_THREADS'),
-})
+});
 
 export const reviewActionSchema = z.discriminatedUnion('type', [
   threadResolveActionSchema,
@@ -40,4 +40,4 @@ export const reviewActionSchema = z.discriminatedUnion('type', [
   addLabelActionSchema,
   postInlineCommentActionSchema,
   fetchThreadsActionSchema,
-])
+]);

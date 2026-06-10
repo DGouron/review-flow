@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
 import { LoadRecentJobHistoryUseCase } from '@/modules/review-execution/usecases/jobHistory/loadRecentJobHistory.usecase.js';
-import { StubJobHistoryGateway } from '@/tests/stubs/jobHistory.stub.js';
 import { JobRecordFactory } from '@/tests/factories/jobRecord.factory.js';
 import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
+import { StubJobHistoryGateway } from '@/tests/stubs/jobHistory.stub.js';
 
 describe('LoadRecentJobHistoryUseCase', () => {
   let gateway: StubJobHistoryGateway;

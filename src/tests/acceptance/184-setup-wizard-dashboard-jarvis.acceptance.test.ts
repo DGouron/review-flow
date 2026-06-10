@@ -1,13 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { StubSetupProcessGateway } from '@/tests/stubs/setupProcess.stub.js';
-import { WizardStreamEventFactory } from '@/tests/factories/wizardStreamEvent.factory.js';
+
+import { buildStepRowsModel, buildBannerModel } from '@/dashboard/modules/setupWizard.js';
+import { STEP_IDS } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
 import { wizardStreamEventGuard } from '@/modules/setup-wizard/entities/wizardStreamEvent/wizardStreamEvent.guard.js';
 import type { WizardStreamEvent } from '@/modules/setup-wizard/entities/wizardStreamEvent/wizardStreamEvent.schema.js';
-import { STEP_IDS } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
-import {
-  buildStepRowsModel,
-  buildBannerModel,
-} from '@/dashboard/modules/setupWizard.js';
+import { WizardStreamEventFactory } from '@/tests/factories/wizardStreamEvent.factory.js';
+import { StubSetupProcessGateway } from '@/tests/stubs/setupProcess.stub.js';
 
 function collectEmittedLines(): string[] {
   const gateway = new StubSetupProcessGateway();
@@ -19,7 +17,9 @@ function collectEmittedLines(): string[] {
     gateway.emitLine(WizardStreamEventFactory.stepStarted({ step: stepId }));
     gateway.emitLine(WizardStreamEventFactory.stepCompleted({ step: stepId, status: 'succeeded' }));
   }
-  gateway.emitLine(WizardStreamEventFactory.resume({ resumeAt: 'add-project', position: 5, total: 10 }));
+  gateway.emitLine(
+    WizardStreamEventFactory.resume({ resumeAt: 'add-project', position: 5, total: 10 }),
+  );
   gateway.emitLine(WizardStreamEventFactory.done());
   gateway.exit(0);
 
@@ -77,7 +77,10 @@ describe('Setup Wizard Dashboard — Jarvis HUD (acceptance, Iteration A)', () =
 
   describe('the SSE boundary tolerates malformed subprocess output', () => {
     it('skips lines that are not valid wizard events', () => {
-      const malformed = wizardStreamEventGuard.safeParse({ step: 'not-a-real-step', status: 'weird' });
+      const malformed = wizardStreamEventGuard.safeParse({
+        step: 'not-a-real-step',
+        status: 'weird',
+      });
 
       expect(malformed.success).toBe(false);
     });

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
 
 describe('evaluateQualityGate', () => {

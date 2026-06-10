@@ -1,39 +1,42 @@
-import type { Config } from '../config/loader.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
-import type { StatsGateway } from '@/modules/statistics-insights/interface-adapters/gateways/stats.gateway.js';
-import type { ReviewFileGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewFile.gateway.js';
-import type { ReviewLogFileGateway } from '@/modules/data-lifecycle/interface-adapters/gateways/reviewLogFile.gateway.js';
-import type { ReviewContextGateway } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js';
-import type { InsightsGateway } from '@/modules/statistics-insights/entities/insight/insights.gateway.js';
-import type { SupervisorStatusStore } from '@/modules/supervisor-management/entities/supervisor/supervisorStatusStore.gateway.js';
-import { InMemorySupervisorStatusStore } from '@/modules/supervisor-management/interface-adapters/gateways/supervisorStatusStore.memory.gateway.js';
-import { FileSystemReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/fileSystem/reviewRequestTracking.fileSystem.js';
-import { FileSystemStatsGateway } from '@/modules/statistics-insights/interface-adapters/gateways/fileSystem/stats.fileSystem.js';
-import { FileSystemInsightsGateway } from '@/modules/statistics-insights/interface-adapters/gateways/fileSystem/insights.fileSystem.js';
-import { FileSystemReviewFileGateway } from '@/modules/review-execution/interface-adapters/gateways/fileSystem/reviewFile.fileSystem.js';
-import { FileSystemReviewLogFileGateway } from '@/modules/data-lifecycle/interface-adapters/gateways/fileSystem/reviewLogFile.fileSystem.gateway.js';
-import { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
-import { ReviewContextWatcherService } from '@/modules/review-execution/services/reviewContextWatcher.service.js';
-import { ReviewContextProgressPresenter } from '@/modules/review-execution/interface-adapters/presenters/reviewContextProgress.presenter.js';
-import { ProjectStatsCalculator } from '@/modules/statistics-insights/interface-adapters/presenters/projectStats.calculator.js';
+import { mkdirSync } from 'node:fs';
+
+import { pino, type Logger, type LoggerOptions } from 'pino';
+
 import {
   createDefaultClaudeInvocationDeps,
   type ClaudeInvocationDeps,
 } from '@/frameworks/claude/claudeInvoker.js';
-import { GitCommandCliGateway } from '@/modules/worktree-management/interface-adapters/gateways/gitCommand.cli.gateway.js';
-import { WorktreeFileSystemGateway } from '@/modules/worktree-management/interface-adapters/gateways/worktree.fileSystem.gateway.js';
-import { WorktreeSizeProbeCliGateway } from '@/modules/worktree-management/interface-adapters/gateways/worktreeSizeProbe.cli.gateway.js';
-import { WorktreePanelPresenter } from '@/modules/worktree-management/interface-adapters/presenters/worktreePanel.presenter.js';
-import { WorktreeHealthProbeFileSystemGateway } from '@/modules/worktree-management/interface-adapters/gateways/worktreeHealthProbe.fileSystem.gateway.js';
-import { InMemoryForceCleanupLockService } from '@/modules/worktree-management/services/forceCleanupLock.js';
+import type { ReviewLogFileGateway } from '@/modules/data-lifecycle/entities/reviewLog/reviewLogFile.gateway.js';
+import { FileSystemReviewLogFileGateway } from '@/modules/data-lifecycle/interface-adapters/gateways/fileSystem/reviewLogFile.fileSystem.gateway.js';
+import type { ReviewContextGateway } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js';
+import { FileSystemReviewFileGateway } from '@/modules/review-execution/interface-adapters/gateways/fileSystem/reviewFile.fileSystem.js';
+import { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
+import type { ReviewFileGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewFile.gateway.js';
+import { ReviewContextProgressPresenter } from '@/modules/review-execution/interface-adapters/presenters/reviewContextProgress.presenter.js';
+import { ReviewContextWatcherService } from '@/modules/review-execution/services/reviewContextWatcher.service.js';
+import type { InsightsGateway } from '@/modules/statistics-insights/entities/insight/insights.gateway.js';
+import { FileSystemInsightsGateway } from '@/modules/statistics-insights/interface-adapters/gateways/fileSystem/insights.fileSystem.js';
+import { FileSystemStatsGateway } from '@/modules/statistics-insights/interface-adapters/gateways/fileSystem/stats.fileSystem.js';
+import type { StatsGateway } from '@/modules/statistics-insights/interface-adapters/gateways/stats.gateway.js';
+import { ProjectStatsCalculator } from '@/modules/statistics-insights/interface-adapters/presenters/projectStats.calculator.js';
+import type { SupervisorStatusStore } from '@/modules/supervisor-management/entities/supervisor/supervisorStatusStore.gateway.js';
+import { InMemorySupervisorStatusStore } from '@/modules/supervisor-management/interface-adapters/gateways/supervisorStatusStore.memory.gateway.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
+import { FileSystemReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/fileSystem/reviewRequestTracking.fileSystem.js';
 import type { GitCommandExecutor } from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
 import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
-import type { WorktreeSizeProbeGateway } from '@/modules/worktree-management/entities/worktree/worktreeSizeProbe.gateway.js';
 import type { WorktreeHealthProbeGateway } from '@/modules/worktree-management/entities/worktree/worktreeHealthProbe.gateway.js';
-import type { ForceCleanupLockService } from '@/modules/worktree-management/services/forceCleanupLock.js';
+import type { WorktreeSizeProbeGateway } from '@/modules/worktree-management/entities/worktree/worktreeSizeProbe.gateway.js';
 import type { WorktreeSchedulerControls } from '@/modules/worktree-management/interface-adapters/controllers/http/worktreeOverview.routes.js';
-import { pino, type Logger, type LoggerOptions } from 'pino';
-import { mkdirSync } from 'node:fs';
+import { GitCommandCliGateway } from '@/modules/worktree-management/interface-adapters/gateways/gitCommand.cli.gateway.js';
+import { WorktreeFileSystemGateway } from '@/modules/worktree-management/interface-adapters/gateways/worktree.fileSystem.gateway.js';
+import { WorktreeHealthProbeFileSystemGateway } from '@/modules/worktree-management/interface-adapters/gateways/worktreeHealthProbe.fileSystem.gateway.js';
+import { WorktreeSizeProbeCliGateway } from '@/modules/worktree-management/interface-adapters/gateways/worktreeSizeProbe.cli.gateway.js';
+import { WorktreePanelPresenter } from '@/modules/worktree-management/interface-adapters/presenters/worktreePanel.presenter.js';
+import { InMemoryForceCleanupLockService } from '@/modules/worktree-management/services/forceCleanupLock.js';
+import type { ForceCleanupLockService } from '@/modules/worktree-management/services/forceCleanupLock.js';
+
+import type { Config } from '../config/loader.js';
 import { LOG_DIR, LOG_FILE_PATH } from '../shared/services/daemonPaths.js';
 
 export interface Dependencies {
@@ -70,9 +73,10 @@ function createLoggerOptions(): LoggerOptions {
 
   return {
     level: process.env.LOG_LEVEL || 'info',
-    transport: process.env.NODE_ENV !== 'production'
-      ? { target: 'pino-pretty', options: { colorize: true } }
-      : undefined,
+    transport:
+      process.env.NODE_ENV !== 'production'
+        ? { target: 'pino-pretty', options: { colorize: true } }
+        : undefined,
   };
 }
 
@@ -103,7 +107,9 @@ export function createDependencies(config: Config): Dependencies {
   const forceCleanupLock = new InMemoryForceCleanupLockService();
 
   return {
-    reviewRequestTrackingGateway: new FileSystemReviewRequestTrackingGateway(new ProjectStatsCalculator()),
+    reviewRequestTrackingGateway: new FileSystemReviewRequestTrackingGateway(
+      new ProjectStatsCalculator(),
+    ),
     statsGateway: new FileSystemStatsGateway(),
     reviewFileGateway: new FileSystemReviewFileGateway(),
     reviewLogFileGateway: new FileSystemReviewLogFileGateway(),

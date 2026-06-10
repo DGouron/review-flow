@@ -9,13 +9,15 @@
  * Source of truth: docs/specs/177-dashboard-add-project-ui.md (20 scenarios).
  */
 
-import Fastify, { type FastifyInstance } from 'fastify';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import Fastify, { type FastifyInstance } from 'fastify';
 import { beforeEach, describe, expect, it } from 'vitest';
+
 import { repositoriesRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/repositories.routes.js';
-import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
+import type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
 import { RepositoryConfigFactory } from '@/tests/factories/repositoryConfig.factory.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -35,7 +37,8 @@ async function buildAcceptanceApp(options: BuildAppOptions): Promise<{
   repositories: RepositoryConfig[];
 }> {
   const repositories = options.repositories;
-  const diskExists = options.diskExists ?? new Set(repositories.map((repository) => repository.localPath));
+  const diskExists =
+    options.diskExists ?? new Set(repositories.map((repository) => repository.localPath));
   const writeShouldFail = options.writeShouldFail ?? false;
 
   const app = Fastify();
@@ -85,7 +88,9 @@ describe('Acceptance — SPEC-177: Dashboard Project CRUD UI + Sidebar Animation
   describe('Add (POST /api/repositories)', () => {
     it('nominal add: appends new repository and returns updated list', async () => {
       const { app, repositories } = await buildAcceptanceApp({
-        repositories: [RepositoryConfigFactory.create({ name: 'main-app', localPath: '/home/dev/main-app-v3' })],
+        repositories: [
+          RepositoryConfigFactory.create({ name: 'main-app', localPath: '/home/dev/main-app-v3' }),
+        ],
         diskExists: new Set(['/home/dev/main-app-v3', '/home/dev/projects/new-app']),
       });
 
@@ -237,7 +242,10 @@ describe('Acceptance — SPEC-177: Dashboard Project CRUD UI + Sidebar Animation
       const { app, repositories } = await buildAcceptanceApp({
         repositories: [
           RepositoryConfigFactory.create({ name: 'keep', localPath: '/home/dev/keep' }),
-          RepositoryConfigFactory.create({ name: 'old-project', localPath: '/home/dev/old-project' }),
+          RepositoryConfigFactory.create({
+            name: 'old-project',
+            localPath: '/home/dev/old-project',
+          }),
         ],
       });
 
@@ -306,7 +314,9 @@ describe('Acceptance — SPEC-177: Dashboard Project CRUD UI + Sidebar Animation
 
     it('nominal enable: flips enabled to true', async () => {
       const { app, repositories } = await buildAcceptanceApp({
-        repositories: [RepositoryConfigFactory.create({ localPath: '/home/dev/x', enabled: false })],
+        repositories: [
+          RepositoryConfigFactory.create({ localPath: '/home/dev/x', enabled: false }),
+        ],
       });
 
       const response = await app.inject({

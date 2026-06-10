@@ -3,7 +3,13 @@ export interface InitSummaryInput {
   envPath: string;
   port: number;
   repositoryCount: number;
-  mcpStatus: 'configured' | 'already-configured' | 'claude-not-found' | 'validation-failed' | 'skipped' | 'failed';
+  mcpStatus:
+    | 'configured'
+    | 'already-configured'
+    | 'claude-not-found'
+    | 'validation-failed'
+    | 'skipped'
+    | 'failed';
   gitlabUsername: string;
   githubUsername: string;
 }

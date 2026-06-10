@@ -27,11 +27,12 @@ vi.mock('@/frameworks/logging/logBuffer.js', () => ({
 }));
 
 import Fastify, { type FastifyInstance } from 'fastify';
-import { mrTrackingAdvancedRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTrackingAdvanced.routes.js';
+
 import { enqueueReview } from '@/frameworks/queue/pQueueAdapter.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
-import { TrackedMrFactory, MrTrackingDataFactory } from '@/tests/factories/trackedMr.factory.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import { mrTrackingAdvancedRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTrackingAdvanced.routes.js';
+import { TrackedMrFactory, MrTrackingDataFactory } from '@/tests/factories/trackedMr.factory.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 
 interface RepoStub {
   name: string;
@@ -126,7 +127,11 @@ async function buildApp(options: BuildAppOptions): Promise<AppBundle> {
       loadTracking: tracking.loadTracking ?? vi.fn(() => null),
       saveTracking: vi.fn(),
     } as never,
-    reviewContextGateway: { create: vi.fn(), read: vi.fn(() => null), updateProgress: vi.fn() } as never,
+    reviewContextGateway: {
+      create: vi.fn(),
+      read: vi.fn(() => null),
+      updateProgress: vi.fn(),
+    } as never,
     threadFetchGatewayFactory: () => ({ fetchThreads: vi.fn(() => []) }) as never,
     diffMetadataFetchGatewayFactory: () => ({ fetchDiffMetadata: vi.fn(() => undefined) }) as never,
     diffStatsFetchGatewayFactory: () => ({ fetchDiffStats: vi.fn(() => null) }) as never,
@@ -522,20 +527,31 @@ describe('mrTrackingAdvancedRoutes POST /api/mr-tracking/auto-followup', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/mr-tracking/auto-followup',
-      payload: { mrId: 'gitlab-test-org/test-project-42', projectPath: '/home/user/projects/test', enabled: true },
+      payload: {
+        mrId: 'gitlab-test-org/test-project-42',
+        projectPath: '/home/user/projects/test',
+        enabled: true,
+      },
     });
 
     expect(response.statusCode).toBe(404);
     expect(response.json()).toEqual({ success: false, error: 'MR non trouvée' });
-    expect(update).toHaveBeenCalledWith('/home/user/projects/test', 'gitlab-test-org/test-project-42', {
-      autoFollowup: true,
-    });
+    expect(update).toHaveBeenCalledWith(
+      '/home/user/projects/test',
+      'gitlab-test-org/test-project-42',
+      {
+        autoFollowup: true,
+      },
+    );
 
     await app.close();
   });
 
   it('returns success with the updated MR when toggling auto-followup', async () => {
-    const mr = TrackedMrFactory.create({ id: 'gitlab-test-org/test-project-42', autoFollowup: false });
+    const mr = TrackedMrFactory.create({
+      id: 'gitlab-test-org/test-project-42',
+      autoFollowup: false,
+    });
     const { app, update } = await buildApp({
       enforceBudgetAccepted: true,
       tracking: { update: vi.fn(), getById: vi.fn(() => mr) },
@@ -544,16 +560,24 @@ describe('mrTrackingAdvancedRoutes POST /api/mr-tracking/auto-followup', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/mr-tracking/auto-followup',
-      payload: { mrId: 'gitlab-test-org/test-project-42', projectPath: '/home/user/projects/test', enabled: false },
+      payload: {
+        mrId: 'gitlab-test-org/test-project-42',
+        projectPath: '/home/user/projects/test',
+        enabled: false,
+      },
     });
 
     expect(response.statusCode).toBe(200);
     const body = response.json();
     expect(body.success).toBe(true);
     expect(body.mr.id).toBe('gitlab-test-org/test-project-42');
-    expect(update).toHaveBeenCalledWith('/home/user/projects/test', 'gitlab-test-org/test-project-42', {
-      autoFollowup: false,
-    });
+    expect(update).toHaveBeenCalledWith(
+      '/home/user/projects/test',
+      'gitlab-test-org/test-project-42',
+      {
+        autoFollowup: false,
+      },
+    );
 
     await app.close();
   });
@@ -598,7 +622,10 @@ describe('mrTrackingAdvancedRoutes POST /api/mr-tracking/followup-importants', (
   });
 
   it('returns triggered=0 with empty arrays when no pending-approval MR has warnings', async () => {
-    const noWarnings = TrackedMrFactory.create({ id: 'gitlab-test-org/test-project-1', totalWarnings: 0 });
+    const noWarnings = TrackedMrFactory.create({
+      id: 'gitlab-test-org/test-project-1',
+      totalWarnings: 0,
+    });
     const { app } = await buildApp({
       enforceBudgetAccepted: true,
       tracking: { getByState: vi.fn(() => [noWarnings]) },
@@ -639,7 +666,9 @@ describe('mrTrackingAdvancedRoutes POST /api/mr-tracking/followup-importants', (
     const body = response.json();
     expect(body.success).toBe(true);
     expect(body.triggered).toBe(1);
-    expect(body.candidates).toEqual([{ mrId: 'gitlab-test-org/test-project-42', mrNumber: 42, title: 'Important MR' }]);
+    expect(body.candidates).toEqual([
+      { mrId: 'gitlab-test-org/test-project-42', mrNumber: 42, title: 'Important MR' },
+    ]);
     expect(body.failed).toEqual([]);
 
     await app.close();
@@ -666,7 +695,9 @@ describe('mrTrackingAdvancedRoutes POST /api/mr-tracking/followup-importants', (
     expect(response.statusCode).toBe(200);
     const body = response.json();
     expect(body.triggered).toBe(0);
-    expect(body.failed).toEqual([{ mrId: 'gitlab-test-org/test-project-42', error: 'MR not tracked' }]);
+    expect(body.failed).toEqual([
+      { mrId: 'gitlab-test-org/test-project-42', error: 'MR not tracked' },
+    ]);
 
     await app.close();
   });
@@ -712,7 +743,11 @@ describe('mrTrackingAdvancedRoutes POST /api/mr-tracking/sync', () => {
 
   it('returns the synced MR when a specific mrId resolves', async () => {
     const tracked = TrackedMrFactory.create({ id: 'gitlab-test-org/test-project-42' });
-    const synced = TrackedMrFactory.create({ id: 'gitlab-test-org/test-project-42', openThreads: 2, state: 'pending-approval' });
+    const synced = TrackedMrFactory.create({
+      id: 'gitlab-test-org/test-project-42',
+      openThreads: 2,
+      state: 'pending-approval',
+    });
     const { app } = await buildApp({
       enforceBudgetAccepted: true,
       tracking: { getById: vi.fn(() => tracked) },

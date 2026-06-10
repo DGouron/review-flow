@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import { FollowupImportantsUseCase } from '@/modules/cli-configuration/usecases/cli/followupImportants.usecase.js';
 
 function createMockFetch(response: object) {
@@ -8,7 +9,9 @@ function createMockFetch(response: object) {
   });
 }
 
-function createDeps(overrides: Partial<Parameters<typeof FollowupImportantsUseCase.prototype.execute>[1]> = {}) {
+function createDeps(
+  overrides: Partial<Parameters<typeof FollowupImportantsUseCase.prototype.execute>[1]> = {},
+) {
   return {
     serverPort: 3000,
     log: vi.fn(),
@@ -80,9 +83,7 @@ describe('FollowupImportantsUseCase', () => {
     const fetch = createMockFetch({
       success: true,
       triggered: 1,
-      candidates: [
-        { mrId: 'gitlab-proj-10', mrNumber: 10, title: 'Fix auth' },
-      ],
+      candidates: [{ mrId: 'gitlab-proj-10', mrNumber: 10, title: 'Fix auth' }],
       failed: [{ mrId: 'gitlab-proj-11', error: 'timeout' }],
     });
     const deps = createDeps({ fetch });

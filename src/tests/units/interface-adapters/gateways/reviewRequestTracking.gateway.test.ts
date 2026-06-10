@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest';
+
+import { TrackedMrFactory, MrTrackingDataFactory } from '../../../factories/trackedMr.factory.js';
 import { InMemoryReviewRequestTrackingGateway } from '../../../stubs/reviewRequestTracking.stub.js';
-import {
-  TrackedMrFactory,
-  MrTrackingDataFactory,
-} from '../../../factories/trackedMr.factory.js';
 
 describe('ReviewRequestTrackingGateway', () => {
   describe('loadTracking', () => {
@@ -115,7 +113,7 @@ describe('ReviewRequestTrackingGateway', () => {
       const gateway = new InMemoryReviewRequestTrackingGateway();
       const trackedMr = TrackedMrFactory.create({
         id: 'mr-to-update',
-        state: 'pending-review'
+        state: 'pending-review',
       });
       gateway.create('/my/project', trackedMr);
 
@@ -190,7 +188,11 @@ describe('ReviewRequestTrackingGateway', () => {
       const pendingFix = TrackedMrFactory.create({ id: 'mr-1', state: 'pending-fix' });
       const pendingReview = TrackedMrFactory.create({ id: 'mr-2', state: 'pending-review' });
       const anotherPendingFix = TrackedMrFactory.create({ id: 'mr-3', state: 'pending-fix' });
-      const trackingData = MrTrackingDataFactory.withMrs([pendingFix, pendingReview, anotherPendingFix]);
+      const trackingData = MrTrackingDataFactory.withMrs([
+        pendingFix,
+        pendingReview,
+        anotherPendingFix,
+      ]);
       gateway.saveTracking('/my/project', trackingData);
 
       const result = gateway.getByState('/my/project', 'pending-fix');
@@ -299,7 +301,7 @@ describe('ReviewRequestTrackingGateway', () => {
       const trackedMr = TrackedMrFactory.create({
         mrNumber: 42,
         platform: 'gitlab',
-        lastPushAt: null
+        lastPushAt: null,
       });
       gateway.create('/my/project', trackedMr);
 

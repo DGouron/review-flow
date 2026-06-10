@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { DaemonServiceSystemdGateway } from '@/modules/setup-wizard/interface-adapters/gateways/daemonService.systemd.gateway.js';
 import { StubDaemonHealthProbeGateway } from '@/tests/stubs/setup-wizard/daemonHealthProbe.stub.js';
 

@@ -1,19 +1,41 @@
-import { readFileSync, existsSync, mkdirSync, writeFileSync, readdirSync, copyFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import {
+  readFileSync,
+  existsSync,
+  mkdirSync,
+  writeFileSync,
+  readdirSync,
+  copyFileSync,
+} from 'node:fs';
+import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execSync } from 'node:child_process';
-import { homedir } from 'node:os';
-import { DiscoverRepositoriesUseCase, type DiscoveredRepository, type DiscoverRepositoriesResult } from '@/modules/cli-configuration/usecases/cli/discoverRepositories.usecase.js';
-import { ConfigureMcpUseCase, type ConfigureMcpResult } from '@/modules/cli-configuration/usecases/cli/configureMcp.usecase.js';
-import { WriteInitConfigUseCase, type WriteInitConfigInput, type WriteInitConfigResult } from '@/modules/cli-configuration/usecases/cli/writeInitConfig.usecase.js';
-import { checkInitPrerequisites, type PrerequisitesResult } from '@/modules/cli-configuration/usecases/cli/checkInitPrerequisites.js';
+
 import { formatInitSummary, type InitSummaryInput } from '@/cli/formatters/initSummary.js';
 import { resolveMcpServerPath } from '@/frameworks/claude/claudeInvoker.js';
-import { checkDependency } from '@/shared/services/dependencyChecker.js';
-import { getConfigDir } from '@/shared/services/configDir.js';
-import { generateWebhookSecret, truncateSecret } from '@/shared/services/secretGenerator.js';
-import { green, red, yellow, dim, bold } from '@/shared/services/ansiColors.js';
 import { DEFAULT_SCAN_PATHS } from '@/main/shared/cliConstants.js';
+import {
+  checkInitPrerequisites,
+  type PrerequisitesResult,
+} from '@/modules/cli-configuration/usecases/cli/checkInitPrerequisites.js';
+import {
+  ConfigureMcpUseCase,
+  type ConfigureMcpResult,
+} from '@/modules/cli-configuration/usecases/cli/configureMcp.usecase.js';
+import {
+  DiscoverRepositoriesUseCase,
+  type DiscoveredRepository,
+  type DiscoverRepositoriesResult,
+} from '@/modules/cli-configuration/usecases/cli/discoverRepositories.usecase.js';
+import {
+  WriteInitConfigUseCase,
+  type WriteInitConfigInput,
+  type WriteInitConfigResult,
+} from '@/modules/cli-configuration/usecases/cli/writeInitConfig.usecase.js';
+import { green, red, yellow, dim, bold } from '@/shared/services/ansiColors.js';
+import { getConfigDir } from '@/shared/services/configDir.js';
+import { checkDependency } from '@/shared/services/dependencyChecker.js';
+import { generateWebhookSecret, truncateSecret } from '@/shared/services/secretGenerator.js';
 
 export type PlatformChoice = 'gitlab' | 'github' | 'both';
 
@@ -110,7 +132,7 @@ export async function executeInit(
   const pathsToScan = scanPaths.length > 0 ? scanPaths : DEFAULT_SCAN_PATHS;
   let selectedRepos: Array<{ name: string; localPath: string; enabled: boolean }> = [];
 
-  const shouldScan = yes || await deps.confirmScanRepositories();
+  const shouldScan = yes || (await deps.confirmScanRepositories());
 
   if (shouldScan) {
     deps.log(dim('\nScanning for repositories...'));
@@ -119,14 +141,14 @@ export async function executeInit(
 
     if (discovered.repositories.length > 0) {
       if (yes) {
-        selectedRepos = discovered.repositories.map(r => ({
+        selectedRepos = discovered.repositories.map((r) => ({
           name: r.name,
           localPath: r.localPath,
           enabled: true,
         }));
       } else {
         const selected = await deps.selectRepositories(discovered.repositories);
-        selectedRepos = selected.map(r => ({
+        selectedRepos = selected.map((r) => ({
           name: r.name,
           localPath: r.localPath,
           enabled: true,
@@ -205,7 +227,8 @@ export function createInitDependencies(
         message: 'Server port:',
         default: 3847,
         validate: (value) => {
-          if (value === undefined || value < 1 || value > 65535) return 'Port must be between 1 and 65535';
+          if (value === undefined || value < 1 || value > 65535)
+            return 'Port must be between 1 and 65535';
           return true;
         },
       });
@@ -227,7 +250,7 @@ export function createInitDependencies(
       const { checkbox } = await import('@inquirer/prompts');
       return checkbox({
         message: 'Select repositories to configure:',
-        choices: repositories.map(r => ({
+        choices: repositories.map((r) => ({
           name: `${r.name} ${dim(`(${r.localPath})`)}${r.hasReviewConfig ? green(' [configured]') : ''}`,
           value: r,
           checked: r.hasReviewConfig,
@@ -240,7 +263,7 @@ export function createInitDependencies(
       const discoverer = new DiscoverRepositoriesUseCase({
         existsSync,
         readdirSync: (path: string) =>
-          readdirSync(path, { withFileTypes: true }).map(d => ({
+          readdirSync(path, { withFileTypes: true }).map((d) => ({
             name: d.name,
             isDirectory: () => d.isDirectory(),
           })),

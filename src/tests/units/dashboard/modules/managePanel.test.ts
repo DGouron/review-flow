@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import {
   buildManagePanelModel,
   renderManagePanelHtml,
@@ -25,7 +26,9 @@ describe('managePanel module', () => {
 
     it('exposes shortPath as the last two path segments', () => {
       const model = buildManagePanelModel({
-        repositories: [{ name: 'frontend', localPath: '/home/dev/projects/frontend', enabled: true }],
+        repositories: [
+          { name: 'frontend', localPath: '/home/dev/projects/frontend', enabled: true },
+        ],
         isOpen: false,
       });
 
@@ -54,7 +57,12 @@ describe('managePanel module', () => {
     it('emits one row per repository with a data-local-path attribute', () => {
       const html = renderManagePanelHtml({
         rows: [
-          { name: 'frontend', localPath: '/home/dev/frontend', shortPath: 'dev/frontend', enabled: true },
+          {
+            name: 'frontend',
+            localPath: '/home/dev/frontend',
+            shortPath: 'dev/frontend',
+            enabled: true,
+          },
           { name: 'api', localPath: '/home/dev/api', shortPath: 'dev/api', enabled: false },
         ],
         isOpen: false,

@@ -9,38 +9,41 @@
  * line feed drives a full --json run that needs input to completion.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
+import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
+import { PromptStdinJsonGateway } from '@/modules/setup-wizard/interface-adapters/gateways/prompt.stdinJson.gateway.js';
+import { SetupStateFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupState.fileSystem.gateway.js';
+import { NextActionsPresenter } from '@/modules/setup-wizard/interface-adapters/presenters/nextActions.presenter.js';
+import { JsonWizardEventEmitter } from '@/modules/setup-wizard/services/jsonWizardEventEmitter.js';
 import { OrchestrateSetupUseCase } from '@/modules/setup-wizard/usecases/orchestrateSetup.usecase.js';
+import { AddProjectStep } from '@/modules/setup-wizard/usecases/steps/addProject.step.js';
 import { CheckDependenciesStep } from '@/modules/setup-wizard/usecases/steps/checkDependencies.step.js';
 import { ClaudeLoginStep } from '@/modules/setup-wizard/usecases/steps/claudeLogin.step.js';
-import { DaemonInstallStep } from '@/modules/setup-wizard/usecases/steps/daemonInstall.step.js';
-import { GenerateSecretsStep } from '@/modules/setup-wizard/usecases/steps/generateSecrets.step.js';
-import { AddProjectStep } from '@/modules/setup-wizard/usecases/steps/addProject.step.js';
 import { ConfigurePipelineStep } from '@/modules/setup-wizard/usecases/steps/configurePipeline.step.js';
+import { DaemonInstallStep } from '@/modules/setup-wizard/usecases/steps/daemonInstall.step.js';
+import { DisplayNextActionsStep } from '@/modules/setup-wizard/usecases/steps/displayNextActions.step.js';
 import { GenerateFilesStep } from '@/modules/setup-wizard/usecases/steps/generateFiles.step.js';
+import { GenerateSecretsStep } from '@/modules/setup-wizard/usecases/steps/generateSecrets.step.js';
 import { RegisterProjectStep } from '@/modules/setup-wizard/usecases/steps/registerProject.step.js';
 import { ValidateSetupStep } from '@/modules/setup-wizard/usecases/steps/validateSetup.step.js';
-import { DisplayNextActionsStep } from '@/modules/setup-wizard/usecases/steps/displayNextActions.step.js';
-import { StubDependencyProbeGateway } from '@/tests/stubs/setup-wizard/dependencyProbe.stub.js';
+import { StubAiFallbackGateway } from '@/tests/stubs/setup-wizard/aiFallback.stub.js';
 import { StubClaudeAuthGateway } from '@/tests/stubs/setup-wizard/claudeAuth.stub.js';
-import { StubDaemonServiceGateway } from '@/tests/stubs/setup-wizard/daemonService.stub.js';
 import { StubDaemonHealthProbeGateway } from '@/tests/stubs/setup-wizard/daemonHealthProbe.stub.js';
+import { StubDaemonServiceGateway } from '@/tests/stubs/setup-wizard/daemonService.stub.js';
+import { StubDependencyProbeGateway } from '@/tests/stubs/setup-wizard/dependencyProbe.stub.js';
 import { StubEnvFileGateway } from '@/tests/stubs/setup-wizard/envFile.stub.js';
 import { StubGitRemoteGateway } from '@/tests/stubs/setup-wizard/gitRemote.stub.js';
-import { StubProjectConfigGateway } from '@/tests/stubs/setup-wizard/projectConfig.stub.js';
-import { StubSkillTemplateGateway } from '@/tests/stubs/setup-wizard/skillTemplate.stub.js';
-import { StubServerConfigGateway } from '@/tests/stubs/setup-wizard/serverConfig.stub.js';
-import { StubValidationGateway } from '@/tests/stubs/setup-wizard/validation.stub.js';
-import { StubAiFallbackGateway } from '@/tests/stubs/setup-wizard/aiFallback.stub.js';
 import { StubLineReader } from '@/tests/stubs/setup-wizard/lineReader.stub.js';
-import { SetupStateFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupState.fileSystem.gateway.js';
-import { PromptStdinJsonGateway } from '@/modules/setup-wizard/interface-adapters/gateways/prompt.stdinJson.gateway.js';
-import { JsonWizardEventEmitter } from '@/modules/setup-wizard/services/jsonWizardEventEmitter.js';
-import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
-import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
+import { StubProjectConfigGateway } from '@/tests/stubs/setup-wizard/projectConfig.stub.js';
+import { StubServerConfigGateway } from '@/tests/stubs/setup-wizard/serverConfig.stub.js';
+import { StubSkillTemplateGateway } from '@/tests/stubs/setup-wizard/skillTemplate.stub.js';
+import { StubValidationGateway } from '@/tests/stubs/setup-wizard/validation.stub.js';
 
 interface WizardEvent {
   step: string;
@@ -83,11 +86,14 @@ describe('Acceptance — SPEC-187: Read setup wizard answers from stdin in JSON 
       new GenerateFilesStep(),
       new RegisterProjectStep(),
       new ValidateSetupStep(),
-      new DisplayNextActionsStep(),
+      new DisplayNextActionsStep(new NextActionsPresenter()),
     ];
   }
 
-  function buildContext(options: BuildContextOptions): { context: WizardContext; events: WizardEvent[] } {
+  function buildContext(options: BuildContextOptions): {
+    context: WizardContext;
+    events: WizardEvent[];
+  } {
     const events: WizardEvent[] = [];
     const emitter = new JsonWizardEventEmitter((line) => events.push(JSON.parse(line)));
     const platform = options.ambiguousPlatform ? 'unknown' : 'github';
@@ -234,8 +240,14 @@ describe('Acceptance — SPEC-187: Read setup wizard answers from stdin in JSON 
     expect(result.exitCode).toBe(0);
     expect(context.project.platform).toBe('gitlab');
     const warnings = events.filter((event) => event.status === 'warning');
-    expect(warnings.some((event) => event.message === 'Choix invalide, sélectionnez une option proposée')).toBe(true);
-    const awaiting = events.filter((event) => event.status === 'awaiting_input' && event.step === 'add-project');
+    expect(
+      warnings.some(
+        (event) => event.message === 'Choix invalide, sélectionnez une option proposée',
+      ),
+    ).toBe(true);
+    const awaiting = events.filter(
+      (event) => event.status === 'awaiting_input' && event.step === 'add-project',
+    );
     expect(awaiting.length).toBe(2);
   });
 
@@ -250,7 +262,11 @@ describe('Acceptance — SPEC-187: Read setup wizard answers from stdin in JSON 
     expect(result.exitCode).toBe(0);
     expect(context.project.preset).toBe('custom');
     const warnings = events.filter((event) => event.status === 'warning');
-    expect(warnings.some((event) => event.message === "Sélection invalide, une valeur n'est pas proposée")).toBe(true);
+    expect(
+      warnings.some(
+        (event) => event.message === "Sélection invalide, une valeur n'est pas proposée",
+      ),
+    ).toBe(true);
   });
 
   it('re-announces and accepts the next line when a malformed line arrives', async () => {

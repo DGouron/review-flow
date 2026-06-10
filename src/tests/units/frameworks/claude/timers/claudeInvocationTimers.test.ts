@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { startClaudeInvocationTimers } from '@/frameworks/claude/timers/claudeInvocationTimers.js';
-import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
 import { StubBillingStateGateway } from '@/tests/stubs/billingState.stub.js';
+import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
 import { StubSupervisorHealthGateway } from '@/tests/stubs/supervisorHealth.stub.js';
 
 describe('startClaudeInvocationTimers', () => {

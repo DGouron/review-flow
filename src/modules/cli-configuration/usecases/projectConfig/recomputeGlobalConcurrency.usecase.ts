@@ -1,9 +1,9 @@
-import type { ProjectConfigGateway } from '@/modules/cli-configuration/entities/projectConfig/projectConfig.gateway.js';
-import type { RepositoriesListGateway } from '@/modules/cli-configuration/entities/repositoriesList/repositoriesList.gateway.js';
 import {
   DEFAULT_PROJECT_CONCURRENCY_CAP,
   effectiveProjectConcurrencyCap,
 } from '@/modules/cli-configuration/entities/projectConcurrencyCap/projectConcurrencyCap.valueObject.js';
+import type { ProjectConfigGateway } from '@/modules/cli-configuration/entities/projectConfig/projectConfig.gateway.js';
+import type { RepositoriesListGateway } from '@/modules/cli-configuration/entities/repositoriesList/repositoriesList.gateway.js';
 import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
 export interface QueueCapacityPort {
@@ -24,9 +24,10 @@ export interface RecomputeGlobalConcurrencyDependencies {
   queueCapacityPort: QueueCapacityPort;
 }
 
-export class RecomputeGlobalConcurrencyUseCase
-  implements UseCase<RecomputeGlobalConcurrencyInput, RecomputeGlobalConcurrencyResult>
-{
+export class RecomputeGlobalConcurrencyUseCase implements UseCase<
+  RecomputeGlobalConcurrencyInput,
+  RecomputeGlobalConcurrencyResult
+> {
   constructor(private readonly dependencies: RecomputeGlobalConcurrencyDependencies) {}
 
   execute(_input: RecomputeGlobalConcurrencyInput): RecomputeGlobalConcurrencyResult {
@@ -36,9 +37,10 @@ export class RecomputeGlobalConcurrencyUseCase
 
     for (const repository of repositories) {
       const readResult = projectConfigGateway.read(repository.localPath);
-      const cap = readResult.status === 'ok'
-        ? effectiveProjectConcurrencyCap(readResult.config)
-        : DEFAULT_PROJECT_CONCURRENCY_CAP;
+      const cap =
+        readResult.status === 'ok'
+          ? effectiveProjectConcurrencyCap(readResult.config)
+          : DEFAULT_PROJECT_CONCURRENCY_CAP;
       perProjectCaps.push({ path: repository.localPath, cap });
       queueCapacityPort.setProjectConcurrencyCap(repository.localPath, cap);
     }

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { DiffStatsFactory } from '@/tests/factories/diffStats.factory.js';
 
 describe('DiffStats', () => {

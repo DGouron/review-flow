@@ -1,9 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { triggerReview, type TriggerReviewParams } from '@/modules/review-execution/usecases/triggerReview.usecase.js';
+
+import {
+  triggerReview,
+  type TriggerReviewParams,
+} from '@/modules/review-execution/usecases/triggerReview.usecase.js';
+
+import { TrackedMrFactory } from '../../factories/trackedMr.factory.js';
+import { createStubLogger } from '../../stubs/logger.stub.js';
 import { StubReviewQueuePort } from '../../stubs/reviewQueue.stub.js';
 import { InMemoryReviewRequestTrackingGateway } from '../../stubs/reviewRequestTracking.stub.js';
-import { createStubLogger } from '../../stubs/logger.stub.js';
-import { TrackedMrFactory } from '../../factories/trackedMr.factory.js';
 
 describe('triggerReview usecase', () => {
   let queuePort: StubReviewQueuePort;
@@ -82,11 +87,7 @@ describe('triggerReview usecase', () => {
       logger: createStubLogger(),
     });
 
-    const updated = trackingGateway.getByNumber(
-      '/home/user/projects/my-project',
-      42,
-      'gitlab'
-    );
+    const updated = trackingGateway.getByNumber('/home/user/projects/my-project', 42, 'gitlab');
     expect(updated?.lastPushAt).not.toBeNull();
   });
 

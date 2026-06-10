@@ -24,7 +24,9 @@ export const AVATAR_STATES = ['idle', 'working', 'success', 'error', 'listening'
  * @returns {string}
  */
 function statusOf(value) {
-  return value && typeof value === 'object' && typeof (/** @type {Record<string, unknown>} */ (value).status) === 'string'
+  return value &&
+    typeof value === 'object' &&
+    typeof (/** @type {Record<string, unknown>} */ (value).status) === 'string'
     ? /** @type {string} */ (/** @type {Record<string, unknown>} */ (value).status)
     : '';
 }

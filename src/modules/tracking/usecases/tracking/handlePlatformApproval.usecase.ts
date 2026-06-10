@@ -1,9 +1,9 @@
-import type { UseCase } from '@/shared/foundation/usecase.base.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
 import {
   evaluateQualityGate,
   type QualityGateRejectionReason,
 } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
+import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
 interface HandlePlatformApprovalInput {
   projectPath: string;
@@ -34,9 +34,10 @@ function buildRevertMessage(
   return 'Approbation annulée : issues bloquantes non résolues. Utilisez `/bypass-quality "raison"` pour forcer.';
 }
 
-export class HandlePlatformApprovalUseCase
-  implements UseCase<HandlePlatformApprovalInput, HandlePlatformApprovalResult>
-{
+export class HandlePlatformApprovalUseCase implements UseCase<
+  HandlePlatformApprovalInput,
+  HandlePlatformApprovalResult
+> {
   constructor(private readonly trackingGateway: ReviewRequestTrackingGateway) {}
 
   execute(input: HandlePlatformApprovalInput): HandlePlatformApprovalResult {

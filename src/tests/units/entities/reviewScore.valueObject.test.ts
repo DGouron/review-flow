@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { ReviewScore } from '@/modules/review-execution/entities/review/reviewScore.valueObject.js';
 
 describe('ReviewScore', () => {

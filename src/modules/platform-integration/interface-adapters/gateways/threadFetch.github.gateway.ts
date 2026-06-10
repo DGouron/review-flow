@@ -1,21 +1,22 @@
-import { execSync } from 'node:child_process'
-import type { ThreadFetchGateway } from '@/modules/platform-integration/entities/threadFetch/threadFetch.gateway.js'
-import type { ReviewContextThread } from '@/modules/review-execution/entities/reviewContext/reviewContext.js'
+import { execSync } from 'node:child_process';
 
-export type CommandExecutor = (command: string) => string
+import type { ThreadFetchGateway } from '@/modules/platform-integration/entities/threadFetch/threadFetch.gateway.js';
+import type { ReviewContextThread } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
+
+export type CommandExecutor = (command: string) => string;
 
 export const defaultGitHubExecutor: CommandExecutor = (command: string) => {
-  return execSync(command, { encoding: 'utf-8', timeout: 30000 })
-}
+  return execSync(command, { encoding: 'utf-8', timeout: 30000 });
+};
 
 interface GitHubReviewThreadNode {
-  id: string
-  isResolved: boolean
-  path: string | null
-  line: number | null
+  id: string;
+  isResolved: boolean;
+  path: string | null;
+  line: number | null;
   comments: {
-    nodes: Array<{ body: string }>
-  }
+    nodes: Array<{ body: string }>;
+  };
 }
 
 interface GitHubGraphQLResponse {
@@ -23,18 +24,18 @@ interface GitHubGraphQLResponse {
     repository: {
       pullRequest: {
         reviewThreads: {
-          nodes: GitHubReviewThreadNode[]
-        }
-      }
-    }
-  }
+          nodes: GitHubReviewThreadNode[];
+        };
+      };
+    };
+  };
 }
 
 export class GitHubThreadFetchGateway implements ThreadFetchGateway {
   constructor(private readonly executor: CommandExecutor) {}
 
   fetchThreads(projectPath: string, mergeRequestNumber: number): ReviewContextThread[] {
-    const [owner, name] = projectPath.split('/')
+    const [owner, name] = projectPath.split('/');
     const query = `query {
       repository(owner: "${owner}", name: "${name}") {
         pullRequest(number: ${mergeRequestNumber}) {
@@ -43,18 +44,18 @@ export class GitHubThreadFetchGateway implements ThreadFetchGateway {
           }
         }
       }
-    }`
+    }`;
 
-    const response = this.executor(`gh api graphql -f query='${query}'`)
-    const data: GitHubGraphQLResponse = JSON.parse(response)
-    const nodes = data.data.repository.pullRequest.reviewThreads.nodes
+    const response = this.executor(`gh api graphql -f query='${query}'`);
+    const data: GitHubGraphQLResponse = JSON.parse(response);
+    const nodes = data.data.repository.pullRequest.reviewThreads.nodes;
 
     return nodes.map((node) => ({
       id: node.id,
       file: node.path,
       line: node.line,
-      status: node.isResolved ? 'resolved' as const : 'open' as const,
+      status: node.isResolved ? ('resolved' as const) : ('open' as const),
       body: node.comments.nodes[0]?.body ?? '',
-    }))
+    }));
   }
 }

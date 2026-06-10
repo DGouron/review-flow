@@ -1,7 +1,11 @@
 import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
-import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
+import {
+  succeeded,
+  blocked,
+  warning,
+} from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
 import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
-import { succeeded, blocked, warning } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
+import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
 
 const MINIMUM_NODE_MAJOR = 20;
 
@@ -21,7 +25,10 @@ export class CheckDependenciesStep implements SetupStep {
     const nodeMajor = parseMajor(report.node.version);
 
     if (!report.node.present || nodeMajor === null) {
-      return blocked('Node.js manquant', 'Installez Node.js 20 ou supérieur depuis https://nodejs.org');
+      return blocked(
+        'Node.js manquant',
+        'Installez Node.js 20 ou supérieur depuis https://nodejs.org',
+      );
     }
     if (nodeMajor < MINIMUM_NODE_MAJOR) {
       return blocked(
@@ -42,7 +49,9 @@ export class CheckDependenciesStep implements SetupStep {
       return blocked('Yarn manquant', "Installez Yarn: 'npm install -g yarn'");
     }
     if (!report.gh.present && !report.glab.present) {
-      return warning('Aucun CLI plateforme installé, vous devrez en installer au moins un selon votre repo');
+      return warning(
+        'Aucun CLI plateforme installé, vous devrez en installer au moins un selon votre repo',
+      );
     }
     return succeeded('Toutes les dépendances sont présentes', {
       node: report.node.version,

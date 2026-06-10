@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   RemoveRepositoryFromConfigUseCase,
   type RemoveRepositoryFromConfigDependencies,
@@ -19,9 +20,7 @@ function createFakeDeps(
   return {
     readFileSync: vi.fn(() =>
       JSON.stringify(
-        baseConfig([
-          { name: 'old-project', localPath: '/home/dev/old-project', enabled: true },
-        ]),
+        baseConfig([{ name: 'old-project', localPath: '/home/dev/old-project', enabled: true }]),
       ),
     ),
     writeFileSync: vi.fn(),

@@ -1,6 +1,6 @@
-import { createGuard } from '@/shared/foundation/guard.base.js';
-import { teamInsightSchema } from '@/modules/statistics-insights/entities/insight/teamInsight.schema.js';
 import type { TeamInsight } from '@/modules/statistics-insights/entities/insight/teamInsight.js';
+import { teamInsightSchema } from '@/modules/statistics-insights/entities/insight/teamInsight.schema.js';
+import { createGuard } from '@/shared/foundation/guard.base.js';
 
 export const teamInsightGuard = createGuard(teamInsightSchema, 'teamInsight');
 

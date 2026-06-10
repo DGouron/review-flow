@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   parseStreamJsonEvent,
   extractText,
@@ -33,7 +34,12 @@ describe('extractText', () => {
   it('joins text parts from a message content array', () => {
     expect(
       extractText({
-        message: { content: [{ type: 'text', text: 'a' }, { type: 'text', text: 'b' }] },
+        message: {
+          content: [
+            { type: 'text', text: 'a' },
+            { type: 'text', text: 'b' },
+          ],
+        },
       }),
     ).toBe('ab');
   });
@@ -51,7 +57,9 @@ describe('extractText', () => {
   });
 
   it('returns null when message content is a plain string (user line, not an array)', () => {
-    expect(extractText({ type: 'user', message: { content: 'Quelle est ma question ?' } })).toBeNull();
+    expect(
+      extractText({ type: 'user', message: { content: 'Quelle est ma question ?' } }),
+    ).toBeNull();
   });
 
   it('returns null when no text is present', () => {
@@ -72,15 +80,30 @@ describe('isTurnComplete', () => {
     expect(isTurnComplete({ type: 'system', subtype: 'turn_duration' })).toBe(true);
   });
 
-  it('is true on an assistant message that ended the turn', () => {
+  it('is true on an assistant message that ended the turn with text', () => {
     expect(
-      isTurnComplete({ type: 'assistant', message: { stop_reason: 'end_turn' } }),
+      isTurnComplete({
+        type: 'assistant',
+        message: { stop_reason: 'end_turn', content: [{ type: 'text', text: '{"ok":true}' }] },
+      }),
     ).toBe(true);
+  });
+
+  it('is false on a thinking-only assistant message that ended the turn (no answer text yet)', () => {
+    expect(
+      isTurnComplete({
+        type: 'assistant',
+        message: { stop_reason: 'end_turn', content: [{ type: 'thinking' }] },
+      }),
+    ).toBe(false);
   });
 
   it('is false on a streaming assistant message with no stop reason', () => {
     expect(
-      isTurnComplete({ type: 'assistant', message: { content: [{ type: 'text', text: 'partial' }] } }),
+      isTurnComplete({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: 'partial' }] },
+      }),
     ).toBe(false);
   });
 

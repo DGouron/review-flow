@@ -1,7 +1,7 @@
 import { EgressScannedNoteCommentPostGateway } from '@/modules/platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.js';
 import { EgressBlockedError } from '@/modules/platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.js';
-import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
 import { StubEgressScanGateway, StubEgressTraceGateway } from '@/tests/stubs/egressScan.stub.js';
+import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
 
 const SECRET = 'glpat-abcdefghij1234567890';
 
@@ -37,7 +37,11 @@ describe('EgressScannedNoteCommentPostGateway', () => {
       });
       const gateway = new EgressScannedNoteCommentPostGateway(sink, scanner, trace);
 
-      await gateway.postComment({ projectPath: 'group/project', mrNumber: 1, body: `token is ${SECRET} here` });
+      await gateway.postComment({
+        projectPath: 'group/project',
+        mrNumber: 1,
+        body: `token is ${SECRET} here`,
+      });
 
       expect(sink.calls).toHaveLength(1);
       expect(sink.calls[0].body).toBe('token is [REDACTED] here');
@@ -96,7 +100,11 @@ describe('EgressScannedNoteCommentPostGateway', () => {
       });
       const gateway = new EgressScannedNoteCommentPostGateway(sink, scanner, trace);
 
-      await gateway.postComment({ projectPath: 'group/project', mrNumber: 1, body: `token is ${SECRET}` });
+      await gateway.postComment({
+        projectPath: 'group/project',
+        mrNumber: 1,
+        body: `token is ${SECRET}`,
+      });
 
       expect(trace.traces).toHaveLength(1);
       expect(trace.traces[0].mode).toBe('redact');

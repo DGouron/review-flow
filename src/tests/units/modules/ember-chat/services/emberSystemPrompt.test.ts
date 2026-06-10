@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest';
+
 import { buildEmberSystemPrompt } from '@/modules/ember-chat/services/emberSystemPrompt.js';
 import type { EmberGrounding } from '@/modules/ember-chat/services/emberSystemPrompt.js';
+import {
+  EmberMemoryFactory,
+  EmberMemoryTurnFactory,
+} from '@/tests/factories/emberMemory.factory.js';
 import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
-import { EmberMemoryFactory, EmberMemoryTurnFactory } from '@/tests/factories/emberMemory.factory.js';
 
 const EMPTY_GROUNDING: EmberGrounding = {
   reviewScores: null,
@@ -140,7 +144,9 @@ describe('buildEmberSystemPrompt', () => {
       memory: EmberMemoryFactory.create({ turns: [] }),
     };
 
-    expect(buildEmberSystemPrompt(grounding).toLowerCase()).not.toContain('conversation précédente');
+    expect(buildEmberSystemPrompt(grounding).toLowerCase()).not.toContain(
+      'conversation précédente',
+    );
   });
 
   it('omits any recurring-insights section when there is no recorded insight', () => {

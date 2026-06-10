@@ -1,20 +1,23 @@
-import type { PromptGateway, PromptChoice } from '@/modules/setup-wizard/entities/prompt/prompt.gateway.js';
-import type { LineReader } from '@/modules/setup-wizard/entities/lineReader/lineReader.gateway.js';
-import type { WizardEventEmitter } from '@/modules/setup-wizard/services/wizardEventEmitter.js';
-import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
-import type {
-  PromptKind,
-  PromptOption,
-} from '@/modules/setup-wizard/entities/promptOption/promptOption.schema.js';
-import {
-  AwaitingInputClosedError,
-  NonInteractiveInputError,
-} from '@/modules/setup-wizard/entities/promptInputError/promptInputError.js';
 import {
   confirmAnswerGuard,
   choiceAnswerGuard,
   multiSelectAnswerGuard,
 } from '@/modules/setup-wizard/entities/answerLine/answerLine.guard.js';
+import type { LineReader } from '@/modules/setup-wizard/entities/lineReader/lineReader.gateway.js';
+import type {
+  PromptGateway,
+  PromptChoice,
+} from '@/modules/setup-wizard/entities/prompt/prompt.gateway.js';
+import {
+  AwaitingInputClosedError,
+  NonInteractiveInputError,
+} from '@/modules/setup-wizard/entities/promptInputError/promptInputError.js';
+import type {
+  PromptKind,
+  PromptOption,
+} from '@/modules/setup-wizard/entities/promptOption/promptOption.schema.js';
+import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
+import type { WizardEventEmitter } from '@/modules/setup-wizard/services/wizardEventEmitter.js';
 
 export interface PromptStdinJsonGatewayDependencies {
   lineReader: LineReader;

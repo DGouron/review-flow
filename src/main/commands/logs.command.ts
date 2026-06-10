@@ -1,7 +1,10 @@
-import { ReadLogsUseCase, type ReadLogsDependencies } from '@/modules/cli-configuration/usecases/cli/readLogs.usecase.js';
+import {
+  ReadLogsUseCase,
+  type ReadLogsDependencies,
+} from '@/modules/cli-configuration/usecases/cli/readLogs.usecase.js';
 import { yellow } from '@/shared/services/ansiColors.js';
-import { logFileExists, readLastLines, watchLogFile } from '@/shared/services/logFileReader.js';
 import { LOG_FILE_PATH } from '@/shared/services/daemonPaths.js';
+import { logFileExists, readLastLines, watchLogFile } from '@/shared/services/logFileReader.js';
 
 export interface LogsDeps {
   readLogsDeps: ReadLogsDependencies;

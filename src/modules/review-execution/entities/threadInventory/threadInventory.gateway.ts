@@ -1,7 +1,7 @@
 export interface ThreadInventoryPage {
-  page: number
-  totalPages: number
-  threadIds: string[]
+  page: number;
+  totalPages: number;
+  threadIds: string[];
 }
 
 /**
@@ -9,5 +9,5 @@ export interface ThreadInventoryPage {
  * Each page carries its own `totalPages` so the resolver can prove completeness.
  */
 export interface ThreadInventoryGateway {
-  fetchPage(projectPath: string, mergeRequestNumber: number, page: number): ThreadInventoryPage
+  fetchPage(projectPath: string, mergeRequestNumber: number, page: number): ThreadInventoryPage;
 }

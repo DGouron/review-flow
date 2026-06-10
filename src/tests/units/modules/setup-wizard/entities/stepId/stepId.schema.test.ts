@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { stepIdSchema, STEP_IDS } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
 
 describe('stepIdSchema', () => {

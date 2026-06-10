@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
+
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
-import { StubPendingReviewRequestGateway } from '@/tests/stubs/pendingReviewRequest.stub.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { StubPendingReviewRequestGateway } from '@/tests/stubs/pendingReviewRequest.stub.js';
 
 function buildReviewJob(overrides: Partial<ReviewJob> = {}): ReviewJob {
   return {

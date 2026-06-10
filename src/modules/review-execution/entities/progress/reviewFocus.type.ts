@@ -14,7 +14,7 @@ export function isReviewFocus(value: unknown): value is ReviewFocus {
   if (typeof value !== 'string') {
     return false;
   }
-  return (REVIEW_FOCUS_VALUES as readonly string[]).includes(value);
+  return REVIEW_FOCUS_VALUES.some((focus) => focus === value);
 }
 
 export function reviewSkillForFocus(focus: ReviewFocus): string {

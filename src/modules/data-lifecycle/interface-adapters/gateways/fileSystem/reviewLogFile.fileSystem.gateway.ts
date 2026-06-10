@@ -1,6 +1,10 @@
 import { readdir, stat, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ReviewLogFileGateway, LogFileInfo } from '@/modules/data-lifecycle/interface-adapters/gateways/reviewLogFile.gateway.js';
+
+import type {
+  ReviewLogFileGateway,
+  LogFileInfo,
+} from '@/modules/data-lifecycle/entities/reviewLog/reviewLogFile.gateway.js';
 
 const LOG_FILE_PATTERN = /\.(log|json)$/;
 

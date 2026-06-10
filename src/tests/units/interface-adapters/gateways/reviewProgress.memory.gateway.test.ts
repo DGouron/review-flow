@@ -1,185 +1,177 @@
-import { describe, it, expect } from "vitest";
-import { ReviewProgressMemoryGateway } from "@/modules/review-execution/interface-adapters/gateways/reviewProgress.memory.gateway.js";
+import { describe, it, expect } from 'vitest';
 
-describe("ReviewProgressMemoryGateway", () => {
-	describe("createProgress", () => {
-		it("should store a new progress with pending phase and all agents pending", () => {
-			const gateway = new ReviewProgressMemoryGateway();
-			const jobId = "gitlab:project:123";
-			const agents = ["clean-architecture", "ddd", "solid"];
+import { ReviewProgressMemoryGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewProgress.memory.gateway.js';
 
-			const progress = gateway.createProgress(jobId, agents);
+describe('ReviewProgressMemoryGateway', () => {
+  describe('createProgress', () => {
+    it('should store a new progress with pending phase and all agents pending', () => {
+      const gateway = new ReviewProgressMemoryGateway();
+      const jobId = 'gitlab:project:123';
+      const agents = ['clean-architecture', 'ddd', 'solid'];
 
-			expect(progress.currentPhase).toBe("initializing");
-			expect(progress.overallProgress).toBe(0);
-			expect(progress.agents).toHaveLength(3);
-			expect(
-				progress.agents.every((agent) => agent.status === "pending"),
-			).toBe(true);
-		});
-	});
+      const progress = gateway.createProgress(jobId, agents);
 
-	describe("getProgress", () => {
-		it("should retrieve a stored progress by jobId", () => {
-			const gateway = new ReviewProgressMemoryGateway();
-			const jobId = "gitlab:project:123";
+      expect(progress.currentPhase).toBe('initializing');
+      expect(progress.overallProgress).toBe(0);
+      expect(progress.agents).toHaveLength(3);
+      expect(progress.agents.every((agent) => agent.status === 'pending')).toBe(true);
+    });
+  });
 
-			gateway.createProgress(jobId, ["clean-architecture"]);
-			const progress = gateway.getProgress(jobId);
+  describe('getProgress', () => {
+    it('should retrieve a stored progress by jobId', () => {
+      const gateway = new ReviewProgressMemoryGateway();
+      const jobId = 'gitlab:project:123';
 
-			expect(progress).toBeDefined();
-			expect(progress?.currentPhase).toBe("initializing");
-		});
-	});
+      gateway.createProgress(jobId, ['clean-architecture']);
+      const progress = gateway.getProgress(jobId);
 
-	describe("startAgent", () => {
-		it("should set agent status to running and define startedAt when starting an agent", () => {
-			const gateway = new ReviewProgressMemoryGateway();
-			const jobId = "gitlab:project:123";
-			gateway.createProgress(jobId, ["clean-architecture", "ddd"]);
+      expect(progress).toBeDefined();
+      expect(progress?.currentPhase).toBe('initializing');
+    });
+  });
 
-			const progress = gateway.startAgent(jobId, "clean-architecture");
+  describe('startAgent', () => {
+    it('should set agent status to running and define startedAt when starting an agent', () => {
+      const gateway = new ReviewProgressMemoryGateway();
+      const jobId = 'gitlab:project:123';
+      gateway.createProgress(jobId, ['clean-architecture', 'ddd']);
 
-			const agent = progress?.agents.find(
-				(a) => a.name === "clean-architecture",
-			);
-			expect(agent?.status).toBe("running");
-			expect(agent?.startedAt).toBeDefined();
-		});
+      const progress = gateway.startAgent(jobId, 'clean-architecture');
 
-		it("should return null when starting an unknown agent", () => {
-			const gateway = new ReviewProgressMemoryGateway();
-			const jobId = "gitlab:project:123";
-			gateway.createProgress(jobId, ["clean-architecture"]);
+      const agent = progress?.agents.find((a) => a.name === 'clean-architecture');
+      expect(agent?.status).toBe('running');
+      expect(agent?.startedAt).toBeDefined();
+    });
 
-			const progress = gateway.startAgent(jobId, "unknown-agent");
+    it('should return null when starting an unknown agent', () => {
+      const gateway = new ReviewProgressMemoryGateway();
+      const jobId = 'gitlab:project:123';
+      gateway.createProgress(jobId, ['clean-architecture']);
 
-			expect(progress).toBeNull();
-		});
-	});
+      const progress = gateway.startAgent(jobId, 'unknown-agent');
 
-	describe("completeAgent", () => {
-		it("should set agent status to completed and define completedAt when completing an agent", () => {
-			const gateway = new ReviewProgressMemoryGateway();
-			const jobId = "gitlab:project:123";
-			gateway.createProgress(jobId, ["ddd"]);
-			gateway.startAgent(jobId, "ddd");
+      expect(progress).toBeNull();
+    });
+  });
 
-			const progress = gateway.completeAgent(jobId, "ddd", "success");
+  describe('completeAgent', () => {
+    it('should set agent status to completed and define completedAt when completing an agent', () => {
+      const gateway = new ReviewProgressMemoryGateway();
+      const jobId = 'gitlab:project:123';
+      gateway.createProgress(jobId, ['ddd']);
+      gateway.startAgent(jobId, 'ddd');
 
-			const agent = progress?.agents.find((a) => a.name === "ddd");
-			expect(agent?.status).toBe("completed");
-			expect(agent?.completedAt).toBeDefined();
-		});
+      const progress = gateway.completeAgent(jobId, 'ddd', 'success');
 
-		it("should set agent status to failed with error message when completing with failed status", () => {
-			const gateway = new ReviewProgressMemoryGateway();
-			const jobId = "gitlab:project:123";
-			gateway.createProgress(jobId, ["testing"]);
-			gateway.startAgent(jobId, "testing");
+      const agent = progress?.agents.find((a) => a.name === 'ddd');
+      expect(agent?.status).toBe('completed');
+      expect(agent?.completedAt).toBeDefined();
+    });
 
-			const progress = gateway.completeAgent(
-				jobId,
-				"testing",
-				"failed",
-				"No test files found",
-			);
+    it('should set agent status to failed with error message when completing with failed status', () => {
+      const gateway = new ReviewProgressMemoryGateway();
+      const jobId = 'gitlab:project:123';
+      gateway.createProgress(jobId, ['testing']);
+      gateway.startAgent(jobId, 'testing');
 
-			const agent = progress?.agents.find((a) => a.name === "testing");
-			expect(agent?.status).toBe("failed");
-			expect(agent?.error).toBe("No test files found");
-			expect(agent?.completedAt).toBeDefined();
-		});
-	});
+      const progress = gateway.completeAgent(jobId, 'testing', 'failed', 'No test files found');
 
-	describe("onProgressChange callback", () => {
-		it("should call onProgressChange callback when starting an agent", () => {
-			const gateway = new ReviewProgressMemoryGateway();
-			const jobId = "gitlab:project:123";
-			let callbackCalled = false;
-			let receivedJobId: string | null = null;
+      const agent = progress?.agents.find((a) => a.name === 'testing');
+      expect(agent?.status).toBe('failed');
+      expect(agent?.error).toBe('No test files found');
+      expect(agent?.completedAt).toBeDefined();
+    });
+  });
 
-			gateway.setOnProgressChange((id) => {
-				callbackCalled = true;
-				receivedJobId = id;
-			});
+  describe('onProgressChange callback', () => {
+    it('should call onProgressChange callback when starting an agent', () => {
+      const gateway = new ReviewProgressMemoryGateway();
+      const jobId = 'gitlab:project:123';
+      let callbackCalled = false;
+      let receivedJobId: string | null = null;
 
-			gateway.createProgress(jobId, ["clean-architecture"]);
-			gateway.startAgent(jobId, "clean-architecture");
+      gateway.setOnProgressChange((id) => {
+        callbackCalled = true;
+        receivedJobId = id;
+      });
 
-			expect(callbackCalled).toBe(true);
-			expect(receivedJobId).toBe(jobId);
-		});
+      gateway.createProgress(jobId, ['clean-architecture']);
+      gateway.startAgent(jobId, 'clean-architecture');
 
-		it("should call onProgressChange callback when completing an agent", () => {
-			const gateway = new ReviewProgressMemoryGateway();
-			const jobId = "gitlab:project:123";
-			let callbackCount = 0;
+      expect(callbackCalled).toBe(true);
+      expect(receivedJobId).toBe(jobId);
+    });
 
-			gateway.setOnProgressChange(() => {
-				callbackCount++;
-			});
+    it('should call onProgressChange callback when completing an agent', () => {
+      const gateway = new ReviewProgressMemoryGateway();
+      const jobId = 'gitlab:project:123';
+      let callbackCount = 0;
 
-			gateway.createProgress(jobId, ["ddd"]);
-			gateway.startAgent(jobId, "ddd");
-			gateway.completeAgent(jobId, "ddd", "success");
+      gateway.setOnProgressChange(() => {
+        callbackCount++;
+      });
 
-			expect(callbackCount).toBe(2);
-		});
+      gateway.createProgress(jobId, ['ddd']);
+      gateway.startAgent(jobId, 'ddd');
+      gateway.completeAgent(jobId, 'ddd', 'success');
 
-		it("should not call onProgressChange callback when agent does not exist", () => {
-			const gateway = new ReviewProgressMemoryGateway();
-			const jobId = "gitlab:project:123";
-			let callbackCalled = false;
+      expect(callbackCount).toBe(2);
+    });
 
-			gateway.setOnProgressChange(() => {
-				callbackCalled = true;
-			});
+    it('should not call onProgressChange callback when agent does not exist', () => {
+      const gateway = new ReviewProgressMemoryGateway();
+      const jobId = 'gitlab:project:123';
+      let callbackCalled = false;
 
-			gateway.createProgress(jobId, ["clean-architecture"]);
-			gateway.startAgent(jobId, "unknown-agent");
+      gateway.setOnProgressChange(() => {
+        callbackCalled = true;
+      });
 
-			expect(callbackCalled).toBe(false);
-		});
+      gateway.createProgress(jobId, ['clean-architecture']);
+      gateway.startAgent(jobId, 'unknown-agent');
 
-		it("should not call onProgressChange callback when jobId does not exist", () => {
-			const gateway = new ReviewProgressMemoryGateway();
-			let callbackCalled = false;
+      expect(callbackCalled).toBe(false);
+    });
 
-			gateway.setOnProgressChange(() => {
-				callbackCalled = true;
-			});
+    it('should not call onProgressChange callback when jobId does not exist', () => {
+      const gateway = new ReviewProgressMemoryGateway();
+      let callbackCalled = false;
 
-			gateway.startAgent("unknown-job", "clean-architecture");
+      gateway.setOnProgressChange(() => {
+        callbackCalled = true;
+      });
 
-			expect(callbackCalled).toBe(false);
-		});
-	});
+      gateway.startAgent('unknown-job', 'clean-architecture');
 
-	describe("overallProgress calculation", () => {
-		it("should increase overallProgress when starting an agent", () => {
-			const gateway = new ReviewProgressMemoryGateway();
-			const jobId = "gitlab:project:123";
-			gateway.createProgress(jobId, ["clean-architecture", "ddd"]);
+      expect(callbackCalled).toBe(false);
+    });
+  });
 
-			const progressBefore = gateway.getProgress(jobId)!.overallProgress;
-			gateway.startAgent(jobId, "clean-architecture");
-			const progressAfter = gateway.getProgress(jobId)!.overallProgress;
+  describe('overallProgress calculation', () => {
+    it('should increase overallProgress when starting an agent', () => {
+      const gateway = new ReviewProgressMemoryGateway();
+      const jobId = 'gitlab:project:123';
+      gateway.createProgress(jobId, ['clean-architecture', 'ddd']);
 
-			expect(progressAfter).toBeGreaterThan(progressBefore);
-		});
+      const progressBefore = gateway.getProgress(jobId)?.overallProgress ?? Number.NaN;
+      gateway.startAgent(jobId, 'clean-architecture');
+      const progressAfter = gateway.getProgress(jobId)?.overallProgress ?? Number.NaN;
 
-		it("should increase overallProgress when completing an agent", () => {
-			const gateway = new ReviewProgressMemoryGateway();
-			const jobId = "gitlab:project:123";
-			gateway.createProgress(jobId, ["clean-architecture"]);
-			gateway.startAgent(jobId, "clean-architecture");
+      expect(progressAfter).toBeGreaterThan(progressBefore);
+    });
 
-			const progressBefore = gateway.getProgress(jobId)!.overallProgress;
-			gateway.completeAgent(jobId, "clean-architecture", "success");
-			const progressAfter = gateway.getProgress(jobId)!.overallProgress;
+    it('should increase overallProgress when completing an agent', () => {
+      const gateway = new ReviewProgressMemoryGateway();
+      const jobId = 'gitlab:project:123';
+      gateway.createProgress(jobId, ['clean-architecture']);
+      gateway.startAgent(jobId, 'clean-architecture');
 
-			expect(progressAfter).toBeGreaterThan(progressBefore);
-		});
-	});
+      const progressBefore = gateway.getProgress(jobId)?.overallProgress ?? Number.NaN;
+      gateway.completeAgent(jobId, 'clean-architecture', 'success');
+      const progressAfter = gateway.getProgress(jobId)?.overallProgress ?? Number.NaN;
+
+      expect(progressAfter).toBeGreaterThan(progressBefore);
+    });
+  });
 });

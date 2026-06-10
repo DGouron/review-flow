@@ -1,8 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { createInitialState, markStep, findFirstIncomplete, isComplete } from '@/modules/setup-wizard/entities/setupState/setupState.js';
-import { succeeded, blocked } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
-import { STEP_IDS } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
+
 import { setupStateGuard } from '@/modules/setup-wizard/entities/setupState/setupState.guard.js';
+import {
+  createInitialState,
+  markStep,
+  findFirstIncomplete,
+  isComplete,
+} from '@/modules/setup-wizard/entities/setupState/setupState.js';
+import { STEP_IDS } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
+import { succeeded, blocked } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
 
 describe('setupState helpers', () => {
   const now = () => new Date('2026-05-28T10:00:00.000Z');

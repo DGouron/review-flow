@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   AddRepositoriesToConfigUseCase,
   type AddRepositoriesToConfigDependencies,
@@ -8,12 +9,14 @@ function createFakeDeps(
   overrides?: Partial<AddRepositoriesToConfigDependencies>,
 ): AddRepositoriesToConfigDependencies {
   return {
-    readFileSync: vi.fn(() => JSON.stringify({
-      server: { port: 3847 },
-      user: { gitlabUsername: '', githubUsername: '' },
-      queue: { maxConcurrent: 2, deduplicationWindowMs: 300000 },
-      repositories: [],
-    })),
+    readFileSync: vi.fn(() =>
+      JSON.stringify({
+        server: { port: 3847 },
+        user: { gitlabUsername: '', githubUsername: '' },
+        queue: { maxConcurrent: 2, deduplicationWindowMs: 300000 },
+        repositories: [],
+      }),
+    ),
     writeFileSync: vi.fn(),
     existsSync: vi.fn(() => true),
     ...overrides,
@@ -27,9 +30,7 @@ describe('AddRepositoriesToConfigUseCase', () => {
 
     const result = usecase.execute({
       configPath: '/home/user/.config/reviewflow/config.json',
-      newRepositories: [
-        { name: 'my-app', localPath: '/home/user/projects/my-app', enabled: true },
-      ],
+      newRepositories: [{ name: 'my-app', localPath: '/home/user/projects/my-app', enabled: true }],
     });
 
     expect(result.added).toHaveLength(1);
@@ -39,14 +40,16 @@ describe('AddRepositoriesToConfigUseCase', () => {
 
   it('should skip repositories already present in config', () => {
     const deps = createFakeDeps({
-      readFileSync: vi.fn(() => JSON.stringify({
-        server: { port: 3847 },
-        user: { gitlabUsername: '', githubUsername: '' },
-        queue: { maxConcurrent: 2, deduplicationWindowMs: 300000 },
-        repositories: [
-          { name: 'existing-app', localPath: '/home/user/projects/existing-app', enabled: true },
-        ],
-      })),
+      readFileSync: vi.fn(() =>
+        JSON.stringify({
+          server: { port: 3847 },
+          user: { gitlabUsername: '', githubUsername: '' },
+          queue: { maxConcurrent: 2, deduplicationWindowMs: 300000 },
+          repositories: [
+            { name: 'existing-app', localPath: '/home/user/projects/existing-app', enabled: true },
+          ],
+        }),
+      ),
     });
     const usecase = new AddRepositoriesToConfigUseCase(deps);
 
@@ -64,14 +67,14 @@ describe('AddRepositoriesToConfigUseCase', () => {
 
   it('should handle a mix of new and existing repositories', () => {
     const deps = createFakeDeps({
-      readFileSync: vi.fn(() => JSON.stringify({
-        server: { port: 3847 },
-        user: { gitlabUsername: '', githubUsername: '' },
-        queue: { maxConcurrent: 2, deduplicationWindowMs: 300000 },
-        repositories: [
-          { name: 'old-app', localPath: '/projects/old-app', enabled: true },
-        ],
-      })),
+      readFileSync: vi.fn(() =>
+        JSON.stringify({
+          server: { port: 3847 },
+          user: { gitlabUsername: '', githubUsername: '' },
+          queue: { maxConcurrent: 2, deduplicationWindowMs: 300000 },
+          repositories: [{ name: 'old-app', localPath: '/projects/old-app', enabled: true }],
+        }),
+      ),
     });
     const usecase = new AddRepositoriesToConfigUseCase(deps);
 
@@ -95,12 +98,12 @@ describe('AddRepositoriesToConfigUseCase', () => {
     });
     const usecase = new AddRepositoriesToConfigUseCase(deps);
 
-    expect(() => usecase.execute({
-      configPath: '/missing/config.json',
-      newRepositories: [
-        { name: 'app', localPath: '/projects/app', enabled: true },
-      ],
-    })).toThrow();
+    expect(() =>
+      usecase.execute({
+        configPath: '/missing/config.json',
+        newRepositories: [{ name: 'app', localPath: '/projects/app', enabled: true }],
+      }),
+    ).toThrow();
   });
 
   it('should throw a meaningful error when config contains invalid JSON', () => {
@@ -109,12 +112,12 @@ describe('AddRepositoriesToConfigUseCase', () => {
     });
     const usecase = new AddRepositoriesToConfigUseCase(deps);
 
-    expect(() => usecase.execute({
-      configPath: '/config/config.json',
-      newRepositories: [
-        { name: 'app', localPath: '/projects/app', enabled: true },
-      ],
-    })).toThrow('Invalid JSON in configuration file: /config/config.json');
+    expect(() =>
+      usecase.execute({
+        configPath: '/config/config.json',
+        newRepositories: [{ name: 'app', localPath: '/projects/app', enabled: true }],
+      }),
+    ).toThrow('Invalid JSON in configuration file: /config/config.json');
   });
 
   it('should write the merged repositories back to config file', () => {
@@ -122,9 +125,7 @@ describe('AddRepositoriesToConfigUseCase', () => {
       server: { port: 3847 },
       user: { gitlabUsername: 'me', githubUsername: '' },
       queue: { maxConcurrent: 2, deduplicationWindowMs: 300000 },
-      repositories: [
-        { name: 'old-app', localPath: '/projects/old-app', enabled: true },
-      ],
+      repositories: [{ name: 'old-app', localPath: '/projects/old-app', enabled: true }],
     };
     const writeFileSync = vi.fn();
     const deps = createFakeDeps({
@@ -135,9 +136,7 @@ describe('AddRepositoriesToConfigUseCase', () => {
 
     usecase.execute({
       configPath: '/config/config.json',
-      newRepositories: [
-        { name: 'new-app', localPath: '/projects/new-app', enabled: true },
-      ],
+      newRepositories: [{ name: 'new-app', localPath: '/projects/new-app', enabled: true }],
     });
 
     const writtenConfig = JSON.parse(writeFileSync.mock.calls[0][1]);

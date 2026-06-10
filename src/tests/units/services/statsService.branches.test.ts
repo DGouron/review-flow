@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, rmSync, existsSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import {
   loadProjectStats,
   saveProjectStats,
@@ -9,8 +11,8 @@ import {
   addReviewStats,
   getStatsSummary,
 } from '@/modules/statistics-insights/services/statsService.js';
-import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 import { DiffStatsFactory } from '@/tests/factories/diffStats.factory.js';
+import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 
 const STATS_RELATIVE_PATH = join('.claude', 'reviews', 'stats.json');
 
@@ -50,7 +52,7 @@ describe('loadProjectStats edge branches', () => {
     writeFileSync(
       join(projectPath, STATS_RELATIVE_PATH),
       JSON.stringify({ totalReviews: 'oops', somethingElse: true }),
-      'utf-8'
+      'utf-8',
     );
 
     const stats = loadProjectStats(projectPath);
@@ -68,7 +70,7 @@ describe('loadProjectStats edge branches', () => {
         totalDuration: 120000,
         lastUpdated: '2024-01-15T10:00:00Z',
       }),
-      'utf-8'
+      'utf-8',
     );
 
     const stats = loadProjectStats(projectPath);
@@ -87,7 +89,7 @@ describe('loadProjectStats edge branches', () => {
         lastUpdated: '2024-01-15T10:00:00Z',
         reviews: 'not-an-array',
       }),
-      'utf-8'
+      'utf-8',
     );
 
     const stats = loadProjectStats(projectPath);
@@ -106,7 +108,7 @@ describe('loadProjectStats edge branches', () => {
         lastUpdated: '2024-01-15T10:00:00Z',
         reviews: [review],
       }),
-      'utf-8'
+      'utf-8',
     );
 
     const stats = loadProjectStats(projectPath);
@@ -149,7 +151,9 @@ describe('saveProjectStats directory branch', () => {
 
 describe('parseReviewOutput branch coverage', () => {
   it('parses a full structured stats line', () => {
-    const result = parseReviewOutput('[REVIEW_STATS:blocking=1:warnings=2:suggestions=3:score=7.5]');
+    const result = parseReviewOutput(
+      '[REVIEW_STATS:blocking=1:warnings=2:suggestions=3:score=7.5]',
+    );
 
     expect(result).toEqual({ score: 7.5, blocking: 1, warnings: 2, suggestions: 3 });
   });
@@ -255,7 +259,7 @@ describe('addReviewStats branch coverage', () => {
       60000,
       '[REVIEW_STATS:blocking=0:warnings=0:suggestions=0:score=9]',
       'reviewer',
-      diffStats
+      diffStats,
     );
 
     expect(review.diffStats).toEqual(diffStats);
@@ -336,10 +340,10 @@ describe('getStatsSummary formatting and trend branches', () => {
 
   it('reports score up and blocking up when recent reviews improve', () => {
     const previous = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `p${index}`, score: 5, blocking: 3 })
+      ReviewStatsFactory.create({ id: `p${index}`, score: 5, blocking: 3 }),
     );
     const recent = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `r${index}`, score: 9, blocking: 0 })
+      ReviewStatsFactory.create({ id: `r${index}`, score: 9, blocking: 0 }),
     );
     const stats = ProjectStatsFactory.withReviews([...previous, ...recent]);
 
@@ -351,10 +355,10 @@ describe('getStatsSummary formatting and trend branches', () => {
 
   it('reports score down and blocking down when recent reviews worsen', () => {
     const previous = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `p${index}`, score: 9, blocking: 0 })
+      ReviewStatsFactory.create({ id: `p${index}`, score: 9, blocking: 0 }),
     );
     const recent = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `r${index}`, score: 5, blocking: 4 })
+      ReviewStatsFactory.create({ id: `r${index}`, score: 5, blocking: 4 }),
     );
     const stats = ProjectStatsFactory.withReviews([...previous, ...recent]);
 
@@ -366,10 +370,10 @@ describe('getStatsSummary formatting and trend branches', () => {
 
   it('keeps score trend stable when no scored reviews exist in either window', () => {
     const previous = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `p${index}`, score: null, blocking: 1 })
+      ReviewStatsFactory.create({ id: `p${index}`, score: null, blocking: 1 }),
     );
     const recent = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `r${index}`, score: null, blocking: 1 })
+      ReviewStatsFactory.create({ id: `r${index}`, score: null, blocking: 1 }),
     );
     const stats = ProjectStatsFactory.withReviews([...previous, ...recent]);
 
@@ -381,10 +385,10 @@ describe('getStatsSummary formatting and trend branches', () => {
 
   it('keeps score trend stable when changes stay within the threshold', () => {
     const previous = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `p${index}`, score: 7, blocking: 1 })
+      ReviewStatsFactory.create({ id: `p${index}`, score: 7, blocking: 1 }),
     );
     const recent = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `r${index}`, score: 7.2, blocking: 1 })
+      ReviewStatsFactory.create({ id: `r${index}`, score: 7.2, blocking: 1 }),
     );
     const stats = ProjectStatsFactory.withReviews([...previous, ...recent]);
 

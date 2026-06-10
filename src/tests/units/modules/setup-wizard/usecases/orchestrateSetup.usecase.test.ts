@@ -1,30 +1,34 @@
 import { describe, it, expect } from 'vitest';
-import { OrchestrateSetupUseCase } from '@/modules/setup-wizard/usecases/orchestrateSetup.usecase.js';
-import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
-import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
-import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
-import type { SetupState } from '@/modules/setup-wizard/entities/setupState/setupState.schema.js';
-import type { SetupStateGateway, SetupStateLoadResult } from '@/modules/setup-wizard/entities/setupState/setupState.gateway.js';
-import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
-import type { WizardEventEmitter } from '@/modules/setup-wizard/services/wizardEventEmitter.js';
-import { succeeded, blocked } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
+
 import {
   AwaitingInputClosedError,
   NonInteractiveInputError,
 } from '@/modules/setup-wizard/entities/promptInputError/promptInputError.js';
+import type {
+  SetupStateGateway,
+  SetupStateLoadResult,
+} from '@/modules/setup-wizard/entities/setupState/setupState.gateway.js';
+import type { SetupState } from '@/modules/setup-wizard/entities/setupState/setupState.schema.js';
+import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
+import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
+import { succeeded, blocked } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
+import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
+import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
+import type { WizardEventEmitter } from '@/modules/setup-wizard/services/wizardEventEmitter.js';
+import { OrchestrateSetupUseCase } from '@/modules/setup-wizard/usecases/orchestrateSetup.usecase.js';
 import { SetupStateFactory } from '@/tests/factories/setupState.factory.js';
-import { StubDependencyProbeGateway } from '@/tests/stubs/setup-wizard/dependencyProbe.stub.js';
+import { StubAiFallbackGateway } from '@/tests/stubs/setup-wizard/aiFallback.stub.js';
 import { StubClaudeAuthGateway } from '@/tests/stubs/setup-wizard/claudeAuth.stub.js';
-import { StubDaemonServiceGateway } from '@/tests/stubs/setup-wizard/daemonService.stub.js';
 import { StubDaemonHealthProbeGateway } from '@/tests/stubs/setup-wizard/daemonHealthProbe.stub.js';
+import { StubDaemonServiceGateway } from '@/tests/stubs/setup-wizard/daemonService.stub.js';
+import { StubDependencyProbeGateway } from '@/tests/stubs/setup-wizard/dependencyProbe.stub.js';
 import { StubEnvFileGateway } from '@/tests/stubs/setup-wizard/envFile.stub.js';
 import { StubGitRemoteGateway } from '@/tests/stubs/setup-wizard/gitRemote.stub.js';
 import { StubProjectConfigGateway } from '@/tests/stubs/setup-wizard/projectConfig.stub.js';
-import { StubSkillTemplateGateway } from '@/tests/stubs/setup-wizard/skillTemplate.stub.js';
-import { StubServerConfigGateway } from '@/tests/stubs/setup-wizard/serverConfig.stub.js';
-import { StubValidationGateway } from '@/tests/stubs/setup-wizard/validation.stub.js';
-import { StubAiFallbackGateway } from '@/tests/stubs/setup-wizard/aiFallback.stub.js';
 import { StubPromptGateway } from '@/tests/stubs/setup-wizard/prompt.stub.js';
+import { StubServerConfigGateway } from '@/tests/stubs/setup-wizard/serverConfig.stub.js';
+import { StubSkillTemplateGateway } from '@/tests/stubs/setup-wizard/skillTemplate.stub.js';
+import { StubValidationGateway } from '@/tests/stubs/setup-wizard/validation.stub.js';
 
 class FakeStep implements SetupStep {
   public detectCalls = 0;
@@ -88,11 +92,21 @@ class RecordingStateGateway implements SetupStateGateway {
   reset(): void {}
 }
 
-function buildContext(emitter: WizardEventEmitter, stateGateway: SetupStateGateway, yes = false): WizardContext {
+function buildContext(
+  emitter: WizardEventEmitter,
+  stateGateway: SetupStateGateway,
+  yes = false,
+): WizardContext {
   return {
     state: null,
     currentStepId: null,
-    project: { localPath: '/tmp/p', platform: 'github', preset: 'backend', language: 'en', remoteUrl: null },
+    project: {
+      localPath: '/tmp/p',
+      platform: 'github',
+      preset: 'backend',
+      language: 'en',
+      remoteUrl: null,
+    },
     flags: { path: '/tmp/p', json: false, force: false, ai: false, yes, showSecrets: false },
     gateways: {
       setupState: stateGateway,
@@ -126,7 +140,10 @@ describe('OrchestrateSetupUseCase', () => {
       new FakeStep('daemon', 'Daemon', null, succeeded()),
     ];
 
-    const result = await orchestrator.execute({ context: buildContext(emitter, stateGateway), steps });
+    const result = await orchestrator.execute({
+      context: buildContext(emitter, stateGateway),
+      steps,
+    });
 
     expect(result.exitCode).toBe(0);
     expect(result.resumedFromStepId).toBeNull();
@@ -161,7 +178,10 @@ describe('OrchestrateSetupUseCase', () => {
       new FakeStep('claude-login', 'Login', succeeded(), succeeded()),
     ];
 
-    const result = await orchestrator.execute({ context: buildContext(emitter, stateGateway), steps });
+    const result = await orchestrator.execute({
+      context: buildContext(emitter, stateGateway),
+      steps,
+    });
 
     expect(result.exitCode).toBe(0);
     expect(steps.every((step) => step.executeCalls === 0)).toBe(true);
@@ -178,7 +198,10 @@ describe('OrchestrateSetupUseCase', () => {
       new FakeStep('daemon', 'Daemon', null, succeeded()),
     ];
 
-    const result = await orchestrator.execute({ context: buildContext(emitter, stateGateway), steps });
+    const result = await orchestrator.execute({
+      context: buildContext(emitter, stateGateway),
+      steps,
+    });
 
     expect(result.resumedFromStepId).toBe('claude-login');
     expect(emitter.resumeBanners).toEqual([{ stepId: 'claude-login', position: 2, total: 3 }]);
@@ -194,7 +217,10 @@ describe('OrchestrateSetupUseCase', () => {
       new FakeStep('daemon', 'Daemon', null, succeeded()),
     ];
 
-    const result = await orchestrator.execute({ context: buildContext(emitter, stateGateway, true), steps });
+    const result = await orchestrator.execute({
+      context: buildContext(emitter, stateGateway, true),
+      steps,
+    });
 
     expect(result.exitCode).toBe(2);
     expect(steps[2].executeCalls).toBe(0);
@@ -209,7 +235,10 @@ describe('OrchestrateSetupUseCase', () => {
       new FakeStep('claude-login', 'Login', null, succeeded()),
     ];
 
-    const result = await orchestrator.execute({ context: buildContext(emitter, stateGateway, false), steps });
+    const result = await orchestrator.execute({
+      context: buildContext(emitter, stateGateway, false),
+      steps,
+    });
 
     expect(result.exitCode).toBe(1);
     expect(steps[1].executeCalls).toBe(0);
@@ -229,7 +258,10 @@ describe('OrchestrateSetupUseCase', () => {
       },
     };
 
-    const result = await orchestrator.execute({ context: buildContext(emitter, stateGateway), steps: [throwingStep] });
+    const result = await orchestrator.execute({
+      context: buildContext(emitter, stateGateway),
+      steps: [throwingStep],
+    });
 
     expect(result.exitCode).toBe(1);
     const outcome = result.finalState.steps['add-project'];
@@ -251,12 +283,17 @@ describe('OrchestrateSetupUseCase', () => {
       },
     };
 
-    const result = await orchestrator.execute({ context: buildContext(emitter, stateGateway, true), steps: [throwingStep] });
+    const result = await orchestrator.execute({
+      context: buildContext(emitter, stateGateway, true),
+      steps: [throwingStep],
+    });
 
     expect(result.exitCode).toBe(2);
     const outcome = result.finalState.steps['add-project'];
     expect(outcome?.status).toBe('blocked');
-    expect(outcome?.message).toBe('Mode non-interactif : aucune entrée disponible pour cette étape');
+    expect(outcome?.message).toBe(
+      'Mode non-interactif : aucune entrée disponible pour cette étape',
+    );
   });
 
   it('exposes the current step id on the context while a step executes', async () => {
@@ -275,7 +312,10 @@ describe('OrchestrateSetupUseCase', () => {
       },
     };
 
-    await orchestrator.execute({ context: buildContext(emitter, stateGateway), steps: [observingStep] });
+    await orchestrator.execute({
+      context: buildContext(emitter, stateGateway),
+      steps: [observingStep],
+    });
 
     expect(seen).toBe('daemon');
   });
@@ -285,7 +325,10 @@ describe('OrchestrateSetupUseCase', () => {
     const stateGateway = new RecordingStateGateway({ state: null, corrupted: true });
     const steps = [new FakeStep('dependencies', 'Deps', null, succeeded())];
 
-    const result = await orchestrator.execute({ context: buildContext(emitter, stateGateway), steps });
+    const result = await orchestrator.execute({
+      context: buildContext(emitter, stateGateway),
+      steps,
+    });
 
     expect(result.stateWasCorrupted).toBe(true);
     expect(emitter.warnings.length).toBeGreaterThan(0);

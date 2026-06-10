@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   EMBER_STATES,
   emberStateToVisual,
@@ -62,8 +63,10 @@ describe('projectFlameVertex', () => {
   it('leans the tip far more than the base for a positive sway', () => {
     const tip: [number, number, number] = [0, FLAME_TIP_Y, 0];
     const base: [number, number, number] = [0, FLAME_BASE_Y, 0];
-    const tipShift = projectFlameVertex(tip, 0, 0.4, projection).x - projectFlameVertex(tip, 0, 0, projection).x;
-    const baseShift = projectFlameVertex(base, 0, 0.4, projection).x - projectFlameVertex(base, 0, 0, projection).x;
+    const tipShift =
+      projectFlameVertex(tip, 0, 0.4, projection).x - projectFlameVertex(tip, 0, 0, projection).x;
+    const baseShift =
+      projectFlameVertex(base, 0, 0.4, projection).x - projectFlameVertex(base, 0, 0, projection).x;
     expect(tipShift).toBeGreaterThan(baseShift);
     expect(baseShift).toBeCloseTo(0, 6);
   });

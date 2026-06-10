@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { setupInputGuard } from '@/modules/setup-wizard/entities/setupInput/setupInput.guard.js';
 
 describe('setupInputGuard', () => {

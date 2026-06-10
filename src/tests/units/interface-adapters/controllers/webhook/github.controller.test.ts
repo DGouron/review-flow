@@ -1,7 +1,9 @@
-import { vi } from 'vitest';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import type { RepositoryConfig } from '../../../../../config/loader.js';
+import { vi } from 'vitest';
+
 import type { GitHubWebhookDependencies } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
+
+import type { RepositoryConfig } from '../../../../../config/loader.js';
 
 const mockConfig = {
   server: { port: 3000 },
@@ -54,11 +56,15 @@ vi.mock('../../../../../main/websocket.js', () => ({
 }));
 
 vi.mock('@/modules/review-execution/services/contextActionsExecutor.js', () => ({
-  executeActionsFromContext: vi.fn(() => Promise.resolve({ total: 1, succeeded: 1, failed: 0, skipped: 0 })),
+  executeActionsFromContext: vi.fn(() =>
+    Promise.resolve({ total: 1, succeeded: 1, failed: 0, skipped: 0 }),
+  ),
 }));
 
 vi.mock('@/modules/review-execution/services/threadActionsExecutor.js', () => ({
-  executeThreadActions: vi.fn(() => Promise.resolve({ total: 0, succeeded: 0, failed: 0, skipped: 0 })),
+  executeThreadActions: vi.fn(() =>
+    Promise.resolve({ total: 0, succeeded: 0, failed: 0, skipped: 0 }),
+  ),
   defaultCommandExecutor: vi.fn(),
 }));
 
@@ -75,15 +81,17 @@ vi.mock('../../../../../config/projectConfig.js', () => ({
 }));
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { handleGitHubWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
-import { GitHubEventFactory } from '../../../../factories/gitHubEvent.factory.js';
-import { createStubLogger } from '../../../../stubs/logger.stub.js';
-import { enqueueReview } from '../../../../../frameworks/queue/pQueueAdapter.js';
-import { invokeClaudeReview } from '../../../../../claude/invoker.js';
-import { verifyGitHubSignature, getGitHubEventType } from '../../../../../security/verifier.js';
-import { findRepositoryByRemoteUrl } from '../../../../../config/loader.js';
-import { TrackedMrFactory } from '../../../../factories/trackedMr.factory.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+
+import { invokeClaudeReview } from '../../../../../claude/invoker.js';
+import { findRepositoryByRemoteUrl } from '../../../../../config/loader.js';
+import { enqueueReview } from '../../../../../frameworks/queue/pQueueAdapter.js';
+import { verifyGitHubSignature, getGitHubEventType } from '../../../../../security/verifier.js';
+import { GitHubEventFactory } from '../../../../factories/gitHubEvent.factory.js';
+import { TrackedMrFactory } from '../../../../factories/trackedMr.factory.js';
+import { createStubLogger } from '../../../../stubs/logger.stub.js';
 
 function createMockDeps(): GitHubWebhookDependencies {
   return {
@@ -208,7 +216,7 @@ describe('handleGitHubWebhook', () => {
           assignedBy: expect.objectContaining({
             username: 'developer',
           }),
-        })
+        }),
       );
     });
 
@@ -227,7 +235,7 @@ describe('handleGitHubWebhook', () => {
             mrNumber: 123,
             platform: 'github',
           }),
-        })
+        }),
       );
     });
   });
@@ -266,7 +274,7 @@ describe('handleGitHubWebhook', () => {
             warnings: 3,
             suggestions: 1,
           }),
-        })
+        }),
       );
     });
 
@@ -298,7 +306,7 @@ describe('handleGitHubWebhook', () => {
             blocking: 1,
             threadsOpened: 1, // Only blocking count, not blocking + warnings (6)
           }),
-        })
+        }),
       );
     });
 
@@ -433,7 +441,7 @@ describe('handleGitHubWebhook', () => {
             username: 'pr-owner',
             displayName: 'pr-owner',
           }),
-        })
+        }),
       );
     });
 
@@ -455,16 +463,13 @@ describe('handleGitHubWebhook', () => {
             username: 'webhook-sender',
             displayName: 'webhook-sender',
           }),
-        })
+        }),
       );
     });
 
     it('should use first assignee when multiple assignees exist', async () => {
       const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
-      event.pull_request.assignees = [
-        { login: 'primary-owner' },
-        { login: 'secondary-owner' },
-      ];
+      event.pull_request.assignees = [{ login: 'primary-owner' }, { login: 'secondary-owner' }];
       event.sender = { login: 'reviewer' };
 
       const request = {
@@ -480,7 +485,7 @@ describe('handleGitHubWebhook', () => {
             username: 'primary-owner',
             displayName: 'primary-owner',
           }),
-        })
+        }),
       );
     });
 
@@ -502,7 +507,7 @@ describe('handleGitHubWebhook', () => {
             username: 'fallback-sender',
             displayName: 'fallback-sender',
           }),
-        })
+        }),
       );
     });
   });
@@ -830,9 +835,7 @@ describe('handleGitHubWebhook', () => {
 
       expect(removeWorktree).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'cleaned' }),
-      );
+      expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'cleaned' }));
     });
   });
 
@@ -1099,7 +1102,10 @@ describe('handleGitHubWebhook', () => {
       await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
 
       expect(mockReply.send).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'ignored', reason: 'Review state is commented, not approved' }),
+        expect.objectContaining({
+          status: 'ignored',
+          reason: 'Review state is commented, not approved',
+        }),
       );
     });
 
@@ -1230,7 +1236,11 @@ describe('handleGitHubWebhook', () => {
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(202);
       expect(mockReply.send).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'pending-confirmation', pendingId: 'pending-1', prNumber: 123 }),
+        expect.objectContaining({
+          status: 'pending-confirmation',
+          pendingId: 'pending-1',
+          prNumber: 123,
+        }),
       );
     });
 

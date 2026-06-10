@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { computeCardCounters } from '@/dashboard/modules/cardCounters.js';
 
 describe('computeCardCounters', () => {
@@ -125,7 +126,9 @@ describe('computeCardCounters', () => {
 describe('extractGithubSlug', () => {
   it('extracts owner/repo from an https GitHub URL with .git suffix', async () => {
     const { extractGithubSlug } = await import('@/dashboard/modules/cardCounters.js');
-    expect(extractGithubSlug('https://github.com/DGouron/review-flow.git')).toBe('DGouron/review-flow');
+    expect(extractGithubSlug('https://github.com/DGouron/review-flow.git')).toBe(
+      'DGouron/review-flow',
+    );
   });
 
   it('extracts owner/repo from an https GitHub URL without .git suffix', async () => {
@@ -175,9 +178,7 @@ describe('computeCardCounters — aliases', () => {
   it('falls back to localPath-only match when no aliases provided', async () => {
     const { computeCardCounters: cc } = await import('@/dashboard/modules/cardCounters.js');
     const result = cc({
-      activeReviews: [
-        { project: 'DGouron/review-flow', status: 'running' },
-      ],
+      activeReviews: [{ project: 'DGouron/review-flow', status: 'running' }],
       reviewFiles: [],
       scope: { kind: 'project', localPath: '/repo/A', projectName: 'A' },
     });

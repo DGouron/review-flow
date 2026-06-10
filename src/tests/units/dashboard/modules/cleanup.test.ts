@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { renderCleanupSection } from '@/dashboard/modules/cleanup.js';
 
 describe('renderCleanupSection', () => {

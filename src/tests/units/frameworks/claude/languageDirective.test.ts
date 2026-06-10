@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { buildLanguageDirective } from '@/frameworks/claude/languageDirective.js';
 
 describe('buildLanguageDirective', () => {

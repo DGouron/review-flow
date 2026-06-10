@@ -1,21 +1,17 @@
+import type { CommandExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
 import {
   buildScopedExecutorEnvironment,
   type ExecutorFileWriter,
   type ScopedExecutorEnv,
-} from '@/modules/platform-integration/services/scopedExecutorEnvironment.js'
-import type { CommandExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js'
+} from '@/modules/platform-integration/services/scopedExecutorEnvironment.js';
 
-export type ScopedSpawn = (
-  command: string,
-  env: ScopedExecutorEnv,
-  cwd: string,
-) => string
+export type ScopedSpawn = (command: string, env: ScopedExecutorEnv, cwd: string) => string;
 
 export interface CreateScopedGitLabExecutorInput {
-  parentEnv: Record<string, string | undefined>
-  isolatedDir: string
-  fileWriter: ExecutorFileWriter
-  spawn: ScopedSpawn
+  parentEnv: Record<string, string | undefined>;
+  isolatedDir: string;
+  fileWriter: ExecutorFileWriter;
+  spawn: ScopedSpawn;
 }
 
 /**
@@ -31,9 +27,9 @@ export function createScopedGitLabExecutor(
     parentEnv: input.parentEnv,
     isolatedDir: input.isolatedDir,
     fileWriter: input.fileWriter,
-  })
+  });
 
-  const cwd = env.HOME ?? input.isolatedDir
+  const cwd = env.HOME ?? input.isolatedDir;
 
-  return (command: string): string => input.spawn(command, env, cwd)
+  return (command: string): string => input.spawn(command, env, cwd);
 }

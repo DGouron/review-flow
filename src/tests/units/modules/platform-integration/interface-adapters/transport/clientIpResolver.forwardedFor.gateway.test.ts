@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
 
 describe('ForwardedForClientIpResolver', () => {

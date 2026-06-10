@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { serializeSetupInput } from '@/modules/setup-wizard/entities/setupInput/setupInput.schema.js';
 
 describe('serializeSetupInput', () => {

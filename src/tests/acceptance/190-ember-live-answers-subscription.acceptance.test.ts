@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
-import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
-import { StubEmberReadDataGateway } from '@/tests/stubs/emberReadData.stub.js';
-import { StubEmberAnswerTransportGateway } from '@/tests/stubs/emberAnswerTransport.stub.js';
-import { StubEmberMemoryGateway } from '@/tests/stubs/emberMemory.stub.js';
+
+import { buildEmberSystemPrompt } from '@/modules/ember-chat/services/emberSystemPrompt.js';
 import { askEmber } from '@/modules/ember-chat/usecases/askEmber/askEmber.usecase.js';
 import type { EmberStreamSubscriber } from '@/modules/ember-chat/usecases/askEmber/askEmber.usecase.js';
-import { buildEmberSystemPrompt } from '@/modules/ember-chat/services/emberSystemPrompt.js';
+import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+import { StubEmberAnswerTransportGateway } from '@/tests/stubs/emberAnswerTransport.stub.js';
+import { StubEmberMemoryGateway } from '@/tests/stubs/emberMemory.stub.js';
+import { StubEmberReadDataGateway } from '@/tests/stubs/emberReadData.stub.js';
+import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
 
 const PROJECT_PATH = '/projects/alpha';
 

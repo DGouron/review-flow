@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import {
   buildTabBarModel,
   renderTabBarHtml,
@@ -78,7 +79,11 @@ describe('tabBar module', () => {
       });
 
       expect(model.tabs).toHaveLength(3);
-      expect(model.tabs[1]).toMatchObject({ id: '/repos/frontend', label: 'frontend', isActive: false });
+      expect(model.tabs[1]).toMatchObject({
+        id: '/repos/frontend',
+        label: 'frontend',
+        isActive: false,
+      });
       expect(model.tabs[2]).toMatchObject({ id: '/repos/api', label: 'api', isActive: false });
     });
 
@@ -122,7 +127,9 @@ describe('tabBar module', () => {
 
     it('escapes the label to prevent HTML injection', () => {
       const html = renderTabBarHtml({
-        tabs: [{ id: 'overview', label: '<script>alert(1)</script>', isActive: true, enabled: true }],
+        tabs: [
+          { id: 'overview', label: '<script>alert(1)</script>', isActive: true, enabled: true },
+        ],
       });
 
       expect(html).not.toContain('<script>alert(1)</script>');

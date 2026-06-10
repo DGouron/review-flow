@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { presetSchema } from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
 
 export const agentPresetSchema = z.object({

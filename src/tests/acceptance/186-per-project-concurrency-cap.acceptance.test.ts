@@ -15,12 +15,14 @@
 
 import Fastify, { type FastifyInstance } from 'fastify';
 import { describe, expect, it } from 'vitest';
-import { projectConfigRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/projectConfig.routes.js';
-import { UpdateProjectConfigUseCase } from '@/modules/cli-configuration/usecases/projectConfig/updateProjectConfig.usecase.js';
-import { StubProjectConfigGateway } from '@/tests/stubs/projectConfigGateway.stub.js';
-import { StubRepositoriesListGateway } from '@/tests/stubs/repositoriesListGateway.stub.js';
-import { StubQueueCapacityPort } from '@/tests/stubs/queueCapacityPort.stub.js';
-import { RecomputeGlobalConcurrencyUseCase } from '@/modules/cli-configuration/usecases/projectConfig/recomputeGlobalConcurrency.usecase.js';
+
+import type { ProjectConfig } from '@/config/projectConfig.js';
+import { buildHeaderCapacityViewModel } from '@/dashboard/modules/headerCapacityBadge.js';
+import {
+  validateMaxConcurrentReviews,
+  buildSettingsViewModel,
+  renderSettingsModalHtml,
+} from '@/dashboard/modules/settingsModal.js';
 import { ProjectSemaphore } from '@/frameworks/queue/projectSemaphore.js';
 import {
   effectiveProjectConcurrencyCap,
@@ -29,15 +31,14 @@ import {
   PROJECT_CAP_NOT_INTEGER_MESSAGE,
   PROJECT_CAP_REQUIRED_MESSAGE,
 } from '@/modules/cli-configuration/entities/projectConcurrencyCap/projectConcurrencyCap.valueObject.js';
+import { projectConfigRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/projectConfig.routes.js';
+import { RecomputeGlobalConcurrencyUseCase } from '@/modules/cli-configuration/usecases/projectConfig/recomputeGlobalConcurrency.usecase.js';
+import { UpdateProjectConfigUseCase } from '@/modules/cli-configuration/usecases/projectConfig/updateProjectConfig.usecase.js';
 import { OverviewPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/overview.presenter.js';
 import { RepositoryConfigFactory } from '@/tests/factories/repositoryConfig.factory.js';
-import {
-  validateMaxConcurrentReviews,
-  buildSettingsViewModel,
-  renderSettingsModalHtml,
-} from '@/dashboard/modules/settingsModal.js';
-import { buildHeaderCapacityViewModel } from '@/dashboard/modules/headerCapacityBadge.js';
-import type { ProjectConfig } from '@/config/projectConfig.js';
+import { StubProjectConfigGateway } from '@/tests/stubs/projectConfigGateway.stub.js';
+import { StubQueueCapacityPort } from '@/tests/stubs/queueCapacityPort.stub.js';
+import { StubRepositoriesListGateway } from '@/tests/stubs/repositoriesListGateway.stub.js';
 
 function baseProjectConfig(overrides: Partial<ProjectConfig> = {}): ProjectConfig {
   return {
@@ -196,9 +197,10 @@ describe('Acceptance — SPEC-186: Per-project concurrency cap', () => {
       expect(semaphore.runningCount('/proj/A')).toBe(2);
 
       let thirdResolved = false;
-      const thirdPromise = semaphore.acquire('/proj/A').then(() => {
+      const thirdPromise = (async () => {
+        await semaphore.acquire('/proj/A');
         thirdResolved = true;
-      });
+      })();
 
       await Promise.resolve();
       await Promise.resolve();
@@ -238,9 +240,10 @@ describe('Acceptance — SPEC-186: Per-project concurrency cap', () => {
       expect(semaphore.runningCount('/proj/A')).toBe(4);
 
       let queuedResolved = false;
-      const queuedPromise = semaphore.acquire('/proj/A').then(() => {
+      const queuedPromise = (async () => {
+        await semaphore.acquire('/proj/A');
         queuedResolved = true;
-      });
+      })();
 
       await Promise.resolve();
       await Promise.resolve();
@@ -263,11 +266,11 @@ describe('Acceptance — SPEC-186: Per-project concurrency cap', () => {
       await semaphore.acquire('/proj/A');
 
       const releasedCounter = { count: 0 };
-      const queuedPromises = [
-        semaphore.acquire('/proj/A').then(() => { releasedCounter.count += 1; }),
-        semaphore.acquire('/proj/A').then(() => { releasedCounter.count += 1; }),
-        semaphore.acquire('/proj/A').then(() => { releasedCounter.count += 1; }),
-      ];
+      const acquireAndCount = async (): Promise<void> => {
+        await semaphore.acquire('/proj/A');
+        releasedCounter.count += 1;
+      };
+      const queuedPromises = [acquireAndCount(), acquireAndCount(), acquireAndCount()];
 
       await Promise.resolve();
       expect(releasedCounter.count).toBe(0);

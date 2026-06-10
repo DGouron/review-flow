@@ -1,6 +1,6 @@
+import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
 import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
-import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
 
 interface DeveloperData {
   name: string;
@@ -102,7 +102,9 @@ function extractReviewExcerpt(content: string): string {
   }
 
   // Extract blocking corrections titles only
-  const blockingSection = content.match(/## Corrections? (?:Importantes?|Bloquantes?)[\s\S]*?(?=\n## )/g);
+  const blockingSection = content.match(
+    /## Corrections? (?:Importantes?|Bloquantes?)[\s\S]*?(?=\n## )/g,
+  );
   if (blockingSection) {
     for (const section of blockingSection) {
       const titles = section.match(/^### \d+\..+$/gm);
@@ -131,22 +133,25 @@ function buildDeveloperSection(
 ): string {
   const { name, reviews, trackedMrs } = developer;
 
-  const sortedReviews = [...reviews].sort(
+  const sortedReviews = [...reviews].toSorted(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 
   const averageScore = computeAverageScore(reviews);
   const averageBlocking = computeAverageBlocking(reviews);
   const averageWarnings = computeAverageWarnings(reviews);
-  const averageDuration = reviews.length > 0
-    ? formatDuration(reviews.reduce((sum, review) => sum + review.duration, 0) / reviews.length)
-    : 'N/A';
+  const averageDuration =
+    reviews.length > 0
+      ? formatDuration(reviews.reduce((sum, review) => sum + review.duration, 0) / reviews.length)
+      : 'N/A';
   const firstPassRate = computeFirstPassQualityRate(reviews);
   const totalAdditions = reviews.reduce(
-    (sum, review) => sum + (review.diffStats?.additions ?? 0), 0,
+    (sum, review) => sum + (review.diffStats?.additions ?? 0),
+    0,
   );
   const totalDeletions = reviews.reduce(
-    (sum, review) => sum + (review.diffStats?.deletions ?? 0), 0,
+    (sum, review) => sum + (review.diffStats?.deletions ?? 0),
+    0,
   );
 
   let section = `### Developer: ${name} (${reviews.length} reviews)\n`;
@@ -165,7 +170,9 @@ function buildDeveloperSection(
     if (content) {
       const excerpt = extractReviewExcerpt(content);
       if (excerpt.length > 0) {
-        reviewExcerpts.push(`--- MR ${review.mrNumber} (score: ${review.score ?? 'N/A'}) ---\n${excerpt}`);
+        reviewExcerpts.push(
+          `--- MR ${review.mrNumber} (score: ${review.score ?? 'N/A'}) ---\n${excerpt}`,
+        );
       }
     }
   }
@@ -177,7 +184,9 @@ function buildDeveloperSection(
   if (trackedMrs.length > 0) {
     const totalMrReviews = trackedMrs.reduce((sum, mr) => sum + mr.totalReviews, 0);
     const totalFollowups = trackedMrs.reduce((sum, mr) => sum + mr.totalFollowups, 0);
-    const approvedFirst = trackedMrs.filter((mr) => mr.totalReviews <= 1 && mr.state === 'approved').length;
+    const approvedFirst = trackedMrs.filter(
+      (mr) => mr.totalReviews <= 1 && mr.state === 'approved',
+    ).length;
 
     section += `\n### MR Lifecycle for ${name}:\n`;
     section += `- Total MRs: ${trackedMrs.length}\n`;
@@ -239,7 +248,9 @@ You MUST return a valid JSON object matching this EXACT schema. Every field is R
 \`\`\`json
 {
   "developers": [
-    ${developerNames.map(name => `{
+    ${developerNames
+      .map(
+        (name) => `{
       "developerName": "${name}",
       "title": "<string: creative title in ${language === 'fr' ? 'French' : 'English'}, e.g. 'Le Chirurgien du Code'>",
       "titleExplanation": "<string: one sentence why this title fits, with data reference>",
@@ -247,7 +258,9 @@ You MUST return a valid JSON object matching this EXACT schema. Every field is R
       "weaknesses": ["<string: concrete weakness with numbers>", "<at least 1 item>"],
       "recommendations": ["<string: actionable recommendation>", "<at least 1 item>"],
       "summary": "<string: 2-3 sentences profiling coding style and quality>"
-    }`).join(',\n    ')}
+    }`,
+      )
+      .join(',\n    ')}
   ],
   "team": {
     "summary": "<string: 2-3 sentences about team dynamics>",

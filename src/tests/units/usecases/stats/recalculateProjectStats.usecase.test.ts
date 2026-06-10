@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
+
 import { recalculateProjectStats } from '@/modules/statistics-insights/usecases/stats/recalculateProjectStats.usecase.js';
-import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 
 describe('recalculateProjectStats', () => {
   it('should recalculate averageScore correctly from reviews', () => {
@@ -121,7 +122,11 @@ describe('recalculateProjectStats', () => {
       ReviewStatsFactory.create({ id: 'r1', duration: 60000, mrNumber: 1 }),
       ReviewStatsFactory.create({ id: 'r2', duration: 120000, mrNumber: 2 }),
     ];
-    const projectStats = ProjectStatsFactory.create({ reviews, totalDuration: 0, averageDuration: 0 });
+    const projectStats = ProjectStatsFactory.create({
+      reviews,
+      totalDuration: 0,
+      averageDuration: 0,
+    });
     statsGateway.saveProjectStats('/test/project', projectStats);
 
     const result = recalculateProjectStats('/test/project', {
@@ -151,9 +156,7 @@ describe('recalculateProjectStats', () => {
 
   it('should save the recalculated stats', () => {
     const statsGateway = new InMemoryStatsGateway();
-    const reviews = [
-      ReviewStatsFactory.create({ id: 'r1', score: 7, mrNumber: 1 }),
-    ];
+    const reviews = [ReviewStatsFactory.create({ id: 'r1', score: 7, mrNumber: 1 })];
     const projectStats = ProjectStatsFactory.create({ reviews, averageScore: 0 });
     statsGateway.saveProjectStats('/test/project', projectStats);
 

@@ -1,19 +1,20 @@
 import type { Logger } from 'pino';
-import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
-import type { ReviewFileGateway } from '@/modules/review-execution/entities/review/reviewFile.gateway.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
+
 import type { EnvironmentGateway } from '@/modules/claude-invocation/entities/billingState/environment.gateway.js';
-import type { AiInsightsSessionGateway } from '@/modules/statistics-insights/entities/insight/aiInsightsSession.gateway.js';
-import type { AiInsightsResult } from '@/modules/statistics-insights/entities/insight/aiInsight.js';
+import type { ReviewFileGateway } from '@/modules/review-execution/entities/review/reviewFile.gateway.js';
 import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
+import type { AiInsightsResult } from '@/modules/statistics-insights/entities/insight/aiInsight.js';
+import type { AiInsightsSessionGateway } from '@/modules/statistics-insights/entities/insight/aiInsightsSession.gateway.js';
+import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import { buildAiInsightsPrompt } from '@/modules/statistics-insights/usecases/insights/buildAiInsightsPrompt.js';
 import { parseAiInsightsResponse } from '@/modules/statistics-insights/usecases/insights/parseAiInsightsResponse.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 
 const NO_STATS_MESSAGE = 'Aucune statistique de review disponible pour ce projet';
 const API_KEY_PRESENT_MESSAGE =
   "Impossible de générer les insights — l'abonnement Claude est requis, pas de clé API";
 const UNAVAILABLE_MESSAGE =
-  'Impossible de générer les insights — connexion à l\'abonnement Claude requise';
+  "Impossible de générer les insights — connexion à l'abonnement Claude requise";
 const TIMEOUT_MESSAGE = 'La génération des insights a expiré';
 
 interface GenerateAiInsightsViaSessionInput {
@@ -72,7 +73,7 @@ export async function generateAiInsightsViaSession(
 
   logger.info({ promptLength: prompt.length }, 'Dispatching --bg session for AI insights');
 
-  const sessionResult = await session.run(prompt);
+  const sessionResult = await session.run(prompt, projectPath);
 
   if (sessionResult.status === 'unavailable') {
     logger.error({ reason: sessionResult.reason }, 'AI insights session unavailable');
@@ -84,7 +85,10 @@ export async function generateAiInsightsViaSession(
     throw new Error(TIMEOUT_MESSAGE);
   }
 
-  logger.info({ answerLength: sessionResult.answer.length }, 'Received --bg answer for AI insights');
+  logger.info(
+    { answerLength: sessionResult.answer.length },
+    'Received --bg answer for AI insights',
+  );
 
   const result = parseAiInsightsResponse(sessionResult.answer);
 

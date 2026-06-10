@@ -1,5 +1,6 @@
-import { vi } from 'vitest';
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import { vi } from 'vitest';
+
 import type { RepositoryConfig } from '@/config/loader.js';
 
 const mockConfig = {
@@ -26,9 +27,7 @@ vi.mock('@/config/loader.js', () => ({
 vi.mock('@/security/verifier.js', () => ({
   verifyGitLabSignature: vi.fn(() => ({ valid: true })),
   getGitLabEventType: vi.fn(() => 'Merge Request Hook'),
-  getGitLabEventUuid: vi.fn(
-    (request: FastifyRequest) => request.headers['x-gitlab-event-uuid'],
-  ),
+  getGitLabEventUuid: vi.fn((request: FastifyRequest) => request.headers['x-gitlab-event-uuid']),
 }));
 
 vi.mock('@/frameworks/queue/pQueueAdapter.js', () => ({
@@ -57,33 +56,39 @@ vi.mock('@/config/projectConfig.js', () => ({
 }));
 
 import { describe, it, expect, beforeEach } from 'vitest';
+
 import { handleGitLabWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
-import { GitLabEventFactory } from '@/tests/factories/gitLabEvent.factory.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
-import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
-import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
-import { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
-import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
-import { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
-import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
-import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
-import { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
-import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
-import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
-import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
-import { StubApprovalRevocationGateway } from '@/tests/stubs/approvalRevocation.stub.js';
-import { StubIdempotencyStore } from '@/tests/stubs/idempotencyStore.stub.js';
 import { InMemoryIdempotencyStore } from '@/modules/platform-integration/interface-adapters/gateways/inMemoryIdempotencyStore.gateway.js';
 import type {
   GateClaudeInvocationInput,
   GateClaudeInvocationResult,
 } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
+import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
+import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
+import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
+import { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
+import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
+import { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
+import { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
+import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
+import { GitLabEventFactory } from '@/tests/factories/gitLabEvent.factory.js';
+import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
+import { StubApprovalRevocationGateway } from '@/tests/stubs/approvalRevocation.stub.js';
+import { StubIdempotencyStore } from '@/tests/stubs/idempotencyStore.stub.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
 
 class StubGateClaudeInvocation {
   invocationCount = 0;
   private readonly result: GateClaudeInvocationResult;
 
-  constructor(result: GateClaudeInvocationResult = { status: 'enqueued', jobId: 'gitlab-test-org/test-project-42' }) {
+  constructor(
+    result: GateClaudeInvocationResult = {
+      status: 'enqueued',
+      jobId: 'gitlab-test-org/test-project-42',
+    },
+  ) {
     this.result = result;
   }
 
@@ -155,7 +160,9 @@ function createDeps(
   return {
     reviewContextGateway: createStubContextGateway(),
     threadFetchGateway,
-    diffMetadataFetchGateway: { fetchDiffMetadata: vi.fn(() => ({ baseSha: 'abc', headSha: 'def', startSha: 'ghi' })) },
+    diffMetadataFetchGateway: {
+      fetchDiffMetadata: vi.fn(() => ({ baseSha: 'abc', headSha: 'def', startSha: 'ghi' })),
+    },
     diffStatsFetchGateway: { fetchDiffStats: vi.fn(() => null) },
     trackAssignment: new TrackAssignmentUseCase(trackingGateway),
     recordCompletion: new RecordReviewCompletionUseCase(trackingGateway),

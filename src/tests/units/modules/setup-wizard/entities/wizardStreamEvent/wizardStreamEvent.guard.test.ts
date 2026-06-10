@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { wizardStreamEventGuard } from '@/modules/setup-wizard/entities/wizardStreamEvent/wizardStreamEvent.guard.js';
 
 describe('wizardStreamEventGuard', () => {

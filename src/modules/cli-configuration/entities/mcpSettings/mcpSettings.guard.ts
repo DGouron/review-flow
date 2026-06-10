@@ -1,5 +1,8 @@
+import {
+  mcpSettingsSchema,
+  type McpSettings,
+} from '@/modules/cli-configuration/entities/mcpSettings/mcpSettings.schema.js';
 import { createGuard } from '@/shared/foundation/guard.base.js';
-import { mcpSettingsSchema, type McpSettings } from '@/modules/cli-configuration/entities/mcpSettings/mcpSettings.schema.js';
 
 const mcpSettingsGuard = createGuard(mcpSettingsSchema, 'mcpSettings');
 

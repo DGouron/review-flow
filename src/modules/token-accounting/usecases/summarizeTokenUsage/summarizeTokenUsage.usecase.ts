@@ -21,9 +21,7 @@ export class SummarizeTokenUsageUseCase {
   async execute({ localPath, since }: SummarizeInput): Promise<TokenUsageSummary> {
     const allRecords = await this.gateway.loadAll(localPath);
 
-    const records = since
-      ? allRecords.filter(record => record.recordedAt >= since)
-      : allRecords;
+    const records = since ? allRecords.filter((record) => record.recordedAt >= since) : allRecords;
 
     const summary: TokenUsageSummary = {
       totalInputTokens: 0,

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+
 import { createServer } from '../../main/server.js';
 import { createTestConfig } from '../factories/config.factory.js';
 

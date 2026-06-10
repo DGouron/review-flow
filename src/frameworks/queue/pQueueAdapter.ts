@@ -1,49 +1,13 @@
 import PQueue from 'p-queue';
 import type { Logger } from 'pino';
+
 import { loadConfig } from '@/frameworks/config/configLoader.js';
 import { ProjectSemaphore } from '@/frameworks/queue/projectSemaphore.js';
-import type { ReviewProgress, ProgressEvent } from '@/modules/review-execution/entities/progress/progress.type.js';
-import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
-import type { ClaudeModelName } from '@/modules/review-execution/entities/modelRouting/modelRouting.schema.js';
-
-export interface ReviewJob {
-  id: string; // Unique identifier: platform:project:mrNumber
-  platform: 'gitlab' | 'github';
-  projectPath: string;
-  localPath: string;
-  mrNumber: number;
-  skill: string;
-  mrUrl: string;
-  sourceBranch: string;
-  targetBranch: string;
-  // Job type: review or followup
-  jobType?: 'review' | 'followup';
-  // Output language for the review
-  language?: Language;
-  // Model selected by routing for this job
-  model?: ClaudeModelName;
-  // Optional MR metadata
-  title?: string;
-  description?: string;
-  assignedBy?: {
-    username: string;
-    displayName?: string;
-  };
-  // The actual author of the MR/PR (distinct from assignedBy, which is the reviewer/assignee).
-  author?: {
-    username: string;
-    displayName?: string;
-  };
-  // Diff size metrics. Any field may be null when the platform does not provide it.
-  sizeMetrics?: {
-    additions: number | null;
-    deletions: number | null;
-    filesChanged: number | null;
-  };
-  // SPEC-170 FR-8: clone URL of the source fork for cross-fork PRs (GitHub).
-  // null/undefined means the MR/PR source is the same repository as the base.
-  sourceForkCloneUrl?: string;
-}
+import type { JobStatus, ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
+import type {
+  ReviewProgress,
+  ProgressEvent,
+} from '@/modules/review-execution/entities/progress/progress.type.js';
 
 // Deduplication tracking
 const recentJobs = new Map<string, number>(); // jobId -> timestamp
@@ -51,25 +15,22 @@ const recentJobs = new Map<string, number>(); // jobId -> timestamp
 // Abort controllers for cancellation
 const jobAbortControllers = new Map<string, AbortController>();
 
-// Active and completed jobs tracking
-export interface JobStatus {
-  job: ReviewJob;
-  status: 'queued' | 'running' | 'completed' | 'failed';
-  startedAt?: Date;
-  completedAt?: Date;
-  error?: string;
-  progress?: ReviewProgress;
-}
-
 // Progress change callback type
-export type ProgressChangeCallback = (jobId: string, progress: ReviewProgress, event?: ProgressEvent) => void;
+export type ProgressChangeCallback = (
+  jobId: string,
+  progress: ReviewProgress,
+  event?: ProgressEvent,
+) => void;
 
 // State change callback type - called when jobs are added/started/completed/failed
 export type StateChangeCallback = () => void;
 
 // Persist job record callback type - fired in the completion finally block.
 // Best-effort: implementations must never throw nor delay the queue task.
-export type PersistJobRecordCallback = (jobStatus: JobStatus, abortSignalAborted: boolean) => Promise<void>;
+export type PersistJobRecordCallback = (
+  jobStatus: JobStatus,
+  abortSignalAborted: boolean,
+) => Promise<void>;
 
 // Global progress change listener
 let progressChangeCallback: ProgressChangeCallback | null = null;
@@ -136,22 +97,23 @@ export function initQueue(log: Logger): PQueue {
   const config = loadConfig();
   logger = log;
 
-  queue = new PQueue({
+  const createdQueue = new PQueue({
     concurrency: config.queue.maxConcurrent,
     timeout: 30 * 60 * 1000, // 30 minutes max per job
     throwOnTimeout: true,
   });
+  queue = createdQueue;
 
   // Log queue events
-  queue.on('active', () => {
-    log.info({ pending: queue!.pending, size: queue!.size }, 'Job started');
+  createdQueue.on('active', () => {
+    log.info({ pending: createdQueue.pending, size: createdQueue.size }, 'Job started');
   });
 
-  queue.on('idle', () => {
+  createdQueue.on('idle', () => {
     log.info('Queue is idle');
   });
 
-  queue.on('error', (error) => {
+  createdQueue.on('error', (error) => {
     log.error({ error }, 'Queue error');
   });
 
@@ -160,12 +122,12 @@ export function initQueue(log: Logger): PQueue {
     cleanupDeduplication();
   }, 60000); // Every minute
 
-  return queue;
+  return createdQueue;
 }
 
 export function getQueue(): PQueue {
   if (!queue) {
-    throw new Error('Queue non initialisée. Appelez initQueue() d\'abord.');
+    throw new Error("Queue non initialisée. Appelez initQueue() d'abord.");
   }
   return queue;
 }
@@ -213,10 +175,13 @@ export function createJobId(platform: string, projectPath: string, mrNumber: num
  */
 export async function enqueueReview(
   job: ReviewJob,
-  processor: (job: ReviewJob, signal: AbortSignal) => Promise<void>
+  processor: (job: ReviewJob, signal: AbortSignal) => Promise<void>,
 ): Promise<boolean> {
   const q = getQueue();
-  const log = logger!;
+  if (!logger) {
+    throw new Error("Queue non initialisée. Appelez initQueue() d'abord.");
+  }
+  const log = logger;
 
   // Check deduplication (only blocks if a previous job SUCCEEDED recently)
   if (shouldDeduplicate(job.id)) {
@@ -252,7 +217,7 @@ export async function enqueueReview(
       queueSize: q.size,
       pending: q.pending,
     },
-    'Job ajouté à la queue'
+    'Job ajouté à la queue',
   );
 
   // SPEC-170 FR-9: MR-scoped serialization. fresh + followup on the same MR
@@ -263,7 +228,8 @@ export async function enqueueReview(
   const mrKey = createMrConcurrencyKey(job.platform, job.projectPath, job.mrNumber);
   const previousTail = mrChains.get(mrKey) ?? Promise.resolve();
 
-  const newTail: Promise<void> = previousTail.then(async () => {
+  const newTail: Promise<void> = (async () => {
+    await previousTail;
     await projectSemaphore.acquire(job.projectPath);
     await q.add(async () => {
       jobStatus.status = 'running';
@@ -311,7 +277,10 @@ export async function enqueueReview(
         // Best-effort persistence (SPEC-176): fire the callback without
         // awaiting and swallow any rejection so the queue task is never
         // delayed nor failed by a disk write.
-        const persistPromise = persistJobRecordCallback?.(jobStatus, abortController.signal.aborted);
+        const persistPromise = persistJobRecordCallback?.(
+          jobStatus,
+          abortController.signal.aborted,
+        );
         if (persistPromise) {
           persistPromise.catch(() => {});
         }
@@ -320,18 +289,23 @@ export async function enqueueReview(
         stateChangeCallback?.();
       }
     });
-  });
+  })();
 
   mrChains.set(mrKey, newTail);
 
   // The inner try/catch/finally swallows processor errors (jobStatus is set to
   // 'failed' and logged there), so newTail never rejects. We only need finally
   // to release the MR chain entry (R4 leak fix).
-  newTail.finally(() => {
-    if (mrChains.get(mrKey) === newTail) {
-      mrChains.delete(mrKey);
+  const releaseMrChainEntry = async (): Promise<void> => {
+    try {
+      await newTail;
+    } finally {
+      if (mrChains.get(mrKey) === newTail) {
+        mrChains.delete(mrKey);
+      }
     }
-  });
+  };
+  void releaseMrChainEntry();
 
   return true;
 }
@@ -411,7 +385,11 @@ export function getJobsStatus(): {
     description?: string;
     assignedBy?: { username: string; displayName?: string };
     author?: { username: string; displayName?: string };
-    sizeMetrics?: { additions: number | null; deletions: number | null; filesChanged: number | null };
+    sizeMetrics?: {
+      additions: number | null;
+      deletions: number | null;
+      filesChanged: number | null;
+    };
     jobType?: 'review' | 'followup';
   }>;
   recent: Array<{
@@ -427,12 +405,16 @@ export function getJobsStatus(): {
     title?: string;
     assignedBy?: { username: string; displayName?: string };
     author?: { username: string; displayName?: string };
-    sizeMetrics?: { additions: number | null; deletions: number | null; filesChanged: number | null };
+    sizeMetrics?: {
+      additions: number | null;
+      deletions: number | null;
+      filesChanged: number | null;
+    };
     jobType?: 'review' | 'followup';
   }>;
 } {
   return {
-    active: Array.from(activeJobs.values()).map(js => ({
+    active: Array.from(activeJobs.values()).map((js) => ({
       id: js.job.id,
       mrNumber: js.job.mrNumber,
       project: js.job.projectPath,
@@ -447,7 +429,7 @@ export function getJobsStatus(): {
       sizeMetrics: js.job.sizeMetrics,
       jobType: js.job.jobType || 'review',
     })),
-    recent: completedJobs.map(js => ({
+    recent: completedJobs.map((js) => ({
       id: js.job.id,
       mrNumber: js.job.mrNumber,
       project: js.job.projectPath,
@@ -469,7 +451,11 @@ export function getJobsStatus(): {
 /**
  * Update job progress
  */
-export function updateJobProgress(jobId: string, progress: ReviewProgress, event?: ProgressEvent): void {
+export function updateJobProgress(
+  jobId: string,
+  progress: ReviewProgress,
+  event?: ProgressEvent,
+): void {
   const jobStatus = activeJobs.get(jobId);
   if (jobStatus) {
     jobStatus.progress = progress;

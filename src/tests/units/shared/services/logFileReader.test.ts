@@ -1,12 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, writeFileSync, appendFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  logFileExists,
-  readLastLines,
-  watchLogFile,
-} from '@/shared/services/logFileReader.js';
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+import { logFileExists, readLastLines, watchLogFile } from '@/shared/services/logFileReader.js';
 
 describe('logFileReader', () => {
   let dir: string;

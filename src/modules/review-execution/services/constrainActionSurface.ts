@@ -1,9 +1,9 @@
-import type { ReviewAction } from '@/modules/review-execution/entities/reviewAction/reviewAction.js'
-import type { Provenance } from '@/modules/review-execution/entities/actionProvenance/actionProvenance.js'
+import type { Provenance } from '@/modules/review-execution/entities/actionProvenance/actionProvenance.js';
+import type { ReviewAction } from '@/modules/review-execution/entities/reviewAction/reviewAction.js';
 
 export interface ActionSurfaceConstraints {
-  provenance: Provenance
-  threadInventory: ReadonlySet<string>
+  provenance: Provenance;
+  threadInventory: ReadonlySet<string>;
 }
 
 /**
@@ -19,45 +19,45 @@ export interface ActionSurfaceConstraints {
  */
 export function constrainActionSurface(
   actions: ReviewAction[],
-  constraints: ActionSurfaceConstraints
+  constraints: ActionSurfaceConstraints,
 ): ReviewAction[] {
-  const { provenance, threadInventory } = constraints
-  const isTrusted = provenance === 'trusted'
+  const { provenance, threadInventory } = constraints;
+  const isTrusted = provenance === 'trusted';
 
-  const constrained: ReviewAction[] = []
+  const constrained: ReviewAction[] = [];
 
   for (const action of actions) {
     switch (action.type) {
       case 'POST_COMMENT':
-        constrained.push(action)
-        break
+        constrained.push(action);
+        break;
 
       case 'FETCH_THREADS':
-        if (isTrusted) constrained.push(action)
-        break
+        if (isTrusted) constrained.push(action);
+        break;
 
       case 'THREAD_RESOLVE': {
-        if (!isTrusted) break
-        const target = action.threadId.trim()
+        if (!isTrusted) break;
+        const target = action.threadId.trim();
         if (threadInventory.has(target)) {
-          constrained.push({ ...action, threadId: target })
+          constrained.push({ ...action, threadId: target });
         }
-        break
+        break;
       }
 
       case 'THREAD_REPLY': {
-        if (!isTrusted) break
-        const target = action.threadId.trim()
+        if (!isTrusted) break;
+        const target = action.threadId.trim();
         if (threadInventory.has(target)) {
-          constrained.push({ ...action, threadId: target })
+          constrained.push({ ...action, threadId: target });
         }
-        break
+        break;
       }
 
       default:
-        break
+        break;
     }
   }
 
-  return constrained
+  return constrained;
 }

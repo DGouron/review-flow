@@ -1,3 +1,3 @@
 export interface PackageVersionGateway {
-  fetchLatestVersion(): Promise<string | null>
+  fetchLatestVersion(): Promise<string | null>;
 }

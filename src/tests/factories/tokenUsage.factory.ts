@@ -1,4 +1,7 @@
-import type { TokenUsage, TokenUsageRecord } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
+import type {
+  TokenUsage,
+  TokenUsageRecord,
+} from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
 
 export class TokenUsageFactory {
   static create(overrides?: Partial<TokenUsage>): TokenUsage {

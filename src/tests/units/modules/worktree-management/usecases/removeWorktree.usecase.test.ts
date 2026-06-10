@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { removeWorktree } from '@/modules/worktree-management/usecases/removeWorktree.usecase.js';
+
 import { deriveWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
-import type { WorktreeIdentity, WorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+import type {
+  WorktreeIdentity,
+  WorktreePath,
+} from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+import { removeWorktree } from '@/modules/worktree-management/usecases/removeWorktree.usecase.js';
 import { StubGitCommandExecutor } from '@/tests/stubs/gitCommandExecutor.stub.js';
 
 const identity: WorktreeIdentity = {

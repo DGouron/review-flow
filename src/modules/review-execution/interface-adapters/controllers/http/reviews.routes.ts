@@ -1,13 +1,16 @@
-import type { FastifyPluginAsync } from 'fastify';
 import { existsSync, unlinkSync } from 'node:fs';
-import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { join } from 'node:path';
+
+import type { FastifyPluginAsync } from 'fastify';
 import type { Logger } from 'pino';
-import type { ReviewFileGateway } from '../../gateways/reviewFile.gateway.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
+
 import { cancelReview } from '@/modules/review-execution/usecases/cancelReview.usecase.js';
 import type { CancelReviewQueuePort } from '@/modules/review-execution/usecases/cancelReview.usecase.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import { sanitizeJobId } from '@/shared/services/mcpJobContext.js';
+
+import type { ReviewFileGateway } from '../../gateways/reviewFile.gateway.js';
 
 interface ReviewRoutesOptions {
   reviewFileGateway: ReviewFileGateway;
@@ -19,15 +22,12 @@ interface ReviewRoutesOptions {
 
 const FILENAME_REGEX = /^\d{4}-\d{2}-\d{2}-(?:MR|PR)-[^/\\]+\.md$/;
 
-export const reviewRoutes: FastifyPluginAsync<ReviewRoutesOptions> = async (
-  fastify,
-  opts
-) => {
-  const { reviewFileGateway, reviewRequestTrackingGateway, getRepositories, queuePort, logger } = opts;
+export const reviewRoutes: FastifyPluginAsync<ReviewRoutesOptions> = async (fastify, opts) => {
+  const { reviewFileGateway, reviewRequestTrackingGateway, getRepositories, queuePort, logger } =
+    opts;
 
-  fastify.get('/api/reviews', async (request) => {
-    const query = request.query as { path?: string };
-    const projectPath = query.path?.trim();
+  fastify.get<{ Querystring: { path?: string } }>('/api/reviews', async (request) => {
+    const projectPath = request.query.path?.trim();
 
     if (projectPath) {
       if (!projectPath.startsWith('/') || projectPath.includes('..')) {
@@ -49,49 +49,58 @@ export const reviewRoutes: FastifyPluginAsync<ReviewRoutesOptions> = async (
     return { reviews: allReviews, count: allReviews.length };
   });
 
-  fastify.get('/api/reviews/:filename', async (request, reply) => {
-    const { filename } = request.params as { filename: string };
+  fastify.get<{ Params: { filename: string } }>(
+    '/api/reviews/:filename',
+    async (request, reply) => {
+      const { filename } = request.params;
 
-    if (!FILENAME_REGEX.test(filename)) {
-      reply.code(400);
-      return { error: 'Invalid filename format' };
-    }
-
-    for (const repo of getRepositories()) {
-      if (!repo.enabled) continue;
-      const content = await reviewFileGateway.readReview(repo.localPath, filename);
-      if (content !== null) {
-        return { filename, content };
+      if (!FILENAME_REGEX.test(filename)) {
+        reply.code(400);
+        return { error: 'Invalid filename format' };
       }
-    }
 
-    reply.code(404);
-    return { error: 'Review not found' };
-  });
-
-  fastify.delete('/api/reviews/:filename', async (request, reply) => {
-    const { filename } = request.params as { filename: string };
-
-    if (!FILENAME_REGEX.test(filename)) {
-      reply.code(400);
-      return { success: false, error: 'Invalid filename format' };
-    }
-
-    for (const repo of getRepositories()) {
-      if (!repo.enabled) continue;
-      const deleted = await reviewFileGateway.deleteReview(repo.localPath, filename);
-      if (deleted) {
-        return { success: true };
+      for (const repo of getRepositories()) {
+        if (!repo.enabled) continue;
+        const content = await reviewFileGateway.readReview(repo.localPath, filename);
+        if (content !== null) {
+          return { filename, content };
+        }
       }
-    }
 
-    reply.code(404);
-    return { success: false, error: 'Review not found' };
-  });
+      reply.code(404);
+      return { error: 'Review not found' };
+    },
+  );
 
-  fastify.post('/api/reviews/cancel/:jobId', async (request, reply) => {
-    const { jobId } = request.params as { jobId: string };
-    const body = (request.body ?? {}) as { projectPath?: string; mrId?: string };
+  fastify.delete<{ Params: { filename: string } }>(
+    '/api/reviews/:filename',
+    async (request, reply) => {
+      const { filename } = request.params;
+
+      if (!FILENAME_REGEX.test(filename)) {
+        reply.code(400);
+        return { success: false, error: 'Invalid filename format' };
+      }
+
+      for (const repo of getRepositories()) {
+        if (!repo.enabled) continue;
+        const deleted = await reviewFileGateway.deleteReview(repo.localPath, filename);
+        if (deleted) {
+          return { success: true };
+        }
+      }
+
+      reply.code(404);
+      return { success: false, error: 'Review not found' };
+    },
+  );
+
+  fastify.post<{
+    Params: { jobId: string };
+    Body: { projectPath?: string; mrId?: string } | null;
+  }>('/api/reviews/cancel/:jobId', async (request, reply) => {
+    const { jobId } = request.params;
+    const body: { projectPath?: string; mrId?: string } = request.body ?? {};
 
     if (!jobId || jobId.length === 0) {
       reply.code(400);
@@ -108,7 +117,12 @@ export const reviewRoutes: FastifyPluginAsync<ReviewRoutesOptions> = async (
         reviewRequestTrackingGateway.remove(body.projectPath, body.mrId);
 
         try {
-          const contextPath = join(homedir(), '.claude-review', 'jobs', `${sanitizeJobId(jobId)}.json`);
+          const contextPath = join(
+            homedir(),
+            '.claude-review',
+            'jobs',
+            `${sanitizeJobId(jobId)}.json`,
+          );
           if (existsSync(contextPath)) {
             unlinkSync(contextPath);
           }
@@ -121,7 +135,11 @@ export const reviewRoutes: FastifyPluginAsync<ReviewRoutesOptions> = async (
     }
 
     if (result.status === 'already-completed') {
-      return { success: false, status: 'already-completed', message: 'Cette review est déjà terminée' };
+      return {
+        success: false,
+        status: 'already-completed',
+        message: 'Cette review est déjà terminée',
+      };
     }
 
     reply.code(404);

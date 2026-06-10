@@ -1,12 +1,13 @@
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+
 import type { EmberMemoryGateway } from '@/modules/ember-chat/entities/emberMemory/emberMemory.gateway.js';
+import { emberMemoryGuard } from '@/modules/ember-chat/entities/emberMemory/emberMemory.guard.js';
 import type {
   EmberMemory,
   EmberMemoryTurn,
   EmberRecurringInsight,
 } from '@/modules/ember-chat/entities/emberMemory/emberMemory.schema.js';
-import { emberMemoryGuard } from '@/modules/ember-chat/entities/emberMemory/emberMemory.guard.js';
 
 export interface EmberMemoryFileSystemGatewayOptions {
   homeDir: string;

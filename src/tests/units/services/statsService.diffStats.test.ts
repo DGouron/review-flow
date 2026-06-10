@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
-import { DiffStatsFactory } from '@/tests/factories/diffStats.factory.js';
+
 import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
+import { DiffStatsFactory } from '@/tests/factories/diffStats.factory.js';
+import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 
 describe('StatsService DiffStats', () => {
   describe('ReviewStats', () => {
@@ -60,9 +61,7 @@ describe('StatsService DiffStats', () => {
     });
 
     it('should return null averages when no reviews have diffStats', () => {
-      const reviews: ReviewStats[] = [
-        ReviewStatsFactory.create({ diffStats: null }),
-      ];
+      const reviews: ReviewStats[] = [ReviewStatsFactory.create({ diffStats: null })];
 
       const stats = ProjectStatsFactory.withReviews(reviews);
 

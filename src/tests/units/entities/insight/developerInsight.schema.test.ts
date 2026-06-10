@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { developerInsightSchema } from '@/modules/statistics-insights/entities/insight/developerInsight.schema.js';
 import { DeveloperInsightFactory } from '@/tests/factories/developerInsight.factory.js';
 

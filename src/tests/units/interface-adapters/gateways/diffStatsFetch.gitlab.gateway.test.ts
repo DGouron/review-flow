@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { GitLabDiffStatsFetchGateway } from '@/modules/statistics-insights/interface-adapters/gateways/diffStatsFetch.gitlab.gateway.js';
 
 describe('GitLabDiffStatsFetchGateway', () => {
@@ -6,11 +7,7 @@ describe('GitLabDiffStatsFetchGateway', () => {
     it('should parse additions, deletions from MR API and count commits', () => {
       const stubExecutor = (command: string) => {
         if (command.includes('/commits')) {
-          return JSON.stringify([
-            { id: 'commit1' },
-            { id: 'commit2' },
-            { id: 'commit3' },
-          ]);
+          return JSON.stringify([{ id: 'commit1' }, { id: 'commit2' }, { id: 'commit3' }]);
         }
         return JSON.stringify({
           changes_count: '5',

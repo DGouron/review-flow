@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { EnvFileFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/envFile.fileSystem.gateway.js';
 
 describe('EnvFileFileSystemGateway', () => {

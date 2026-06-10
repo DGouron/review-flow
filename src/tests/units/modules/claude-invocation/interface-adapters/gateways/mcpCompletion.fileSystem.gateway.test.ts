@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { FileSystemMcpCompletionBridge } from '@/modules/claude-invocation/interface-adapters/gateways/mcpCompletion.fileSystem.gateway.js';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import type { SessionCompletion } from '@/modules/claude-invocation/entities/sessionCompletion/sessionCompletion.schema.js';
+import { FileSystemMcpCompletionBridge } from '@/modules/claude-invocation/interface-adapters/gateways/mcpCompletion.fileSystem.gateway.js';
 
 describe('FileSystemMcpCompletionBridge (cross-process bridge for SPEC-169 B3)', () => {
   let directory: string;
@@ -22,7 +24,7 @@ describe('FileSystemMcpCompletionBridge (cross-process bridge for SPEC-169 B3)',
   }
 
   function tick(): void {
-    for (const handler of [...timers.values()]) {
+    for (const handler of Array.from(timers.values())) {
       handler();
     }
   }
@@ -52,7 +54,7 @@ describe('FileSystemMcpCompletionBridge (cross-process bridge for SPEC-169 B3)',
 
     bridge.publish('job-1', completion);
 
-    const files = readdirSync(directory).filter(name => name.endsWith('.json'));
+    const files = readdirSync(directory).filter((name) => name.endsWith('.json'));
     expect(files).toEqual(['job-1.json']);
   });
 
@@ -62,7 +64,7 @@ describe('FileSystemMcpCompletionBridge (cross-process bridge for SPEC-169 B3)',
     bridge.publish('job-2', completion);
 
     const received: SessionCompletion[] = [];
-    bridge.subscribe('job-2', value => {
+    bridge.subscribe('job-2', (value) => {
       received.push(value);
     });
 
@@ -72,7 +74,7 @@ describe('FileSystemMcpCompletionBridge (cross-process bridge for SPEC-169 B3)',
   it('delivers a completion when the publisher writes after the subscriber polls', () => {
     const bridge = makeBridge();
     const received: SessionCompletion[] = [];
-    bridge.subscribe('job-3', value => {
+    bridge.subscribe('job-3', (value) => {
       received.push(value);
     });
 
@@ -101,7 +103,7 @@ describe('FileSystemMcpCompletionBridge (cross-process bridge for SPEC-169 B3)',
     writeFileSync(join(directory, 'job-5.json'), '{not valid json');
 
     const received: SessionCompletion[] = [];
-    bridge.subscribe('job-5', value => {
+    bridge.subscribe('job-5', (value) => {
       received.push(value);
     });
     tick();
@@ -129,7 +131,7 @@ describe('FileSystemMcpCompletionBridge (cross-process bridge for SPEC-169 B3)',
     bridge.subscribe('job-7', () => {
       received.push({ source: 'mcp', outcome: 'failed', reason: 'first-listener' });
     });
-    bridge.subscribe('job-7', value => {
+    bridge.subscribe('job-7', (value) => {
       received.push(value);
     });
 

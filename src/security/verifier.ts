@@ -1,5 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+
 import type { FastifyRequest } from 'fastify';
+
 import { loadEnvSecrets } from '@/config/loader.js';
 import { currentGitlabWebhookToken } from '@/security/gitlabWebhookTokenSource.js';
 
@@ -45,6 +47,13 @@ export function verifyGitLabSignature(request: FastifyRequest): VerificationResu
   return { valid: true };
 }
 
+function extractRawBody(request: FastifyRequest): Buffer | null {
+  if ('rawBody' in request && Buffer.isBuffer(request.rawBody)) {
+    return request.rawBody;
+  }
+  return null;
+}
+
 /**
  * Verify GitHub webhook signature
  * GitHub uses HMAC-SHA256 signature in the X-Hub-Signature-256 header
@@ -60,7 +69,7 @@ export function verifyGitHubSignature(request: FastifyRequest): VerificationResu
   const secret = secrets.githubWebhookSecret;
 
   // Get raw body - Fastify stores it when configured
-  const rawBody = (request as FastifyRequest & { rawBody?: Buffer }).rawBody;
+  const rawBody = extractRawBody(request);
   if (!rawBody) {
     return { valid: false, error: 'Corps de requête non disponible pour vérification' };
   }

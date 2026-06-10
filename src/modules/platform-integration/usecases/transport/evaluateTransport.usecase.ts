@@ -1,8 +1,8 @@
+import { isIpInCidr } from '@/modules/platform-integration/entities/transport/cidr.js';
 import type {
   TransportContext,
   TransportDecision,
 } from '@/modules/platform-integration/entities/transport/transportContext.js';
-import { isIpInCidr } from '@/modules/platform-integration/entities/transport/cidr.js';
 
 const REJECT_STATUS = 403;
 
@@ -17,8 +17,7 @@ export function evaluateTransport(context: TransportContext): TransportDecision 
 
   const clientIp = context.resolvedClientIp;
   const allowed =
-    clientIp !== null &&
-    context.allowedCidrRanges.some((range) => isIpInCidr(clientIp, range));
+    clientIp !== null && context.allowedCidrRanges.some((range) => isIpInCidr(clientIp, range));
 
   if (!allowed) {
     return { kind: 'reject', status: REJECT_STATUS, reason: 'off-allowlist' };

@@ -1,9 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import { executeValidate, type ValidateDependencies } from '@/main/commands/validate.command.js';
 
-function createFakeValidateDeps(
-  overrides?: Partial<ValidateDependencies>,
-): ValidateDependencies {
+function createFakeValidateDeps(overrides?: Partial<ValidateDependencies>): ValidateDependencies {
   return {
     existsSync: vi.fn(() => false),
     readFileSync: vi.fn(() => ''),
@@ -75,7 +74,9 @@ describe('executeValidate', () => {
 
   describe('config path resolution', () => {
     it('prefers cwd/config.json over configDir/config.json when both exist', () => {
-      const existsSync = vi.fn((path: string) => path === '/project/config.json' || path === '/project/.env');
+      const existsSync = vi.fn(
+        (path: string) => path === '/project/config.json' || path === '/project/.env',
+      );
       const readFileSync = vi.fn(() => validConfig);
       const deps = createFakeValidateDeps({ existsSync, readFileSync });
 
@@ -85,8 +86,9 @@ describe('executeValidate', () => {
     });
 
     it('falls back to configDir/config.json when cwd has no config', () => {
-      const existsSync = vi.fn((path: string) =>
-        path === '/home/user/.reviewflow/config.json' || path === '/home/user/.reviewflow/.env'
+      const existsSync = vi.fn(
+        (path: string) =>
+          path === '/home/user/.reviewflow/config.json' || path === '/home/user/.reviewflow/.env',
       );
       const readFileSync = vi.fn(() => validConfig);
       const deps = createFakeValidateDeps({ existsSync, readFileSync });

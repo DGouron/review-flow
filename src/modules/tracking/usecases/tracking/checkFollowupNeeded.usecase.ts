@@ -1,5 +1,5 @@
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import type { UseCase } from '@/shared/foundation/usecase.base.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
 
 interface CheckFollowupNeededInput {
   projectPath: string;

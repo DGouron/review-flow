@@ -1,12 +1,13 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
+
+import type { GitCommandExecutor } from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
+import type { WorktreeEntry } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 import type {
   HealthSignals,
   WorktreeHealthProbeGateway,
   OrphanLockSignal,
 } from '@/modules/worktree-management/entities/worktree/worktreeHealthProbe.gateway.js';
-import type { WorktreeEntry } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
-import type { GitCommandExecutor } from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
 
 export interface WorktreeHealthProbeFileSystemGatewayDependencies {
   executor: GitCommandExecutor;

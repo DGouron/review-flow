@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { gitHubPullRequestReviewEventGuard } from '@/modules/platform-integration/entities/github/githubPullRequestReviewEvent.guard.js';
 
 function validPayload(): unknown {
@@ -30,7 +31,9 @@ describe('gitHubPullRequestReviewEventGuard', () => {
   });
 
   it('rejects a payload missing the review.id', () => {
-    const base = validPayload() as { review: { id?: number; state: string; user: { login: string } } };
+    const base = validPayload() as {
+      review: { id?: number; state: string; user: { login: string } };
+    };
     const payload = {
       ...base,
       review: { state: base.review.state, user: base.review.user },
@@ -47,7 +50,9 @@ describe('gitHubPullRequestReviewEventGuard', () => {
   });
 
   it('rejects a payload missing the review.state', () => {
-    const base = validPayload() as { review: { id: number; state?: string; user: { login: string } } };
+    const base = validPayload() as {
+      review: { id: number; state?: string; user: { login: string } };
+    };
     const payload = {
       ...base,
       review: { id: base.review.id, user: base.review.user },

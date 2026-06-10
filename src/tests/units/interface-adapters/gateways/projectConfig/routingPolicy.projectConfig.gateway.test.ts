@@ -1,5 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fs from 'node:fs';
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { ProjectConfigRoutingPolicyGateway } from '@/modules/review-execution/interface-adapters/gateways/projectConfig/routingPolicy.projectConfig.gateway.js';
 
 vi.mock('node:fs');

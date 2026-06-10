@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { buildInsightsReport } from '@/dashboard/modules/insightsReport.js';
 
 function createTranslate() {
@@ -200,14 +201,16 @@ describe('buildInsightsReport', () => {
 
   it('should render level bar with correct width percentage', () => {
     const data = createInsightsData({
-      developers: [createDeveloperViewModel({
-        categoryLevels: {
-          quality: { level: 8, trend: 'stable' },
-          responsiveness: { level: 6, trend: 'stable' },
-          codeVolume: { level: 7, trend: 'stable' },
-          iteration: { level: 5, trend: 'stable' },
-        },
-      })],
+      developers: [
+        createDeveloperViewModel({
+          categoryLevels: {
+            quality: { level: 8, trend: 'stable' },
+            responsiveness: { level: 6, trend: 'stable' },
+            codeVolume: { level: 7, trend: 'stable' },
+            iteration: { level: 5, trend: 'stable' },
+          },
+        }),
+      ],
     });
 
     const html = buildInsightsReport(data, translate);
@@ -218,14 +221,16 @@ describe('buildInsightsReport', () => {
 
   it('should use correct colors for level bars based on level value', () => {
     const data = createInsightsData({
-      developers: [createDeveloperViewModel({
-        categoryLevels: {
-          quality: { level: 9, trend: 'stable' },
-          responsiveness: { level: 7, trend: 'stable' },
-          codeVolume: { level: 5, trend: 'stable' },
-          iteration: { level: 2, trend: 'stable' },
-        },
-      })],
+      developers: [
+        createDeveloperViewModel({
+          categoryLevels: {
+            quality: { level: 9, trend: 'stable' },
+            responsiveness: { level: 7, trend: 'stable' },
+            codeVolume: { level: 5, trend: 'stable' },
+            iteration: { level: 2, trend: 'stable' },
+          },
+        }),
+      ],
     });
 
     const html = buildInsightsReport(data, translate);
@@ -238,17 +243,19 @@ describe('buildInsightsReport', () => {
 
   it('should render developer metrics when available', () => {
     const data = createInsightsData({
-      developers: [createDeveloperViewModel({
-        metrics: {
-          averageScore: 7.5,
-          averageBlocking: 1.2,
-          firstReviewQualityRate: 0.75,
-          averageDuration: '15m',
-          averageWarnings: 2.1,
-          averageAdditions: 120,
-          averageDeletions: 30,
-        },
-      })],
+      developers: [
+        createDeveloperViewModel({
+          metrics: {
+            averageScore: 7.5,
+            averageBlocking: 1.2,
+            firstReviewQualityRate: 0.75,
+            averageDuration: '15m',
+            averageWarnings: 2.1,
+            averageAdditions: 120,
+            averageDeletions: 30,
+          },
+        }),
+      ],
     });
 
     const html = buildInsightsReport(data, translate);
@@ -266,9 +273,11 @@ describe('buildInsightsReport', () => {
 
   it('should render developer strengths list', () => {
     const data = createInsightsData({
-      developers: [createDeveloperViewModel({
-        strengths: ['quality', 'responsiveness'],
-      })],
+      developers: [
+        createDeveloperViewModel({
+          strengths: ['quality', 'responsiveness'],
+        }),
+      ],
     });
 
     const html = buildInsightsReport(data, translate);
@@ -280,9 +289,11 @@ describe('buildInsightsReport', () => {
 
   it('should render developer weaknesses list', () => {
     const data = createInsightsData({
-      developers: [createDeveloperViewModel({
-        weaknesses: ['iteration', 'codeVolume'],
-      })],
+      developers: [
+        createDeveloperViewModel({
+          weaknesses: ['iteration', 'codeVolume'],
+        }),
+      ],
     });
 
     const html = buildInsightsReport(data, translate);
@@ -296,15 +307,17 @@ describe('buildInsightsReport', () => {
     const data = createInsightsData({
       developers: [createDeveloperViewModel({ developerName: 'alice' })],
       aiInsights: {
-        developers: [{
-          developerName: 'alice',
-          title: 'The Quality Guardian',
-          titleExplanation: 'High scores',
-          strengths: ['Clean code'],
-          weaknesses: ['Slow reviews'],
-          recommendations: ['Speed up'],
-          summary: 'Alice is great.',
-        }],
+        developers: [
+          {
+            developerName: 'alice',
+            title: 'The Quality Guardian',
+            titleExplanation: 'High scores',
+            strengths: ['Clean code'],
+            weaknesses: ['Slow reviews'],
+            recommendations: ['Speed up'],
+            summary: 'Alice is great.',
+          },
+        ],
         team: { summary: '', strengths: [], weaknesses: [], recommendations: [], dynamics: '' },
         generatedAt: '2026-03-15T10:00:00Z',
       },
@@ -319,15 +332,17 @@ describe('buildInsightsReport', () => {
     const data = createInsightsData({
       developers: [createDeveloperViewModel({ developerName: 'alice' })],
       aiInsights: {
-        developers: [{
-          developerName: 'alice',
-          title: 'Title',
-          titleExplanation: 'Reason',
-          strengths: ['Clean code'],
-          weaknesses: ['Large PRs'],
-          recommendations: ['Break down changes', 'Add more tests'],
-          summary: 'Profile text.',
-        }],
+        developers: [
+          {
+            developerName: 'alice',
+            title: 'Title',
+            titleExplanation: 'Reason',
+            strengths: ['Clean code'],
+            weaknesses: ['Large PRs'],
+            recommendations: ['Break down changes', 'Add more tests'],
+            summary: 'Profile text.',
+          },
+        ],
         team: { summary: '', strengths: [], weaknesses: [], recommendations: [], dynamics: '' },
         generatedAt: '2026-03-15T10:00:00Z',
       },
@@ -344,15 +359,17 @@ describe('buildInsightsReport', () => {
     const data = createInsightsData({
       developers: [createDeveloperViewModel({ developerName: 'alice' })],
       aiInsights: {
-        developers: [{
-          developerName: 'alice',
-          title: 'Title',
-          titleExplanation: 'Reason',
-          strengths: [],
-          weaknesses: [],
-          recommendations: [],
-          summary: 'Alice is a thorough developer who prioritizes code quality.',
-        }],
+        developers: [
+          {
+            developerName: 'alice',
+            title: 'Title',
+            titleExplanation: 'Reason',
+            strengths: [],
+            weaknesses: [],
+            recommendations: [],
+            summary: 'Alice is a thorough developer who prioritizes code quality.',
+          },
+        ],
         team: { summary: '', strengths: [], weaknesses: [], recommendations: [], dynamics: '' },
         generatedAt: '2026-03-15T10:00:00Z',
       },

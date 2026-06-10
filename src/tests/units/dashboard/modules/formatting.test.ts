@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { formatTime, formatDuration, formatPhase, formatLogTime } from '@/dashboard/modules/formatting.js';
+
+import {
+  formatTime,
+  formatDuration,
+  formatPhase,
+  formatLogTime,
+} from '@/dashboard/modules/formatting.js';
 import { setLanguage } from '@/dashboard/modules/i18n.js';
 
 describe('formatTime', () => {

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   renderWorktreeSection,
   renderWorktreeEmptyState,
@@ -393,7 +394,11 @@ describe('renderDegradedAlerts', () => {
   it('renders one alert block per degraded row with the French reason label', () => {
     const html = renderDegradedAlerts([
       buildDegradedRow({ mrNumber: 1, reasonLabel: 'Worktree inactif depuis 26h' }),
-      buildDegradedRow({ mrNumber: 2, reasonLabel: 'Lock git orphelin depuis 2h', reasonCode: 'orphan-git-lock' }),
+      buildDegradedRow({
+        mrNumber: 2,
+        reasonLabel: 'Lock git orphelin depuis 2h',
+        reasonCode: 'orphan-git-lock',
+      }),
     ]);
 
     expect(html).toContain('Worktree inactif depuis 26h');
@@ -480,9 +485,12 @@ describe('triggerForceCleanup', () => {
       fetchImpl,
     );
 
-    expect(fetchImpl).toHaveBeenCalledWith('/api/worktrees/cleanup', expect.objectContaining({
-      method: 'POST',
-    }));
+    expect(fetchImpl).toHaveBeenCalledWith(
+      '/api/worktrees/cleanup',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    );
     expect(result.status).toBe('ok');
   });
 

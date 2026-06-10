@@ -1,6 +1,7 @@
 import type { Logger } from 'pino';
-import type { EgressTraceGateway } from '@/modules/platform-integration/entities/egressScan/egressTrace.gateway.js';
+
 import type { EgressScanTrace } from '@/modules/platform-integration/entities/egressScan/egressScan.gateway.js';
+import type { EgressTraceGateway } from '@/modules/platform-integration/entities/egressScan/egressTrace.gateway.js';
 
 export class LoggerEgressTraceGateway implements EgressTraceGateway {
   constructor(private readonly logger: Logger) {}

@@ -31,7 +31,11 @@ describe('buildBudgetStatusMessage', () => {
     };
 
     const raw = buildBudgetStatusMessage(viewModel);
-    const parsed = JSON.parse(raw) as { type: string; data: BudgetStatusViewModel; timestamp: string };
+    const parsed = JSON.parse(raw) as {
+      type: string;
+      data: BudgetStatusViewModel;
+      timestamp: string;
+    };
 
     expect(parsed.type).toBe('budget-status');
     expect(parsed.data).toEqual(viewModel);
@@ -50,7 +54,11 @@ describe('buildBudgetExceededMessage', () => {
     };
 
     const raw = buildBudgetExceededMessage(payload);
-    const parsed = JSON.parse(raw) as { type: string; data: BudgetExceededPayload; timestamp: string };
+    const parsed = JSON.parse(raw) as {
+      type: string;
+      data: BudgetExceededPayload;
+      timestamp: string;
+    };
 
     expect(parsed.type).toBe('budget-exceeded');
     expect(parsed.data).toEqual(payload);

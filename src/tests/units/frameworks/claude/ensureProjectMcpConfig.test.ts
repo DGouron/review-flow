@@ -1,6 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { buildMcpConfigJson } from '@/frameworks/claude/claudeInvoker.js';
 import * as fs from 'node:fs';
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { buildMcpConfigJson } from '@/frameworks/claude/claudeInvoker.js';
 
 vi.mock('node:fs');
 

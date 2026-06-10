@@ -1,16 +1,17 @@
+import type { ClaudeSessionJobType } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
 import type {
   ReviewReportContent,
   ReviewReportGateway,
   ReviewReportLocation,
 } from '@/modules/claude-invocation/entities/sessionCompletion/reviewReport.gateway.js';
-import type { ClaudeSessionJobType } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
 
 export class StubReviewReportGateway implements ReviewReportGateway {
   private report: ReviewReportContent | null = {
     content: '# Stub report',
     path: '/tmp/project/.claude/reviews/2026-05-22-MR-42-review.md',
   };
-  private readStrategy: ((location: ReviewReportLocation) => ReviewReportContent | null) | null = null;
+  private readStrategy: ((location: ReviewReportLocation) => ReviewReportContent | null) | null =
+    null;
 
   lastReadJobType: ClaudeSessionJobType | null = null;
   readCallCount = 0;

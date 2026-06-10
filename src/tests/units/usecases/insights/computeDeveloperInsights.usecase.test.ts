@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
+
+import type { ReviewStats } from '@/modules/statistics-insights/services/statsService.js';
 import { computeDeveloperInsights } from '@/modules/statistics-insights/usecases/insights/computeDeveloperInsights.usecase.js';
 import { ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
-import type { ReviewStats } from '@/modules/statistics-insights/services/statsService.js';
 
 function createReviewsForDeveloper(
   developerName: string,
@@ -539,7 +540,9 @@ describe('computeDeveloperInsights', () => {
       const alice = result.find((insight) => insight.developerName === 'alice');
       if (alice && alice.insightDescriptions.length > 0) {
         for (const description of alice.insightDescriptions) {
-          expect(['quality', 'responsiveness', 'codeVolume', 'iteration']).toContain(description.category);
+          expect(['quality', 'responsiveness', 'codeVolume', 'iteration']).toContain(
+            description.category,
+          );
           expect(['strength', 'weakness']).toContain(description.type);
           expect(description.descriptionKey).toBeTruthy();
         }

@@ -1,15 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   executeInit,
   type InitDependencies,
   type PlatformChoice,
 } from '@/main/commands/init.command.js';
-import type { DiscoveredRepository } from '@/modules/cli-configuration/usecases/cli/discoverRepositories.usecase.js';
 import type { ConfigureMcpResult } from '@/modules/cli-configuration/usecases/cli/configureMcp.usecase.js';
+import type { DiscoveredRepository } from '@/modules/cli-configuration/usecases/cli/discoverRepositories.usecase.js';
 
-function createFakeInitDeps(
-  overrides?: Partial<InitDependencies>,
-): InitDependencies {
+function createFakeInitDeps(overrides?: Partial<InitDependencies>): InitDependencies {
   return {
     log: vi.fn(),
     exit: vi.fn(),
@@ -71,9 +70,7 @@ describe('executeInit', () => {
       await executeInit(false, false, false, [], deps);
 
       expect(exit).toHaveBeenCalledWith(1);
-      expect(log).toHaveBeenCalledWith(
-        expect.stringContaining('Node.js'),
-      );
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('Node.js'));
     });
 
     it('should exit with code 1 when Claude CLI is not installed', async () => {
@@ -91,9 +88,7 @@ describe('executeInit', () => {
       await executeInit(false, false, false, [], deps);
 
       expect(exit).toHaveBeenCalledWith(1);
-      expect(log).toHaveBeenCalledWith(
-        expect.stringContaining('Claude CLI'),
-      );
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('Claude CLI'));
     });
   });
 
@@ -243,7 +238,7 @@ describe('executeInit', () => {
 
       await executeInit(false, false, true, [], deps);
 
-      const allLogs = log.mock.calls.map(c => c[0]).join('\n');
+      const allLogs = log.mock.calls.map((c) => c[0]).join('\n');
       expect(allLogs).toContain('GitLab: full-secret-value-here');
       expect(allLogs).toContain('GitHub: full-secret-value-here');
     });
@@ -259,7 +254,7 @@ describe('executeInit', () => {
       await executeInit(false, false, false, [], deps);
 
       expect(truncateSecret).toHaveBeenCalledTimes(2);
-      const allLogs = log.mock.calls.map(c => c[0]).join('\n');
+      const allLogs = log.mock.calls.map((c) => c[0]).join('\n');
       expect(allLogs).toContain('GitLab: abc123...');
       expect(allLogs).toContain('GitHub: abc123...');
     });
@@ -297,8 +292,20 @@ describe('executeInit', () => {
 
     it('should call selectRepositories with discovered repos in interactive mode', async () => {
       const fakeRepos: DiscoveredRepository[] = [
-        { name: 'app-one', localPath: '/projects/app-one', platform: 'github', remoteUrl: 'https://github.com/user/app-one', hasReviewConfig: false },
-        { name: 'app-two', localPath: '/projects/app-two', platform: 'gitlab', remoteUrl: 'https://gitlab.com/user/app-two', hasReviewConfig: true },
+        {
+          name: 'app-one',
+          localPath: '/projects/app-one',
+          platform: 'github',
+          remoteUrl: 'https://github.com/user/app-one',
+          hasReviewConfig: false,
+        },
+        {
+          name: 'app-two',
+          localPath: '/projects/app-two',
+          platform: 'gitlab',
+          remoteUrl: 'https://gitlab.com/user/app-two',
+          hasReviewConfig: true,
+        },
       ];
       const selectRepositories = vi.fn(async (repos: DiscoveredRepository[]) => [repos[0]]);
       const writeConfig = vi.fn(() => ({

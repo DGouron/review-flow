@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { parseAiInsightsResponse } from '@/modules/statistics-insights/usecases/insights/parseAiInsightsResponse.js';
+
 import type { AiInsightsResult } from '@/modules/statistics-insights/entities/insight/aiInsight.js';
+import { parseAiInsightsResponse } from '@/modules/statistics-insights/usecases/insights/parseAiInsightsResponse.js';
 
 const validAiResult: AiInsightsResult = {
   developers: [

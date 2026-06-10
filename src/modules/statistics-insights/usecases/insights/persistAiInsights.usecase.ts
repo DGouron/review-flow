@@ -1,6 +1,6 @@
-import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
-import type { InsightsGateway } from '@/modules/statistics-insights/entities/insight/insights.gateway.js';
 import type { AiInsightsResult } from '@/modules/statistics-insights/entities/insight/aiInsight.js';
+import type { InsightsGateway } from '@/modules/statistics-insights/entities/insight/insights.gateway.js';
+import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import { computeInsightsWithPersistence } from '@/modules/statistics-insights/usecases/insights/computeInsightsWithPersistence.usecase.js';
 
 interface PersistAiInsightsInput {

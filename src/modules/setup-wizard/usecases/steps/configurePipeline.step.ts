@@ -1,12 +1,24 @@
+import type {
+  Preset,
+  Language,
+} from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
 import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
-import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
-import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
-import type { Preset, Language } from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
 import { succeeded, blocked } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
-import { getAgentsForPreset, getFullAgentCatalog } from '@/modules/setup-wizard/services/agentPresetCatalog.js';
+import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
+import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
+import {
+  getAgentsForPreset,
+  getFullAgentCatalog,
+} from '@/modules/setup-wizard/services/agentPresetCatalog.js';
 
 function isPreset(value: string): value is Preset {
-  return value === 'backend' || value === 'frontend' || value === 'fullstack' || value === 'basic' || value === 'custom';
+  return (
+    value === 'backend' ||
+    value === 'frontend' ||
+    value === 'fullstack' ||
+    value === 'basic' ||
+    value === 'custom'
+  );
 }
 
 function isLanguage(value: string): value is Language {
@@ -32,7 +44,10 @@ export class ConfigurePipelineStep implements SetupStep {
           { label: 'Custom (multi-select agents)', value: 'custom' },
         ]);
     if (!isPreset(presetChoice)) {
-      return blocked('Preset invalide', "Choisissez parmi backend, frontend, fullstack, basic, custom");
+      return blocked(
+        'Preset invalide',
+        'Choisissez parmi backend, frontend, fullstack, basic, custom',
+      );
     }
 
     let agents = getAgentsForPreset(presetChoice);
@@ -45,7 +60,7 @@ export class ConfigurePipelineStep implements SetupStep {
       if (selected.length === 0) {
         return blocked(
           "Sélectionnez au moins un agent ou choisissez le preset 'basic'",
-          "Relancez et cochez un ou plusieurs agents",
+          'Relancez et cochez un ou plusieurs agents',
         );
       }
       agents = selected;
@@ -62,6 +77,10 @@ export class ConfigurePipelineStep implements SetupStep {
     context.project.preset = presetChoice;
     context.project.language = language;
 
-    return succeeded(`Pipeline configuré: ${presetChoice} / ${language}`, { preset: presetChoice, language, agents });
+    return succeeded(`Pipeline configuré: ${presetChoice} / ${language}`, {
+      preset: presetChoice,
+      language,
+      agents,
+    });
   }
 }

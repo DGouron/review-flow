@@ -1,5 +1,10 @@
 import { execSync } from 'node:child_process';
-import type { DependencyProbeGateway, DependencyProbeReport, DependencyProbeResult } from '@/modules/setup-wizard/entities/dependencyProbe/dependencyProbe.gateway.js';
+
+import type {
+  DependencyProbeGateway,
+  DependencyProbeReport,
+  DependencyProbeResult,
+} from '@/modules/setup-wizard/entities/dependencyProbe/dependencyProbe.gateway.js';
 
 type CommandExecutor = (command: string, options?: object) => Buffer | string;
 

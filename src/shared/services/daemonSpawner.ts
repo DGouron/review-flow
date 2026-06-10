@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { openSync } from 'node:fs';
 import { mkdirSync } from 'node:fs';
+
 import { LOG_DIR, LOG_FILE_PATH } from './daemonPaths.js';
 
 export function spawnDaemon(port: number | undefined): number {

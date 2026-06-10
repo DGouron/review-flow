@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
-import { InMemoryInsightsGateway } from '@/tests/stubs/insights.stub.js';
-import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
-import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+
 import { EmberReadDataCompositeGateway } from '@/modules/ember-chat/interface-adapters/gateways/emberReadData.composite.gateway.js';
 import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
-import type { WorktreeEntry } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 import { createWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
+import type { WorktreeEntry } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+import { InMemoryInsightsGateway } from '@/tests/stubs/insights.stub.js';
+import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
+import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 
 class StubWorktreeGateway implements WorktreeGateway {
   constructor(private readonly entries: WorktreeEntry[]) {}

@@ -1,5 +1,5 @@
-import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import type { ProjectStats } from '@/modules/tracking/entities/tracking/mrTrackingData.js';
+import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 
 export class ProjectStatsCalculator {
   compute(mrs: TrackedMr[]): ProjectStats {
@@ -55,7 +55,7 @@ export class ProjectStatsCalculator {
 
     return Array.from(assignerCounts.entries())
       .map(([username, count]) => ({ username, count }))
-      .sort((a, b) => b.count - a.count)
+      .toSorted((a, b) => b.count - a.count)
       .slice(0, 10);
   }
 }

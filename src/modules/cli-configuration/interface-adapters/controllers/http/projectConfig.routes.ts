@@ -1,17 +1,19 @@
-import type { FastifyPluginAsync } from 'fastify';
 import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
+
+import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+
 import { logInfo, logError } from '@/frameworks/logging/logBuffer.js';
+import type {
+  UpdateProjectConfigUseCase,
+  ProjectConfigPatch,
+} from '@/modules/cli-configuration/usecases/projectConfig/updateProjectConfig.usecase.js';
 import {
   REVIEW_FOCUS_VALUES,
   isReviewFocus,
   reviewSkillForFocus,
 } from '@/modules/review-execution/entities/progress/reviewFocus.type.js';
-import type {
-  UpdateProjectConfigUseCase,
-  ProjectConfigPatch,
-} from '@/modules/cli-configuration/usecases/projectConfig/updateProjectConfig.usecase.js';
 
 interface ProjectConfigRoutesOptions {
   updateProjectConfig?: UpdateProjectConfigUseCase;
@@ -33,7 +35,7 @@ const patchBodySchema = z
   .passthrough();
 
 function formatReviewFocusValues(): string {
-  return REVIEW_FOCUS_VALUES.map(value => `'${value}'`).join(', ');
+  return REVIEW_FOCUS_VALUES.map((value) => `'${value}'`).join(', ');
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -63,7 +65,11 @@ function extractPatch(body: Record<string, unknown>): ProjectConfigPatch {
     }
   }
   if ('defaultModel' in body && typeof body.defaultModel === 'string') {
-    if (body.defaultModel === 'haiku' || body.defaultModel === 'sonnet' || body.defaultModel === 'opus') {
+    if (
+      body.defaultModel === 'haiku' ||
+      body.defaultModel === 'sonnet' ||
+      body.defaultModel === 'opus'
+    ) {
       patch.defaultModel = body.defaultModel;
     }
   }
@@ -108,7 +114,9 @@ function extractPatch(body: Record<string, unknown>): ProjectConfigPatch {
   return patch;
 }
 
-function validateProjectPath(rawPath: string | undefined): { ok: true; path: string } | { ok: false; error: string } {
+function validateProjectPath(
+  rawPath: string | undefined,
+): { ok: true; path: string } | { ok: false; error: string } {
   const projectPath = rawPath?.trim();
   if (!projectPath) {
     return { ok: false, error: 'Project path required' };
@@ -148,12 +156,13 @@ export const projectConfigRoutes: FastifyPluginAsync<ProjectConfigRoutesOptions>
       }
 
       const baseRequiredFields = ['github', 'gitlab', 'defaultModel', 'reviewFollowupSkill'];
-      const missingBase = baseRequiredFields.filter(field => !(field in config));
+      const missingBase = baseRequiredFields.filter((field) => !(field in config));
       if (missingBase.length > 0) {
         return { success: false, error: `Missing fields: ${missingBase.join(', ')}` };
       }
 
-      const hasReviewSkill = typeof config.reviewSkill === 'string' && config.reviewSkill.length > 0;
+      const hasReviewSkill =
+        typeof config.reviewSkill === 'string' && config.reviewSkill.length > 0;
       if (!hasReviewSkill && !hasReviewFocus) {
         return { success: false, error: 'Missing fields: reviewSkill' };
       }
@@ -177,7 +186,8 @@ export const projectConfigRoutes: FastifyPluginAsync<ProjectConfigRoutesOptions>
           ) {
             return {
               success: false,
-              error: 'Invalid agents format: each agent must have { name: string, displayName: string }',
+              error:
+                'Invalid agents format: each agent must have { name: string, displayName: string }',
             };
           }
         }
@@ -197,7 +207,9 @@ export const projectConfigRoutes: FastifyPluginAsync<ProjectConfigRoutesOptions>
       try {
         await stat(followupSkillPath);
       } catch {
-        skillErrors.push(`reviewFollowupSkill "${config.reviewFollowupSkill}" not found (${followupSkillPath})`);
+        skillErrors.push(
+          `reviewFollowupSkill "${config.reviewFollowupSkill}" not found (${followupSkillPath})`,
+        );
       }
 
       if (skillErrors.length > 0) {

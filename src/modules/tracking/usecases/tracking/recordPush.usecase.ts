@@ -1,6 +1,6 @@
-import type { UseCase } from '@/shared/foundation/usecase.base.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
 interface RecordPushInput {
   projectPath: string;

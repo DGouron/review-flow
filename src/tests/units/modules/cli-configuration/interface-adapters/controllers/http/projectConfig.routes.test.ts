@@ -1,16 +1,18 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import Fastify, { type FastifyInstance } from 'fastify';
 import { statSync, type Stats } from 'node:fs';
-import { tmpdir } from 'node:os';
 import * as fsPromises from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+
+import Fastify, { type FastifyInstance } from 'fastify';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+import type { ProjectConfig } from '@/config/projectConfig.js';
 import { projectConfigRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/projectConfig.routes.js';
 import { UpdateProjectConfigUseCase } from '@/modules/cli-configuration/usecases/projectConfig/updateProjectConfig.usecase.js';
-import { StubProjectConfigGateway } from '@/tests/stubs/projectConfigGateway.stub.js';
 import { ProjectConfigFactory } from '@/tests/factories/projectConfig.factory.js';
-import type { ProjectConfig } from '@/config/projectConfig.js';
+import { StubProjectConfigGateway } from '@/tests/stubs/projectConfigGateway.stub.js';
 
 vi.mock('node:fs/promises', async () => {
-  const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+  const actual = await vi.importActual<typeof fsPromises>('node:fs/promises');
   return {
     ...actual,
     readFile: vi.fn(),
@@ -204,9 +206,7 @@ describe('projectConfigRoutes — GET /api/project-config', () => {
   });
 
   it('reports missing base required fields when they are absent', async () => {
-    vi.mocked(fsPromises.readFile).mockResolvedValue(
-      jsonResponse({ reviewSkill: 'review-front' }),
-    );
+    vi.mocked(fsPromises.readFile).mockResolvedValue(jsonResponse({ reviewSkill: 'review-front' }));
 
     const app = await buildApp();
     const response = await app.inject({
@@ -236,9 +236,9 @@ describe('projectConfigRoutes — GET /api/project-config', () => {
 
     expect(response.json().success).toBe(true);
     const checkedPaths = statMock.mock.calls.map((call) => String(call[0]));
-    expect(
-      checkedPaths.some((checkedPath) => checkedPath.includes('review-front/SKILL.md')),
-    ).toBe(true);
+    expect(checkedPaths.some((checkedPath) => checkedPath.includes('review-front/SKILL.md'))).toBe(
+      true,
+    );
     await app.close();
   });
 

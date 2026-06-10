@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { startCleanupScheduler } from '@/frameworks/scheduler/cleanupScheduler.js';
+import type { ReviewFileGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewFile.gateway.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { InMemoryReviewFileGateway } from '@/tests/stubs/reviewFile.stub.js';
 import { InMemoryReviewLogFileGateway } from '@/tests/stubs/reviewLogFile.stub.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
-import type { ReviewFileGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewFile.gateway.js';
 
 describe('cleanupScheduler', () => {
   beforeEach(() => {
@@ -75,7 +76,9 @@ describe('cleanupScheduler', () => {
     const reviewLogFileGateway = new InMemoryReviewLogFileGateway();
 
     const failingGateway: ReviewFileGateway = {
-      listReviews: () => { throw new Error('filesystem error'); },
+      listReviews: () => {
+        throw new Error('filesystem error');
+      },
       readReview: () => Promise.resolve(null),
       deleteReview: () => Promise.resolve(false),
       reviewExists: () => Promise.resolve(false),

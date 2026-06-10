@@ -1,7 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+
 import { ValidateConfigUseCase } from '@/modules/cli-configuration/usecases/cli/validateConfig.usecase.js';
-import type { ValidationGateway, ValidationReport } from '@/modules/setup-wizard/entities/validation/validation.gateway.js';
+import type {
+  ValidationGateway,
+  ValidationReport,
+} from '@/modules/setup-wizard/entities/validation/validation.gateway.js';
 
 interface ValidationAdapterGatewayDependencies {
   configPath: string;

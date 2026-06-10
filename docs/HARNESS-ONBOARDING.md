@@ -111,7 +111,7 @@ cat docs/feature-tracker.md | head -5
 | Main branch | `master` | `main`/`master` |
 | Framework | Fastify 5 + Node 20 | NestJS 11 |
 | Test runner | Vitest (`yarn test:ci`) | Vitest (`pnpm test`) |
-| Linter | Biome | Biome |
+| Linter | Oxlint + oxfmt | Biome |
 | Tracker path | `docs/feature-tracker.md` | `docs/feature-tracker.md` |
 | Specs | `docs/specs/` | `docs/specs/<bc>/` |
 

@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { writeWorktreeSettings } from '@/modules/worktree-management/services/worktreeSettingsWriter.js';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import type { WorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+import { writeWorktreeSettings } from '@/modules/worktree-management/services/worktreeSettingsWriter.js';
 
 describe('writeWorktreeSettings', () => {
   let tmpRoot: string;
@@ -22,7 +24,9 @@ describe('writeWorktreeSettings', () => {
     expect(result.status).toBe('ok');
     const settingsPath = join(tmpRoot, '.claude', 'settings.json');
     expect(existsSync(settingsPath)).toBe(true);
-    const parsed = JSON.parse(readFileSync(settingsPath, 'utf-8')) as { worktree?: { bgIsolation?: string } };
+    const parsed = JSON.parse(readFileSync(settingsPath, 'utf-8')) as {
+      worktree?: { bgIsolation?: string };
+    };
     expect(parsed.worktree?.bgIsolation).toBe('none');
   });
 

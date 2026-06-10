@@ -3,8 +3,8 @@ import type {
   EgressScanInput,
   EgressScanResult,
 } from '@/modules/platform-integration/entities/egressScan/egressScan.gateway.js';
-import type { EgressTraceGateway } from '@/modules/platform-integration/entities/egressScan/egressTrace.gateway.js';
 import type { EgressScanTrace } from '@/modules/platform-integration/entities/egressScan/egressScan.gateway.js';
+import type { EgressTraceGateway } from '@/modules/platform-integration/entities/egressScan/egressTrace.gateway.js';
 
 export class StubEgressScanGateway implements EgressScanGateway {
   readonly calls: EgressScanInput[] = [];

@@ -148,7 +148,9 @@ export async function connectEmberStream(options) {
       options.onAnswer(answer);
     }
     if (event.type === 'error') {
-      options.onAnnounce(typeof event.message === 'string' ? event.message : '// EMBER INDISPONIBLE — réessayer');
+      options.onAnnounce(
+        typeof event.message === 'string' ? event.message : '// EMBER INDISPONIBLE — réessayer',
+      );
     }
     options.onRetryVisible(shouldShowRetry(events));
   };

@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { describe, it, expect, beforeEach } from 'vitest';
+
 import { mrTrackingRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTracking.routes.js';
-import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
+import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 
 interface BuildAppOptions {
   gateway: InMemoryReviewRequestTrackingGateway;
@@ -154,10 +155,7 @@ describe('mrTrackingRoutes — POST /api/mr-tracking/mark-as-merged', () => {
   });
 
   it('returns 200 and transitions a pending-fix MR to merged', async () => {
-    gateway.create(
-      projectPath,
-      TrackedMrFactory.create({ id: 'mr-1', state: 'pending-fix' }),
-    );
+    gateway.create(projectPath, TrackedMrFactory.create({ id: 'mr-1', state: 'pending-fix' }));
     const app = await buildApp({ gateway, qualityThreshold: null });
 
     const response = await app.inject({
@@ -176,10 +174,7 @@ describe('mrTrackingRoutes — POST /api/mr-tracking/mark-as-merged', () => {
   });
 
   it('returns 409 when the MR is not in pending-fix state', async () => {
-    gateway.create(
-      projectPath,
-      TrackedMrFactory.create({ id: 'mr-1', state: 'approved' }),
-    );
+    gateway.create(projectPath, TrackedMrFactory.create({ id: 'mr-1', state: 'approved' }));
     const app = await buildApp({ gateway, qualityThreshold: null });
 
     const response = await app.inject({
@@ -191,9 +186,7 @@ describe('mrTrackingRoutes — POST /api/mr-tracking/mark-as-merged', () => {
     expect(response.statusCode).toBe(409);
     const body = response.json() as { success: boolean; error: string };
     expect(body.success).toBe(false);
-    expect(body.error).toBe(
-      'Seules les MR en correction peuvent être marquées comme mergées'
-    );
+    expect(body.error).toBe('Seules les MR en correction peuvent être marquées comme mergées');
     expect(gateway.getById(projectPath, 'mr-1')?.state).toBe('approved');
   });
 });

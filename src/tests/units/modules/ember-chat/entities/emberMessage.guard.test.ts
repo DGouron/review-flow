@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { emberMessageGuard } from '@/modules/ember-chat/entities/emberMessage/emberMessage.guard.js';
 
 describe('emberMessageGuard', () => {

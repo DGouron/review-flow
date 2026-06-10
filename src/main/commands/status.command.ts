@@ -1,4 +1,7 @@
-import { QueryStatusUseCase, type QueryStatusDependencies } from '@/modules/cli-configuration/usecases/cli/queryStatus.usecase.js';
+import {
+  QueryStatusUseCase,
+  type QueryStatusDependencies,
+} from '@/modules/cli-configuration/usecases/cli/queryStatus.usecase.js';
 import { green, red, dim, bold } from '@/shared/services/ansiColors.js';
 
 export interface StatusDeps {

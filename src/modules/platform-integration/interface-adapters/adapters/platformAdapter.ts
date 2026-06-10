@@ -1,8 +1,12 @@
-import { GitLabMergeRequestAdapter } from './gitlabMergeRequest.adapter.js';
-import { GitHubPullRequestAdapter } from './githubPullRequest.adapter.js';
-import type { GitLabMergeRequestEvent, GitHubPullRequestEvent } from '../controllers/webhook/eventFilter.js';
 import type { ReviewRequest } from '@/modules/review-execution/entities/reviewRequest/reviewRequest.entity.js';
 import { parseReviewRequest } from '@/modules/review-execution/entities/reviewRequest/reviewRequest.guard.js';
+
+import type {
+  GitLabMergeRequestEvent,
+  GitHubPullRequestEvent,
+} from '../controllers/webhook/eventFilter.js';
+import { GitHubPullRequestAdapter } from './githubPullRequest.adapter.js';
+import { GitLabMergeRequestAdapter } from './gitlabMergeRequest.adapter.js';
 
 export class PlatformAdapter {
   private gitlabAdapter = new GitLabMergeRequestAdapter();

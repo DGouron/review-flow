@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   buildFormModel,
   renderForm,
@@ -218,10 +219,15 @@ describe('buildInputPayload', () => {
   });
 
   it('builds a multiSelect payload when every value is among the offered options', () => {
-    const payload = buildInputPayload('multiSelect', 'run-1', ['solid', 'testing'], [
-      { label: 'SOLID', value: 'solid' },
-      { label: 'Testing', value: 'testing' },
-    ]);
+    const payload = buildInputPayload(
+      'multiSelect',
+      'run-1',
+      ['solid', 'testing'],
+      [
+        { label: 'SOLID', value: 'solid' },
+        { label: 'Testing', value: 'testing' },
+      ],
+    );
 
     expect(payload).toEqual({
       ok: true,
@@ -230,18 +236,24 @@ describe('buildInputPayload', () => {
   });
 
   it('surfaces an invalid multiSelect when any value is not offered', () => {
-    const payload = buildInputPayload('multiSelect', 'run-1', ['solid', 'ghost'], [
-      { label: 'SOLID', value: 'solid' },
-    ]);
+    const payload = buildInputPayload(
+      'multiSelect',
+      'run-1',
+      ['solid', 'ghost'],
+      [{ label: 'SOLID', value: 'solid' }],
+    );
 
     expect(payload.ok).toBe(false);
     expect(payload).toHaveProperty('error');
   });
 
   it('accepts an empty multiSelect selection', () => {
-    const payload = buildInputPayload('multiSelect', 'run-1', [], [
-      { label: 'SOLID', value: 'solid' },
-    ]);
+    const payload = buildInputPayload(
+      'multiSelect',
+      'run-1',
+      [],
+      [{ label: 'SOLID', value: 'solid' }],
+    );
 
     expect(payload).toEqual({
       ok: true,

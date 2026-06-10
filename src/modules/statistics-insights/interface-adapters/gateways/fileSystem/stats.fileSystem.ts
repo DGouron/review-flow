@@ -1,12 +1,12 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
+
 import type { ProjectStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
+import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 
 function getStatsPath(projectPath: string): string {
   return join(projectPath, '.claude', 'reviews', 'stats.json');
 }
-
 
 export class FileSystemStatsGateway implements StatsGateway {
   loadProjectStats(projectPath: string): ProjectStats | null {
@@ -18,7 +18,7 @@ export class FileSystemStatsGateway implements StatsGateway {
 
     try {
       const content = readFileSync(statsPath, 'utf-8');
-      const stats = JSON.parse(content) as ProjectStats;
+      const stats: ProjectStats = JSON.parse(content);
 
       if (!Array.isArray(stats.reviews)) {
         stats.reviews = [];

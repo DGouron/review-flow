@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { startSupervisorScheduler } from '@/frameworks/scheduler/supervisorScheduler.js';
-import { StubSupervisorGateway } from '@/tests/stubs/supervisor.stub.js';
-import { StubSupervisorLockGateway } from '@/tests/stubs/supervisorLock.stub.js';
 import { InMemorySupervisorStatusStore } from '@/modules/supervisor-management/interface-adapters/gateways/supervisorStatusStore.memory.gateway.js';
 import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
+import { StubSupervisorGateway } from '@/tests/stubs/supervisor.stub.js';
+import { StubSupervisorLockGateway } from '@/tests/stubs/supervisorLock.stub.js';
 
 describe('startSupervisorScheduler', () => {
   beforeEach(() => {

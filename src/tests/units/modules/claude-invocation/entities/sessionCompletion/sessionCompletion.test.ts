@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { parseSessionCompletion } from '@/modules/claude-invocation/entities/sessionCompletion/sessionCompletion.guard.js';
 
 describe('SessionCompletion entity', () => {

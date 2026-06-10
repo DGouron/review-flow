@@ -1,5 +1,6 @@
-import { z } from 'zod'
-import { createGuard } from '@/shared/foundation/guard.base.js'
+import { z } from 'zod';
+
+import { createGuard } from '@/shared/foundation/guard.base.js';
 
 const gitLabMergeRequestEventSchema = z.object({
   object_kind: z.literal('merge_request'),
@@ -31,7 +32,7 @@ const gitLabMergeRequestEventSchema = z.object({
       z.object({
         username: z.string(),
         name: z.string(),
-      })
+      }),
     )
     .optional(),
   assignees: z
@@ -39,7 +40,7 @@ const gitLabMergeRequestEventSchema = z.object({
       z.object({
         username: z.string(),
         name: z.string(),
-      })
+      }),
     )
     .optional(),
   changes: z
@@ -52,8 +53,11 @@ const gitLabMergeRequestEventSchema = z.object({
         .optional(),
     })
     .optional(),
-})
+});
 
-export const gitLabMergeRequestEventGuard = createGuard(gitLabMergeRequestEventSchema, 'gitLabMergeRequestEvent')
+export const gitLabMergeRequestEventGuard = createGuard(
+  gitLabMergeRequestEventSchema,
+  'gitLabMergeRequestEvent',
+);
 
-export type GitLabMergeRequestEvent = z.infer<typeof gitLabMergeRequestEventSchema>
+export type GitLabMergeRequestEvent = z.infer<typeof gitLabMergeRequestEventSchema>;

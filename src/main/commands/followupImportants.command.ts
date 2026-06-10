@@ -1,8 +1,8 @@
 import { FollowupImportantsUseCase } from '@/modules/cli-configuration/usecases/cli/followupImportants.usecase.js';
 import { red } from '@/shared/services/ansiColors.js';
+import { PID_FILE_PATH } from '@/shared/services/daemonPaths.js';
 import { readPidFile } from '@/shared/services/pidFileManager.js';
 import { isProcessRunning } from '@/shared/services/processChecker.js';
-import { PID_FILE_PATH } from '@/shared/services/daemonPaths.js';
 
 export interface FollowupImportantsDependencies {
   readPidFile: () => { pid: number; port: number } | null;

@@ -1,12 +1,15 @@
-import { StartDaemonUseCase, type StartDaemonDependencies } from '@/modules/cli-configuration/usecases/cli/startDaemon.usecase.js';
-import type { PidFileDeps } from '@/shared/services/pidFileManager.js';
-import { yellow } from '@/shared/services/ansiColors.js';
 import { formatStartupBanner } from '@/cli/startupBanner.js';
-import { validateDependencies } from '@/shared/services/dependencyChecker.js';
-import { startServer } from '@/main/server.js';
-import { spawnDaemon } from '@/shared/services/daemonSpawner.js';
-import { openInBrowser } from '@/shared/services/browserOpener.js';
 import { loadConfig } from '@/frameworks/config/configLoader.js';
+import { startServer } from '@/main/server.js';
+import {
+  StartDaemonUseCase,
+  type StartDaemonDependencies,
+} from '@/modules/cli-configuration/usecases/cli/startDaemon.usecase.js';
+import { yellow } from '@/shared/services/ansiColors.js';
+import { openInBrowser } from '@/shared/services/browserOpener.js';
+import { spawnDaemon } from '@/shared/services/daemonSpawner.js';
+import { validateDependencies } from '@/shared/services/dependencyChecker.js';
+import type { PidFileDeps } from '@/shared/services/pidFileManager.js';
 
 export interface StartDependencies {
   validateDependencies: () => { name: string; installUrl: string }[];
@@ -96,9 +99,9 @@ export function createStartDependencies(pidDeps: PidFileDeps): StartDependencies
     loadStartupInfo: () => {
       try {
         const config = loadConfig();
-        const enabledPlatforms = [...new Set(
-          config.repositories.filter(r => r.enabled).map(r => r.platform),
-        )] as Array<'gitlab' | 'github'>;
+        const enabledPlatforms: Array<'gitlab' | 'github'> = [
+          ...new Set(config.repositories.filter((r) => r.enabled).map((r) => r.platform)),
+        ];
         return { enabledPlatforms, defaultPort: config.server.port };
       } catch {
         return { enabledPlatforms: [], defaultPort: 3000 };

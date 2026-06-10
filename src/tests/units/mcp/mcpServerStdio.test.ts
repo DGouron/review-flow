@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('node:fs');
 vi.mock('node:os');
@@ -54,12 +55,14 @@ describe('mcpServerStdio context loading', () => {
 
     it('should sanitize job ID when building file path', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
-        jobId: 'gitlab:org/repo:mr-5',
-        localPath: '/tmp',
-        mergeRequestId: 'mr-5',
-        jobType: 'review',
-      }));
+      vi.mocked(fs.readFileSync).mockReturnValue(
+        JSON.stringify({
+          jobId: 'gitlab:org/repo:mr-5',
+          localPath: '/tmp',
+          mergeRequestId: 'mr-5',
+          jobType: 'review',
+        }),
+      );
 
       loadJobContextFromFile('gitlab:org/repo:mr-5');
 
@@ -88,11 +91,13 @@ describe('mcpServerStdio context loading', () => {
 
     it('should default jobType to review when not specified', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
-        jobId: 'job-1',
-        localPath: '/tmp',
-        mergeRequestId: 'mr-1',
-      }));
+      vi.mocked(fs.readFileSync).mockReturnValue(
+        JSON.stringify({
+          jobId: 'job-1',
+          localPath: '/tmp',
+          mergeRequestId: 'mr-1',
+        }),
+      );
 
       const result = loadJobContextFromFile('job-1');
 
@@ -165,10 +170,10 @@ describe('mcpServerStdio context loading', () => {
         localPath: '/tmp/repos/lazy',
         mergeRequestId: 'gitlab-org/lazy-10',
       });
-      expect(mockDeps.progressGateway.createProgress).toHaveBeenCalledWith(
-        'job-lazy',
-        ['agent-a', 'agent-b'],
-      );
+      expect(mockDeps.progressGateway.createProgress).toHaveBeenCalledWith('job-lazy', [
+        'agent-a',
+        'agent-b',
+      ]);
     });
 
     it('should skip loading if context is already registered', () => {
@@ -210,10 +215,9 @@ describe('mcpServerStdio context loading', () => {
 
       ensureJobContextLoaded('followup-job', mockDeps as never);
 
-      expect(mockDeps.progressGateway.createProgress).toHaveBeenCalledWith(
-        'followup-job',
-        ['followup-check'],
-      );
+      expect(mockDeps.progressGateway.createProgress).toHaveBeenCalledWith('followup-job', [
+        'followup-check',
+      ]);
     });
 
     it('should not throw when context file is missing', () => {

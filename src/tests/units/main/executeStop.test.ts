@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import { executeStop, type StopDeps } from '@/main/commands/stop.command.js';
 import type { StopDaemonDependencies } from '@/modules/cli-configuration/usecases/cli/stopDaemon.usecase.js';
+
 import { createPidFileContent } from '../../factories/pidFileContent.factory.js';
 
-function createFakeStopDeps(
-  overrides?: Partial<StopDaemonDependencies>,
-): StopDaemonDependencies {
+function createFakeStopDeps(overrides?: Partial<StopDaemonDependencies>): StopDaemonDependencies {
   return {
     readPidFile: vi.fn(() => null),
     removePidFile: vi.fn(),
@@ -54,7 +54,9 @@ describe('executeStop', () => {
       stopDaemonDeps: createFakeStopDeps({
         readPidFile: vi.fn(() => pidContent),
         isProcessRunning: vi.fn(() => true),
-        killProcess: vi.fn(() => { throw new Error('EPERM'); }),
+        killProcess: vi.fn(() => {
+          throw new Error('EPERM');
+        }),
       }),
     });
 

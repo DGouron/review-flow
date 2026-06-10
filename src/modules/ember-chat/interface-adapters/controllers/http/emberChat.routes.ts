@@ -1,12 +1,13 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { Logger } from 'pino';
+
+import type { EnvironmentGateway } from '@/modules/claude-invocation/entities/billingState/environment.gateway.js';
+import type { EmberAnswerTransportGateway } from '@/modules/ember-chat/entities/emberAnswer/emberAnswerTransport.gateway.js';
+import type { EmberMemoryGateway } from '@/modules/ember-chat/entities/emberMemory/emberMemory.gateway.js';
 import { emberMessageGuard } from '@/modules/ember-chat/entities/emberMessage/emberMessage.guard.js';
+import type { EmberReadDataGateway } from '@/modules/ember-chat/entities/emberTool/emberTool.gateway.js';
 import { askEmber } from '@/modules/ember-chat/usecases/askEmber/askEmber.usecase.js';
 import { clearEmberMemory } from '@/modules/ember-chat/usecases/clearEmberMemory/clearEmberMemory.usecase.js';
-import type { EmberAnswerTransportGateway } from '@/modules/ember-chat/entities/emberAnswer/emberAnswerTransport.gateway.js';
-import type { EmberReadDataGateway } from '@/modules/ember-chat/entities/emberTool/emberTool.gateway.js';
-import type { EmberMemoryGateway } from '@/modules/ember-chat/entities/emberMemory/emberMemory.gateway.js';
-import type { EnvironmentGateway } from '@/modules/claude-invocation/entities/billingState/environment.gateway.js';
 
 const UNAVAILABLE_MESSAGE = '// EMBER INDISPONIBLE — réessayer';
 

@@ -1,7 +1,17 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import {
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { JobHistoryFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/fileSystem/jobHistory.fileSystem.gateway.js';
 import { JobRecordFactory } from '@/tests/factories/jobRecord.factory.js';
 import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
@@ -67,10 +77,7 @@ describe('JobHistoryFileSystemGateway', () => {
         logger,
       });
 
-      const result = await gateway.loadRecordsWithinWindow(
-        7,
-        new Date('2026-05-25T12:00:00.000Z'),
-      );
+      const result = await gateway.loadRecordsWithinWindow(7, new Date('2026-05-25T12:00:00.000Z'));
 
       expect(result).toEqual([]);
     });
@@ -91,10 +98,7 @@ describe('JobHistoryFileSystemGateway', () => {
         }),
       );
 
-      const result = await gateway.loadRecordsWithinWindow(
-        7,
-        new Date('2026-05-25T12:00:00.000Z'),
-      );
+      const result = await gateway.loadRecordsWithinWindow(7, new Date('2026-05-25T12:00:00.000Z'));
 
       expect(result).toHaveLength(1);
       expect(result[0]?.jobId).toBe('recent');
@@ -110,13 +114,12 @@ describe('JobHistoryFileSystemGateway', () => {
         `${JSON.stringify(valid)}\nnot-json-line\n${JSON.stringify({ ...valid, jobId: 'second' })}\n`,
       );
 
-      const result = await gateway.loadRecordsWithinWindow(
-        7,
-        new Date('2026-05-25T12:00:00.000Z'),
-      );
+      const result = await gateway.loadRecordsWithinWindow(7, new Date('2026-05-25T12:00:00.000Z'));
 
-      expect(result.map((entry) => entry.jobId).sort()).toEqual(['second', 'valid']);
-      expect(warnMessages.some((message) => message.includes('Ligne 2 illisible, ignorée'))).toBe(true);
+      expect(result.map((entry) => entry.jobId).toSorted()).toEqual(['second', 'valid']);
+      expect(warnMessages.some((message) => message.includes('Ligne 2 illisible, ignorée'))).toBe(
+        true,
+      );
     });
 
     it('skips lines whose JSON does not match the schema', async () => {
@@ -128,13 +131,12 @@ describe('JobHistoryFileSystemGateway', () => {
         `${JSON.stringify({ unrelated: 'object' })}\n`,
       );
 
-      const result = await gateway.loadRecordsWithinWindow(
-        7,
-        new Date('2026-05-25T12:00:00.000Z'),
-      );
+      const result = await gateway.loadRecordsWithinWindow(7, new Date('2026-05-25T12:00:00.000Z'));
 
       expect(result).toEqual([]);
-      expect(warnMessages.some((message) => message.includes('Ligne 1 illisible, ignorée'))).toBe(true);
+      expect(warnMessages.some((message) => message.includes('Ligne 1 illisible, ignorée'))).toBe(
+        true,
+      );
     });
 
     it('tolerates empty lines silently', async () => {
@@ -142,15 +144,9 @@ describe('JobHistoryFileSystemGateway', () => {
       const gateway = new JobHistoryFileSystemGateway({ rootDir, logger });
       const record = JobRecordFactory.create();
       mkdirSync(rootDir, { recursive: true });
-      writeFileSync(
-        join(rootDir, '2026-05-25.jsonl'),
-        `${JSON.stringify(record)}\n\n`,
-      );
+      writeFileSync(join(rootDir, '2026-05-25.jsonl'), `${JSON.stringify(record)}\n\n`);
 
-      const result = await gateway.loadRecordsWithinWindow(
-        7,
-        new Date('2026-05-25T12:00:00.000Z'),
-      );
+      const result = await gateway.loadRecordsWithinWindow(7, new Date('2026-05-25T12:00:00.000Z'));
 
       expect(result).toHaveLength(1);
     });
@@ -185,8 +181,8 @@ describe('JobHistoryFileSystemGateway', () => {
         new Date('2026-05-25T12:00:00.000Z'),
       );
 
-      expect(result.deletedFilenames.sort()).toEqual(['2026-05-10.jsonl', '2026-05-15.jsonl']);
-      expect(readdirSync(rootDir).sort()).toEqual(['2026-05-24.jsonl']);
+      expect(result.deletedFilenames.toSorted()).toEqual(['2026-05-10.jsonl', '2026-05-15.jsonl']);
+      expect(readdirSync(rootDir).toSorted()).toEqual(['2026-05-24.jsonl']);
     });
 
     it('ignores files whose filename is not a valid date pattern', async () => {

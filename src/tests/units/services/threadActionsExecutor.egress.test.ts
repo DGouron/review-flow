@@ -1,15 +1,16 @@
 import { describe, it, expect } from 'vitest';
+
+import { createEgressScanner } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
+import type { EgressScanConfig } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
+import { EgressScannedNoteCommentPostGateway } from '@/modules/platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.js';
 import {
   executeThreadActions,
   type ExecutionContext,
   type CommandExecutor,
 } from '@/modules/review-execution/services/threadActionsExecutor.js';
 import type { ThreadAction } from '@/modules/review-execution/services/threadActionsParser.js';
-import { EgressScannedNoteCommentPostGateway } from '@/modules/platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.js';
-import { createEgressScanner } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
-import type { EgressScanConfig } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
-import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
 import { StubEgressTraceGateway } from '@/tests/stubs/egressScan.stub.js';
+import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
 
 const SECRET = 'glpat-abcdefghij1234567890';
 

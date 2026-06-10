@@ -1,4 +1,7 @@
-import type { PromptGateway, PromptChoice } from '@/modules/setup-wizard/entities/prompt/prompt.gateway.js';
+import type {
+  PromptGateway,
+  PromptChoice,
+} from '@/modules/setup-wizard/entities/prompt/prompt.gateway.js';
 
 export class PromptTtyGateway implements PromptGateway {
   async askText(prompt: string, defaultValue?: string): Promise<string> {

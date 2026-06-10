@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { StubSetupProcessGateway } from '@/tests/stubs/setupProcess.stub.js';
+
 import { SetupRunRegistry } from '@/modules/setup-wizard/usecases/streamSetupRun.usecase.js';
+import { StubSetupProcessGateway } from '@/tests/stubs/setupProcess.stub.js';
 
 describe('SetupRunRegistry', () => {
   let registry: SetupRunRegistry;

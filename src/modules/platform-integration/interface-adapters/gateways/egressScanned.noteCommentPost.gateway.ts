@@ -1,9 +1,9 @@
+import type { EgressScanGateway } from '@/modules/platform-integration/entities/egressScan/egressScan.gateway.js';
+import type { EgressTraceGateway } from '@/modules/platform-integration/entities/egressScan/egressTrace.gateway.js';
 import type {
   NoteCommentPostGateway,
   NoteCommentPostInput,
 } from '@/modules/platform-integration/entities/noteComment/noteCommentPost.gateway.js';
-import type { EgressScanGateway } from '@/modules/platform-integration/entities/egressScan/egressScan.gateway.js';
-import type { EgressTraceGateway } from '@/modules/platform-integration/entities/egressScan/egressTrace.gateway.js';
 
 export class EgressBlockedError extends Error {
   constructor(channel: string) {

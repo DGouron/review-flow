@@ -39,9 +39,10 @@ export function createSessionMetricsState(nowMs = Date.now()) {
  */
 export function trackSessionAction(state, actionType, nowMs = Date.now()) {
   const normalizedActionType = actionType in state.actionBreakdown ? actionType : 'other';
-  const firstUsefulActionDelayMs = state.firstUsefulActionDelayMs === null
-    ? Math.max(0, nowMs - state.sessionStartedAt)
-    : state.firstUsefulActionDelayMs;
+  const firstUsefulActionDelayMs =
+    state.firstUsefulActionDelayMs === null
+      ? Math.max(0, nowMs - state.sessionStartedAt)
+      : state.firstUsefulActionDelayMs;
 
   return {
     ...state,
@@ -65,7 +66,10 @@ export function updatePriorityItemTracking(state, input) {
 
   const trackedItemId = state.currentPriorityItemId;
   const trackedStartAt = state.currentPriorityItemStartedAt;
-  const trackedItemResolved = trackedItemId !== null && trackedStartAt !== null && !input.pendingFixIds.includes(trackedItemId);
+  const trackedItemResolved =
+    trackedItemId !== null &&
+    trackedStartAt !== null &&
+    !input.pendingFixIds.includes(trackedItemId);
   if (trackedItemResolved) {
     nextState = {
       ...nextState,
@@ -107,9 +111,11 @@ export function updatePriorityItemTracking(state, input) {
  * }}
  */
 export function getSessionMetricsSnapshot(state) {
-  const averagePriorityResolutionMs = state.resolvedPriorityDurationsMs.length === 0
-    ? null
-    : state.resolvedPriorityDurationsMs.reduce((total, duration) => total + duration, 0) / state.resolvedPriorityDurationsMs.length;
+  const averagePriorityResolutionMs =
+    state.resolvedPriorityDurationsMs.length === 0
+      ? null
+      : state.resolvedPriorityDurationsMs.reduce((total, duration) => total + duration, 0) /
+        state.resolvedPriorityDurationsMs.length;
 
   return {
     firstUsefulActionDelayMs: state.firstUsefulActionDelayMs,

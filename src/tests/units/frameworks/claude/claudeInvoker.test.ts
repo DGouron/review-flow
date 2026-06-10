@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
+
 import { buildMcpSystemPrompt } from '@/frameworks/claude/claudeInvoker.js';
-import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 
 function buildJob(overrides: Partial<ReviewJob>): ReviewJob {
   return {

@@ -1,5 +1,5 @@
-import type { SkillTemplateGateway } from '@/modules/setup-wizard/entities/skillTemplate/skillTemplate.gateway.js';
 import type { Language } from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
+import type { SkillTemplateGateway } from '@/modules/setup-wizard/entities/skillTemplate/skillTemplate.gateway.js';
 
 interface WrittenSkill {
   projectPath: string;

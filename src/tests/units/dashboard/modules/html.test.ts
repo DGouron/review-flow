@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { escapeHtml, markdownToHtml, sanitizeHttpUrl } from '@/dashboard/modules/html.js';
 
 describe('escapeHtml', () => {
@@ -9,7 +10,7 @@ describe('escapeHtml', () => {
 
   it('should escape HTML special characters', () => {
     expect(escapeHtml('<script>alert("xss")</script>')).toBe(
-      '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;'
+      '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;',
     );
   });
 

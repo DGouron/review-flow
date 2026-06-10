@@ -5,8 +5,6 @@ export interface ClearEmberMemoryDependencies {
   projectPath: string;
 }
 
-export async function clearEmberMemory(
-  dependencies: ClearEmberMemoryDependencies,
-): Promise<void> {
+export async function clearEmberMemory(dependencies: ClearEmberMemoryDependencies): Promise<void> {
   await dependencies.memory.clear(dependencies.projectPath);
 }

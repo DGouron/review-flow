@@ -20,9 +20,7 @@ export type ProjectConcurrencyCapValidation =
   | { ok: true; value: ProjectConcurrencyCap }
   | { ok: false; reason: string };
 
-export function validateProjectConcurrencyCap(
-  value: unknown,
-): ProjectConcurrencyCapValidation {
+export function validateProjectConcurrencyCap(value: unknown): ProjectConcurrencyCapValidation {
   if (value === null || value === undefined || value === '') {
     return { ok: false, reason: PROJECT_CAP_REQUIRED_MESSAGE };
   }
@@ -35,9 +33,9 @@ export function validateProjectConcurrencyCap(
   return { ok: true, value };
 }
 
-export function effectiveProjectConcurrencyCap(
-  config: { maxConcurrentReviews?: number | null },
-): number {
+export function effectiveProjectConcurrencyCap(config: {
+  maxConcurrentReviews?: number | null;
+}): number {
   const raw = config.maxConcurrentReviews;
   if (typeof raw !== 'number' || !Number.isInteger(raw)) {
     return DEFAULT_PROJECT_CONCURRENCY_CAP;

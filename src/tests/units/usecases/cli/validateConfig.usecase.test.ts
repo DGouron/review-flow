@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   ValidateConfigUseCase,
   type ValidateConfigDependencies,
@@ -26,7 +27,10 @@ describe('ValidateConfigUseCase', () => {
     const deps = createFakeDeps({ existsSync: vi.fn(() => false) });
     const usecase = new ValidateConfigUseCase(deps);
 
-    const result = usecase.execute({ configPath: '/missing/config.json', envPath: '/missing/.env' });
+    const result = usecase.execute({
+      configPath: '/missing/config.json',
+      envPath: '/missing/.env',
+    });
 
     expect(result.status).toBe('not-found');
   });
@@ -59,7 +63,7 @@ describe('ValidateConfigUseCase', () => {
     });
 
     expect(result.status).toBe('invalid');
-    expect(result.issues.some(i => i.field === 'config.json')).toBe(true);
+    expect(result.issues.some((i) => i.field === 'config.json')).toBe(true);
   });
 
   it('should detect invalid port', () => {
@@ -81,7 +85,7 @@ describe('ValidateConfigUseCase', () => {
     const result = usecase.execute({ configPath: '/config.json', envPath: '/.env' });
 
     expect(result.status).toBe('invalid');
-    expect(result.issues.some(i => i.field === 'server.port')).toBe(true);
+    expect(result.issues.some((i) => i.field === 'server.port')).toBe(true);
   });
 
   it('should detect missing .env file', () => {
@@ -101,7 +105,7 @@ describe('ValidateConfigUseCase', () => {
     const result = usecase.execute({ configPath: '/config.json', envPath: '/.env' });
 
     expect(result.status).toBe('invalid');
-    expect(result.issues.some(i => i.field === '.env')).toBe(true);
+    expect(result.issues.some((i) => i.field === '.env')).toBe(true);
   });
 
   it('should detect missing required fields', () => {
@@ -118,7 +122,7 @@ describe('ValidateConfigUseCase', () => {
     const result = usecase.execute({ configPath: '/config.json', envPath: '/.env' });
 
     expect(result.status).toBe('invalid');
-    expect(result.issues.some(i => i.field === 'user')).toBe(true);
+    expect(result.issues.some((i) => i.field === 'user')).toBe(true);
   });
 
   it('should detect non-existent repository paths', () => {
@@ -130,9 +134,7 @@ describe('ValidateConfigUseCase', () => {
             server: { port: 3847 },
             user: { gitlabUsername: 'u', githubUsername: 'u' },
             queue: { maxConcurrent: 2, deduplicationWindowMs: 300000 },
-            repositories: [
-              { name: 'repo', localPath: '/nonexistent/repo', enabled: true },
-            ],
+            repositories: [{ name: 'repo', localPath: '/nonexistent/repo', enabled: true }],
           });
         }
         return 'GITLAB_WEBHOOK_TOKEN=abc\nGITHUB_WEBHOOK_SECRET=def';
@@ -143,6 +145,6 @@ describe('ValidateConfigUseCase', () => {
     const result = usecase.execute({ configPath: '/config.json', envPath: '/.env' });
 
     expect(result.status).toBe('invalid');
-    expect(result.issues.some(i => i.field === 'repositories')).toBe(true);
+    expect(result.issues.some((i) => i.field === 'repositories')).toBe(true);
   });
 });

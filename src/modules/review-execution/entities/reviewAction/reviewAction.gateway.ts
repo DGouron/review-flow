@@ -1,23 +1,16 @@
-import type { ReviewAction } from './reviewAction.js'
-import type { DiffMetadata } from '../reviewContext/reviewContext.js'
+import type { ExecutionResult } from '@/shared/foundation/executionGateway.base.js';
+
+import type { DiffMetadata } from '../reviewContext/reviewContext.js';
+import type { ReviewAction } from './reviewAction.js';
 
 export interface ExecutionContext {
-  projectPath: string
-  mrNumber: number
-  localPath: string
-  diffMetadata?: DiffMetadata
-  baseUrl: string | null
+  projectPath: string;
+  mrNumber: number;
+  localPath: string;
+  diffMetadata?: DiffMetadata;
+  baseUrl: string | null;
 }
-
-export interface ExecutionResult {
-  total: number
-  succeeded: number
-  failed: number
-  skipped: number
-}
-
-export type CommandExecutor = (command: string, args: string[], cwd: string) => void
 
 export interface ReviewActionGateway {
-  execute(actions: ReviewAction[], context: ExecutionContext): Promise<ExecutionResult>
+  execute(actions: ReviewAction[], context: ExecutionContext): Promise<ExecutionResult>;
 }

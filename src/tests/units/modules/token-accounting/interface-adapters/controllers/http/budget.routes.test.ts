@@ -1,12 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { describe, it, expect, beforeEach } from 'vitest';
+
 import { budgetRoutes } from '@/modules/token-accounting/interface-adapters/controllers/http/budget.routes.js';
+import { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
 import { GetBudgetStatusUseCase } from '@/modules/token-accounting/usecases/getBudgetStatus/getBudgetStatus.usecase.js';
 import { UpdateBudgetUseCase } from '@/modules/token-accounting/usecases/updateBudget/updateBudget.usecase.js';
-import { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
+import { TokenUsageRecordFactory } from '@/tests/factories/tokenUsage.factory.js';
 import { StubBudgetGateway } from '@/tests/stubs/budget.stub.js';
 import { StubTokenUsageGateway } from '@/tests/stubs/tokenUsage.stub.js';
-import { TokenUsageRecordFactory } from '@/tests/factories/tokenUsage.factory.js';
 
 interface Harness {
   app: FastifyInstance;
@@ -28,7 +29,14 @@ async function buildApp(now: Date = new Date('2026-05-15T12:00:00Z')): Promise<H
     budgetGateway,
     presenter,
     getRepositories: () => [
-      { name: 'repo', platform: 'gitlab', remoteUrl: '', localPath: '/project', skill: 'review', enabled: true },
+      {
+        name: 'repo',
+        platform: 'gitlab',
+        remoteUrl: '',
+        localPath: '/project',
+        skill: 'review',
+        enabled: true,
+      },
     ],
     now: () => now,
   });
@@ -125,7 +133,13 @@ describe('budgetRoutes', () => {
         TokenUsageRecordFactory.create({
           recordedAt: '2026-05-10T00:00:00Z',
           localPath: '/project',
-          usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 48.5 },
+          usage: {
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheCreationInputTokens: 0,
+            cacheReadInputTokens: 0,
+            costUsd: 48.5,
+          },
         }),
       ]);
 

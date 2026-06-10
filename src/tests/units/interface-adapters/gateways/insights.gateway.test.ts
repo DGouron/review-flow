@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { FileSystemInsightsGateway } from '@/modules/statistics-insights/interface-adapters/gateways/fileSystem/insights.fileSystem.js';
+import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import type { PersistedInsightsData } from '@/modules/statistics-insights/entities/insight/persistedInsightsData.js';
+import { FileSystemInsightsGateway } from '@/modules/statistics-insights/interface-adapters/gateways/fileSystem/insights.fileSystem.js';
 
 describe('FileSystemInsightsGateway', () => {
   let gateway: FileSystemInsightsGateway;
@@ -59,20 +61,22 @@ describe('FileSystemInsightsGateway', () => {
   describe('savePersistedInsights', () => {
     it('should save persisted insights data to file', () => {
       const insightsData: PersistedInsightsData = {
-        developers: [{
-          developerName: 'alice',
-          totalReviews: 10,
-          totalScore: 75,
-          scoredReviewCount: 9,
-          totalBlocking: 5,
-          totalWarnings: 12,
-          totalSuggestions: 20,
-          totalDuration: 600000,
-          totalAdditions: 1500,
-          totalDeletions: 300,
-          diffStatsReviewCount: 8,
-          recentReviews: [],
-        }],
+        developers: [
+          {
+            developerName: 'alice',
+            totalReviews: 10,
+            totalScore: 75,
+            scoredReviewCount: 9,
+            totalBlocking: 5,
+            totalWarnings: 12,
+            totalSuggestions: 20,
+            totalDuration: 600000,
+            totalAdditions: 1500,
+            totalDeletions: 300,
+            diffStatsReviewCount: 8,
+            recentReviews: [],
+          },
+        ],
         processedReviewIds: ['review-1'],
         lastUpdated: '2024-01-15T10:00:00Z',
         aiInsights: null,
@@ -108,20 +112,22 @@ describe('FileSystemInsightsGateway', () => {
   describe('round-trip', () => {
     it('should save and load the same data', () => {
       const insightsData: PersistedInsightsData = {
-        developers: [{
-          developerName: 'bob',
-          totalReviews: 5,
-          totalScore: 40,
-          scoredReviewCount: 5,
-          totalBlocking: 2,
-          totalWarnings: 8,
-          totalSuggestions: 10,
-          totalDuration: 300000,
-          totalAdditions: 800,
-          totalDeletions: 200,
-          diffStatsReviewCount: 5,
-          recentReviews: [],
-        }],
+        developers: [
+          {
+            developerName: 'bob',
+            totalReviews: 5,
+            totalScore: 40,
+            scoredReviewCount: 5,
+            totalBlocking: 2,
+            totalWarnings: 8,
+            totalSuggestions: 10,
+            totalDuration: 300000,
+            totalAdditions: 800,
+            totalDeletions: 200,
+            diffStatsReviewCount: 5,
+            recentReviews: [],
+          },
+        ],
         processedReviewIds: ['rev-1', 'rev-2'],
         lastUpdated: '2024-01-15T10:00:00Z',
         aiInsights: null,

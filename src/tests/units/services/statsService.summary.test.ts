@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
+
 import { getStatsSummary } from '@/modules/statistics-insights/services/statsService.js';
-import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 import { DiffStatsFactory } from '@/tests/factories/diffStats.factory.js';
+import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 
 describe('getStatsSummary', () => {
   it('exposes existing aggregates (totalReviews, durations, score, counts)', () => {

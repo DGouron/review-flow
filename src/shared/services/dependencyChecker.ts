@@ -38,9 +38,7 @@ export function checkDependency(
   }
 }
 
-export function validateDependencies(
-  executor: CommandExecutor = execSync,
-): DependencyInfo[] {
+export function validateDependencies(executor: CommandExecutor = execSync): DependencyInfo[] {
   const missing: DependencyInfo[] = [];
   for (const dep of REQUIRED_DEPENDENCIES) {
     if (!checkDependency(dep, executor)) {

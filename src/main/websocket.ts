@@ -1,11 +1,21 @@
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
-import type { ReviewProgress, ProgressEvent } from '@/modules/review-execution/entities/progress/progress.type.js';
+
+import type {
+  ReviewProgress,
+  ProgressEvent,
+} from '@/modules/review-execution/entities/progress/progress.type.js';
 import type { BackfillProgress } from '@/modules/statistics-insights/entities/backfill/backfillProgress.js';
 import type { BudgetStatusViewModel } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
-import type { Dependencies } from './dependencies.js';
-import { getJobsStatus, setProgressChangeCallback, setStateChangeCallback, updateJobProgress } from '../frameworks/queue/pQueueAdapter.js';
+
 import { onLog, type LogEntry } from '../frameworks/logging/logBuffer.js';
+import {
+  getJobsStatus,
+  setProgressChangeCallback,
+  setStateChangeCallback,
+  updateJobProgress,
+} from '../frameworks/queue/pQueueAdapter.js';
+import type { Dependencies } from './dependencies.js';
 
 const wsClients = new Set<WebSocket>();
 
@@ -15,7 +25,11 @@ export function getWsClientsCount(): number {
   return wsClients.size;
 }
 
-export function broadcastProgress(jobId: string, progress: ReviewProgress, event?: ProgressEvent): void {
+export function broadcastProgress(
+  jobId: string,
+  progress: ReviewProgress,
+  event?: ProgressEvent,
+): void {
   const message = JSON.stringify({
     type: 'progress',
     jobId,
@@ -46,8 +60,10 @@ function broadcastLogEntry(log: LogEntry): void {
 
 function broadcastStateChange(): void {
   const jobs = getJobsStatus();
-  const clientCount = Array.from(wsClients).filter(c => c.readyState === 1).length;
-  console.log(`[WS Broadcast] state: ${jobs.active.length} active reviews to ${clientCount} clients`);
+  const clientCount = Array.from(wsClients).filter((c) => c.readyState === 1).length;
+  console.log(
+    `[WS Broadcast] state: ${jobs.active.length} active reviews to ${clientCount} clients`,
+  );
 
   const message = JSON.stringify({
     type: 'state',
@@ -133,7 +149,9 @@ export function broadcastBudgetExceeded(payload: BudgetExceededPayload): void {
   }
 }
 
-export function setupWebSocketCallbacks(deps: Pick<Dependencies, 'reviewContextWatcher' | 'progressPresenter'>): void {
+export function setupWebSocketCallbacks(
+  deps: Pick<Dependencies, 'reviewContextWatcher' | 'progressPresenter'>,
+): void {
   injectedDeps = deps;
   onLog(broadcastLogEntry);
   setProgressChangeCallback((jobId, progress, event) => {
@@ -144,7 +162,11 @@ export function setupWebSocketCallbacks(deps: Pick<Dependencies, 'reviewContextW
   });
 }
 
-export function startWatchingReviewContext(jobId: string, localPath: string, mergeRequestId: string): void {
+export function startWatchingReviewContext(
+  jobId: string,
+  localPath: string,
+  mergeRequestId: string,
+): void {
   if (!injectedDeps) {
     throw new Error('WebSocket dependencies not initialized. Call setupWebSocketCallbacks first.');
   }
@@ -164,7 +186,7 @@ export function stopWatchingReviewContext(mergeRequestId: string): void {
 
 export async function registerWebSocketRoutes(
   app: FastifyInstance,
-  deps: Pick<Dependencies, 'logger'>
+  deps: Pick<Dependencies, 'logger'>,
 ): Promise<void> {
   const { logger } = deps;
   app.get('/ws', { websocket: true }, (socket) => {
@@ -172,13 +194,18 @@ export async function registerWebSocketRoutes(
     wsClients.add(socket);
 
     const jobs = getJobsStatus();
-    logger.info({ activeCount: jobs.active.length, recentCount: jobs.recent.length }, 'Sending init to new WebSocket client');
-    socket.send(JSON.stringify({
-      type: 'init',
-      activeReviews: jobs.active,
-      recentReviews: jobs.recent,
-      timestamp: new Date().toISOString(),
-    }));
+    logger.info(
+      { activeCount: jobs.active.length, recentCount: jobs.recent.length },
+      'Sending init to new WebSocket client',
+    );
+    socket.send(
+      JSON.stringify({
+        type: 'init',
+        activeReviews: jobs.active,
+        recentReviews: jobs.recent,
+        timestamp: new Date().toISOString(),
+      }),
+    );
 
     socket.on('message', (message: Buffer) => {
       try {

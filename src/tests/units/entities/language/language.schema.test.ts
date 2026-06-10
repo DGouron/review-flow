@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { languageSchema } from '@/modules/shared-kernel/entities/language/language.schema.js';
 
 describe('Language schema', () => {

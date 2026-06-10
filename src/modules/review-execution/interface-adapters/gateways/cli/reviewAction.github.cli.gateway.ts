@@ -1,6 +1,12 @@
-import type { ReviewAction } from '@/modules/review-execution/entities/reviewAction/reviewAction.js'
-import type { ReviewActionGateway, ExecutionContext } from '@/modules/review-execution/entities/reviewAction/reviewAction.gateway.js'
-import { ExecutionGatewayBase, type CommandInfo } from '@/shared/foundation/executionGateway.base.js'
+import type {
+  ReviewActionGateway,
+  ExecutionContext,
+} from '@/modules/review-execution/entities/reviewAction/reviewAction.gateway.js';
+import type { ReviewAction } from '@/modules/review-execution/entities/reviewAction/reviewAction.js';
+import {
+  ExecutionGatewayBase,
+  type CommandInfo,
+} from '@/shared/foundation/executionGateway.base.js';
 
 export class GitHubReviewActionCliGateway
   extends ExecutionGatewayBase<ReviewAction, ExecutionContext>
@@ -17,7 +23,7 @@ export class GitHubReviewActionCliGateway
             '-f',
             `query=mutation { resolveReviewThread(input: {threadId: "${action.threadId}"}) { thread { id isResolved } } }`,
           ],
-        }
+        };
 
       case 'POST_COMMENT':
         return {
@@ -30,7 +36,7 @@ export class GitHubReviewActionCliGateway
             '--field',
             `body=${action.body}`,
           ],
-        }
+        };
 
       case 'THREAD_REPLY':
         return {
@@ -45,7 +51,7 @@ export class GitHubReviewActionCliGateway
             '-f',
             `body=${action.message}`,
           ],
-        }
+        };
 
       case 'ADD_LABEL':
         return {
@@ -58,25 +64,31 @@ export class GitHubReviewActionCliGateway
             '--field',
             `labels[]=${action.label}`,
           ],
-        }
+        };
 
       case 'POST_INLINE_COMMENT': {
-        if (!context.diffMetadata) return null
+        if (!context.diffMetadata) return null;
         return {
           command: 'gh',
           args: [
-            'api', '--method', 'POST',
+            'api',
+            '--method',
+            'POST',
             `repos/${context.projectPath}/pulls/${context.mrNumber}/comments`,
-            '--field', `body=${action.body}`,
-            '--field', `commit_id=${context.diffMetadata.headSha}`,
-            '--field', `path=${action.filePath}`,
-            '--field', `line=${action.line}`,
+            '--field',
+            `body=${action.body}`,
+            '--field',
+            `commit_id=${context.diffMetadata.headSha}`,
+            '--field',
+            `path=${action.filePath}`,
+            '--field',
+            `line=${action.line}`,
           ],
-        }
+        };
       }
 
       case 'FETCH_THREADS':
-        return null
+        return null;
     }
   }
 }

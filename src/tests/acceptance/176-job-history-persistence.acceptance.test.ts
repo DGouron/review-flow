@@ -10,19 +10,29 @@
  * proving the persistence layer satisfies the spec end-to-end.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import {
+  mkdtempSync,
+  rmSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { JobHistoryFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/fileSystem/jobHistory.fileSystem.gateway.js';
-import { PersistJobRecordUseCase } from '@/modules/review-execution/usecases/jobHistory/persistJobRecord.usecase.js';
-import { LoadRecentJobHistoryUseCase } from '@/modules/review-execution/usecases/jobHistory/loadRecentJobHistory.usecase.js';
-import { PruneJobHistoryUseCase } from '@/modules/review-execution/usecases/jobHistory/pruneJobHistory.usecase.js';
-import type { JobStatus } from '@/frameworks/queue/pQueueAdapter.js';
-import { ReviewJobFactory } from '@/tests/factories/reviewJob.factory.js';
-import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import type { JobHistoryGateway } from '@/modules/review-execution/entities/job/jobHistory.gateway.js';
 import type { JobRecord } from '@/modules/review-execution/entities/job/jobRecord.schema.js';
+import type { JobStatus } from '@/modules/review-execution/entities/job/reviewJob.js';
+import { JobHistoryFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/fileSystem/jobHistory.fileSystem.gateway.js';
+import { LoadRecentJobHistoryUseCase } from '@/modules/review-execution/usecases/jobHistory/loadRecentJobHistory.usecase.js';
+import { PersistJobRecordUseCase } from '@/modules/review-execution/usecases/jobHistory/persistJobRecord.usecase.js';
+import { PruneJobHistoryUseCase } from '@/modules/review-execution/usecases/jobHistory/pruneJobHistory.usecase.js';
+import { ReviewJobFactory } from '@/tests/factories/reviewJob.factory.js';
+import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
 
 describe('Acceptance — SPEC-176: Job History Persistence', () => {
   let rootDir: string;
@@ -127,7 +137,7 @@ describe('Acceptance — SPEC-176: Job History Persistence', () => {
       now: () => new Date('2026-05-25T12:00:00.000Z'),
     });
 
-    expect(result.deletedFilenames.sort()).toEqual(['2026-05-10.jsonl', '2026-05-15.jsonl']);
+    expect(result.deletedFilenames.toSorted()).toEqual(['2026-05-10.jsonl', '2026-05-15.jsonl']);
     const remaining = readdirSync(rootDir);
     expect(remaining).toEqual(['2026-05-25.jsonl']);
   });
@@ -271,7 +281,7 @@ describe('Acceptance — SPEC-176: Job History Persistence', () => {
     const lines = readFileSync(filePath, 'utf-8').trim().split('\n');
     expect(lines).toHaveLength(2);
     const parsed = lines.map((line) => JSON.parse(line) as { jobId: string });
-    const ids = parsed.map((entry) => entry.jobId).sort();
+    const ids = parsed.map((entry) => entry.jobId).toSorted();
     expect(ids).toEqual(['gitlab:a:1', 'gitlab:b:2']);
   });
 

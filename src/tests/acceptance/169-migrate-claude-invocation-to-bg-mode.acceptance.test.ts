@@ -1,15 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { runClaudeReviewJob } from '@/modules/claude-invocation/usecases/runClaudeReviewJob.usecase.js';
-import type { RunClaudeReviewJobDependencies } from '@/modules/claude-invocation/usecases/runClaudeReviewJob.usecase.js';
-import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
-import { StubMcpCompletionBridge } from '@/tests/stubs/mcpCompletion.stub.js';
-import { StubReviewReportGateway } from '@/tests/stubs/reviewReport.stub.js';
-import { StubBillingStateGateway } from '@/tests/stubs/billingState.stub.js';
-import { StubSupervisorHealthGateway } from '@/tests/stubs/supervisorHealth.stub.js';
-import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
+
+import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
 import { auditBilling } from '@/modules/claude-invocation/usecases/auditBilling.usecase.js';
 import { checkSupervisorHealth } from '@/modules/claude-invocation/usecases/checkSupervisorHealth.usecase.js';
-import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
+import { runClaudeReviewJob } from '@/modules/claude-invocation/usecases/runClaudeReviewJob.usecase.js';
+import type { RunClaudeReviewJobDependencies } from '@/modules/claude-invocation/usecases/runClaudeReviewJob.usecase.js';
+import { StubBillingStateGateway } from '@/tests/stubs/billingState.stub.js';
+import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
+import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
+import { StubMcpCompletionBridge } from '@/tests/stubs/mcpCompletion.stub.js';
+import { StubReviewReportGateway } from '@/tests/stubs/reviewReport.stub.js';
+import { StubSupervisorHealthGateway } from '@/tests/stubs/supervisorHealth.stub.js';
 
 interface AcceptanceContext {
   sessionGateway: StubClaudeSessionGateway;
@@ -76,7 +77,10 @@ describe('SPEC-169: Migrate Claude invocation to --bg mode (acceptance)', () => 
   describe('Scenario 1: Webhook triggers review dispatched via --bg', () => {
     it('spawns claude --bg with the configured flags and captures the session ID', async () => {
       const context = createContext();
-      context.sessionGateway.setDispatchResult({ status: 'dispatched', sessionId: parseSessionId('7c5dcf5d') });
+      context.sessionGateway.setDispatchResult({
+        status: 'dispatched',
+        sessionId: parseSessionId('7c5dcf5d'),
+      });
       context.completionBridge.scheduleCompletion(baseInput.jobId, {
         source: 'mcp',
         outcome: 'completed',
@@ -103,7 +107,10 @@ describe('SPEC-169: Migrate Claude invocation to --bg mode (acceptance)', () => 
   describe('Scenario 2: Completion via MCP primary signal', () => {
     it('reads the report from the conventional path, then stops and removes the session', async () => {
       const context = createContext();
-      context.sessionGateway.setDispatchResult({ status: 'dispatched', sessionId: parseSessionId('abc12345') });
+      context.sessionGateway.setDispatchResult({
+        status: 'dispatched',
+        sessionId: parseSessionId('abc12345'),
+      });
       context.completionBridge.scheduleCompletion(baseInput.jobId, {
         source: 'mcp',
         outcome: 'completed',
@@ -130,7 +137,10 @@ describe('SPEC-169: Migrate Claude invocation to --bg mode (acceptance)', () => 
   describe('Scenario 3: Completion via polling fallback', () => {
     it('detects completion through claude agents --json when MCP stays silent', async () => {
       const context = createContext();
-      context.sessionGateway.setDispatchResult({ status: 'dispatched', sessionId: parseSessionId('poll0001') });
+      context.sessionGateway.setDispatchResult({
+        status: 'dispatched',
+        sessionId: parseSessionId('poll0001'),
+      });
       context.sessionGateway.scheduleAgentCompletion('poll0001', 'completed', 1);
       context.reportGateway.setReport({
         content: '# Polled report',
@@ -150,7 +160,10 @@ describe('SPEC-169: Migrate Claude invocation to --bg mode (acceptance)', () => 
   describe('Scenario 4: Hard timeout reached without completion signal', () => {
     it('marks the job failed with reason "timeout" after 15 minutes', async () => {
       const context = createContext();
-      context.sessionGateway.setDispatchResult({ status: 'dispatched', sessionId: parseSessionId('time0001') });
+      context.sessionGateway.setDispatchResult({
+        status: 'dispatched',
+        sessionId: parseSessionId('time0001'),
+      });
       let nowMs = new Date('2026-05-22T10:00:00Z').getTime();
       const deps = { ...context.deps, now: (): Date => new Date(nowMs) };
 
@@ -174,7 +187,10 @@ describe('SPEC-169: Migrate Claude invocation to --bg mode (acceptance)', () => 
   describe('Scenario 5: Report file missing after completion', () => {
     it('fails the job with reason "report-missing" and still runs cleanup', async () => {
       const context = createContext();
-      context.sessionGateway.setDispatchResult({ status: 'dispatched', sessionId: parseSessionId('rep00001') });
+      context.sessionGateway.setDispatchResult({
+        status: 'dispatched',
+        sessionId: parseSessionId('rep00001'),
+      });
       context.completionBridge.scheduleCompletion(baseInput.jobId, {
         source: 'mcp',
         outcome: 'completed',
@@ -197,7 +213,10 @@ describe('SPEC-169: Migrate Claude invocation to --bg mode (acceptance)', () => 
   describe('Scenario 6: Rate limit error on dispatch', () => {
     it('returns a retry signal with exponential backoff', async () => {
       const context = createContext();
-      context.sessionGateway.setDispatchResult({ status: 'rate-limited', rawStderr: '429 Too Many Requests' });
+      context.sessionGateway.setDispatchResult({
+        status: 'rate-limited',
+        rawStderr: '429 Too Many Requests',
+      });
 
       const result = await runClaudeReviewJob(baseInput, context.deps);
 
@@ -259,7 +278,10 @@ describe('SPEC-169: Migrate Claude invocation to --bg mode (acceptance)', () => 
   describe('Scenario 10: Followup job uses same --bg dispatch path', () => {
     it('runs the followup through the same use case with jobType="followup"', async () => {
       const context = createContext();
-      context.sessionGateway.setDispatchResult({ status: 'dispatched', sessionId: parseSessionId('foll0001') });
+      context.sessionGateway.setDispatchResult({
+        status: 'dispatched',
+        sessionId: parseSessionId('foll0001'),
+      });
       context.completionBridge.scheduleCompletion(baseInput.jobId, {
         source: 'mcp',
         outcome: 'completed',
@@ -270,10 +292,7 @@ describe('SPEC-169: Migrate Claude invocation to --bg mode (acceptance)', () => 
         path: '/tmp/project/.claude/reviews/2026-05-22-MR-42-followup.md',
       });
 
-      const runPromise = runClaudeReviewJob(
-        { ...baseInput, jobType: 'followup' },
-        context.deps,
-      );
+      const runPromise = runClaudeReviewJob({ ...baseInput, jobType: 'followup' }, context.deps);
       await vi.runAllTimersAsync();
       const result = await runPromise;
 

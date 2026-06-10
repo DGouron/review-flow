@@ -1,7 +1,7 @@
-import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
 import type { ReviewFileInfo } from '@/modules/review-execution/entities/review/reviewFile.gateway.js';
-import type { ProjectStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
+import type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
 import { Duration } from '@/modules/shared-kernel/entities/shared/duration.valueObject.js';
+import type { ProjectStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
 
 export interface OverviewProjectStatsSummary {
   totalReviews: number;
@@ -125,7 +125,10 @@ function resolveProjectName(repositories: RepositoryConfig[], localPath: string)
   return match ? match.name : null;
 }
 
-function resolveProjectNameFromFilePath(repositories: RepositoryConfig[], filePath: string): string | null {
+function resolveProjectNameFromFilePath(
+  repositories: RepositoryConfig[],
+  filePath: string,
+): string | null {
   const match = repositories.find((repository) => filePath.startsWith(`${repository.localPath}/`));
   return match ? match.name : null;
 }
@@ -152,10 +155,15 @@ function formatAverageScore(averageScore: number | null): string {
 }
 
 function buildSparklinePoints(reviews: OverviewProjectStatsEntry['stats']['reviews']): number[] {
-  const sorted = [...reviews].sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+  const sorted = [...reviews].toSorted((left, right) =>
+    left.timestamp.localeCompare(right.timestamp),
+  );
   const lastTen = sorted.slice(-SPARKLINE_MAX_POINTS);
   return lastTen
-    .filter((review): review is typeof review & { score: number } => review.score !== null && review.score !== undefined)
+    .filter(
+      (review): review is typeof review & { score: number } =>
+        review.score !== null && review.score !== undefined,
+    )
     .map((review) => review.score);
 }
 
@@ -228,7 +236,8 @@ function buildRecentReviewItem(
   review: ReviewFileInfo,
   repositories: RepositoryConfig[],
 ): OverviewRecentReviewItem {
-  const projectName = resolveProjectNameFromFilePath(repositories, review.path) ?? EMPTY_PROJECT_LABEL;
+  const projectName =
+    resolveProjectNameFromFilePath(repositories, review.path) ?? EMPTY_PROJECT_LABEL;
   const mrPrefix: 'MR' | 'PR' = review.type === 'PR' ? 'PR' : 'MR';
   return {
     filename: review.filename,
@@ -251,18 +260,23 @@ export class OverviewPresenter {
     const now = this.now();
 
     const activeItems = [...input.activeJobs]
-      .map((job) => ({ job, startedAtMs: job.startedAt === null ? 0 : new Date(job.startedAt).getTime() }))
-      .sort((left, right) => right.startedAtMs - left.startedAtMs)
+      .map((job) => ({
+        job,
+        startedAtMs: job.startedAt === null ? 0 : new Date(job.startedAt).getTime(),
+      }))
+      .toSorted((left, right) => right.startedAtMs - left.startedAtMs)
       .map(({ job }) => buildActiveReviewItem(job, input.repositories, now));
 
     const statsByPath = new Map<string, OverviewProjectStatsEntry>();
     for (const entry of input.projectStats) {
       statsByPath.set(entry.path, entry);
     }
-    const cardItems = input.repositories.map((repository) => buildProjectCard(repository, statsByPath, input.projectConfigs));
+    const cardItems = input.repositories.map((repository) =>
+      buildProjectCard(repository, statsByPath, input.projectConfigs),
+    );
 
     const recentItems = [...input.recentReviews]
-      .sort((left, right) => right.mtime.localeCompare(left.mtime))
+      .toSorted((left, right) => right.mtime.localeCompare(left.mtime))
       .slice(0, RECENT_FEED_MAX_ITEMS)
       .map((review) => buildRecentReviewItem(review, input.repositories));
 

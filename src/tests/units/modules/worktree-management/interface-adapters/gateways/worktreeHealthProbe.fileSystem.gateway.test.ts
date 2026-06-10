@@ -1,11 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { WorktreeHealthProbeFileSystemGateway } from '@/modules/worktree-management/interface-adapters/gateways/worktreeHealthProbe.fileSystem.gateway.js';
-import { StubGitCommandExecutor } from '@/tests/stubs/gitCommandExecutor.stub.js';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { createWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
 import type { WorktreeEntry } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+import { WorktreeHealthProbeFileSystemGateway } from '@/modules/worktree-management/interface-adapters/gateways/worktreeHealthProbe.fileSystem.gateway.js';
+import { StubGitCommandExecutor } from '@/tests/stubs/gitCommandExecutor.stub.js';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -37,7 +39,10 @@ describe('WorktreeHealthProbeFileSystemGateway', () => {
     };
     mkdirSync(scaffold.worktreeDirectory, { recursive: true });
     mkdirSync(scaffold.gitWorktreeDirectory, { recursive: true });
-    writeFileSync(join(scaffold.worktreeDirectory, '.git'), `gitdir: ${scaffold.gitWorktreeDirectory}\n`);
+    writeFileSync(
+      join(scaffold.worktreeDirectory, '.git'),
+      `gitdir: ${scaffold.gitWorktreeDirectory}\n`,
+    );
     executor = new StubGitCommandExecutor();
   });
 
@@ -103,7 +108,11 @@ describe('WorktreeHealthProbeFileSystemGateway', () => {
 
   describe('unresolvedConflict', () => {
     it('reports false when git status porcelain shows no conflict markers', async () => {
-      executor.programResponse('status-porcelain', { exitCode: 0, stdout: ' M src/foo.ts\n', stderr: '' });
+      executor.programResponse('status-porcelain', {
+        exitCode: 0,
+        stdout: ' M src/foo.ts\n',
+        stderr: '',
+      });
 
       const gateway = new WorktreeHealthProbeFileSystemGateway({ executor });
       const entry = buildEntry(scaffold.worktreeDirectory);

@@ -1,8 +1,8 @@
-import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
 import type {
   DeclaredRepository,
   RepositoriesListGateway,
 } from '@/modules/cli-configuration/entities/repositoriesList/repositoriesList.gateway.js';
+import type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
 
 export class RepositoriesListRuntimeConfigGateway implements RepositoriesListGateway {
   constructor(private readonly getRepositories: () => RepositoryConfig[]) {}

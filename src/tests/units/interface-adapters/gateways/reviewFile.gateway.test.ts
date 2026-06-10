@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { InMemoryReviewFileGateway } from '../../../stubs/reviewFile.stub.js';
 
 describe('ReviewFileGateway', () => {
@@ -43,7 +44,7 @@ describe('ReviewFileGateway', () => {
       const result = await gateway.listReviews('/my/project');
 
       expect(result).toHaveLength(2);
-      const mrNumbers = result.map(r => r.mrNumber);
+      const mrNumbers = result.map((r) => r.mrNumber);
       expect(mrNumbers).toContain('42');
       expect(mrNumbers).toContain('123');
     });

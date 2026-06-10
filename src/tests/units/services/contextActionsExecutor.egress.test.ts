@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { executeActionsFromContext } from '@/modules/review-execution/services/contextActionsExecutor.js';
-import type { ReviewContext } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
-import type { CommandExecutor } from '@/modules/review-execution/entities/reviewAction/reviewAction.gateway.js';
-import { EgressScannedNoteCommentPostGateway } from '@/modules/platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.js';
+
 import { createEgressScanner } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
 import type { EgressScanConfig } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
-import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
+import { EgressScannedNoteCommentPostGateway } from '@/modules/platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.js';
+import type { ReviewContext } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
+import { executeActionsFromContext } from '@/modules/review-execution/services/contextActionsExecutor.js';
+import type { CommandExecutor } from '@/shared/foundation/executionGateway.base.js';
 import { StubEgressTraceGateway } from '@/tests/stubs/egressScan.stub.js';
+import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
 
 const SECRET = 'glpat-abcdefghij1234567890';
 
@@ -58,7 +59,14 @@ describe('executeActionsFromContext — egress routing (pentest amendment AC7/AC
       actions: [{ type: 'POST_COMMENT', body: `## Review\ntoken ${SECRET}` }],
     };
 
-    await executeActionsFromContext(context, '/tmp/repo', silentLogger, recordingExecutor, null, gateway);
+    await executeActionsFromContext(
+      context,
+      '/tmp/repo',
+      silentLogger,
+      recordingExecutor,
+      null,
+      gateway,
+    );
 
     expect(sink.calls).toHaveLength(1);
     expect(sink.calls[0].body).toContain('[REDACTED]');
@@ -79,7 +87,14 @@ describe('executeActionsFromContext — egress routing (pentest amendment AC7/AC
       actions: [{ type: 'THREAD_REPLY', threadId: 'abc', message: `fixed ${SECRET}` }],
     };
 
-    await executeActionsFromContext(context, '/tmp/repo', silentLogger, recordingExecutor, null, gateway);
+    await executeActionsFromContext(
+      context,
+      '/tmp/repo',
+      silentLogger,
+      recordingExecutor,
+      null,
+      gateway,
+    );
 
     expect(sink.calls).toHaveLength(1);
     expect(sink.calls[0].body).not.toContain(SECRET);
@@ -104,7 +119,14 @@ describe('executeActionsFromContext — egress routing (pentest amendment AC7/AC
       ],
     };
 
-    await executeActionsFromContext(context, '/tmp/repo', silentLogger, recordingExecutor, null, gateway);
+    await executeActionsFromContext(
+      context,
+      '/tmp/repo',
+      silentLogger,
+      recordingExecutor,
+      null,
+      gateway,
+    );
 
     expect(sink.calls).toHaveLength(2);
     for (const call of sink.calls) {
@@ -130,7 +152,14 @@ describe('executeActionsFromContext — egress routing (pentest amendment AC7/AC
       ],
     };
 
-    await executeActionsFromContext(context, '/tmp/repo', silentLogger, recordingExecutor, null, gateway);
+    await executeActionsFromContext(
+      context,
+      '/tmp/repo',
+      silentLogger,
+      recordingExecutor,
+      null,
+      gateway,
+    );
 
     expect(sink.calls).toHaveLength(1);
     expect(rawCalls.some((args) => args.includes('resolved=true'))).toBe(false);

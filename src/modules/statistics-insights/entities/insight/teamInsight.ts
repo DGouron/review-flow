@@ -1,5 +1,9 @@
 import type { z } from 'zod';
-import type { teamInsightSchema, averageLevelsSchema } from '@/modules/statistics-insights/entities/insight/teamInsight.schema.js';
+
+import type {
+  teamInsightSchema,
+  averageLevelsSchema,
+} from '@/modules/statistics-insights/entities/insight/teamInsight.schema.js';
 
 export type AverageLevels = z.infer<typeof averageLevelsSchema>;
 

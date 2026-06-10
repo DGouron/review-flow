@@ -1,7 +1,11 @@
 import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
-import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
+import {
+  skipped,
+  succeeded,
+  blocked,
+} from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
 import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
-import { skipped, succeeded, blocked } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
+import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
 import { getAgentsForPreset } from '@/modules/setup-wizard/services/agentPresetCatalog.js';
 
 export class GenerateFilesStep implements SetupStep {
@@ -33,7 +37,7 @@ export class GenerateFilesStep implements SetupStep {
     if (alreadyExists && !context.flags.force) {
       return blocked(
         'Configuration projet existante',
-        "Utilisez --force pour écraser (sauvegarde dans config.json.bak)",
+        'Utilisez --force pour écraser (sauvegarde dans config.json.bak)',
       );
     }
 
@@ -51,8 +55,8 @@ export class GenerateFilesStep implements SetupStep {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('EACCES')) {
         return blocked(
-          'Impossible d\'écrire dans le dossier projet, vérifiez les permissions',
-          "Modifiez les permissions du dossier ou choisissez un autre emplacement",
+          "Impossible d'écrire dans le dossier projet, vérifiez les permissions",
+          'Modifiez les permissions du dossier ou choisissez un autre emplacement',
         );
       }
       return blocked(`Échec d'écriture: ${message}`, 'Vérifiez les permissions du dossier');

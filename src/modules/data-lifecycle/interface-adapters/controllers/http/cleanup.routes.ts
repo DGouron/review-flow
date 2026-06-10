@@ -1,9 +1,10 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { Logger } from 'pino';
-import type { ReviewFileGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewFile.gateway.js';
-import type { ReviewLogFileGateway } from '@/modules/data-lifecycle/interface-adapters/gateways/reviewLogFile.gateway.js';
-import { cleanupExpiredReviews } from '@/modules/data-lifecycle/usecases/cleanup/cleanupExpiredReviews.usecase.js';
+
 import { getProjectRetentionDays } from '@/config/projectConfig.js';
+import type { ReviewLogFileGateway } from '@/modules/data-lifecycle/entities/reviewLog/reviewLogFile.gateway.js';
+import { cleanupExpiredReviews } from '@/modules/data-lifecycle/usecases/cleanup/cleanupExpiredReviews.usecase.js';
+import type { ReviewFileGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewFile.gateway.js';
 
 interface CleanupRoutesOptions {
   reviewFileGateway: ReviewFileGateway;
@@ -12,15 +13,11 @@ interface CleanupRoutesOptions {
   logger: Logger;
 }
 
-export const cleanupRoutes: FastifyPluginAsync<CleanupRoutesOptions> = async (
-  fastify,
-  options
-) => {
+export const cleanupRoutes: FastifyPluginAsync<CleanupRoutesOptions> = async (fastify, options) => {
   const { reviewFileGateway, reviewLogFileGateway, getRepositories, logger } = options;
 
-  fastify.post('/api/reviews/cleanup', async (request) => {
-    const query = request.query as { path?: string };
-    const singleProjectPath = query.path?.trim();
+  fastify.post<{ Querystring: { path?: string } }>('/api/reviews/cleanup', async (request) => {
+    const singleProjectPath = request.query.path?.trim();
 
     const allDeletedFiles: string[] = [];
     let totalDeletedCount = 0;
@@ -48,7 +45,10 @@ export const cleanupRoutes: FastifyPluginAsync<CleanupRoutesOptions> = async (
           allDeletedFiles.push(...result.deletedReviewFiles, ...result.deletedLogFiles);
           totalDeletedCount += result.totalDeletedCount;
         } catch (error) {
-          logger.error({ error, projectPath: repository.localPath }, 'Cleanup failed for repository');
+          logger.error(
+            { error, projectPath: repository.localPath },
+            'Cleanup failed for repository',
+          );
         }
       }
     }

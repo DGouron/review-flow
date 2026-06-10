@@ -1,12 +1,13 @@
 import type { Logger } from 'pino';
+
+import type { LastSweepSummary } from '@/modules/worktree-management/entities/sweep/lastSweepSummary.schema.js';
+import type { RunSweepNowResult } from '@/modules/worktree-management/entities/sweep/runSweepResult.js';
 import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
 import type {
   SweepRepository,
   SweepTrackingGateway,
 } from '@/modules/worktree-management/usecases/sweepStaleWorktrees.usecase.js';
 import { sweepStaleWorktrees } from '@/modules/worktree-management/usecases/sweepStaleWorktrees.usecase.js';
-import type { LastSweepSummary } from '@/modules/worktree-management/entities/sweep/lastSweepSummary.schema.js';
-import type { RunSweepNowResult } from '@/modules/worktree-management/entities/sweep/runSweepResult.js';
 
 const TWENTY_FOUR_HOURS_IN_MILLISECONDS = 86_400_000;
 
@@ -40,9 +41,9 @@ export function startWorktreeSweepScheduler(
     try {
       const summary = await sweepStaleWorktrees({
         listEntries: () => worktreeGateway.list(),
-        removeWorktree: async identity => {
+        removeWorktree: async (identity) => {
           const repositories = getRepositories();
-          const firstEnabled = repositories.find(repository => repository.enabled);
+          const firstEnabled = repositories.find((repository) => repository.enabled);
           const sourceCheckoutPath = firstEnabled?.localPath ?? '';
           return worktreeGateway.remove({ identity, sourceCheckoutPath });
         },

@@ -1,6 +1,6 @@
-export type Provenance = 'trusted' | 'untrusted'
+export type Provenance = 'trusted' | 'untrusted';
 
-const CANONICAL_TRUSTED = 'trusted'
+const CANONICAL_TRUSTED = 'trusted';
 
 /**
  * Fail-closed provenance resolver.
@@ -9,5 +9,5 @@ const CANONICAL_TRUSTED = 'trusted'
  * `trusted` is NEVER derived from a payload field.
  */
 export function resolveProvenance(value: unknown): Provenance {
-  return value === CANONICAL_TRUSTED ? 'trusted' : 'untrusted'
+  return value === CANONICAL_TRUSTED ? 'trusted' : 'untrusted';
 }

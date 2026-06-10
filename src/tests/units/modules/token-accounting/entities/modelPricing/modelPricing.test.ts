@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   computeCostUsd,
   MODEL_PRICING_USD_PER_MILLION,

@@ -1,9 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   StartDaemonUseCase,
   type StartDaemonDependencies,
   type StartDaemonInput,
 } from '@/modules/cli-configuration/usecases/cli/startDaemon.usecase.js';
+
 import { createPidFileContent } from '../../../factories/pidFileContent.factory.js';
 
 function createFakeInput(overrides?: Partial<StartDaemonInput>): StartDaemonInput {
@@ -14,9 +16,7 @@ function createFakeInput(overrides?: Partial<StartDaemonInput>): StartDaemonInpu
   };
 }
 
-function createFakeDeps(
-  overrides?: Partial<StartDaemonDependencies>,
-): StartDaemonDependencies {
+function createFakeDeps(overrides?: Partial<StartDaemonDependencies>): StartDaemonDependencies {
   return {
     readPidFile: vi.fn(() => null),
     writePidFile: vi.fn(),

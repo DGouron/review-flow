@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
+
 import { transportGuardMiddleware } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
-import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
 import type { TransportGuardConfig } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
+import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
 
 const TRUSTED_HOP = '127.0.0.1';
 
@@ -30,7 +31,9 @@ class FakeResponse {
   }
 }
 
-function buildRequest(overrides: Partial<{ remoteAddress: string; proto: string; forwardedFor: string }> = {}): FakeRequest {
+function buildRequest(
+  overrides: Partial<{ remoteAddress: string; proto: string; forwardedFor: string }> = {},
+): FakeRequest {
   return {
     socket: { remoteAddress: overrides.remoteAddress ?? TRUSTED_HOP },
     headers: {
@@ -47,7 +50,14 @@ describe('transportGuardMiddleware (AC5)', () => {
     const reply = new FakeResponse();
 
     transportGuardMiddleware(
-      { request, reply, next: () => { nextCalled = true; }, resolver: new ForwardedForClientIpResolver() },
+      {
+        request,
+        reply,
+        next: () => {
+          nextCalled = true;
+        },
+        resolver: new ForwardedForClientIpResolver(),
+      },
       config,
     );
 
@@ -62,7 +72,14 @@ describe('transportGuardMiddleware (AC5)', () => {
     const reply = new FakeResponse();
 
     transportGuardMiddleware(
-      { request, reply, next: () => { nextCalled = true; }, resolver: new ForwardedForClientIpResolver() },
+      {
+        request,
+        reply,
+        next: () => {
+          nextCalled = true;
+        },
+        resolver: new ForwardedForClientIpResolver(),
+      },
       config,
     );
 
@@ -77,7 +94,14 @@ describe('transportGuardMiddleware (AC5)', () => {
     const reply = new FakeResponse();
 
     transportGuardMiddleware(
-      { request, reply, next: () => { nextCalled = true; }, resolver: new ForwardedForClientIpResolver() },
+      {
+        request,
+        reply,
+        next: () => {
+          nextCalled = true;
+        },
+        resolver: new ForwardedForClientIpResolver(),
+      },
       config,
     );
 
@@ -91,7 +115,14 @@ describe('transportGuardMiddleware (AC5)', () => {
     const reply = new FakeResponse();
 
     transportGuardMiddleware(
-      { request, reply, next: () => { nextCalled = true; }, resolver: new ForwardedForClientIpResolver() },
+      {
+        request,
+        reply,
+        next: () => {
+          nextCalled = true;
+        },
+        resolver: new ForwardedForClientIpResolver(),
+      },
       config,
     );
 

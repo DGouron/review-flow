@@ -1,14 +1,22 @@
-import type { SetupState } from '@/modules/setup-wizard/entities/setupState/setupState.schema.js';
-import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
-import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
-import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
-import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
-import { createInitialState, markStep, findFirstIncomplete } from '@/modules/setup-wizard/entities/setupState/setupState.js';
-import { isFinalSuccess, isBlocking, blocked } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
 import {
   AwaitingInputClosedError,
   NonInteractiveInputError,
 } from '@/modules/setup-wizard/entities/promptInputError/promptInputError.js';
+import {
+  createInitialState,
+  markStep,
+  findFirstIncomplete,
+} from '@/modules/setup-wizard/entities/setupState/setupState.js';
+import type { SetupState } from '@/modules/setup-wizard/entities/setupState/setupState.schema.js';
+import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
+import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
+import {
+  isFinalSuccess,
+  isBlocking,
+  blocked,
+} from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
+import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
+import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
 
 export interface OrchestrateSetupInput {
   context: WizardContext;
@@ -51,9 +59,7 @@ export class OrchestrateSetupUseCase {
     const stepIds = steps.map((step) => step.id);
     const firstIncomplete = findFirstIncomplete(state, stepIds);
     const resumedFromStepId =
-      firstIncomplete !== null && Object.keys(state.steps).length > 0
-        ? firstIncomplete
-        : null;
+      firstIncomplete !== null && Object.keys(state.steps).length > 0 ? firstIncomplete : null;
     if (resumedFromStepId !== null) {
       const position = stepIds.indexOf(resumedFromStepId) + 1;
       context.emitter.emitResumeBanner(resumedFromStepId, position, steps.length);

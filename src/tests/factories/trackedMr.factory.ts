@@ -1,5 +1,5 @@
-import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import type { MrTrackingData } from '@/modules/tracking/entities/tracking/mrTrackingData.js';
+import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 
 export class TrackedMrFactory {
   static create(overrides: Partial<TrackedMr> = {}): TrackedMr {

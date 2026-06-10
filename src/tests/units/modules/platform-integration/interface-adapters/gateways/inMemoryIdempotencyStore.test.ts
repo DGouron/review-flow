@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { InMemoryIdempotencyStore } from '@/modules/platform-integration/interface-adapters/gateways/inMemoryIdempotencyStore.gateway.js';
 
 function createClock(start: number): { now: () => number; advance: (ms: number) => void } {

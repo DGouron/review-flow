@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { ProjectSemaphore } from '@/frameworks/queue/projectSemaphore.js';
 
 async function flushMicrotasks(): Promise<void> {
@@ -15,7 +16,10 @@ describe('ProjectSemaphore', () => {
     expect(semaphore.runningCount('/proj/A')).toBe(2);
 
     let thirdResolved = false;
-    semaphore.acquire('/proj/A').then(() => { thirdResolved = true; });
+    (async () => {
+      await semaphore.acquire('/proj/A');
+      thirdResolved = true;
+    })();
     await flushMicrotasks();
     expect(thirdResolved).toBe(false);
   });
@@ -41,8 +45,14 @@ describe('ProjectSemaphore', () => {
     await semaphore.acquire('/proj/A');
 
     const log: string[] = [];
-    const w1 = semaphore.acquire('/proj/A').then(() => { log.push('w1'); });
-    const w2 = semaphore.acquire('/proj/A').then(() => { log.push('w2'); });
+    const w1 = (async () => {
+      await semaphore.acquire('/proj/A');
+      log.push('w1');
+    })();
+    const w2 = (async () => {
+      await semaphore.acquire('/proj/A');
+      log.push('w2');
+    })();
 
     await flushMicrotasks();
     expect(log).toEqual([]);
@@ -80,9 +90,13 @@ describe('ProjectSemaphore', () => {
     await semaphore.acquire('/proj/A');
 
     const counter = { released: 0 };
-    semaphore.acquire('/proj/A').then(() => { counter.released += 1; });
-    semaphore.acquire('/proj/A').then(() => { counter.released += 1; });
-    semaphore.acquire('/proj/A').then(() => { counter.released += 1; });
+    const acquireAndCount = async (): Promise<void> => {
+      await semaphore.acquire('/proj/A');
+      counter.released += 1;
+    };
+    acquireAndCount();
+    acquireAndCount();
+    acquireAndCount();
 
     await flushMicrotasks();
     expect(counter.released).toBe(0);

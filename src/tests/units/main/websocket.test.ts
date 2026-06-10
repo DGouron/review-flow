@@ -1,24 +1,25 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../../../frameworks/queue/pQueueAdapter.js', () => ({
   setProgressChangeCallback: vi.fn(),
   setStateChangeCallback: vi.fn(),
   updateJobProgress: vi.fn(),
   getJobsStatus: vi.fn(() => ({ active: [], recent: [] })),
-}))
+}));
 
 vi.mock('../../../frameworks/logging/logBuffer.js', () => ({
   onLog: vi.fn(),
-}))
+}));
 
+import type { ReviewProgress } from '@/modules/review-execution/entities/progress/progress.type.js';
+import type { ReviewContextProgress } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
+
+import { updateJobProgress } from '../../../frameworks/queue/pQueueAdapter.js';
 import {
   setupWebSocketCallbacks,
   startWatchingReviewContext,
   stopWatchingReviewContext,
-} from '../../../main/websocket.js'
-import { updateJobProgress } from '../../../frameworks/queue/pQueueAdapter.js'
-import type { ReviewContextProgress } from '@/modules/review-execution/entities/reviewContext/reviewContext.js'
-import type { ReviewProgress } from '@/modules/review-execution/entities/progress/progress.type.js'
+} from '../../../main/websocket.js';
 
 function createMockDeps() {
   return {
@@ -31,57 +32,57 @@ function createMockDeps() {
     progressPresenter: {
       toReviewProgress: vi.fn(),
     },
-  }
+  };
 }
 
 describe('startWatchingReviewContext', () => {
   it('should delegate to watcher.start with correct arguments', () => {
-    const deps = createMockDeps()
-    setupWebSocketCallbacks(deps as never)
+    const deps = createMockDeps();
+    setupWebSocketCallbacks(deps as never);
 
-    startWatchingReviewContext('job-123', '/tmp/repo', 'gitlab-project-42')
+    startWatchingReviewContext('job-123', '/tmp/repo', 'gitlab-project-42');
 
     expect(deps.reviewContextWatcher.start).toHaveBeenCalledWith(
       '/tmp/repo',
       'gitlab-project-42',
       expect.any(Function),
-    )
-  })
+    );
+  });
 
   it('should transform context progress and update job progress in callback', () => {
-    const deps = createMockDeps()
-    setupWebSocketCallbacks(deps as never)
+    const deps = createMockDeps();
+    setupWebSocketCallbacks(deps as never);
 
     const fakeReviewProgress: ReviewProgress = {
       agents: [],
       currentPhase: 'agents-running',
       overallProgress: 50,
       lastUpdate: new Date(),
-    }
-    deps.progressPresenter.toReviewProgress.mockReturnValue(fakeReviewProgress)
+    };
+    deps.progressPresenter.toReviewProgress.mockReturnValue(fakeReviewProgress);
 
-    startWatchingReviewContext('job-456', '/tmp/repo', 'gitlab-project-42')
+    startWatchingReviewContext('job-456', '/tmp/repo', 'gitlab-project-42');
 
-    const callback = deps.reviewContextWatcher.start.mock.calls[0][2]
+    const callback = deps.reviewContextWatcher.start.mock.calls[0][2];
     const contextProgress: ReviewContextProgress = {
       phase: 'agents-running',
       currentStep: 'verify',
       stepsCompleted: ['context'],
-    }
-    callback(contextProgress)
+    };
+    callback(contextProgress);
 
-    expect(deps.progressPresenter.toReviewProgress).toHaveBeenCalledWith(contextProgress)
-    expect(updateJobProgress).toHaveBeenCalledWith('job-456', fakeReviewProgress)
-  })
-})
+    expect(deps.progressPresenter.toReviewProgress).toHaveBeenCalledWith(contextProgress);
+    expect(updateJobProgress).toHaveBeenCalledWith('job-456', fakeReviewProgress);
+  });
+});
 
 describe('stopWatchingReviewContext', () => {
   it('should delegate to watcher.stop', () => {
-    const deps = createMockDeps()
-    setupWebSocketCallbacks(deps as never)
+    const deps = createMockDeps();
+    setupWebSocketCallbacks(deps as never);
 
-    stopWatchingReviewContext('gitlab-project-42')
+    stopWatchingReviewContext('gitlab-project-42');
 
-    expect(deps.reviewContextWatcher.stop).toHaveBeenCalledWith('gitlab-project-42')
-  })
-})
+    expect(deps.reviewContextWatcher.stop).toHaveBeenCalledWith('gitlab-project-42');
+  });
+});

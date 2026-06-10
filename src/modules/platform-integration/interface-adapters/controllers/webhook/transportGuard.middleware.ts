@@ -1,5 +1,5 @@
-import { evaluateTransport } from '@/modules/platform-integration/usecases/transport/evaluateTransport.usecase.js';
 import type { ClientIpResolver } from '@/modules/platform-integration/entities/transport/clientIpResolver.gateway.js';
+import { evaluateTransport } from '@/modules/platform-integration/usecases/transport/evaluateTransport.usecase.js';
 
 export interface TransportGuardConfig {
   trustedHopAddress: string;

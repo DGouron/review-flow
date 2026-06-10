@@ -46,5 +46,9 @@ export function isTurnComplete(event: StreamJsonEvent): boolean {
   if (event.type === 'system' && event.subtype === 'turn_duration') {
     return true;
   }
-  return event.type === 'assistant' && event.message?.stop_reason === 'end_turn';
+  return (
+    event.type === 'assistant' &&
+    event.message?.stop_reason === 'end_turn' &&
+    extractText(event) !== null
+  );
 }

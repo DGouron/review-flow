@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ensureWorktree } from '@/modules/worktree-management/usecases/ensureWorktree.usecase.js';
-import type { WorktreeIdentity } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+
 import { deriveWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
+import type { WorktreeIdentity } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+import { ensureWorktree } from '@/modules/worktree-management/usecases/ensureWorktree.usecase.js';
 import { StubGitCommandExecutor } from '@/tests/stubs/gitCommandExecutor.stub.js';
 
 interface StubFileSystem {
@@ -39,8 +40,8 @@ describe('ensureWorktree use case', () => {
       },
       {
         executor,
-        worktreeExists: async path => fileSystem.existingPaths.has(path),
-        writeWorktreeSettings: async path => {
+        worktreeExists: async (path) => fileSystem.existingPaths.has(path),
+        writeWorktreeSettings: async (path) => {
           fileSystem.settingsWrites.push({ path, content: 'settings' });
           return { status: 'ok' };
         },
@@ -48,7 +49,7 @@ describe('ensureWorktree use case', () => {
     );
 
     expect(result).toEqual({ status: 'created', path: expectedPath, settingsWarning: null });
-    const kinds = executor.calls.map(c => c.kind);
+    const kinds = executor.calls.map((c) => c.kind);
     expect(kinds).toEqual(['worktree-prune', 'fetch', 'worktree-add']);
     expect(executor.callsOfKind('worktree-add')[0]?.args).toContain(expectedPath);
     expect(fileSystem.settingsWrites).toEqual([{ path: expectedPath, content: 'settings' }]);
@@ -66,8 +67,8 @@ describe('ensureWorktree use case', () => {
       },
       {
         executor,
-        worktreeExists: async path => fileSystem.existingPaths.has(path),
-        writeWorktreeSettings: async path => {
+        worktreeExists: async (path) => fileSystem.existingPaths.has(path),
+        writeWorktreeSettings: async (path) => {
           fileSystem.settingsWrites.push({ path, content: 'settings' });
           return { status: 'ok' };
         },
@@ -75,7 +76,7 @@ describe('ensureWorktree use case', () => {
     );
 
     expect(result).toEqual({ status: 'reused', path: expectedPath });
-    const kinds = executor.calls.map(c => c.kind);
+    const kinds = executor.calls.map((c) => c.kind);
     expect(kinds).toEqual(['worktree-prune', 'fetch', 'reset-hard']);
     expect(executor.callsOfKind('worktree-add')).toHaveLength(0);
   });
@@ -90,7 +91,7 @@ describe('ensureWorktree use case', () => {
       },
       {
         executor,
-        worktreeExists: async path => fileSystem.existingPaths.has(path),
+        worktreeExists: async (path) => fileSystem.existingPaths.has(path),
         writeWorktreeSettings: async () => ({ status: 'ok' }),
       },
     );
@@ -103,7 +104,11 @@ describe('ensureWorktree use case', () => {
   });
 
   it('returns branch-not-found when the fetch fails', async () => {
-    executor.programResponse('fetch', { exitCode: 128, stdout: '', stderr: "fatal: couldn't find remote ref feat/x" });
+    executor.programResponse('fetch', {
+      exitCode: 128,
+      stdout: '',
+      stderr: "fatal: couldn't find remote ref feat/x",
+    });
 
     const result = await ensureWorktree(
       {

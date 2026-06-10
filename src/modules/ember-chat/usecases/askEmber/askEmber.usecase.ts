@@ -1,16 +1,19 @@
 import type { EnvironmentGateway } from '@/modules/claude-invocation/entities/billingState/environment.gateway.js';
-import type { EmberMessage } from '@/modules/ember-chat/entities/emberMessage/emberMessage.schema.js';
-import type { EmberReadDataGateway } from '@/modules/ember-chat/entities/emberTool/emberTool.gateway.js';
-import type { EmberMemoryGateway } from '@/modules/ember-chat/entities/emberMemory/emberMemory.gateway.js';
-import type { EmberMemory } from '@/modules/ember-chat/entities/emberMemory/emberMemory.schema.js';
 import type {
   EmberAnswerSubscriber,
   EmberAnswerTransportGateway,
 } from '@/modules/ember-chat/entities/emberAnswer/emberAnswerTransport.gateway.js';
-import type { EmberStreamSubscriber } from '@/modules/ember-chat/usecases/askEmber/emberStream.js';
+import type { EmberMemoryGateway } from '@/modules/ember-chat/entities/emberMemory/emberMemory.gateway.js';
+import type { EmberMemory } from '@/modules/ember-chat/entities/emberMemory/emberMemory.schema.js';
+import type { EmberMessage } from '@/modules/ember-chat/entities/emberMessage/emberMessage.schema.js';
+import type { EmberReadDataGateway } from '@/modules/ember-chat/entities/emberTool/emberTool.gateway.js';
 import { buildEmberSystemPrompt } from '@/modules/ember-chat/services/emberSystemPrompt.js';
+import type { EmberStreamSubscriber } from '@/modules/ember-chat/usecases/askEmber/emberStream.js';
 
-export type { EmberStatus, EmberStreamSubscriber } from '@/modules/ember-chat/usecases/askEmber/emberStream.js';
+export type {
+  EmberStatus,
+  EmberStreamSubscriber,
+} from '@/modules/ember-chat/usecases/askEmber/emberStream.js';
 
 export interface AskEmberDependencies {
   transport: EmberAnswerTransportGateway;
@@ -139,10 +142,7 @@ export async function askEmber(
   const relay = new AnswerRelay((answer) => {
     void rememberTurn(memory, projectPath, message.question, answer);
   });
-  const started = transport.start(
-    { question: message.question, systemPrompt, projectPath },
-    relay,
-  );
+  const started = transport.start({ question: message.question, systemPrompt, projectPath }, relay);
 
   if (started.status === 'failed') {
     return { status: 'unavailable', reason: started.reason };

@@ -1,71 +1,78 @@
-import type { ReviewContextAction } from '@/modules/review-execution/entities/reviewAction/reviewAction.js'
-import type { ReviewContextResult } from './reviewContextResult.schema.js'
+import type { ReviewContextAction } from '@/modules/review-execution/entities/reviewAction/reviewAction.js';
+
+import type { ReviewContextResult } from './reviewContextResult.schema.js';
 
 export interface DiffMetadata {
-  baseSha: string
-  headSha: string
-  startSha: string
+  baseSha: string;
+  headSha: string;
+  startSha: string;
 }
 
 export interface ReviewContextThread {
-  id: string
-  file: string | null
-  line: number | null
-  status: 'open' | 'resolved'
-  body: string
+  id: string;
+  file: string | null;
+  line: number | null;
+  status: 'open' | 'resolved';
+  body: string;
 }
 
 export interface ReviewContextAgent {
-  name: string
-  displayName: string
+  name: string;
+  displayName: string;
 }
 
 export interface ReviewContextProgress {
-  phase: 'pending' | 'initializing' | 'agents-running' | 'synthesizing' | 'publishing' | 'completed'
-  currentStep: string | null
-  stepsCompleted?: string[]
-  agents?: ReviewContextAgent[]
-  updatedAt?: string
+  phase:
+    | 'pending'
+    | 'initializing'
+    | 'agents-running'
+    | 'synthesizing'
+    | 'publishing'
+    | 'completed';
+  currentStep: string | null;
+  stepsCompleted?: string[];
+  agents?: ReviewContextAgent[];
+  updatedAt?: string;
 }
 
 export interface AgentInstructions {
-  contextFilePath: string
-  critical: string[]
-  actionSchema: Record<string, Record<string, string>>
+  contextFilePath: string;
+  critical: string[];
+  actionSchema: Record<string, Record<string, string>>;
 }
 
 export interface ReviewContext {
-  version: string
-  mergeRequestId: string
-  platform: 'github' | 'gitlab'
-  projectPath: string
-  mergeRequestNumber: number
-  createdAt: string
-  threads: ReviewContextThread[]
-  actions: ReviewContextAction[]
-  progress: ReviewContextProgress
-  result?: ReviewContextResult
-  agentInstructions?: AgentInstructions
-  diffMetadata?: DiffMetadata
+  version: string;
+  mergeRequestId: string;
+  platform: 'github' | 'gitlab';
+  projectPath: string;
+  mergeRequestNumber: number;
+  createdAt: string;
+  threads: ReviewContextThread[];
+  actions: ReviewContextAction[];
+  progress: ReviewContextProgress;
+  result?: ReviewContextResult;
+  agentInstructions?: AgentInstructions;
+  diffMetadata?: DiffMetadata;
 }
 
 export interface CreateReviewContextInput {
-  localPath: string
-  mergeRequestId: string
-  platform: 'github' | 'gitlab'
-  projectPath: string
-  mergeRequestNumber: number
-  threads?: ReviewContextThread[]
-  agents?: ReviewContextAgent[]
-  diffMetadata?: DiffMetadata
+  localPath: string;
+  mergeRequestId: string;
+  platform: 'github' | 'gitlab';
+  projectPath: string;
+  mergeRequestNumber: number;
+  threads?: ReviewContextThread[];
+  agents?: ReviewContextAgent[];
+  diffMetadata?: DiffMetadata;
 }
 
 export interface CreateReviewContextResult {
-  success: boolean
-  filePath: string
+  success: boolean;
+  filePath: string;
 }
 
 export interface DeleteReviewContextResult {
-  success: boolean
-  deleted: boolean
+  success: boolean;
+  deleted: boolean;
 }

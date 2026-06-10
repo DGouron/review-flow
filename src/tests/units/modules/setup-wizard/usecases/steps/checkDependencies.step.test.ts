@@ -1,21 +1,22 @@
 import { describe, it, expect } from 'vitest';
+
+import type { DependencyProbeGateway } from '@/modules/setup-wizard/entities/dependencyProbe/dependencyProbe.gateway.js';
+import type { SetupStateGateway } from '@/modules/setup-wizard/entities/setupState/setupState.gateway.js';
+import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
+import { HumanWizardEventEmitter } from '@/modules/setup-wizard/services/humanWizardEventEmitter.js';
 import { CheckDependenciesStep } from '@/modules/setup-wizard/usecases/steps/checkDependencies.step.js';
-import { StubDependencyProbeGateway } from '@/tests/stubs/setup-wizard/dependencyProbe.stub.js';
+import { StubAiFallbackGateway } from '@/tests/stubs/setup-wizard/aiFallback.stub.js';
 import { StubClaudeAuthGateway } from '@/tests/stubs/setup-wizard/claudeAuth.stub.js';
-import { StubDaemonServiceGateway } from '@/tests/stubs/setup-wizard/daemonService.stub.js';
 import { StubDaemonHealthProbeGateway } from '@/tests/stubs/setup-wizard/daemonHealthProbe.stub.js';
+import { StubDaemonServiceGateway } from '@/tests/stubs/setup-wizard/daemonService.stub.js';
+import { StubDependencyProbeGateway } from '@/tests/stubs/setup-wizard/dependencyProbe.stub.js';
 import { StubEnvFileGateway } from '@/tests/stubs/setup-wizard/envFile.stub.js';
 import { StubGitRemoteGateway } from '@/tests/stubs/setup-wizard/gitRemote.stub.js';
 import { StubProjectConfigGateway } from '@/tests/stubs/setup-wizard/projectConfig.stub.js';
-import { StubSkillTemplateGateway } from '@/tests/stubs/setup-wizard/skillTemplate.stub.js';
-import { StubServerConfigGateway } from '@/tests/stubs/setup-wizard/serverConfig.stub.js';
-import { StubValidationGateway } from '@/tests/stubs/setup-wizard/validation.stub.js';
-import { StubAiFallbackGateway } from '@/tests/stubs/setup-wizard/aiFallback.stub.js';
 import { StubPromptGateway } from '@/tests/stubs/setup-wizard/prompt.stub.js';
-import { HumanWizardEventEmitter } from '@/modules/setup-wizard/services/humanWizardEventEmitter.js';
-import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
-import type { DependencyProbeGateway } from '@/modules/setup-wizard/entities/dependencyProbe/dependencyProbe.gateway.js';
-import type { SetupStateGateway } from '@/modules/setup-wizard/entities/setupState/setupState.gateway.js';
+import { StubServerConfigGateway } from '@/tests/stubs/setup-wizard/serverConfig.stub.js';
+import { StubSkillTemplateGateway } from '@/tests/stubs/setup-wizard/skillTemplate.stub.js';
+import { StubValidationGateway } from '@/tests/stubs/setup-wizard/validation.stub.js';
 
 function noopStateGateway(): SetupStateGateway {
   return {

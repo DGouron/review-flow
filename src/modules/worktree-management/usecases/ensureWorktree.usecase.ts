@@ -1,14 +1,17 @@
-import { deriveFetchRef, deriveWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
+import type {
+  GitCommandExecutor,
+  GitCommandResult,
+} from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
+import {
+  deriveFetchRef,
+  deriveWorktreePath,
+} from '@/modules/worktree-management/entities/worktree/worktree.js';
 import type {
   EnsureResult,
   MrSource,
   WorktreeIdentity,
   WorktreePath,
 } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
-import type {
-  GitCommandExecutor,
-  GitCommandResult,
-} from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
 
 export interface EnsureWorktreeInput {
   identity: WorktreeIdentity;
@@ -89,7 +92,7 @@ export async function ensureWorktree(
 
   const settingsResult = await deps.writeWorktreeSettings(targetPath);
   const settingsWarning =
-    settingsResult.status === 'failed' ? settingsResult.reason ?? 'unknown' : null;
+    settingsResult.status === 'failed' ? (settingsResult.reason ?? 'unknown') : null;
 
   return { status: 'created', path: targetPath, settingsWarning };
 }

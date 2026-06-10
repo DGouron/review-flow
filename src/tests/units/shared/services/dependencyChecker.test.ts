@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   checkDependency,
   validateDependencies,
@@ -9,10 +10,7 @@ describe('dependencyChecker', () => {
     it('should return true when command succeeds', () => {
       const fakeExecutor = () => Buffer.from('1.0.0');
 
-      const result = checkDependency(
-        { name: 'test', command: 'test --version' },
-        fakeExecutor,
-      );
+      const result = checkDependency({ name: 'test', command: 'test --version' }, fakeExecutor);
 
       expect(result).toBe(true);
     });
@@ -22,10 +20,7 @@ describe('dependencyChecker', () => {
         throw new Error('command not found');
       };
 
-      const result = checkDependency(
-        { name: 'fake', command: 'fake --version' },
-        fakeExecutor,
-      );
+      const result = checkDependency({ name: 'fake', command: 'fake --version' }, fakeExecutor);
 
       expect(result).toBe(false);
     });

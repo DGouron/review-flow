@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { rankPendingFixForNowLane } from '@/dashboard/modules/priority.js';
 
 describe('rankPendingFixForNowLane', () => {
@@ -65,17 +66,25 @@ describe('rankPendingFixForNowLane', () => {
 
     const ranked = rankPendingFixForNowLane(pendingFix, { nowIsoDate });
 
-    expect(ranked.map((mr) => mr.id)).toEqual([
-      'same-date-lower-number',
-      'older',
-      'newer',
-    ]);
+    expect(ranked.map((mr) => mr.id)).toEqual(['same-date-lower-number', 'older', 'newer']);
   });
 
   it('should not mutate the input array', () => {
     const pendingFix = [
-      { id: 'a', mrNumber: 10, openThreads: 1, latestScore: 7, createdAt: '2026-02-14T10:00:00.000Z' },
-      { id: 'b', mrNumber: 11, openThreads: 4, latestScore: 5, createdAt: '2026-02-14T09:00:00.000Z' },
+      {
+        id: 'a',
+        mrNumber: 10,
+        openThreads: 1,
+        latestScore: 7,
+        createdAt: '2026-02-14T10:00:00.000Z',
+      },
+      {
+        id: 'b',
+        mrNumber: 11,
+        openThreads: 4,
+        latestScore: 5,
+        createdAt: '2026-02-14T09:00:00.000Z',
+      },
     ];
     const snapshot = pendingFix.map((mr) => mr.id);
 

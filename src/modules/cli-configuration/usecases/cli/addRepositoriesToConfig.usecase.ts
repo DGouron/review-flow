@@ -1,5 +1,5 @@
-import type { UseCase } from '@/shared/foundation/usecase.base.js';
 import type { RepositoryEntry } from '@/modules/cli-configuration/entities/repositoryEntry/repositoryEntry.js';
+import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
 export interface AddRepositoriesToConfigDependencies {
   readFileSync: (path: string, encoding: BufferEncoding) => string;
@@ -18,14 +18,17 @@ export interface AddRepositoriesToConfigResult {
   configPath: string;
 }
 
-export class AddRepositoriesToConfigUseCase
-  implements UseCase<AddRepositoriesToConfigInput, AddRepositoriesToConfigResult>
-{
+export class AddRepositoriesToConfigUseCase implements UseCase<
+  AddRepositoriesToConfigInput,
+  AddRepositoriesToConfigResult
+> {
   constructor(private readonly deps: AddRepositoriesToConfigDependencies) {}
 
   execute(input: AddRepositoriesToConfigInput): AddRepositoriesToConfigResult {
     if (!this.deps.existsSync(input.configPath)) {
-      throw new Error(`Configuration file not found: ${input.configPath}\nRun 'reviewflow init' to create one.`);
+      throw new Error(
+        `Configuration file not found: ${input.configPath}\nRun 'reviewflow init' to create one.`,
+      );
     }
 
     const raw = this.deps.readFileSync(input.configPath, 'utf-8');

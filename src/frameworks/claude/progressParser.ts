@@ -8,6 +8,9 @@
  * - [PHASE:phase-name]
  */
 
+import type { AgentDefinition } from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
+import { calculateOverallProgress } from '@/modules/review-execution/entities/progress/progress.calculator.js';
+import { createInitialProgress } from '@/modules/review-execution/entities/progress/progress.factory.js';
 import type {
   AgentStatus,
   ReviewPhase,
@@ -15,13 +18,22 @@ import type {
   ProgressEvent,
   ProgressEventType,
 } from '@/modules/review-execution/entities/progress/progress.type.js';
-import type { AgentDefinition } from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
-import { createInitialProgress } from '@/modules/review-execution/entities/progress/progress.factory.js';
-import { calculateOverallProgress } from '@/modules/review-execution/entities/progress/progress.calculator.js';
 
 // Regex patterns for parsing markers
 const PROGRESS_PATTERN = /\[PROGRESS:([a-z-]+):(started|completed|failed)(?::([^\]]+))?\]/gi;
 const PHASE_PATTERN = /\[PHASE:(initializing|agents-running|synthesizing|publishing|completed)\]/gi;
+
+const REVIEW_PHASES: readonly ReviewPhase[] = [
+  'initializing',
+  'agents-running',
+  'synthesizing',
+  'publishing',
+  'completed',
+];
+
+function toReviewPhase(value: string): ReviewPhase | null {
+  return REVIEW_PHASES.find((phase) => phase === value.toLowerCase()) ?? null;
+}
 
 export interface ParseResult {
   events: ProgressEvent[];
@@ -82,7 +94,10 @@ export class ProgressParser {
     // Parse phase markers
     PHASE_PATTERN.lastIndex = 0;
     while ((match = PHASE_PATTERN.exec(chunk)) !== null) {
-      const phaseName = match[1] as ReviewPhase;
+      const phaseName = toReviewPhase(match[1]);
+      if (phaseName === null) {
+        continue;
+      }
 
       const event = this.handlePhaseChange(phaseName);
       if (event) {
@@ -100,9 +115,9 @@ export class ProgressParser {
   private handleAgentProgress(
     agentName: string,
     statusStr: string,
-    errorMsg?: string
+    errorMsg?: string,
   ): ProgressEvent | null {
-    const agent = this.progress.agents.find(a => a.name === agentName);
+    const agent = this.progress.agents.find((a) => a.name === agentName);
     if (!agent) {
       // Unknown agent - might be a custom skill agent, add it dynamically
       this.progress.agents.push({
@@ -180,7 +195,7 @@ export class ProgressParser {
   private formatAgentName(name: string): string {
     return name
       .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
 

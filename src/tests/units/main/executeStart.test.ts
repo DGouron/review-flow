@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import { executeStart, type StartDependencies } from '@/main/commands/start.command.js';
 import type { StartDaemonDependencies } from '@/modules/cli-configuration/usecases/cli/startDaemon.usecase.js';
 
@@ -14,9 +15,7 @@ function createFakeStartDaemonDeps(
   };
 }
 
-function createFakeDeps(
-  overrides: Partial<StartDependencies> = {},
-): StartDependencies {
+function createFakeDeps(overrides: Partial<StartDependencies> = {}): StartDependencies {
   return {
     validateDependencies: () => [],
     startServer: () => Promise.resolve(),
@@ -33,9 +32,7 @@ function createFakeDeps(
 describe('executeStart', () => {
   it('should call exit(1) when dependencies are missing', () => {
     const deps = createFakeDeps({
-      validateDependencies: () => [
-        { name: 'Claude CLI', installUrl: 'https://example.com' },
-      ],
+      validateDependencies: () => [{ name: 'Claude CLI', installUrl: 'https://example.com' }],
     });
 
     executeStart(false, false, undefined, false, deps);
@@ -54,12 +51,8 @@ describe('executeStart', () => {
 
     executeStart(false, false, undefined, false, deps);
 
-    expect(deps.error).toHaveBeenCalledWith(
-      '  - Claude CLI: https://claude.example.com',
-    );
-    expect(deps.error).toHaveBeenCalledWith(
-      '  - gh: https://gh.example.com',
-    );
+    expect(deps.error).toHaveBeenCalledWith('  - Claude CLI: https://claude.example.com');
+    expect(deps.error).toHaveBeenCalledWith('  - gh: https://gh.example.com');
   });
 
   it('should skip dependency check when flag is true', () => {
@@ -122,12 +115,17 @@ describe('executeStart', () => {
     const spawnDaemon = vi.fn(() => 123);
     const deps = createFakeDeps({
       startDaemonDeps: createFakeStartDaemonDeps({ spawnDaemon }),
-      loadStartupInfo: () => ({ enabledPlatforms: ['gitlab'] as Array<'gitlab' | 'github'>, defaultPort: 3000 }),
+      loadStartupInfo: () => ({
+        enabledPlatforms: ['gitlab'] as Array<'gitlab' | 'github'>,
+        defaultPort: 3000,
+      }),
     });
 
     executeStart(false, true, 4000, false, deps);
 
-    expect(deps.log).toHaveBeenCalledWith(expect.stringContaining('http://localhost:4000/dashboard/'));
+    expect(deps.log).toHaveBeenCalledWith(
+      expect.stringContaining('http://localhost:4000/dashboard/'),
+    );
     expect(deps.log).toHaveBeenCalledWith(expect.stringContaining('/webhooks/gitlab'));
   });
 
@@ -159,13 +157,18 @@ describe('executeStart', () => {
 
   it('should display startup banner in foreground mode', async () => {
     const deps = createFakeDeps({
-      loadStartupInfo: () => ({ enabledPlatforms: ['github'] as Array<'gitlab' | 'github'>, defaultPort: 3000 }),
+      loadStartupInfo: () => ({
+        enabledPlatforms: ['github'] as Array<'gitlab' | 'github'>,
+        defaultPort: 3000,
+      }),
     });
 
     executeStart(true, false, 5000, false, deps);
 
     await vi.waitFor(() => {
-      expect(deps.log).toHaveBeenCalledWith(expect.stringContaining('http://localhost:5000/dashboard/'));
+      expect(deps.log).toHaveBeenCalledWith(
+        expect.stringContaining('http://localhost:5000/dashboard/'),
+      );
       expect(deps.log).toHaveBeenCalledWith(expect.stringContaining('/webhooks/github'));
     });
   });
@@ -183,7 +186,10 @@ describe('executeStart', () => {
 
   it('should use default port from config when no port specified', async () => {
     const deps = createFakeDeps({
-      loadStartupInfo: () => ({ enabledPlatforms: [] as Array<'gitlab' | 'github'>, defaultPort: 8080 }),
+      loadStartupInfo: () => ({
+        enabledPlatforms: [] as Array<'gitlab' | 'github'>,
+        defaultPort: 8080,
+      }),
     });
 
     executeStart(true, false, undefined, false, deps);

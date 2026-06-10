@@ -1,9 +1,9 @@
-import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
-import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
 import type {
   PromptKind,
   PromptOption,
 } from '@/modules/setup-wizard/entities/promptOption/promptOption.schema.js';
+import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
+import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
 
 export interface WizardEventEmitter {
   emitStepStarted(stepId: StepId, title: string): void;

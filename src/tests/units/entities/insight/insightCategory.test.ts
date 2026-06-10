@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { insightCategorySchema, INSIGHT_CATEGORIES } from '@/modules/statistics-insights/entities/insight/insightCategory.js';
+
+import {
+  insightCategorySchema,
+  INSIGHT_CATEGORIES,
+} from '@/modules/statistics-insights/entities/insight/insightCategory.js';
 
 describe('InsightCategory', () => {
   it('should define four insight categories', () => {

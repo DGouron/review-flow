@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   QueryStatusUseCase,
   type QueryStatusDependencies,
 } from '@/modules/cli-configuration/usecases/cli/queryStatus.usecase.js';
+
 import { createPidFileContent } from '../../../factories/pidFileContent.factory.js';
 
-function createFakeDeps(
-  overrides?: Partial<QueryStatusDependencies>,
-): QueryStatusDependencies {
+function createFakeDeps(overrides?: Partial<QueryStatusDependencies>): QueryStatusDependencies {
   return {
     readPidFile: vi.fn(() => null),
     isProcessRunning: vi.fn(() => false),

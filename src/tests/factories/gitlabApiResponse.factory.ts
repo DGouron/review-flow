@@ -1,33 +1,33 @@
 interface GitLabNotePosition {
-  new_path: string | null
-  new_line: number | null
+  new_path: string | null;
+  new_line: number | null;
 }
 
 interface GitLabNote {
-  resolvable: boolean
-  resolved: boolean
-  body: string
-  position: GitLabNotePosition | null
+  resolvable: boolean;
+  resolved: boolean;
+  body: string;
+  position: GitLabNotePosition | null;
 }
 
 interface GitLabDiscussion {
-  id: string
-  notes: GitLabNote[]
+  id: string;
+  notes: GitLabNote[];
 }
 
 interface GitLabMergeRequestVersion {
-  id: number
-  base_commit_sha: string
-  head_commit_sha: string
-  start_commit_sha: string
+  id: number;
+  base_commit_sha: string;
+  head_commit_sha: string;
+  start_commit_sha: string;
 }
 
 export class GitLabApiResponseFactory {
   static createDiscussionsResponse(discussions: GitLabDiscussion[]): string {
-    return JSON.stringify(discussions)
+    return JSON.stringify(discussions);
   }
 
   static createVersionsResponse(versions: GitLabMergeRequestVersion[]): string {
-    return JSON.stringify(versions)
+    return JSON.stringify(versions);
   }
 }

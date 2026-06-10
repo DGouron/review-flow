@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { detectDegradedWorktrees } from '@/modules/worktree-management/usecases/detectDegradedWorktrees.usecase.js';
-import { StubWorktreeHealthProbeGateway } from '@/tests/stubs/worktreeHealthProbe.stub.js';
+
 import { createWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
 import type {
   WorktreeEntry,
   WorktreeIdentity,
 } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 import type { HealthSignals } from '@/modules/worktree-management/entities/worktree/worktreeHealthProbe.gateway.js';
+import { detectDegradedWorktrees } from '@/modules/worktree-management/usecases/detectDegradedWorktrees.usecase.js';
+import { StubWorktreeHealthProbeGateway } from '@/tests/stubs/worktreeHealthProbe.stub.js';
 
 const NOW = new Date('2026-05-23T12:00:00.000Z');
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -28,7 +29,11 @@ function freshSignals(): HealthSignals {
 describe('detectDegradedWorktrees use case', () => {
   it('returns healthy when no signal trips and the entry is fresh', async () => {
     const probe = new StubWorktreeHealthProbeGateway();
-    const entry = buildEntry(1, new Date(NOW.getTime() - 5 * 60 * 1000), '/tmp/worktrees/gitlab-group-project-1');
+    const entry = buildEntry(
+      1,
+      new Date(NOW.getTime() - 5 * 60 * 1000),
+      '/tmp/worktrees/gitlab-group-project-1',
+    );
     probe.setSignals(entry.path, freshSignals());
 
     const reports = await detectDegradedWorktrees(
@@ -63,10 +68,18 @@ describe('detectDegradedWorktrees use case', () => {
 
   it('flags orphan-git-lock when the probe reports a lock present and the entry is not stale', async () => {
     const probe = new StubWorktreeHealthProbeGateway();
-    const entry = buildEntry(3, new Date(NOW.getTime() - 5 * 60 * 1000), '/tmp/worktrees/gitlab-group-project-3');
+    const entry = buildEntry(
+      3,
+      new Date(NOW.getTime() - 5 * 60 * 1000),
+      '/tmp/worktrees/gitlab-group-project-3',
+    );
     probe.setSignals(entry.path, {
       ...freshSignals(),
-      orphanLock: { present: true, path: '/main/.git/worktrees/abc/index.lock', ageMs: 2 * ONE_HOUR_MS },
+      orphanLock: {
+        present: true,
+        path: '/main/.git/worktrees/abc/index.lock',
+        ageMs: 2 * ONE_HOUR_MS,
+      },
     });
 
     const reports = await detectDegradedWorktrees(
@@ -75,7 +88,10 @@ describe('detectDegradedWorktrees use case', () => {
     );
 
     expect(reports[0]?.health.status).toBe('degraded');
-    if (reports[0]?.health.status === 'degraded' && reports[0].health.reason.kind === 'orphan-git-lock') {
+    if (
+      reports[0]?.health.status === 'degraded' &&
+      reports[0].health.reason.kind === 'orphan-git-lock'
+    ) {
       expect(reports[0].health.reason.lockAgeMs).toBe(2 * ONE_HOUR_MS);
       expect(reports[0].health.reason.lockPath).toBe('/main/.git/worktrees/abc/index.lock');
     }
@@ -83,7 +99,11 @@ describe('detectDegradedWorktrees use case', () => {
 
   it('flags unresolved-conflict when the probe reports a conflict', async () => {
     const probe = new StubWorktreeHealthProbeGateway();
-    const entry = buildEntry(4, new Date(NOW.getTime() - 5 * 60 * 1000), '/tmp/worktrees/gitlab-group-project-4');
+    const entry = buildEntry(
+      4,
+      new Date(NOW.getTime() - 5 * 60 * 1000),
+      '/tmp/worktrees/gitlab-group-project-4',
+    );
     probe.setSignals(entry.path, { ...freshSignals(), unresolvedConflict: true });
 
     const reports = await detectDegradedWorktrees(
@@ -103,7 +123,11 @@ describe('detectDegradedWorktrees use case', () => {
     const entry = buildEntry(6, staleMtime, '/tmp/worktrees/gitlab-group-project-6');
     probe.setSignals(entry.path, {
       mtime: staleMtime,
-      orphanLock: { present: true, path: '/main/.git/worktrees/x/index.lock', ageMs: 1 * ONE_HOUR_MS },
+      orphanLock: {
+        present: true,
+        path: '/main/.git/worktrees/x/index.lock',
+        ageMs: 1 * ONE_HOUR_MS,
+      },
       unresolvedConflict: true,
     });
 
@@ -121,8 +145,16 @@ describe('detectDegradedWorktrees use case', () => {
 
   it('processes multiple entries independently', async () => {
     const probe = new StubWorktreeHealthProbeGateway();
-    const freshEntry = buildEntry(7, new Date(NOW.getTime() - 5 * 60 * 1000), '/tmp/worktrees/gitlab-group-project-7');
-    const staleEntry = buildEntry(8, new Date(NOW.getTime() - 30 * ONE_HOUR_MS), '/tmp/worktrees/gitlab-group-project-8');
+    const freshEntry = buildEntry(
+      7,
+      new Date(NOW.getTime() - 5 * 60 * 1000),
+      '/tmp/worktrees/gitlab-group-project-7',
+    );
+    const staleEntry = buildEntry(
+      8,
+      new Date(NOW.getTime() - 30 * ONE_HOUR_MS),
+      '/tmp/worktrees/gitlab-group-project-8',
+    );
     probe.setSignals(freshEntry.path, freshSignals());
     probe.setSignals(staleEntry.path, { ...freshSignals(), mtime: staleEntry.mtime });
 

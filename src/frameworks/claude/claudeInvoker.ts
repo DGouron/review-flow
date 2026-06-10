@@ -2,54 +2,65 @@ import { spawn } from 'node:child_process';
 import { writeFileSync, mkdirSync, existsSync, unlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import type { Logger } from 'pino';
-import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
-import type { ReviewProgress, ProgressEvent } from '@/modules/review-execution/entities/progress/progress.type.js';
+
+import { getProjectAgents, getFollowupAgents, loadProjectConfig } from '@/config/projectConfig.js';
+import { broadcastBudgetAfterUsage } from '@/frameworks/claude/broadcastBudgetAfterUsage.js';
+import { buildLanguageDirective } from '@/frameworks/claude/languageDirective.js';
 import { logInfo, logWarn, logError } from '@/frameworks/logging/logBuffer.js';
 import { getModel } from '@/frameworks/settings/runtimeSettings.js';
-import { getProjectAgents, getFollowupAgents, loadProjectConfig } from '@/config/projectConfig.js';
-import { addReviewStats } from '@/modules/statistics-insights/services/statsService.js';
-import { fetchDiffStatsSafely } from '@/modules/statistics-insights/services/fetchDiffStatsSafely.js';
-import { FileSystemReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/fileSystem/reviewRequestTracking.fileSystem.js';
-import { ProjectStatsCalculator } from '@/modules/statistics-insights/interface-adapters/presenters/projectStats.calculator.js';
-import { GitLabDiffStatsFetchGateway } from '@/modules/statistics-insights/interface-adapters/gateways/diffStatsFetch.gitlab.gateway.js';
-import { GitHubDiffStatsFetchGateway } from '@/modules/statistics-insights/interface-adapters/gateways/diffStatsFetch.github.gateway.js';
-import { defaultGitLabExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
-import { defaultGitHubExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.github.gateway.js';
-import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
-import { resolveClaudePath } from '@/shared/services/claudePathResolver.js';
-import { getJobContextFilePath } from '@/shared/services/mcpJobContext.js';
-import { buildLanguageDirective } from '@/frameworks/claude/languageDirective.js';
-import type { ClaudeModelName } from '@/modules/review-execution/entities/modelRouting/modelRouting.schema.js';
-import type { TokenUsage, TokenUsageRecord } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
-import { broadcastBudgetAfterUsage } from '@/frameworks/claude/broadcastBudgetAfterUsage.js';
-import { SelectModelForReviewUseCase } from '@/modules/review-execution/usecases/selectModelForReview/selectModelForReview.usecase.js';
-import { ProjectConfigRoutingPolicyGateway } from '@/modules/review-execution/interface-adapters/gateways/projectConfig/routingPolicy.projectConfig.gateway.js';
-import { TrackTokenUsageUseCase } from '@/modules/token-accounting/usecases/trackTokenUsage/trackTokenUsage.usecase.js';
-import { FilesystemTokenUsageGateway } from '@/modules/token-accounting/interface-adapters/gateways/tokenUsage/tokenUsage.filesystem.gateway.js';
-import { GetBudgetStatusUseCase } from '@/modules/token-accounting/usecases/getBudgetStatus/getBudgetStatus.usecase.js';
-import { FilesystemBudgetGateway } from '@/modules/token-accounting/interface-adapters/gateways/budget/budget.filesystem.gateway.js';
-import { BudgetStatusPresenter, type BudgetStatusViewModel } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
+import type { BillingStateGateway } from '@/modules/claude-invocation/entities/billingState/billingState.gateway.js';
+import type { EnvironmentGateway } from '@/modules/claude-invocation/entities/billingState/environment.gateway.js';
+import type { ClaudeSessionGateway } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
+import type { McpCompletionBridge } from '@/modules/claude-invocation/entities/sessionCompletion/mcpCompletion.gateway.js';
+import type { ReviewReportGateway } from '@/modules/claude-invocation/entities/sessionCompletion/reviewReport.gateway.js';
+import { InMemoryBillingStateGateway } from '@/modules/claude-invocation/interface-adapters/gateways/billingState.memory.gateway.js';
 import {
   ClaudeSessionCliGateway,
   type ClaudeProcessRunner,
 } from '@/modules/claude-invocation/interface-adapters/gateways/claudeSession.cli.gateway.js';
+import { ProcessEnvironmentGateway } from '@/modules/claude-invocation/interface-adapters/gateways/environment.process.gateway.js';
 import { FileSystemMcpCompletionBridge } from '@/modules/claude-invocation/interface-adapters/gateways/mcpCompletion.fileSystem.gateway.js';
 import { ReviewReportFileSystemGateway } from '@/modules/claude-invocation/interface-adapters/gateways/reviewReport.fileSystem.gateway.js';
-import { InMemoryBillingStateGateway } from '@/modules/claude-invocation/interface-adapters/gateways/billingState.memory.gateway.js';
-import { ProcessEnvironmentGateway } from '@/modules/claude-invocation/interface-adapters/gateways/environment.process.gateway.js';
 import { runClaudeReviewJob } from '@/modules/claude-invocation/usecases/runClaudeReviewJob.usecase.js';
-import type { ClaudeSessionGateway } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
-import type { McpCompletionBridge } from '@/modules/claude-invocation/entities/sessionCompletion/mcpCompletion.gateway.js';
-import type { ReviewReportGateway } from '@/modules/claude-invocation/entities/sessionCompletion/reviewReport.gateway.js';
-import type { BillingStateGateway } from '@/modules/claude-invocation/entities/billingState/billingState.gateway.js';
-import type { EnvironmentGateway } from '@/modules/claude-invocation/entities/billingState/environment.gateway.js';
+import { defaultGitHubExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.github.gateway.js';
+import { defaultGitLabExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
+import type { ClaudeModelName } from '@/modules/review-execution/entities/modelRouting/modelRouting.schema.js';
+import type {
+  ReviewProgress,
+  ProgressEvent,
+} from '@/modules/review-execution/entities/progress/progress.type.js';
+import { ProjectConfigRoutingPolicyGateway } from '@/modules/review-execution/interface-adapters/gateways/projectConfig/routingPolicy.projectConfig.gateway.js';
+import { SelectModelForReviewUseCase } from '@/modules/review-execution/usecases/selectModelForReview/selectModelForReview.usecase.js';
+import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
+import { GitHubDiffStatsFetchGateway } from '@/modules/statistics-insights/interface-adapters/gateways/diffStatsFetch.github.gateway.js';
+import { GitLabDiffStatsFetchGateway } from '@/modules/statistics-insights/interface-adapters/gateways/diffStatsFetch.gitlab.gateway.js';
+import { ProjectStatsCalculator } from '@/modules/statistics-insights/interface-adapters/presenters/projectStats.calculator.js';
+import { fetchDiffStatsSafely } from '@/modules/statistics-insights/services/fetchDiffStatsSafely.js';
+import { addReviewStats } from '@/modules/statistics-insights/services/statsService.js';
+import type {
+  TokenUsage,
+  TokenUsageRecord,
+} from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
+import { FilesystemBudgetGateway } from '@/modules/token-accounting/interface-adapters/gateways/budget/budget.filesystem.gateway.js';
+import { FilesystemTokenUsageGateway } from '@/modules/token-accounting/interface-adapters/gateways/tokenUsage/tokenUsage.filesystem.gateway.js';
+import {
+  BudgetStatusPresenter,
+  type BudgetStatusViewModel,
+} from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
+import { GetBudgetStatusUseCase } from '@/modules/token-accounting/usecases/getBudgetStatus/getBudgetStatus.usecase.js';
+import { TrackTokenUsageUseCase } from '@/modules/token-accounting/usecases/trackTokenUsage/trackTokenUsage.usecase.js';
+import { FileSystemReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/fileSystem/reviewRequestTracking.fileSystem.js';
+import type { GitCommandExecutor } from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
 import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
 import type { MrSource } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
-import { WorktreeFileSystemGateway } from '@/modules/worktree-management/interface-adapters/gateways/worktree.fileSystem.gateway.js';
 import { GitCommandCliGateway } from '@/modules/worktree-management/interface-adapters/gateways/gitCommand.cli.gateway.js';
-import type { GitCommandExecutor } from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
+import { WorktreeFileSystemGateway } from '@/modules/worktree-management/interface-adapters/gateways/worktree.fileSystem.gateway.js';
 import { resolveClaudeCwd } from '@/modules/worktree-management/services/claudeCwd.js';
+import { resolveClaudePath } from '@/shared/services/claudePathResolver.js';
+import { getJobContextFilePath } from '@/shared/services/mcpJobContext.js';
 
 /**
  * Bundle of gateways needed by runClaudeReviewJob. Built in the composition
@@ -113,7 +124,7 @@ export function buildSpawnEnv(
     ...rest,
     TERM: 'dumb',
     CI: 'true',
-    ...(override ?? {}),
+    ...override,
   };
 }
 
@@ -132,14 +143,14 @@ export function defaultProcessRunner(): ClaudeProcessRunner {
       });
       let stdout = '';
       let stderr = '';
-      child.stdout?.on('data', chunk => {
+      child.stdout?.on('data', (chunk) => {
         stdout += chunk.toString();
       });
-      child.stderr?.on('data', chunk => {
+      child.stderr?.on('data', (chunk) => {
         stderr += chunk.toString();
       });
       child.on('error', reject);
-      child.on('close', code => {
+      child.on('close', (code) => {
         resolve({ stdout, stderr, exitCode: code ?? -1 });
       });
     });
@@ -165,7 +176,7 @@ export function createDefaultClaudeInvokerDependencies(): ClaudeInvokerDependenc
   const budgetGateway = new FilesystemBudgetGateway();
   const gitExecutor = new GitCommandCliGateway();
   return {
-    diffStatsFetchFactory: platform =>
+    diffStatsFetchFactory: (platform) =>
       platform === 'github'
         ? new GitHubDiffStatsFetchGateway(defaultGitHubExecutor)
         : new GitLabDiffStatsFetchGateway(defaultGitLabExecutor),
@@ -195,7 +206,7 @@ export function resolveMcpServerPath(): string {
 
   throw new Error(
     `MCP server not found at: ${candidate} or ${devCandidate}\n` +
-    'Run "yarn build" to compile the project.'
+      'Run "yarn build" to compile the project.',
   );
 }
 
@@ -234,8 +245,8 @@ export function buildMcpConfigJson(): string {
   const mcpServerPath = resolveMcpServerPath();
   return JSON.stringify({
     mcpServers: {
-      "review-progress": {
-        command: "node",
+      'review-progress': {
+        command: 'node',
         args: [mcpServerPath],
       },
     },
@@ -443,13 +454,19 @@ export async function invokeClaudeReview(
   // (set_phase) or `claude agents --json` polling. No -p, no --print, no stream-json.
   const args = [
     '--bg',
-    '--model', model,
-    '--permission-mode', 'auto',
-    '--append-system-prompt', mcpSystemPrompt,
-    '--mcp-config', mcpConfigJson,
+    '--model',
+    model,
+    '--permission-mode',
+    'auto',
+    '--append-system-prompt',
+    mcpSystemPrompt,
+    '--mcp-config',
+    mcpConfigJson,
     '--strict-mcp-config',
-    '--allowedTools', 'Read,Glob,Grep,Bash,Edit,Task,Skill,Write,LSP,mcp__review-progress__*',
-    '--disallowedTools', 'EnterPlanMode,AskUserQuestion',
+    '--allowedTools',
+    'Read,Glob,Grep,Bash,Edit,Task,Skill,Write,LSP,mcp__review-progress__*',
+    '--disallowedTools',
+    'EnterPlanMode,AskUserQuestion',
     prompt,
   ];
 
@@ -462,7 +479,7 @@ export async function invokeClaudeReview(
       prompt,
       args,
     },
-    'Invocation Claude CLI'
+    'Invocation Claude CLI',
   );
 
   // Load project-specific agents configuration (use followup agents for followup jobs)
@@ -536,7 +553,8 @@ async function invokeViaBackgroundSession(
   onProgress: ProgressCallback | undefined,
   deps: ClaudeInvokerDependencies,
 ): Promise<InvocationResult> {
-  const { job, prompt, model, mcpSystemPrompt, mcpConfigJson, diffStats, startTime, signal } = context;
+  const { job, prompt, model, mcpSystemPrompt, mcpConfigJson, diffStats, startTime, signal } =
+    context;
   const invocation = deps.invocation;
   const mergeRequestId = `${job.platform}-${job.projectPath}-${job.mrNumber}`;
   const jobType = job.jobType === 'followup' ? 'followup' : 'review';
@@ -555,7 +573,7 @@ async function invokeViaBackgroundSession(
   const ensureDurationMs = Date.now() - ensureStart;
   logger.info(
     { jobId: job.id, ensureDurationMs, status: ensureResult.status },
-    'ensureWorktree completed'
+    'ensureWorktree completed',
   );
 
   if (ensureResult.status === 'failed') {
@@ -574,7 +592,7 @@ async function invokeViaBackgroundSession(
   if (ensureResult.status === 'created' && ensureResult.settingsWarning !== null) {
     logger.warn(
       { jobId: job.id, warning: ensureResult.settingsWarning },
-      'Worktree created but settings write produced a warning (FR-4 bgIsolation may not be applied)'
+      'Worktree created but settings write produced a warning (FR-4 bgIsolation may not be applied)',
     );
   }
 
@@ -675,7 +693,7 @@ async function invokeViaBackgroundSession(
         );
         logger.info({ reviewStats }, 'Stats de review enregistrées');
       } catch (statsError) {
-        logger.warn({ error: statsError }, 'Erreur lors de l\'enregistrement des stats');
+        logger.warn({ error: statsError }, "Erreur lors de l'enregistrement des stats");
       }
     }
 
@@ -766,15 +784,10 @@ async function invokeViaBackgroundSession(
   };
 }
 
-
 /**
  * Send desktop notification
  */
-export function sendNotification(
-  title: string,
-  message: string,
-  logger: Logger
-): void {
+export function sendNotification(title: string, message: string, logger: Logger): void {
   try {
     // Use notify-send on Linux
     const child = spawn('notify-send', [

@@ -1,9 +1,12 @@
-import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
-import type { CategoryLevel, CategoryLevels } from '@/modules/statistics-insights/entities/insight/developerInsight.js';
-import type { InsightCategory } from '@/modules/statistics-insights/entities/insight/insightCategory.js';
-import type { InsightTrend } from '@/modules/statistics-insights/entities/insight/insightTrend.js';
+import type {
+  CategoryLevel,
+  CategoryLevels,
+} from '@/modules/statistics-insights/entities/insight/developerInsight.js';
 import type { DeveloperTitle } from '@/modules/statistics-insights/entities/insight/developerTitle.js';
+import type { InsightCategory } from '@/modules/statistics-insights/entities/insight/insightCategory.js';
 import { INSIGHT_CATEGORIES } from '@/modules/statistics-insights/entities/insight/insightCategory.js';
+import type { InsightTrend } from '@/modules/statistics-insights/entities/insight/insightTrend.js';
+import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
 
 export const MINIMUM_REVIEWS_THRESHOLD = 5;
 const RELATIVE_WEIGHT = 0.8;
@@ -79,10 +82,7 @@ export function normalizeHigherIsBetter(
   return Math.min(1, Math.max(0, 0.5 + deviation * 2));
 }
 
-export function normalizeLowerIsBetter(
-  value: number,
-  teamAverage: number,
-): number {
+export function normalizeLowerIsBetter(value: number, teamAverage: number): number {
   if (teamAverage === 0) return value === 0 ? 1 : 0;
   // Amplified deviation: mirrors normalizeHigherIsBetter
   const deviation = (teamAverage - value) / teamAverage;
@@ -129,7 +129,7 @@ export function computeTrendForMetric(
 ): InsightTrend {
   if (reviews.length < TREND_WINDOW_SIZE) return 'stable';
 
-  const sorted = [...reviews].sort(
+  const sorted = [...reviews].toSorted(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
   );
 
@@ -156,7 +156,7 @@ export function computeTrendForMetric(
 export function computeCodeVolumeTrend(reviews: ReviewStats[]): InsightTrend {
   if (reviews.length < TREND_WINDOW_SIZE) return 'stable';
 
-  const sorted = [...reviews].sort(
+  const sorted = [...reviews].toSorted(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
   );
 
@@ -185,7 +185,10 @@ export function identifyStrengths(categoryLevels: CategoryLevels): InsightCatego
 
   for (const category of INSIGHT_CATEGORIES) {
     const { level, trend } = categoryLevels[category];
-    if (level >= STRENGTH_THRESHOLD || (trend === 'improving' && level >= STRENGTH_TREND_THRESHOLD)) {
+    if (
+      level >= STRENGTH_THRESHOLD ||
+      (trend === 'improving' && level >= STRENGTH_TREND_THRESHOLD)
+    ) {
       strengths.push(category);
     }
   }
@@ -198,7 +201,10 @@ export function identifyWeaknesses(categoryLevels: CategoryLevels): InsightCateg
 
   for (const category of INSIGHT_CATEGORIES) {
     const { level, trend } = categoryLevels[category];
-    if (level <= WEAKNESS_THRESHOLD || (trend === 'declining' && level <= WEAKNESS_TREND_THRESHOLD)) {
+    if (
+      level <= WEAKNESS_THRESHOLD ||
+      (trend === 'declining' && level <= WEAKNESS_TREND_THRESHOLD)
+    ) {
       weaknesses.push(category);
     }
   }
@@ -287,13 +293,14 @@ export function computeDeveloperMetrics(reviews: ReviewStats[]): DeveloperMetric
   const reviewsWithDiffStats = reviews.filter(
     (review) => review.diffStats !== null && review.diffStats !== undefined,
   );
-  const averageVolume = reviewsWithDiffStats.length > 0
-    ? average(
-        reviewsWithDiffStats.map(
-          (review) => (review.diffStats?.additions ?? 0) + (review.diffStats?.deletions ?? 0),
-        ),
-      )
-    : 0;
+  const averageVolume =
+    reviewsWithDiffStats.length > 0
+      ? average(
+          reviewsWithDiffStats.map(
+            (review) => (review.diffStats?.additions ?? 0) + (review.diffStats?.deletions ?? 0),
+          ),
+        )
+      : 0;
 
   const correlation = computeVolumeScoreCorrelation(reviews);
 
@@ -310,9 +317,7 @@ export function computeDeveloperMetrics(reviews: ReviewStats[]): DeveloperMetric
 function computeVolumeScoreCorrelation(reviews: ReviewStats[]): number {
   const reviewsWithBoth = reviews.filter(
     (review) =>
-      review.score !== null &&
-      review.diffStats !== null &&
-      review.diffStats !== undefined,
+      review.score !== null && review.diffStats !== null && review.diffStats !== undefined,
   );
 
   if (reviewsWithBoth.length < 3) return 0;
@@ -343,9 +348,7 @@ function computeVolumeScoreCorrelation(reviews: ReviewStats[]): number {
   return numerator / denominator;
 }
 
-export function computeTeamMetrics(
-  reviewsByDeveloper: Map<string, ReviewStats[]>,
-): TeamMetrics {
+export function computeTeamMetrics(reviewsByDeveloper: Map<string, ReviewStats[]>): TeamMetrics {
   const allReviews: ReviewStats[] = [];
   for (const reviews of reviewsByDeveloper.values()) {
     allReviews.push(...reviews);
@@ -433,17 +436,17 @@ function computeCodeVolumeLevel(
   metrics: DeveloperMetrics,
   teamMetrics: TeamMetrics,
 ): CategoryLevel {
-  const volumeScore = teamMetrics.averageCodeVolume > 0
-    ? normalizeHigherIsBetter(
-        metrics.averageCodeVolume,
-        teamMetrics.averageCodeVolume,
-        teamMetrics.averageCodeVolume * 5,
-      )
-    : 0.5;
+  const volumeScore =
+    teamMetrics.averageCodeVolume > 0
+      ? normalizeHigherIsBetter(
+          metrics.averageCodeVolume,
+          teamMetrics.averageCodeVolume,
+          teamMetrics.averageCodeVolume * 5,
+        )
+      : 0.5;
 
-  const correlationBonus = metrics.codeVolumeScoreCorrelation > 0
-    ? metrics.codeVolumeScoreCorrelation * 0.2
-    : 0;
+  const correlationBonus =
+    metrics.codeVolumeScoreCorrelation > 0 ? metrics.codeVolumeScoreCorrelation * 0.2 : 0;
 
   const relativeScore = Math.min(1, volumeScore + correlationBonus);
 
@@ -461,17 +464,15 @@ function computeIterationLevel(
   _metrics: DeveloperMetrics,
   _teamMetrics: TeamMetrics,
 ): CategoryLevel {
-  const reviewsWithWarnings = reviews.filter((review) => review.warnings > 0 || review.blocking > 0);
-  const resolutionRatio = reviews.length > 0
-    ? 1 - (reviewsWithWarnings.length / reviews.length)
-    : 0.5;
-
-  const averageSuggestions = average(
-    reviews.map((review) => review.suggestions ?? 0),
+  const reviewsWithWarnings = reviews.filter(
+    (review) => review.warnings > 0 || review.blocking > 0,
   );
-  const suggestionScore = averageSuggestions > 0
-    ? Math.min(1, 1 / (1 + averageSuggestions * 0.1))
-    : 0.7;
+  const resolutionRatio =
+    reviews.length > 0 ? 1 - reviewsWithWarnings.length / reviews.length : 0.5;
+
+  const averageSuggestions = average(reviews.map((review) => review.suggestions ?? 0));
+  const suggestionScore =
+    averageSuggestions > 0 ? Math.min(1, 1 / (1 + averageSuggestions * 0.1)) : 0.7;
 
   const relativeScore = resolutionRatio * 0.6 + suggestionScore * 0.4;
 

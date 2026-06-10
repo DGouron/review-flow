@@ -1,15 +1,23 @@
 import { describe, it, expect } from 'vitest';
+
 import { SupervisorCliGateway } from '@/modules/supervisor-management/interface-adapters/gateways/supervisor.cli.gateway.js';
 import type {
   SupervisorProcessProbe,
   SupervisorProcessSpawner,
 } from '@/modules/supervisor-management/interface-adapters/gateways/supervisor.cli.gateway.js';
 
-function stubProbe(result: { exitCode: number; stdout: string; timedOut: boolean }): SupervisorProcessProbe {
+function stubProbe(result: {
+  exitCode: number;
+  stdout: string;
+  timedOut: boolean;
+}): SupervisorProcessProbe {
   return async () => result;
 }
 
-function stubSpawner(result: { pid: number | null; error: string | null }): SupervisorProcessSpawner {
+function stubSpawner(result: {
+  pid: number | null;
+  error: string | null;
+}): SupervisorProcessSpawner {
   return () => result;
 }
 

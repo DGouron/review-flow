@@ -1,7 +1,7 @@
 import type { BudgetGateway } from '@/modules/token-accounting/entities/budget/budget.gateway.js';
+import { BUDGET_DEFAULT_USD } from '@/modules/token-accounting/entities/budget/budgetConfig.schema.js';
 import type { BudgetStatus } from '@/modules/token-accounting/entities/budget/budgetStatus.js';
 import type { TokenUsageGateway } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.gateway.js';
-import { BUDGET_DEFAULT_USD } from '@/modules/token-accounting/entities/budget/budgetConfig.schema.js';
 
 export interface GetBudgetStatusDependencies {
   budgetGateway: BudgetGateway;
@@ -44,9 +44,12 @@ export class GetBudgetStatusUseCase {
 
     const consumedUsd = roundToTwoDecimals(consumedRaw);
     const remainingUsd = consumedUsd >= limitUsd ? 0 : roundToTwoDecimals(limitUsd - consumedUsd);
-    const percentUsed = limitUsd === 0
-      ? (consumedUsd > 0 ? 100 : 0)
-      : roundToTwoDecimals((consumedUsd / limitUsd) * 100);
+    const percentUsed =
+      limitUsd === 0
+        ? consumedUsd > 0
+          ? 100
+          : 0
+        : roundToTwoDecimals((consumedUsd / limitUsd) * 100);
     const exceeded = consumedUsd >= limitUsd;
 
     return {

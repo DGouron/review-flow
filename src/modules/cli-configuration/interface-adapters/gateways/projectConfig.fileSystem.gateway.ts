@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+
 import type { ProjectConfig } from '@/config/projectConfig.js';
 import { parseProjectConfig } from '@/config/projectConfig.js';
 import type {

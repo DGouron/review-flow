@@ -1,9 +1,9 @@
 import { loadConfig } from '@/config/loader.js';
+import type { GitHubIssueCommentEvent } from '@/modules/platform-integration/entities/github/githubIssueCommentEvent.guard.js';
 import type { GitHubPullRequestEvent } from '@/modules/platform-integration/entities/github/githubPullRequestEvent.guard.js';
+import type { GitHubPullRequestReviewEvent } from '@/modules/platform-integration/entities/github/githubPullRequestReviewEvent.guard.js';
 import type { GitLabMergeRequestEvent } from '@/modules/platform-integration/entities/gitlab/gitlabMergeRequestEvent.guard.js';
 import type { GitLabNoteEvent } from '@/modules/platform-integration/entities/gitlab/gitlabNoteEvent.guard.js';
-import type { GitHubIssueCommentEvent } from '@/modules/platform-integration/entities/github/githubIssueCommentEvent.guard.js';
-import type { GitHubPullRequestReviewEvent } from '@/modules/platform-integration/entities/github/githubPullRequestReviewEvent.guard.js';
 
 export type { GitHubPullRequestEvent, GitLabMergeRequestEvent };
 
@@ -166,14 +166,13 @@ export function filterGitLabEvent(event: GitLabMergeRequestEvent): FilterResult 
  * Only triggers when: user is in current reviewers BUT was NOT in previous reviewers
  * This prevents triggering on MR updates when user is already assigned
  */
-function checkGitLabReviewerAdded(
-  event: GitLabMergeRequestEvent,
-  username: string
-): boolean {
+function checkGitLabReviewerAdded(event: GitLabMergeRequestEvent, username: string): boolean {
   // STRICT CHECK: Only trigger if changes.reviewers shows user was ADDED
   if (event.changes?.reviewers) {
-    const wasInPrevious = event.changes.reviewers.previous?.some(r => r.username === username) ?? false;
-    const isInCurrent = event.changes.reviewers.current?.some(r => r.username === username) ?? false;
+    const wasInPrevious =
+      event.changes.reviewers.previous?.some((r) => r.username === username) ?? false;
+    const isInCurrent =
+      event.changes.reviewers.current?.some((r) => r.username === username) ?? false;
 
     // Only trigger if user was ADDED (in current but not in previous)
     return isInCurrent && !wasInPrevious;

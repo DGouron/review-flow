@@ -1,5 +1,9 @@
+import type {
+  ReviewRequest,
+  ReviewRequestState,
+} from '@/modules/review-execution/entities/reviewRequest/reviewRequest.entity.js';
+
 import type { GitLabMergeRequestEvent } from '../controllers/webhook/eventFilter.js';
-import type { ReviewRequest, ReviewRequestState } from '@/modules/review-execution/entities/reviewRequest/reviewRequest.entity.js';
 
 function mapGitLabState(gitlabState: string): ReviewRequestState {
   switch (gitlabState) {

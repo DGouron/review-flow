@@ -1,5 +1,6 @@
-import { vi } from 'vitest';
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import { vi } from 'vitest';
+
 import type { RepositoryConfig } from '@/config/loader.js';
 
 const mockConfig = {
@@ -32,7 +33,10 @@ vi.mock('@/security/verifier.js', () => ({
 }));
 
 vi.mock('@/frameworks/queue/pQueueAdapter.js', () => ({
-  createJobId: vi.fn((prefix: string, projectPath: string, mrNumber: number) => `${prefix}-${projectPath}-${mrNumber}`),
+  createJobId: vi.fn(
+    (prefix: string, projectPath: string, mrNumber: number) =>
+      `${prefix}-${projectPath}-${mrNumber}`,
+  ),
   enqueueReview: vi.fn(() => Promise.resolve(true)),
   updateJobProgress: vi.fn(),
   cancelJob: vi.fn(),
@@ -57,13 +61,14 @@ vi.mock('@/config/projectConfig.js', () => ({
 }));
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+import { enqueueReview } from '@/frameworks/queue/pQueueAdapter.js';
 import { handleGitHubWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
 import type { GitHubWebhookDependencies } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
-import { enqueueReview } from '@/frameworks/queue/pQueueAdapter.js';
-import { GitHubEventFactory } from '@/tests/factories/gitHubEvent.factory.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
-import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import { GitHubEventFactory } from '@/tests/factories/gitHubEvent.factory.js';
+import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 
 function createSynchronizePr() {
   return GitHubEventFactory.createPullRequestEvent({
@@ -78,21 +83,22 @@ function createSynchronizePr() {
 const NO_TRACKED_MR = Symbol('NO_TRACKED_MR');
 
 function createMockTrackingGateway(mrOverride: Partial<TrackedMr> | typeof NO_TRACKED_MR = {}) {
-  const trackedMr = mrOverride === NO_TRACKED_MR
-    ? null
-    : TrackedMrFactory.create({
-        id: 'github-test-owner/test-repo-123',
-        mrNumber: 123,
-        platform: 'github',
-        project: 'test-owner/test-repo',
-        state: 'pending-fix',
-        openThreads: 3,
-        totalThreads: 3,
-        lastPushAt: '2026-05-20T12:00:00Z',
-        lastReviewAt: '2026-05-20T10:00:00Z',
-        autoFollowup: true,
-        ...mrOverride,
-      });
+  const trackedMr =
+    mrOverride === NO_TRACKED_MR
+      ? null
+      : TrackedMrFactory.create({
+          id: 'github-test-owner/test-repo-123',
+          mrNumber: 123,
+          platform: 'github',
+          project: 'test-owner/test-repo',
+          state: 'pending-fix',
+          openThreads: 3,
+          totalThreads: 3,
+          lastPushAt: '2026-05-20T12:00:00Z',
+          lastReviewAt: '2026-05-20T10:00:00Z',
+          autoFollowup: true,
+          ...mrOverride,
+        });
 
   return {
     getById: vi.fn((): TrackedMr | null => trackedMr),
@@ -110,7 +116,9 @@ function createMockTrackingGateway(mrOverride: Partial<TrackedMr> | typeof NO_TR
   };
 }
 
-function createDefaultDeps(trackingGateway: ReturnType<typeof createMockTrackingGateway>): GitHubWebhookDependencies {
+function createDefaultDeps(
+  trackingGateway: ReturnType<typeof createMockTrackingGateway>,
+): GitHubWebhookDependencies {
   const threadFetchGateway = { fetchThreads: vi.fn(() => []) };
   const recordPushExecute = vi.fn();
   recordPushExecute.mockImplementation(() => trackingGateway.recordPush());
@@ -140,7 +148,9 @@ function createDefaultDeps(trackingGateway: ReturnType<typeof createMockTracking
       setResult: vi.fn(() => ({ success: true })),
     },
     threadFetchGateway,
-    diffMetadataFetchGateway: { fetchDiffMetadata: vi.fn(() => ({ baseSha: 'abc', headSha: 'def', startSha: 'ghi' })) },
+    diffMetadataFetchGateway: {
+      fetchDiffMetadata: vi.fn(() => ({ baseSha: 'abc', headSha: 'def', startSha: 'ghi' })),
+    },
     diffStatsFetchGateway: { fetchDiffStats: vi.fn(() => null) },
     trackAssignment: { execute: vi.fn() },
     recordCompletion: { execute: vi.fn() },
@@ -186,7 +196,7 @@ describe('Acceptance — Spec #46: GitHub Followup Review on Push', () => {
           projectPath: '/home/user/projects/test-repo',
           mrNumber: 123,
           platform: 'github',
-        })
+        }),
       );
       expect(enqueueReview).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -220,7 +230,9 @@ describe('Acceptance — Spec #46: GitHub Followup Review on Push', () => {
 
     it('No followup when PR has no open threads (checkFollowupNeeded returns false)', async () => {
       const noFollowupDeps = createDefaultDeps(mockGateway);
-      (noFollowupDeps.checkFollowupNeeded.execute as ReturnType<typeof vi.fn>).mockReturnValue(false);
+      (noFollowupDeps.checkFollowupNeeded.execute as ReturnType<typeof vi.fn>).mockReturnValue(
+        false,
+      );
 
       const event = createSynchronizePr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
@@ -229,9 +241,7 @@ describe('Acceptance — Spec #46: GitHub Followup Review on Push', () => {
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'ignored' }),
-      );
+      expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'ignored' }));
     });
 
     it('No followup when PR is not tracked (no MR found)', async () => {
@@ -246,9 +256,7 @@ describe('Acceptance — Spec #46: GitHub Followup Review on Push', () => {
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'ignored' }),
-      );
+      expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'ignored' }));
     });
 
     it('Push on draft PR is ignored', async () => {

@@ -10,7 +10,12 @@ const expandedLists = new Set();
  * @param {number} [visibleCount]
  * @returns {string}
  */
-export function renderCollapsibleList(renderedItems, listId, translate, visibleCount = DEFAULT_VISIBLE_COUNT) {
+export function renderCollapsibleList(
+  renderedItems,
+  listId,
+  translate,
+  visibleCount = DEFAULT_VISIBLE_COUNT,
+) {
   if (renderedItems.length <= visibleCount) {
     return renderedItems.join('');
   }
@@ -20,21 +25,35 @@ export function renderCollapsibleList(renderedItems, listId, translate, visibleC
 
   if (isExpanded) {
     const collapseLabel = translate('collapsible.showLess');
-    return renderedItems.join('')
-      + '<button class="collapsible-toggle" onclick="toggleCollapsibleList(\'' + listId + '\')">'
-      + '<i data-lucide="chevron-up"></i> ' + collapseLabel
-      + '</button>';
+    return (
+      renderedItems.join('') +
+      '<button class="collapsible-toggle" onclick="toggleCollapsibleList(\'' +
+      listId +
+      '\')">' +
+      '<i data-lucide="chevron-up"></i> ' +
+      collapseLabel +
+      '</button>'
+    );
   }
 
   const visible = renderedItems.slice(0, visibleCount).join('');
   const hidden = renderedItems.slice(visibleCount).join('');
   const expandLabel = translate('collapsible.showMore', { count: hiddenCount });
 
-  return visible
-    + '<div class="collapsible-hidden" id="collapsible-' + listId + '" style="display:none">' + hidden + '</div>'
-    + '<button class="collapsible-toggle" onclick="toggleCollapsibleList(\'' + listId + '\')">'
-    + '<i data-lucide="chevrons-down"></i> ' + expandLabel
-    + '</button>';
+  return (
+    visible +
+    '<div class="collapsible-hidden" id="collapsible-' +
+    listId +
+    '" style="display:none">' +
+    hidden +
+    '</div>' +
+    '<button class="collapsible-toggle" onclick="toggleCollapsibleList(\'' +
+    listId +
+    '\')">' +
+    '<i data-lucide="chevrons-down"></i> ' +
+    expandLabel +
+    '</button>'
+  );
 }
 
 /**

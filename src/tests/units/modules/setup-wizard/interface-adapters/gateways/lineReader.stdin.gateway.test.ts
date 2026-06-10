@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest';
 import { PassThrough } from 'node:stream';
+
+import { describe, it, expect } from 'vitest';
+
 import { NodeStdinLineReader } from '@/modules/setup-wizard/interface-adapters/gateways/lineReader.stdin.gateway.js';
 
 describe('NodeStdinLineReader', () => {

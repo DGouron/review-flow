@@ -40,9 +40,7 @@ function getCanvasContext(canvasId) {
   if (!canvas) return null;
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
-  const cssWidth = canvas.parentElement?.clientWidth
-    ? canvas.parentElement.clientWidth - 24
-    : 460;
+  const cssWidth = canvas.parentElement?.clientWidth ? canvas.parentElement.clientWidth - 24 : 460;
   return { canvas, ctx, cssWidth };
 }
 
@@ -115,8 +113,8 @@ export function drawScoreTrendChart(canvasId, reviews) {
   setupHiDpiCanvas(ctx, cssWidth, cssHeight);
 
   const scoredReviews = reviews
-    .filter(review => review.score !== null && review.score !== undefined)
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    .filter((review) => review.score !== null && review.score !== undefined)
+    .toSorted((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
   const padding = { top: 20, right: 20, bottom: 30, left: 35 };
   const chartWidth = cssWidth - padding.left - padding.right;
@@ -152,9 +150,10 @@ export function drawScoreTrendChart(canvasId, reviews) {
   ctx.setLineDash([]);
 
   const points = scoredReviews.map((review, index) => {
-    const x = scoredReviews.length === 1
-      ? padding.left + chartWidth / 2
-      : padding.left + (index / (scoredReviews.length - 1)) * chartWidth;
+    const x =
+      scoredReviews.length === 1
+        ? padding.left + chartWidth / 2
+        : padding.left + (index / (scoredReviews.length - 1)) * chartWidth;
     const y = padding.top + chartHeight - (review.score / 10) * chartHeight;
     return { x, y, review };
   });
@@ -190,9 +189,10 @@ export function drawScoreTrendChart(canvasId, reviews) {
         sum += scoredReviews[index - offset].score;
       }
       const avgScore = sum / windowSize;
-      const x = scoredReviews.length === 1
-        ? padding.left + chartWidth / 2
-        : padding.left + (index / (scoredReviews.length - 1)) * chartWidth;
+      const x =
+        scoredReviews.length === 1
+          ? padding.left + chartWidth / 2
+          : padding.left + (index / (scoredReviews.length - 1)) * chartWidth;
       const y = padding.top + chartHeight - (avgScore / 10) * chartHeight;
       movingAvgPoints.push({ x, y });
     }
@@ -253,7 +253,7 @@ function getIsoWeek(date) {
   const firstThursday = target.valueOf();
   target.setMonth(0, 1);
   if (target.getDay() !== 4) {
-    target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+    target.setMonth(0, 1 + ((4 - target.getDay() + 7) % 7));
   }
   return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
 }
@@ -285,7 +285,7 @@ export function drawReviewActivityChart(canvasId, reviews) {
   }
 
   const sortedWeeks = Array.from(weekCounts.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
+    .toSorted(([a], [b]) => a.localeCompare(b))
     .slice(-12);
 
   if (sortedWeeks.length === 0) {
@@ -370,7 +370,9 @@ export function drawScoreDistributionChart(canvasId, reviews) {
   const cssHeight = 120;
   setupHiDpiCanvas(ctx, cssWidth, cssHeight);
 
-  const scoredReviews = reviews.filter(review => review.score !== null && review.score !== undefined);
+  const scoredReviews = reviews.filter(
+    (review) => review.score !== null && review.score !== undefined,
+  );
 
   if (scoredReviews.length === 0) {
     drawNoDataMessage(ctx, t('stats.noChartData'), cssWidth, cssHeight);
@@ -399,7 +401,7 @@ export function drawScoreDistributionChart(canvasId, reviews) {
   const chartWidth = cssWidth - padding.left - padding.right;
   const chartHeight = cssHeight - padding.top - padding.bottom;
 
-  const maxCount = Math.max(...ranges.map(range => range.count));
+  const maxCount = Math.max(...ranges.map((range) => range.count));
   const barGap = 4;
   const barHeight = Math.min(16, (chartHeight - barGap * (ranges.length - 1)) / ranges.length);
   const totalHeight = ranges.length * barHeight + (ranges.length - 1) * barGap;

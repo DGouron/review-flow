@@ -1,69 +1,72 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createMcpDependencies } from "../../../main/mcpDependencies.js";
-import { ReviewContextFileSystemGateway } from "@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import * as os from "node:os";
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 
-describe("createMcpDependencies", () => {
-	let tempDir: string;
-	let reviewContextGateway: ReviewContextFileSystemGateway;
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-	beforeEach(() => {
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-deps-test-"));
-		reviewContextGateway = new ReviewContextFileSystemGateway();
-	});
+import { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
 
-	it("should create all required MCP dependencies", () => {
-		const deps = createMcpDependencies({ reviewContextGateway });
+import { createMcpDependencies } from '../../../main/mcpDependencies.js';
 
-		expect(deps.progressGateway).toBeDefined();
-		expect(deps.jobContextGateway).toBeDefined();
-		expect(deps.reviewContextGateway).toBe(reviewContextGateway);
-	});
+describe('createMcpDependencies', () => {
+  let tempDir: string;
+  let reviewContextGateway: ReviewContextFileSystemGateway;
 
-	it("should configure progressGateway with onProgressChange callback", () => {
-		const onProgressChange = vi.fn();
-		const deps = createMcpDependencies({
-			reviewContextGateway,
-			onProgressChange,
-		});
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-deps-test-'));
+    reviewContextGateway = new ReviewContextFileSystemGateway();
+  });
 
-		deps.progressGateway.createProgress("job-1", ["ddd"]);
-		deps.progressGateway.startAgent("job-1", "ddd");
+  it('should create all required MCP dependencies', () => {
+    const deps = createMcpDependencies({ reviewContextGateway });
 
-		expect(onProgressChange).toHaveBeenCalledWith("job-1", expect.any(Object));
-	});
+    expect(deps.progressGateway).toBeDefined();
+    expect(deps.jobContextGateway).toBeDefined();
+    expect(deps.reviewContextGateway).toBe(reviewContextGateway);
+  });
 
-	it("should sync progress to reviewContext when onProgressChange and job context exists", () => {
-		const deps = createMcpDependencies({ reviewContextGateway });
-		const jobId = "gitlab:project:123";
-		const mergeRequestId = "gitlab-project-123";
+  it('should configure progressGateway with onProgressChange callback', () => {
+    const onProgressChange = vi.fn();
+    const deps = createMcpDependencies({
+      reviewContextGateway,
+      onProgressChange,
+    });
 
-		reviewContextGateway.create({
-			localPath: tempDir,
-			mergeRequestId,
-			platform: "gitlab",
-			projectPath: "project",
-			mergeRequestNumber: 123,
-			threads: [],
-		});
+    deps.progressGateway.createProgress('job-1', ['ddd']);
+    deps.progressGateway.startAgent('job-1', 'ddd');
 
-		deps.jobContextGateway.register(jobId, { localPath: tempDir, mergeRequestId });
-		deps.progressGateway.createProgress(jobId, ["ddd"]);
-		deps.progressGateway.startAgent(jobId, "ddd");
+    expect(onProgressChange).toHaveBeenCalledWith('job-1', expect.any(Object));
+  });
 
-		const context = reviewContextGateway.read(tempDir, mergeRequestId);
-		expect(context?.progress.currentStep).toBe("ddd");
-	});
+  it('should sync progress to reviewContext when onProgressChange and job context exists', () => {
+    const deps = createMcpDependencies({ reviewContextGateway });
+    const jobId = 'gitlab:project:123';
+    const mergeRequestId = 'gitlab-project-123';
 
-	it("should return handler factories that work with the dependencies", () => {
-		const deps = createMcpDependencies({ reviewContextGateway });
+    reviewContextGateway.create({
+      localPath: tempDir,
+      mergeRequestId,
+      platform: 'gitlab',
+      projectPath: 'project',
+      mergeRequestNumber: 123,
+      threads: [],
+    });
 
-		deps.progressGateway.createProgress("job-1", ["agent-1"]);
-		const progress = deps.progressGateway.getProgress("job-1");
+    deps.jobContextGateway.register(jobId, { localPath: tempDir, mergeRequestId });
+    deps.progressGateway.createProgress(jobId, ['ddd']);
+    deps.progressGateway.startAgent(jobId, 'ddd');
 
-		expect(progress).toBeDefined();
-		expect(progress?.agents).toHaveLength(1);
-	});
+    const context = reviewContextGateway.read(tempDir, mergeRequestId);
+    expect(context?.progress.currentStep).toBe('ddd');
+  });
+
+  it('should return handler factories that work with the dependencies', () => {
+    const deps = createMcpDependencies({ reviewContextGateway });
+
+    deps.progressGateway.createProgress('job-1', ['agent-1']);
+    const progress = deps.progressGateway.getProgress('job-1');
+
+    expect(progress).toBeDefined();
+    expect(progress?.agents).toHaveLength(1);
+  });
 });

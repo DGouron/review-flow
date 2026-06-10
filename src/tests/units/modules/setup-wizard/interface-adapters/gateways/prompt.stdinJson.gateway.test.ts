@@ -1,14 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { PromptStdinJsonGateway } from '@/modules/setup-wizard/interface-adapters/gateways/prompt.stdinJson.gateway.js';
-import { AwaitingInputClosedError, NonInteractiveInputError } from '@/modules/setup-wizard/entities/promptInputError/promptInputError.js';
-import { StubLineReader } from '@/tests/stubs/setup-wizard/lineReader.stub.js';
-import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
-import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
-import type { WizardEventEmitter } from '@/modules/setup-wizard/services/wizardEventEmitter.js';
+
+import {
+  AwaitingInputClosedError,
+  NonInteractiveInputError,
+} from '@/modules/setup-wizard/entities/promptInputError/promptInputError.js';
 import type {
   PromptKind,
   PromptOption,
 } from '@/modules/setup-wizard/entities/promptOption/promptOption.schema.js';
+import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
+import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
+import { PromptStdinJsonGateway } from '@/modules/setup-wizard/interface-adapters/gateways/prompt.stdinJson.gateway.js';
+import type { WizardEventEmitter } from '@/modules/setup-wizard/services/wizardEventEmitter.js';
+import { StubLineReader } from '@/tests/stubs/setup-wizard/lineReader.stub.js';
 
 interface AwaitingEvent {
   stepId: StepId;
@@ -48,7 +52,10 @@ interface BuildOptions {
   stepId?: StepId;
 }
 
-function build(options: BuildOptions): { gateway: PromptStdinJsonGateway; emitter: RecordingEmitter } {
+function build(options: BuildOptions): {
+  gateway: PromptStdinJsonGateway;
+  emitter: RecordingEmitter;
+} {
   const emitter = options.emitter ?? new RecordingEmitter();
   const gateway = new PromptStdinJsonGateway({
     lineReader: new StubLineReader(options.lines),
@@ -105,13 +112,17 @@ describe('PromptStdinJsonGateway', () => {
     it('throws AwaitingInputClosedError when the stream closes before an answer', async () => {
       const { gateway } = build({ lines: [] });
 
-      await expect(gateway.askText('Project path?')).rejects.toBeInstanceOf(AwaitingInputClosedError);
+      await expect(gateway.askText('Project path?')).rejects.toBeInstanceOf(
+        AwaitingInputClosedError,
+      );
     });
 
     it('throws NonInteractiveInputError when constructed for non-interactive mode', async () => {
       const { gateway } = build({ lines: ['/home/u/api'], nonInteractive: true });
 
-      await expect(gateway.askText('Project path?')).rejects.toBeInstanceOf(NonInteractiveInputError);
+      await expect(gateway.askText('Project path?')).rejects.toBeInstanceOf(
+        NonInteractiveInputError,
+      );
     });
   });
 

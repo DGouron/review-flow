@@ -1,8 +1,8 @@
+import type { SupervisorHealthGateway } from '@/modules/claude-invocation/entities/supervisorHealth/supervisorHealth.gateway.js';
 import type {
   SupervisorHealth,
   SupervisorHealthStatus,
 } from '@/modules/claude-invocation/entities/supervisorHealth/supervisorHealth.schema.js';
-import type { SupervisorHealthGateway } from '@/modules/claude-invocation/entities/supervisorHealth/supervisorHealth.gateway.js';
 
 export class StubSupervisorHealthGateway implements SupervisorHealthGateway {
   private state: SupervisorHealth = {

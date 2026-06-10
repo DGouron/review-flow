@@ -1,7 +1,7 @@
-import type { UseCase } from '@/shared/foundation/usecase.base.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
 import type { ThreadFetchGateway } from '@/modules/platform-integration/entities/threadFetch/threadFetch.gateway.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
 interface SyncThreadsInput {
   projectPath: string;
@@ -28,8 +28,11 @@ export class SyncThreadsUseCase implements UseCase<SyncThreadsInput, TrackedMr |
     this.trackingGateway.update(input.projectPath, input.mrId, {
       openThreads: open,
       totalThreads: total,
-      ...(hasOpenThreads ? { state: 'pending-fix' } :
-          wasPendingFix ? { state: 'pending-approval' } : {}),
+      ...(hasOpenThreads
+        ? { state: 'pending-fix' }
+        : wasPendingFix
+          ? { state: 'pending-approval' }
+          : {}),
     });
 
     return this.trackingGateway.getById(input.projectPath, input.mrId) ?? null;

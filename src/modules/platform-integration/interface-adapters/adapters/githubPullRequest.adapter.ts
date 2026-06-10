@@ -1,5 +1,9 @@
+import type {
+  ReviewRequest,
+  ReviewRequestState,
+} from '@/modules/review-execution/entities/reviewRequest/reviewRequest.entity.js';
+
 import type { GitHubPullRequestEvent } from '../controllers/webhook/eventFilter.js';
-import type { ReviewRequest, ReviewRequestState } from '@/modules/review-execution/entities/reviewRequest/reviewRequest.entity.js';
 
 function mapGitHubState(state: string, merged?: boolean): ReviewRequestState {
   if (merged) return 'merged';
@@ -21,7 +25,8 @@ export class GitHubPullRequestAdapter {
       state: mapGitHubState(pullRequest.state),
       isDraft: pullRequest.draft,
       author: event.sender.login,
-      assignedReviewer: event.requested_reviewer?.login ?? pullRequest.requested_reviewers?.[0]?.login,
+      assignedReviewer:
+        event.requested_reviewer?.login ?? pullRequest.requested_reviewers?.[0]?.login,
       webUrl: pullRequest.html_url,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

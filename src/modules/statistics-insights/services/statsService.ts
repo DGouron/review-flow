@@ -1,7 +1,11 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import type { ReviewStats, ProjectStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
+
 import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
+import type {
+  ReviewStats,
+  ProjectStats,
+} from '@/modules/statistics-insights/entities/stats/projectStats.js';
 
 export type { ReviewStats, ProjectStats };
 
@@ -19,9 +23,12 @@ function hasProperty<K extends string>(object: object, key: K): object is Record
 function isProjectStatsShape(value: unknown): value is ProjectStats {
   if (typeof value !== 'object' || value === null) return false;
   return (
-    hasProperty(value, 'totalReviews') && typeof value.totalReviews === 'number' &&
-    hasProperty(value, 'totalDuration') && typeof value.totalDuration === 'number' &&
-    hasProperty(value, 'lastUpdated') && typeof value.lastUpdated === 'string'
+    hasProperty(value, 'totalReviews') &&
+    typeof value.totalReviews === 'number' &&
+    hasProperty(value, 'totalDuration') &&
+    typeof value.totalDuration === 'number' &&
+    hasProperty(value, 'lastUpdated') &&
+    typeof value.lastUpdated === 'string'
   );
 }
 
@@ -149,7 +156,9 @@ export function parseReviewOutput(stdout: string): {
     warnings = Number.parseInt(warningsSummary[1], 10);
   }
 
-  const suggestionsSummary = stdout.match(/(?:📝|💡)\s*(?:Améliorations?|Suggestions?)[^:]*:\s*(\d+)/i);
+  const suggestionsSummary = stdout.match(
+    /(?:📝|💡)\s*(?:Améliorations?|Suggestions?)[^:]*:\s*(\d+)/i,
+  );
   if (suggestionsSummary) {
     suggestions = Number.parseInt(suggestionsSummary[1], 10);
   }
@@ -211,7 +220,7 @@ export function addReviewStats(
   duration: number,
   stdout: string,
   assignedBy?: string,
-  diffStats?: DiffStats | null
+  diffStats?: DiffStats | null,
 ): ReviewStats {
   const stats = loadProjectStats(projectPath);
   const parsed = parseReviewOutput(stdout);
@@ -327,7 +336,8 @@ export function getStatsSummary(stats: ProjectStats): {
 
     const avgBlockingRecent = recent.reduce((s, r) => s + r.blocking, 0) / recent.length;
     const avgBlockingPrev = previous.reduce((s, r) => s + r.blocking, 0) / previous.length;
-    if (avgBlockingRecent < avgBlockingPrev - 0.5) blockingTrend = 'up'; // fewer blocking = good = up
+    if (avgBlockingRecent < avgBlockingPrev - 0.5)
+      blockingTrend = 'up'; // fewer blocking = good = up
     else if (avgBlockingRecent > avgBlockingPrev + 0.5) blockingTrend = 'down';
   }
 

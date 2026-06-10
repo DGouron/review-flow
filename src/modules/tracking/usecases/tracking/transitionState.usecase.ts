@@ -1,8 +1,8 @@
-import type { UseCase } from '@/shared/foundation/usecase.base.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
-import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
-import type { QualityGateResult } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
 import type { ReviewRequestStateValue } from '@/modules/review-execution/entities/reviewRequest/reviewRequestState.valueObject.js';
+import type { QualityGateResult } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
+import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
 interface TransitionStateInput {
   projectPath: string;
@@ -23,7 +23,10 @@ const TIMESTAMP_BY_STATE: Partial<Record<TransitionStateInput['targetState'], ke
   merged: 'mergedAt',
 };
 
-export class TransitionStateUseCase implements UseCase<TransitionStateInput, TransitionStateResult> {
+export class TransitionStateUseCase implements UseCase<
+  TransitionStateInput,
+  TransitionStateResult
+> {
   constructor(private readonly trackingGateway: ReviewRequestTrackingGateway) {}
 
   execute(input: TransitionStateInput): TransitionStateResult {

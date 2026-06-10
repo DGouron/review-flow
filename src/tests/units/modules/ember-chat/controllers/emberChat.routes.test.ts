@@ -1,12 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { emberChatRoutes } from '@/modules/ember-chat/interface-adapters/controllers/http/emberChat.routes.js';
+import { EmberMemoryTurnFactory } from '@/tests/factories/emberMemory.factory.js';
 import { StubEmberAnswerTransportGateway } from '@/tests/stubs/emberAnswerTransport.stub.js';
+import { StubEmberMemoryGateway } from '@/tests/stubs/emberMemory.stub.js';
 import { StubEmberReadDataGateway } from '@/tests/stubs/emberReadData.stub.js';
 import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
-import { StubEmberMemoryGateway } from '@/tests/stubs/emberMemory.stub.js';
-import { EmberMemoryTurnFactory } from '@/tests/factories/emberMemory.factory.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 
 const PROJECT_PATH = '/projects/alpha';

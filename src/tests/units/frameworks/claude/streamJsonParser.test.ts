@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { StreamJsonParser } from '@/frameworks/claude/streamJsonParser.js';
 
 // SPEC-169 (FR-8): the parser is now a no-op stub. These tests pin its
@@ -13,7 +14,9 @@ describe('StreamJsonParser (SPEC-169 no-op stub)', () => {
 
   it('returns null usage regardless of feed input', () => {
     const parser = new StreamJsonParser();
-    parser.feed('{"type":"result","total_cost_usd":1,"usage":{"input_tokens":1,"output_tokens":1,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}\n');
+    parser.feed(
+      '{"type":"result","total_cost_usd":1,"usage":{"input_tokens":1,"output_tokens":1,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}\n',
+    );
     expect(parser.getUsage()).toBeNull();
   });
 

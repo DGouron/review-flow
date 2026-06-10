@@ -1,8 +1,6 @@
 import type { Config, RepositoryConfig } from '../../config/loader.js';
 
-export function createTestRepository(
-  overrides?: Partial<RepositoryConfig>
-): RepositoryConfig {
+export function createTestRepository(overrides?: Partial<RepositoryConfig>): RepositoryConfig {
   return {
     name: 'test-repo',
     platform: 'gitlab',

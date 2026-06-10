@@ -1,81 +1,82 @@
-import { describe, it, expect } from "vitest";
-import { ReviewProgressMemoryGateway } from "@/modules/review-execution/interface-adapters/gateways/reviewProgress.memory.gateway.js";
-import { completeAgent } from "@/modules/review-execution/usecases/mcp/completeAgent.usecase.js";
+import { describe, it, expect } from 'vitest';
 
-describe("completeAgent usecase", () => {
-	it("should complete a running agent with success status", () => {
-		const gateway = new ReviewProgressMemoryGateway();
-		gateway.createProgress("job-1", ["ddd", "solid"]);
-		gateway.startAgent("job-1", "ddd");
+import { ReviewProgressMemoryGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewProgress.memory.gateway.js';
+import { completeAgent } from '@/modules/review-execution/usecases/mcp/completeAgent.usecase.js';
 
-		const result = completeAgent("job-1", "ddd", "success", undefined, {
-			progressGateway: gateway,
-		});
+describe('completeAgent usecase', () => {
+  it('should complete a running agent with success status', () => {
+    const gateway = new ReviewProgressMemoryGateway();
+    gateway.createProgress('job-1', ['ddd', 'solid']);
+    gateway.startAgent('job-1', 'ddd');
 
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.agentName).toBe("ddd");
-			expect(result.status).toBe("completed");
-			expect(result.completedAt).toBeInstanceOf(Date);
-		}
-	});
+    const result = completeAgent('job-1', 'ddd', 'success', undefined, {
+      progressGateway: gateway,
+    });
 
-	it("should complete a running agent with failed status and error message", () => {
-		const gateway = new ReviewProgressMemoryGateway();
-		gateway.createProgress("job-1", ["testing"]);
-		gateway.startAgent("job-1", "testing");
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.agentName).toBe('ddd');
+      expect(result.status).toBe('completed');
+      expect(result.completedAt).toBeInstanceOf(Date);
+    }
+  });
 
-		const result = completeAgent("job-1", "testing", "failed", "No test files found", {
-			progressGateway: gateway,
-		});
+  it('should complete a running agent with failed status and error message', () => {
+    const gateway = new ReviewProgressMemoryGateway();
+    gateway.createProgress('job-1', ['testing']);
+    gateway.startAgent('job-1', 'testing');
 
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.agentName).toBe("testing");
-			expect(result.status).toBe("failed");
-			expect(result.error).toBe("No test files found");
-		}
-	});
+    const result = completeAgent('job-1', 'testing', 'failed', 'No test files found', {
+      progressGateway: gateway,
+    });
 
-	it("should return error when agent does not exist", () => {
-		const gateway = new ReviewProgressMemoryGateway();
-		gateway.createProgress("job-1", ["ddd"]);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.agentName).toBe('testing');
+      expect(result.status).toBe('failed');
+      expect(result.error).toBe('No test files found');
+    }
+  });
 
-		const result = completeAgent("job-1", "unknown", "success", undefined, {
-			progressGateway: gateway,
-		});
+  it('should return error when agent does not exist', () => {
+    const gateway = new ReviewProgressMemoryGateway();
+    gateway.createProgress('job-1', ['ddd']);
 
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error).toBe("Agent not found: unknown");
-		}
-	});
+    const result = completeAgent('job-1', 'unknown', 'success', undefined, {
+      progressGateway: gateway,
+    });
 
-	it("should return error when job does not exist", () => {
-		const gateway = new ReviewProgressMemoryGateway();
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBe('Agent not found: unknown');
+    }
+  });
 
-		const result = completeAgent("unknown-job", "ddd", "success", undefined, {
-			progressGateway: gateway,
-		});
+  it('should return error when job does not exist', () => {
+    const gateway = new ReviewProgressMemoryGateway();
 
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error).toContain("not found");
-		}
-	});
+    const result = completeAgent('unknown-job', 'ddd', 'success', undefined, {
+      progressGateway: gateway,
+    });
 
-	it("should return updated overallProgress", () => {
-		const gateway = new ReviewProgressMemoryGateway();
-		gateway.createProgress("job-1", ["ddd", "solid"]);
-		gateway.startAgent("job-1", "ddd");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain('not found');
+    }
+  });
 
-		const result = completeAgent("job-1", "ddd", "success", undefined, {
-			progressGateway: gateway,
-		});
+  it('should return updated overallProgress', () => {
+    const gateway = new ReviewProgressMemoryGateway();
+    gateway.createProgress('job-1', ['ddd', 'solid']);
+    gateway.startAgent('job-1', 'ddd');
 
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.overallProgress).toBeGreaterThan(0);
-		}
-	});
+    const result = completeAgent('job-1', 'ddd', 'success', undefined, {
+      progressGateway: gateway,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.overallProgress).toBeGreaterThan(0);
+    }
+  });
 });

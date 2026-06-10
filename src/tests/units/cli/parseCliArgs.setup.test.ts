@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { parseCliArgs, type CliArgs } from '@/cli/parseCliArgs.js';
 
 type SetupArgs = CliArgs & { command: 'setup' };

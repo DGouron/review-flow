@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { GitRemoteCliGateway } from '@/modules/setup-wizard/interface-adapters/gateways/gitRemote.cli.gateway.js';
 
 describe('GitRemoteCliGateway.detectPlatform', () => {

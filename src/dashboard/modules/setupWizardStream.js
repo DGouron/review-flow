@@ -120,9 +120,11 @@ export function connectSetupWizardStream(options) {
 
   /** @type {Array<Record<string, unknown>>} */
   let events = [];
-  const source = new EventSourceCtor(`/api/setup/events?runId=${encodeURIComponent(options.runId)}`);
+  const source = new EventSourceCtor(
+    `/api/setup/events?runId=${encodeURIComponent(options.runId)}`,
+  );
 
-  source.onmessage = (message) => {
+  source.addEventListener('message', (message) => {
     const event = parseStreamMessage(message.data);
     if (event === null) {
       return;
@@ -136,7 +138,7 @@ export function connectSetupWizardStream(options) {
       source.close();
       options.onComplete();
     }
-  };
+  });
 
   source.addEventListener('end', () => {
     source.close();
@@ -145,12 +147,12 @@ export function connectSetupWizardStream(options) {
     }
   });
 
-  source.onerror = () => {
+  source.addEventListener('error', () => {
     source.close();
     if (shouldStartPolling({ disconnected: true, complete: isRunComplete(events) })) {
       options.onDisconnected();
     }
-  };
+  });
 
   return {
     close: () => source.close(),

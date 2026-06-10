@@ -42,11 +42,7 @@ export function markCleaned(session: ClaudeSession): ClaudeSession {
   return { ...session, status: 'cleaned' };
 }
 
-export function isExpired(
-  session: ClaudeSession,
-  now: Date,
-  timeoutMs: number,
-): boolean {
+export function isExpired(session: ClaudeSession, now: Date, timeoutMs: number): boolean {
   const elapsed = now.getTime() - session.dispatchedAt.getTime();
   return elapsed >= timeoutMs;
 }

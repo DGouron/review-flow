@@ -1,6 +1,14 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, unlinkSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+  unlinkSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+
 import type { PendingReviewRequestGateway } from '@/modules/review-execution/entities/pendingReviewRequest/pendingReviewRequest.gateway.js';
 import { pendingReviewRequestGuard } from '@/modules/review-execution/entities/pendingReviewRequest/pendingReviewRequest.guard.js';
 import type { PendingReviewRequest } from '@/modules/review-execution/entities/pendingReviewRequest/pendingReviewRequest.schema.js';
@@ -33,7 +41,10 @@ export class PendingReviewRequestFileSystemGateway implements PendingReviewReque
 
   async save(pending: PendingReviewRequest): Promise<void> {
     this.ensureRootDir();
-    writeFileSync(this.filePath(pending.pendingReviewRequestId), `${JSON.stringify(pending, null, 2)}\n`);
+    writeFileSync(
+      this.filePath(pending.pendingReviewRequestId),
+      `${JSON.stringify(pending, null, 2)}\n`,
+    );
   }
 
   async load(pendingReviewRequestId: string): Promise<PendingReviewRequest | null> {

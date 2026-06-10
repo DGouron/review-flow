@@ -1,4 +1,4 @@
-import { resolveProvenance } from '@/modules/review-execution/entities/actionProvenance/actionProvenance.js'
+import { resolveProvenance } from '@/modules/review-execution/entities/actionProvenance/actionProvenance.js';
 
 describe('resolveProvenance (AC-1 fail-closed provenance)', () => {
   const nonCanonical: unknown[] = [
@@ -14,15 +14,15 @@ describe('resolveProvenance (AC-1 fail-closed provenance)', () => {
     {},
     0,
     true,
-  ]
+  ];
 
   for (const input of nonCanonical) {
     it(`resolves non-canonical input ${JSON.stringify(input)} to untrusted`, () => {
-      expect(resolveProvenance(input)).toBe('untrusted')
-    })
+      expect(resolveProvenance(input)).toBe('untrusted');
+    });
   }
 
   it('resolves the exact canonical token "trusted" to trusted', () => {
-    expect(resolveProvenance('trusted')).toBe('trusted')
-  })
-})
+    expect(resolveProvenance('trusted')).toBe('trusted');
+  });
+});

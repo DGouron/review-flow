@@ -1,9 +1,9 @@
-import type { UseCase } from '@/shared/foundation/usecase.base.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
-import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
-import type { ReviewEvent } from '@/modules/tracking/entities/tracking/reviewEvent.js';
 import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
+import type { ReviewEvent } from '@/modules/tracking/entities/tracking/reviewEvent.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
+import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
 interface RecordReviewCompletionInput {
   projectPath: string;
@@ -22,7 +22,10 @@ interface RecordReviewCompletionInput {
   qualityThreshold?: number | null;
 }
 
-export class RecordReviewCompletionUseCase implements UseCase<RecordReviewCompletionInput, TrackedMr | null> {
+export class RecordReviewCompletionUseCase implements UseCase<
+  RecordReviewCompletionInput,
+  TrackedMr | null
+> {
   constructor(private readonly trackingGateway: ReviewRequestTrackingGateway) {}
 
   execute(input: RecordReviewCompletionInput): TrackedMr | null {

@@ -1,9 +1,9 @@
-import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
-import type { StepOutcomeStatus } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
 import type {
   PromptKind,
   PromptOption,
 } from '@/modules/setup-wizard/entities/promptOption/promptOption.schema.js';
+import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
+import type { StepOutcomeStatus } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
 
 interface StepStartedOverrides {
   step?: StepId;

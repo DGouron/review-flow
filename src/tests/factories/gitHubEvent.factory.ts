@@ -1,14 +1,14 @@
-import type { GitHubPullRequestEvent } from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js'
+import type { GitHubPullRequestEvent } from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
 
 type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P]
-}
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
 
 function deepMerge<T extends object>(target: T, source: DeepPartial<T>): T {
-  const result = { ...target }
+  const result = { ...target };
   for (const key in source) {
-    const sourceValue = source[key]
-    const targetValue = target[key]
+    const sourceValue = source[key];
+    const targetValue = target[key];
     if (
       sourceValue !== undefined &&
       typeof sourceValue === 'object' &&
@@ -18,17 +18,17 @@ function deepMerge<T extends object>(target: T, source: DeepPartial<T>): T {
       targetValue !== null &&
       !Array.isArray(targetValue)
     ) {
-      result[key] = deepMerge(targetValue, sourceValue as DeepPartial<typeof targetValue>)
+      result[key] = deepMerge(targetValue, sourceValue as DeepPartial<typeof targetValue>);
     } else if (sourceValue !== undefined) {
-      result[key] = sourceValue as T[typeof key]
+      result[key] = sourceValue as T[typeof key];
     }
   }
-  return result
+  return result;
 }
 
 export class GitHubEventFactory {
   static createPullRequestEvent(
-    overrides?: DeepPartial<GitHubPullRequestEvent>
+    overrides?: DeepPartial<GitHubPullRequestEvent>,
   ): GitHubPullRequestEvent {
     const base: GitHubPullRequestEvent = {
       action: 'opened',
@@ -57,9 +57,9 @@ export class GitHubEventFactory {
       sender: {
         login: 'developer',
       },
-    }
+    };
 
-    return overrides ? deepMerge(base, overrides) : base
+    return overrides ? deepMerge(base, overrides) : base;
   }
 
   static createReviewRequestedPr(reviewerLogin: string): GitHubPullRequestEvent {
@@ -71,7 +71,7 @@ export class GitHubEventFactory {
       pull_request: {
         requested_reviewers: [{ login: reviewerLogin }],
       },
-    })
+    });
   }
 
   static createDraftPr(): GitHubPullRequestEvent {
@@ -79,7 +79,7 @@ export class GitHubEventFactory {
       pull_request: {
         draft: true,
       },
-    })
+    });
   }
 
   static createClosedPr(): GitHubPullRequestEvent {
@@ -88,7 +88,7 @@ export class GitHubEventFactory {
       pull_request: {
         state: 'closed',
       },
-    })
+    });
   }
 
   static createMergedPr(): GitHubPullRequestEvent {
@@ -97,13 +97,13 @@ export class GitHubEventFactory {
       pull_request: {
         state: 'closed',
       },
-    })
+    });
   }
 
   static createLabeledPr(labelName: string): GitHubPullRequestEvent {
-    const event = this.createPullRequestEvent({ action: 'labeled' })
-    event.label = { name: labelName }
-    return event
+    const event = this.createPullRequestEvent({ action: 'labeled' });
+    event.label = { name: labelName };
+    return event;
   }
 
   static createSynchronizePr(): GitHubPullRequestEvent {
@@ -113,6 +113,6 @@ export class GitHubEventFactory {
         state: 'open',
         draft: false,
       },
-    })
+    });
   }
 }

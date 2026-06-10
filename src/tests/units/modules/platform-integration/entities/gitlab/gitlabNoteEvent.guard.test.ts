@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { gitLabNoteEventGuard } from '@/modules/platform-integration/entities/gitlab/gitlabNoteEvent.guard.js';
 
 function validPayload(): unknown {
@@ -37,7 +38,10 @@ describe('gitLabNoteEventGuard', () => {
   });
 
   it('rejects a payload with the wrong object_kind', () => {
-    const payload = { ...(validPayload() as Record<string, unknown>), object_kind: 'merge_request' };
+    const payload = {
+      ...(validPayload() as Record<string, unknown>),
+      object_kind: 'merge_request',
+    };
     const result = gitLabNoteEventGuard.safeParse(payload);
     expect(result.success).toBe(false);
   });

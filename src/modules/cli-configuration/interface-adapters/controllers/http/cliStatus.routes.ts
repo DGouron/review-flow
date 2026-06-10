@@ -1,5 +1,7 @@
-import type { FastifyPluginAsync } from 'fastify';
 import { spawn } from 'node:child_process';
+
+import type { FastifyPluginAsync } from 'fastify';
+
 import { logInfo, logWarn, logError } from '@/frameworks/logging/logBuffer.js';
 import { resolveClaudePath } from '@/shared/services/claudePathResolver.js';
 

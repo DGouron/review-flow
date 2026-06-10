@@ -1,7 +1,11 @@
-import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
-import type { DeveloperInsight, CategoryLevels, InsightDescription } from '@/modules/statistics-insights/entities/insight/developerInsight.js';
+import type {
+  DeveloperInsight,
+  CategoryLevels,
+  InsightDescription,
+} from '@/modules/statistics-insights/entities/insight/developerInsight.js';
 import type { InsightCategory } from '@/modules/statistics-insights/entities/insight/insightCategory.js';
 import type { InsightTrend } from '@/modules/statistics-insights/entities/insight/insightTrend.js';
+import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
 import {
   MINIMUM_REVIEWS_THRESHOLD,
   ABSOLUTE_BENCHMARKS,
@@ -15,7 +19,10 @@ import {
   computeOverallLevel,
   average,
 } from '@/modules/statistics-insights/usecases/insights/insightLevelComputation.service.js';
-import type { DeveloperMetrics as ServiceDeveloperMetrics, TeamMetrics } from '@/modules/statistics-insights/usecases/insights/insightLevelComputation.service.js';
+import type {
+  DeveloperMetrics as ServiceDeveloperMetrics,
+  TeamMetrics,
+} from '@/modules/statistics-insights/usecases/insights/insightLevelComputation.service.js';
 
 const QUALITY_SCORE_THRESHOLD = 7;
 
@@ -35,11 +42,7 @@ export function computeDeveloperInsights(reviews: ReviewStats[]): DeveloperInsig
   const insights: DeveloperInsight[] = [];
 
   for (const [developerName, developerReviews] of eligibleDevelopers) {
-    const insight = computeInsightForDeveloper(
-      developerName,
-      developerReviews,
-      teamMetrics,
-    );
+    const insight = computeInsightForDeveloper(developerName, developerReviews, teamMetrics);
     insights.push(insight);
   }
 
@@ -118,7 +121,8 @@ function generateInsightDescriptions(
   const descriptions: InsightDescription[] = [];
 
   for (const category of strengths) {
-    const isTrendBased = categoryLevels[category].level < 7 && categoryLevels[category].trend === 'improving';
+    const isTrendBased =
+      categoryLevels[category].level < 7 && categoryLevels[category].trend === 'improving';
     const description = isTrendBased
       ? generateTrendStrengthDescription(category, categoryLevels[category].trend)
       : generateStrengthDescription(category, serviceMetrics, teamMetrics, reviews);
@@ -170,7 +174,10 @@ function generateStrengthDescription(
       };
     }
     case 'responsiveness': {
-      const percent = computePercentDifference(teamMetrics.averageDuration, metrics.averageDuration);
+      const percent = computePercentDifference(
+        teamMetrics.averageDuration,
+        metrics.averageDuration,
+      );
       return {
         category: 'responsiveness',
         type: 'strength',
@@ -209,7 +216,10 @@ function generateWeaknessDescription(
 ): InsightDescription | null {
   switch (category) {
     case 'quality': {
-      const percent = computePercentDifference(metrics.averageBlocking, teamMetrics.averageBlocking);
+      const percent = computePercentDifference(
+        metrics.averageBlocking,
+        teamMetrics.averageBlocking,
+      );
       return {
         category: 'quality',
         type: 'weakness',
@@ -222,7 +232,10 @@ function generateWeaknessDescription(
       };
     }
     case 'responsiveness': {
-      const percent = computePercentDifference(metrics.averageDuration, teamMetrics.averageDuration);
+      const percent = computePercentDifference(
+        metrics.averageDuration,
+        teamMetrics.averageDuration,
+      );
       return {
         category: 'responsiveness',
         type: 'weakness',

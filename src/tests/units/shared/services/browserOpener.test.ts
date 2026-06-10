@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import { openInBrowser } from '../../../../shared/services/browserOpener.js';
 
 describe('openInBrowser', () => {
@@ -26,13 +27,19 @@ describe('openInBrowser', () => {
   it('should not throw on unsupported platform', () => {
     const execFileSync = vi.fn();
 
-    expect(() => openInBrowser('http://localhost:3000', { platform: 'freebsd', execFileSync })).not.toThrow();
+    expect(() =>
+      openInBrowser('http://localhost:3000', { platform: 'freebsd', execFileSync }),
+    ).not.toThrow();
     expect(execFileSync).not.toHaveBeenCalled();
   });
 
   it('should not throw when command fails', () => {
-    const execFileSync = vi.fn(() => { throw new Error('command not found'); });
+    const execFileSync = vi.fn(() => {
+      throw new Error('command not found');
+    });
 
-    expect(() => openInBrowser('http://localhost:3000', { platform: 'linux', execFileSync })).not.toThrow();
+    expect(() =>
+      openInBrowser('http://localhost:3000', { platform: 'linux', execFileSync }),
+    ).not.toThrow();
   });
 });

@@ -1,4 +1,7 @@
-import type { DaemonHealthProbeGateway, DaemonHealthPingResult } from '@/modules/setup-wizard/entities/daemonHealthProbe/daemonHealthProbe.gateway.js';
+import type {
+  DaemonHealthProbeGateway,
+  DaemonHealthPingResult,
+} from '@/modules/setup-wizard/entities/daemonHealthProbe/daemonHealthProbe.gateway.js';
 
 interface DaemonHealthProbeHttpGatewayDependencies {
   fetchImpl?: typeof fetch;

@@ -118,7 +118,6 @@ describe('animations module — export contracts', () => {
   });
 });
 
-
 describe('animations module — behavioral tests', () => {
   let originalWindow: unknown;
 
@@ -172,7 +171,7 @@ describe('animations module — behavioral tests', () => {
     expect(calls.length).toBeGreaterThanOrEqual(1);
     const tween = calls[0].params as { onComplete?: () => void };
     expect(typeof tween.onComplete).toBe('function');
-    tween.onComplete!();
+    tween.onComplete?.();
     expect(onCompleteFired).toBe(true);
     expect(element.textContent).toBe('5');
   });
@@ -219,7 +218,7 @@ describe('animations module — behavioral tests', () => {
     let offsetHeightReads = 0;
     const element = {
       style: { height: '', overflow: '' },
-      getBoundingClientRect: () => ({ height: 200 } as unknown),
+      getBoundingClientRect: () => ({ height: 200 }) as unknown,
       get offsetHeight() {
         offsetHeightReads += 1;
         return 0;

@@ -2,7 +2,9 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { appendFile, readdir, readFile, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+
 import type { Logger } from 'pino';
+
 import type {
   JobHistoryGateway,
   PruneJobHistoryResult,

@@ -1,7 +1,11 @@
 import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
-import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
+import {
+  skipped,
+  succeeded,
+  blocked,
+} from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
 import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
-import { skipped, succeeded, blocked } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
+import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
 
 export class ClaudeLoginStep implements SetupStep {
   readonly id = 'claude-login' as const;
@@ -18,7 +22,7 @@ export class ClaudeLoginStep implements SetupStep {
   async execute(context: WizardContext): Promise<StepOutcome> {
     if (context.flags.yes) {
       return blocked(
-        'Mode non-interactif: connectez-vous d\'abord avec claude /login',
+        "Mode non-interactif: connectez-vous d'abord avec claude /login",
         "Lancez 'claude /login' manuellement puis relancez le wizard",
       );
     }

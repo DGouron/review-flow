@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { EmberStatusPresenter } from '@/modules/ember-chat/interface-adapters/presenters/emberStatus.presenter.js';
 
 const presenter = new EmberStatusPresenter();
@@ -19,7 +20,10 @@ describe('EmberStatusPresenter', () => {
   });
 
   it('announces the answer text on a chunk-complete event', () => {
-    const viewModel = presenter.present({ kind: 'answer', text: 'Le pire score concerne la MR 42.' });
+    const viewModel = presenter.present({
+      kind: 'answer',
+      text: 'Le pire score concerne la MR 42.',
+    });
 
     expect(viewModel.liveRegionText).toBe('Le pire score concerne la MR 42.');
     expect(viewModel.avatarState).toBe('idle');

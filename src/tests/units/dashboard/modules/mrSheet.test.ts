@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { renderMrSheetContent } from '@/dashboard/modules/mrSheet.js';
 
 const translate = (key: string) => key;

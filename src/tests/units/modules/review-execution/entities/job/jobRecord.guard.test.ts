@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { jobRecordGuard } from '@/modules/review-execution/entities/job/jobRecord.guard.js';
 import { JobRecordFactory } from '@/tests/factories/jobRecord.factory.js';
 

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { getConfigDir } from '../../../../shared/services/configDir.js';
 
 describe('getConfigDir', () => {

@@ -1,13 +1,14 @@
-import { describe, it, expect, beforeEach } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { describe, it, expect, beforeEach } from 'vitest';
+
 import { budgetRoutes } from '@/modules/token-accounting/interface-adapters/controllers/http/budget.routes.js';
+import { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
+import { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
 import { GetBudgetStatusUseCase } from '@/modules/token-accounting/usecases/getBudgetStatus/getBudgetStatus.usecase.js';
 import { UpdateBudgetUseCase } from '@/modules/token-accounting/usecases/updateBudget/updateBudget.usecase.js';
-import { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
-import { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
+import { TokenUsageRecordFactory } from '@/tests/factories/tokenUsage.factory.js';
 import { StubBudgetGateway } from '@/tests/stubs/budget.stub.js';
 import { StubTokenUsageGateway } from '@/tests/stubs/tokenUsage.stub.js';
-import { TokenUsageRecordFactory } from '@/tests/factories/tokenUsage.factory.js';
 
 interface TestContext {
   app: FastifyInstance;
@@ -41,8 +42,22 @@ async function buildContext(now: Date): Promise<TestContext> {
     budgetGateway,
     presenter,
     getRepositories: () => [
-      { name: 'repo-a', platform: PLATFORM, remoteUrl: '', localPath: LOCAL_PATH_A, skill: 'review', enabled: true },
-      { name: 'repo-b', platform: PLATFORM, remoteUrl: '', localPath: LOCAL_PATH_B, skill: 'review', enabled: true },
+      {
+        name: 'repo-a',
+        platform: PLATFORM,
+        remoteUrl: '',
+        localPath: LOCAL_PATH_A,
+        skill: 'review',
+        enabled: true,
+      },
+      {
+        name: 'repo-b',
+        platform: PLATFORM,
+        remoteUrl: '',
+        localPath: LOCAL_PATH_B,
+        skill: 'review',
+        enabled: true,
+      },
     ],
     now: () => now,
   });
@@ -118,14 +133,26 @@ describe('Acceptance — Spec #163: Token Budget Cap with Live Indicator', () =>
         TokenUsageRecordFactory.create({
           recordedAt: '2026-05-10T00:00:00Z',
           localPath: LOCAL_PATH_A,
-          usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 130 },
+          usage: {
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheCreationInputTokens: 0,
+            cacheReadInputTokens: 0,
+            costUsd: 130,
+          },
         }),
       ]);
       context.tokenUsageGateway.setRecordsForPath(LOCAL_PATH_B, [
         TokenUsageRecordFactory.create({
           recordedAt: '2026-05-12T00:00:00Z',
           localPath: LOCAL_PATH_B,
-          usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 90 },
+          usage: {
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheCreationInputTokens: 0,
+            cacheReadInputTokens: 0,
+            costUsd: 90,
+          },
         }),
       ]);
     });
@@ -159,14 +186,26 @@ describe('Acceptance — Spec #163: Token Budget Cap with Live Indicator', () =>
         TokenUsageRecordFactory.create({
           recordedAt: '2026-05-10T00:00:00Z',
           localPath: LOCAL_PATH_A,
-          usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 100 },
+          usage: {
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheCreationInputTokens: 0,
+            cacheReadInputTokens: 0,
+            costUsd: 100,
+          },
         }),
       ]);
       context.tokenUsageGateway.setRecordsForPath(LOCAL_PATH_B, [
         TokenUsageRecordFactory.create({
           recordedAt: '2026-05-12T00:00:00Z',
           localPath: LOCAL_PATH_B,
-          usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 89.99 },
+          usage: {
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheCreationInputTokens: 0,
+            cacheReadInputTokens: 0,
+            costUsd: 89.99,
+          },
         }),
       ]);
     });

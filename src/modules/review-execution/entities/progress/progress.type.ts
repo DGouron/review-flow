@@ -1,6 +1,11 @@
 export type AgentStatus = 'pending' | 'running' | 'completed' | 'failed';
 
-export type ReviewPhase = 'initializing' | 'agents-running' | 'synthesizing' | 'publishing' | 'completed';
+export type ReviewPhase =
+  | 'initializing'
+  | 'agents-running'
+  | 'synthesizing'
+  | 'publishing'
+  | 'completed';
 
 export interface AgentProgress {
   name: string;
@@ -18,7 +23,11 @@ export interface ReviewProgress {
   lastUpdate: Date;
 }
 
-export type ProgressEventType = 'agent:started' | 'agent:completed' | 'agent:failed' | 'phase:changed';
+export type ProgressEventType =
+  | 'agent:started'
+  | 'agent:completed'
+  | 'agent:failed'
+  | 'phase:changed';
 
 export interface ProgressEvent {
   type: ProgressEventType;

@@ -12,9 +12,10 @@
 export function computeCardCounters(input) {
   const { activeReviews, reviewFiles, scope } = input;
 
-  const scoped = scope.kind === 'project'
-    ? activeReviews.filter((review) => matchesProjectScope(review.project, scope))
-    : activeReviews;
+  const scoped =
+    scope.kind === 'project'
+      ? activeReviews.filter((review) => matchesProjectScope(review.project, scope))
+      : activeReviews;
 
   const running = scoped.filter((review) => review.status === 'running').length;
   const queued = scoped.filter((review) => review.status === 'queued').length;

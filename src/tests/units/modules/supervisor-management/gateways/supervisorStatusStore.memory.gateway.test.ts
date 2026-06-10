@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { InMemorySupervisorStatusStore } from '@/modules/supervisor-management/interface-adapters/gateways/supervisorStatusStore.memory.gateway.js';
+
 import { createSupervisorStatus } from '@/modules/supervisor-management/entities/supervisor/supervisorStatus.schema.js';
+import { InMemorySupervisorStatusStore } from '@/modules/supervisor-management/interface-adapters/gateways/supervisorStatusStore.memory.gateway.js';
 
 describe('InMemorySupervisorStatusStore', () => {
   it('starts with state unknown and a null reason', () => {

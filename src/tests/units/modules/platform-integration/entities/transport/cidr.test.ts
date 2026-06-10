@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { isIpInCidr } from '@/modules/platform-integration/entities/transport/cidr.js';
 
 describe('isIpInCidr', () => {

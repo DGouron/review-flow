@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
 import { DismissPendingReviewUseCase } from '@/modules/review-execution/usecases/dismissPendingReview.usecase.js';
-import { StubPendingReviewRequestGateway } from '@/tests/stubs/pendingReviewRequest.stub.js';
 import { PendingReviewRequestFactory } from '@/tests/factories/pendingReviewRequest.factory.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { StubPendingReviewRequestGateway } from '@/tests/stubs/pendingReviewRequest.stub.js';
 
 describe('DismissPendingReviewUseCase', () => {
   let gateway: StubPendingReviewRequestGateway;

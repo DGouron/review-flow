@@ -1,10 +1,11 @@
 import type { Logger } from 'pino';
-import type { JobStatus } from '@/frameworks/queue/pQueueAdapter.js';
+
 import type { JobHistoryGateway } from '@/modules/review-execution/entities/job/jobHistory.gateway.js';
 import type {
   JobRecord,
   JobRecordStatus,
 } from '@/modules/review-execution/entities/job/jobRecord.schema.js';
+import type { JobStatus } from '@/modules/review-execution/entities/job/reviewJob.js';
 
 export interface PersistJobRecordDependencies {
   jobHistoryGateway: JobHistoryGateway;

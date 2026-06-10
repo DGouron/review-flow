@@ -7,25 +7,26 @@
  * Covers Scenarios 1, 2, 5, 6, 7 per docs/specs/173-dashboard-worktree-panel.md.
  */
 
-import { describe, it, expect } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { worktreeOverviewRoutes } from '@/modules/worktree-management/interface-adapters/controllers/http/worktreeOverview.routes.js';
-import { WorktreePanelPresenter } from '@/modules/worktree-management/interface-adapters/presenters/worktreePanel.presenter.js';
-import { StubWorktreeSizeProbeGateway } from '@/tests/stubs/worktreeSizeProbe.stub.js';
-import { LastSweepSummaryFactory } from '@/tests/factories/lastSweepSummary.factory.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
-import { createWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
+import { describe, it, expect } from 'vitest';
+
 import { startWorktreeSweepScheduler } from '@/frameworks/scheduler/worktreeSweepScheduler.js';
+import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import type { LastSweepSummary } from '@/modules/worktree-management/entities/sweep/lastSweepSummary.schema.js';
+import type { RunSweepNowResult } from '@/modules/worktree-management/entities/sweep/runSweepResult.js';
+import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
+import { createWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
 import type {
   EnsureResult,
   RemoveResult,
   WorktreeEntry,
   WorktreeIdentity,
 } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
-import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
-import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
-import type { LastSweepSummary } from '@/modules/worktree-management/entities/sweep/lastSweepSummary.schema.js';
-import type { RunSweepNowResult } from '@/modules/worktree-management/entities/sweep/runSweepResult.js';
+import { worktreeOverviewRoutes } from '@/modules/worktree-management/interface-adapters/controllers/http/worktreeOverview.routes.js';
+import { WorktreePanelPresenter } from '@/modules/worktree-management/interface-adapters/presenters/worktreePanel.presenter.js';
+import { LastSweepSummaryFactory } from '@/tests/factories/lastSweepSummary.factory.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { StubWorktreeSizeProbeGateway } from '@/tests/stubs/worktreeSizeProbe.stub.js';
 
 const NOW = new Date('2026-05-23T12:00:00.000Z');
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -58,10 +59,10 @@ class ConfigurableWorktreeGateway implements WorktreeGateway {
   async remove({ identity }: { identity: WorktreeIdentity }): Promise<RemoveResult> {
     this.removed.push(identity);
     this.entries = this.entries.filter(
-      e =>
-        e.identity.platform !== identity.platform
-        || e.identity.projectPath !== identity.projectPath
-        || e.identity.mrNumber !== identity.mrNumber,
+      (e) =>
+        e.identity.platform !== identity.platform ||
+        e.identity.projectPath !== identity.projectPath ||
+        e.identity.mrNumber !== identity.mrNumber,
     );
     return { status: 'removed' };
   }
@@ -98,7 +99,12 @@ async function buildAcceptanceApp(options: BuildAppOptions): Promise<FastifyInst
   let lastSweep = options.lastSweep ?? null;
   const nextSweepAt = options.nextSweepAt ?? NOW;
   const defaultRunSweep = async (): Promise<RunSweepNowResult> => {
-    const summary = LastSweepSummaryFactory.create({ ranAt: NOW, removed: 4, failures: 0, scanned: 4 });
+    const summary = LastSweepSummaryFactory.create({
+      ranAt: NOW,
+      removed: 4,
+      failures: 0,
+      scanned: 4,
+    });
     lastSweep = summary;
     return { status: 'ok', summary };
   };
@@ -120,9 +126,21 @@ async function buildAcceptanceApp(options: BuildAppOptions): Promise<FastifyInst
 describe('Acceptance — SPEC-173: Dashboard Worktree Panel', () => {
   describe('Scenario 1 — list worktrees with active + idle + stale', () => {
     it('returns 3 rows with statuses [active, idle, stale]', async () => {
-      const activeIdentity: WorktreeIdentity = { platform: 'gitlab', projectPath: 'group/a', mrNumber: 1 };
-      const idleIdentity: WorktreeIdentity = { platform: 'gitlab', projectPath: 'group/b', mrNumber: 2 };
-      const staleIdentity: WorktreeIdentity = { platform: 'gitlab', projectPath: 'group/c', mrNumber: 3 };
+      const activeIdentity: WorktreeIdentity = {
+        platform: 'gitlab',
+        projectPath: 'group/a',
+        mrNumber: 1,
+      };
+      const idleIdentity: WorktreeIdentity = {
+        platform: 'gitlab',
+        projectPath: 'group/b',
+        mrNumber: 2,
+      };
+      const staleIdentity: WorktreeIdentity = {
+        platform: 'gitlab',
+        projectPath: 'group/c',
+        mrNumber: 3,
+      };
       const activePath = '/tmp/worktrees/gitlab-group-a-1';
       const idlePath = '/tmp/worktrees/gitlab-group-b-2';
       const stalePath = '/tmp/worktrees/gitlab-group-c-3';
@@ -146,7 +164,7 @@ describe('Acceptance — SPEC-173: Dashboard Worktree Panel', () => {
       };
       expect(body.totalCount).toBe(3);
       expect(body.totalSizeBytes).toBe(600);
-      const statuses = body.groups.flatMap(g => g.worktrees.map(w => w.status));
+      const statuses = body.groups.flatMap((g) => g.worktrees.map((w) => w.status));
       expect(statuses).toContain('active');
       expect(statuses).toContain('idle');
       expect(statuses).toContain('stale');

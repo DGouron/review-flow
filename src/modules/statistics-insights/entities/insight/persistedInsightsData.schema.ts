@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { aiInsightsResultSchema } from '@/modules/statistics-insights/entities/insight/aiInsight.schema.js';
 
 const reviewStatsForPersistenceSchema = z.object({
@@ -11,11 +12,14 @@ const reviewStatsForPersistenceSchema = z.object({
   warnings: z.number(),
   suggestions: z.number().optional(),
   assignedBy: z.string().optional(),
-  diffStats: z.object({
-    commitsCount: z.number(),
-    additions: z.number(),
-    deletions: z.number(),
-  }).nullable().optional(),
+  diffStats: z
+    .object({
+      commitsCount: z.number(),
+      additions: z.number(),
+      deletions: z.number(),
+    })
+    .nullable()
+    .optional(),
 });
 
 export const persistedDeveloperMetricsSchema = z.object({

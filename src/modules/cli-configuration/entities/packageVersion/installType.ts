@@ -1,1 +1,1 @@
-export type InstallType = 'global-npm' | 'source-checkout'
+export type InstallType = 'global-npm' | 'source-checkout';

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
+
 import type { BudgetStatus } from '@/modules/token-accounting/entities/budget/budgetStatus.js';
+import { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
 
 function makeStatus(overrides: Partial<BudgetStatus> = {}): BudgetStatus {
   return {

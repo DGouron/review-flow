@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ServerConfigFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/serverConfig.fileSystem.gateway.js';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import type { ServerConfigEntry } from '@/modules/setup-wizard/entities/serverConfig/serverConfig.gateway.js';
+import { ServerConfigFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/serverConfig.fileSystem.gateway.js';
 
 const makeEntry = (overrides: Partial<ServerConfigEntry> = {}): ServerConfigEntry => ({
   name: 'main-app',
@@ -52,7 +54,9 @@ describe('ServerConfigFileSystemGateway (integration with real filesystem)', () 
       const path = join(baseDir, 'valid.json');
       writeFileSync(
         path,
-        JSON.stringify({ repositories: [{ name: 'main-app', localPath: '/repos/main-app', enabled: true }] }),
+        JSON.stringify({
+          repositories: [{ name: 'main-app', localPath: '/repos/main-app', enabled: true }],
+        }),
       );
       const gateway = new ServerConfigFileSystemGateway({ configPath: path });
 

@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { PendingReviewRequestFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/pendingReviewRequest.fileSystem.gateway.js';
 import { PendingReviewRequestFactory } from '@/tests/factories/pendingReviewRequest.factory.js';
 
@@ -42,7 +44,7 @@ describe('PendingReviewRequestFileSystemGateway', () => {
     const result = await gateway.listAll();
 
     expect(result).toHaveLength(2);
-    expect(result.map((entry) => entry.pendingReviewRequestId).sort()).toEqual([
+    expect(result.map((entry) => entry.pendingReviewRequestId).toSorted()).toEqual([
       'pending-1',
       'pending-2',
     ]);

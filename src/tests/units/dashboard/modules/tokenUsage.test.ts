@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  formatTokenCount,
-  renderTokenUsageTile,
-} from '@/dashboard/modules/tokenUsage.js';
+
+import { formatTokenCount, renderTokenUsageTile } from '@/dashboard/modules/tokenUsage.js';
 
 const nonEmptyViewModel = {
   totalCostUsd: '$1.23',

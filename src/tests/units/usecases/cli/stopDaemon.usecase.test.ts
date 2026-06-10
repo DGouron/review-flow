@@ -1,9 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   StopDaemonUseCase,
   type StopDaemonDependencies,
   type StopDaemonInput,
 } from '@/modules/cli-configuration/usecases/cli/stopDaemon.usecase.js';
+
 import { createPidFileContent } from '../../../factories/pidFileContent.factory.js';
 
 function createFakeInput(overrides?: Partial<StopDaemonInput>): StopDaemonInput {
@@ -13,9 +15,7 @@ function createFakeInput(overrides?: Partial<StopDaemonInput>): StopDaemonInput 
   };
 }
 
-function createFakeDeps(
-  overrides?: Partial<StopDaemonDependencies>,
-): StopDaemonDependencies {
+function createFakeDeps(overrides?: Partial<StopDaemonDependencies>): StopDaemonDependencies {
   return {
     readPidFile: vi.fn(() => null),
     removePidFile: vi.fn(),

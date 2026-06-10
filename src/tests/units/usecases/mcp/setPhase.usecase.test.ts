@@ -1,79 +1,80 @@
-import { describe, it, expect } from "vitest";
-import { ReviewProgressMemoryGateway } from "@/modules/review-execution/interface-adapters/gateways/reviewProgress.memory.gateway.js";
-import { setPhase } from "@/modules/review-execution/usecases/mcp/setPhase.usecase.js";
-import { StubMcpCompletionBridge } from "@/tests/stubs/mcpCompletion.stub.js";
+import { describe, it, expect } from 'vitest';
 
-describe("setPhase usecase", () => {
-	it("should set phase to agents-running and return success", () => {
-		const gateway = new ReviewProgressMemoryGateway();
-		gateway.createProgress("job-1", ["ddd"]);
+import { ReviewProgressMemoryGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewProgress.memory.gateway.js';
+import { setPhase } from '@/modules/review-execution/usecases/mcp/setPhase.usecase.js';
+import { StubMcpCompletionBridge } from '@/tests/stubs/mcpCompletion.stub.js';
 
-		const result = setPhase("job-1", "agents-running", { progressGateway: gateway });
+describe('setPhase usecase', () => {
+  it('should set phase to agents-running and return success', () => {
+    const gateway = new ReviewProgressMemoryGateway();
+    gateway.createProgress('job-1', ['ddd']);
 
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.phase).toBe("agents-running");
-		}
-	});
+    const result = setPhase('job-1', 'agents-running', { progressGateway: gateway });
 
-	it("should set phase to completed", () => {
-		const gateway = new ReviewProgressMemoryGateway();
-		gateway.createProgress("job-1", ["ddd"]);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.phase).toBe('agents-running');
+    }
+  });
 
-		const result = setPhase("job-1", "completed", { progressGateway: gateway });
+  it('should set phase to completed', () => {
+    const gateway = new ReviewProgressMemoryGateway();
+    gateway.createProgress('job-1', ['ddd']);
 
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.phase).toBe("completed");
-		}
-	});
+    const result = setPhase('job-1', 'completed', { progressGateway: gateway });
 
-	it("should return error when job does not exist", () => {
-		const gateway = new ReviewProgressMemoryGateway();
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.phase).toBe('completed');
+    }
+  });
 
-		const result = setPhase("unknown-job", "agents-running", { progressGateway: gateway });
+  it('should return error when job does not exist', () => {
+    const gateway = new ReviewProgressMemoryGateway();
 
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error).toContain("not found");
-		}
-	});
+    const result = setPhase('unknown-job', 'agents-running', { progressGateway: gateway });
 
-	it("should return updated overallProgress", () => {
-		const gateway = new ReviewProgressMemoryGateway();
-		gateway.createProgress("job-1", ["ddd"]);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain('not found');
+    }
+  });
 
-		const result = setPhase("job-1", "completed", { progressGateway: gateway });
+  it('should return updated overallProgress', () => {
+    const gateway = new ReviewProgressMemoryGateway();
+    gateway.createProgress('job-1', ['ddd']);
 
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.overallProgress).toBeDefined();
-		}
-	});
+    const result = setPhase('job-1', 'completed', { progressGateway: gateway });
 
-	it("publishes a completion event on the MCP completion bridge when phase becomes completed", () => {
-		const gateway = new ReviewProgressMemoryGateway();
-		gateway.createProgress("job-1", ["ddd"]);
-		const bridge = new StubMcpCompletionBridge();
-		const captured: Array<{ source: string; outcome: string }> = [];
-		bridge.subscribe("job-1", completion => {
-			captured.push({ source: completion.source, outcome: completion.outcome });
-		});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.overallProgress).toBeDefined();
+    }
+  });
 
-		setPhase("job-1", "completed", { progressGateway: gateway, completionBridge: bridge });
+  it('publishes a completion event on the MCP completion bridge when phase becomes completed', () => {
+    const gateway = new ReviewProgressMemoryGateway();
+    gateway.createProgress('job-1', ['ddd']);
+    const bridge = new StubMcpCompletionBridge();
+    const captured: Array<{ source: string; outcome: string }> = [];
+    bridge.subscribe('job-1', (completion) => {
+      captured.push({ source: completion.source, outcome: completion.outcome });
+    });
 
-		expect(captured).toEqual([{ source: "mcp", outcome: "completed" }]);
-	});
+    setPhase('job-1', 'completed', { progressGateway: gateway, completionBridge: bridge });
 
-	it("does not publish on the completion bridge for non-terminal phases", () => {
-		const gateway = new ReviewProgressMemoryGateway();
-		gateway.createProgress("job-1", ["ddd"]);
-		const bridge = new StubMcpCompletionBridge();
-		const captured: string[] = [];
-		bridge.subscribe("job-1", c => captured.push(c.outcome));
+    expect(captured).toEqual([{ source: 'mcp', outcome: 'completed' }]);
+  });
 
-		setPhase("job-1", "agents-running", { progressGateway: gateway, completionBridge: bridge });
+  it('does not publish on the completion bridge for non-terminal phases', () => {
+    const gateway = new ReviewProgressMemoryGateway();
+    gateway.createProgress('job-1', ['ddd']);
+    const bridge = new StubMcpCompletionBridge();
+    const captured: string[] = [];
+    bridge.subscribe('job-1', (c) => captured.push(c.outcome));
 
-		expect(captured).toEqual([]);
-	});
+    setPhase('job-1', 'agents-running', { progressGateway: gateway, completionBridge: bridge });
+
+    expect(captured).toEqual([]);
+  });
 });

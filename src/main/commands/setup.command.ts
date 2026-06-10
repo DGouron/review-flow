@@ -1,38 +1,43 @@
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { OrchestrateSetupUseCase } from '@/modules/setup-wizard/usecases/orchestrateSetup.usecase.js';
-import { CheckDependenciesStep } from '@/modules/setup-wizard/usecases/steps/checkDependencies.step.js';
-import { ClaudeLoginStep } from '@/modules/setup-wizard/usecases/steps/claudeLogin.step.js';
-import { DaemonInstallStep } from '@/modules/setup-wizard/usecases/steps/daemonInstall.step.js';
-import { GenerateSecretsStep } from '@/modules/setup-wizard/usecases/steps/generateSecrets.step.js';
-import { AddProjectStep } from '@/modules/setup-wizard/usecases/steps/addProject.step.js';
-import { ConfigurePipelineStep } from '@/modules/setup-wizard/usecases/steps/configurePipeline.step.js';
-import { GenerateFilesStep } from '@/modules/setup-wizard/usecases/steps/generateFiles.step.js';
-import { RegisterProjectStep } from '@/modules/setup-wizard/usecases/steps/registerProject.step.js';
-import { ValidateSetupStep } from '@/modules/setup-wizard/usecases/steps/validateSetup.step.js';
-import { DisplayNextActionsStep } from '@/modules/setup-wizard/usecases/steps/displayNextActions.step.js';
-import { SetupStateFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupState.fileSystem.gateway.js';
-import { DependencyProbeCliGateway } from '@/modules/setup-wizard/interface-adapters/gateways/dependencyProbe.cli.gateway.js';
+
+import type { LineReader } from '@/modules/setup-wizard/entities/lineReader/lineReader.gateway.js';
+import type { PromptGateway } from '@/modules/setup-wizard/entities/prompt/prompt.gateway.js';
+import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
+import type {
+  WizardContext,
+  WizardGateways,
+} from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
+import { AiFallbackNoopGateway } from '@/modules/setup-wizard/interface-adapters/gateways/aiFallback.noop.gateway.js';
 import { ClaudeAuthCliGateway } from '@/modules/setup-wizard/interface-adapters/gateways/claudeAuth.cli.gateway.js';
 import { DaemonHealthProbeHttpGateway } from '@/modules/setup-wizard/interface-adapters/gateways/daemonHealthProbe.http.gateway.js';
 import { DaemonServiceSystemdGateway } from '@/modules/setup-wizard/interface-adapters/gateways/daemonService.systemd.gateway.js';
+import { DependencyProbeCliGateway } from '@/modules/setup-wizard/interface-adapters/gateways/dependencyProbe.cli.gateway.js';
 import { EnvFileFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/envFile.fileSystem.gateway.js';
 import { GitRemoteCliGateway } from '@/modules/setup-wizard/interface-adapters/gateways/gitRemote.cli.gateway.js';
-import { ProjectConfigFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/projectConfig.fileSystem.gateway.js';
-import { SkillTemplateFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/skillTemplate.fileSystem.gateway.js';
-import { ServerConfigFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/serverConfig.fileSystem.gateway.js';
-import { ValidationAdapterGateway } from '@/modules/setup-wizard/interface-adapters/gateways/validation.adapter.gateway.js';
-import { AiFallbackNoopGateway } from '@/modules/setup-wizard/interface-adapters/gateways/aiFallback.noop.gateway.js';
-import { PromptTtyGateway } from '@/modules/setup-wizard/interface-adapters/gateways/prompt.tty.gateway.js';
-import { PromptStdinJsonGateway } from '@/modules/setup-wizard/interface-adapters/gateways/prompt.stdinJson.gateway.js';
 import { NodeStdinLineReader } from '@/modules/setup-wizard/interface-adapters/gateways/lineReader.stdin.gateway.js';
+import { ProjectConfigFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/projectConfig.fileSystem.gateway.js';
+import { PromptStdinJsonGateway } from '@/modules/setup-wizard/interface-adapters/gateways/prompt.stdinJson.gateway.js';
+import { PromptTtyGateway } from '@/modules/setup-wizard/interface-adapters/gateways/prompt.tty.gateway.js';
+import { ServerConfigFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/serverConfig.fileSystem.gateway.js';
+import { SetupStateFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupState.fileSystem.gateway.js';
+import { SkillTemplateFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/skillTemplate.fileSystem.gateway.js';
+import { ValidationAdapterGateway } from '@/modules/setup-wizard/interface-adapters/gateways/validation.adapter.gateway.js';
+import { NextActionsPresenter } from '@/modules/setup-wizard/interface-adapters/presenters/nextActions.presenter.js';
 import { HumanWizardEventEmitter } from '@/modules/setup-wizard/services/humanWizardEventEmitter.js';
 import { JsonWizardEventEmitter } from '@/modules/setup-wizard/services/jsonWizardEventEmitter.js';
-import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
-import type { WizardContext, WizardGateways } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
 import type { WizardEventEmitter } from '@/modules/setup-wizard/services/wizardEventEmitter.js';
-import type { PromptGateway } from '@/modules/setup-wizard/entities/prompt/prompt.gateway.js';
-import type { LineReader } from '@/modules/setup-wizard/entities/lineReader/lineReader.gateway.js';
+import { OrchestrateSetupUseCase } from '@/modules/setup-wizard/usecases/orchestrateSetup.usecase.js';
+import { AddProjectStep } from '@/modules/setup-wizard/usecases/steps/addProject.step.js';
+import { CheckDependenciesStep } from '@/modules/setup-wizard/usecases/steps/checkDependencies.step.js';
+import { ClaudeLoginStep } from '@/modules/setup-wizard/usecases/steps/claudeLogin.step.js';
+import { ConfigurePipelineStep } from '@/modules/setup-wizard/usecases/steps/configurePipeline.step.js';
+import { DaemonInstallStep } from '@/modules/setup-wizard/usecases/steps/daemonInstall.step.js';
+import { DisplayNextActionsStep } from '@/modules/setup-wizard/usecases/steps/displayNextActions.step.js';
+import { GenerateFilesStep } from '@/modules/setup-wizard/usecases/steps/generateFiles.step.js';
+import { GenerateSecretsStep } from '@/modules/setup-wizard/usecases/steps/generateSecrets.step.js';
+import { RegisterProjectStep } from '@/modules/setup-wizard/usecases/steps/registerProject.step.js';
+import { ValidateSetupStep } from '@/modules/setup-wizard/usecases/steps/validateSetup.step.js';
 import { getConfigDir } from '@/shared/services/configDir.js';
 
 const DEFAULT_DAEMON_PORT = 3847;
@@ -129,7 +134,7 @@ export function createSetupDependencies(): SetupDependencies {
       new GenerateFilesStep(),
       new RegisterProjectStep(),
       new ValidateSetupStep(),
-      new DisplayNextActionsStep(),
+      new DisplayNextActionsStep(new NextActionsPresenter()),
     ],
     buildGateways: (_args) => {
       const healthProbe = new DaemonHealthProbeHttpGateway();
@@ -145,8 +150,12 @@ export function createSetupDependencies(): SetupDependencies {
         envFile: new EnvFileFileSystemGateway(),
         gitRemote: new GitRemoteCliGateway(),
         projectConfig: new ProjectConfigFileSystemGateway(),
-        skillTemplate: new SkillTemplateFileSystemGateway({ mcpServerPath: resolveMcpServerPath() }),
-        serverConfig: new ServerConfigFileSystemGateway({ configPath: join(configDir, 'config.json') }),
+        skillTemplate: new SkillTemplateFileSystemGateway({
+          mcpServerPath: resolveMcpServerPath(),
+        }),
+        serverConfig: new ServerConfigFileSystemGateway({
+          configPath: join(configDir, 'config.json'),
+        }),
         validation: new ValidationAdapterGateway({
           configPath: join(configDir, 'config.json'),
           envPath: join(configDir, '.env'),
@@ -164,4 +173,3 @@ export function createSetupDependencies(): SetupDependencies {
     now: () => new Date(),
   };
 }
-

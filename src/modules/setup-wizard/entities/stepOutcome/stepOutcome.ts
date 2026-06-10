@@ -18,7 +18,11 @@ export function succeeded(message?: string, evidence?: Record<string, unknown>):
   };
 }
 
-export function blocked(message: string, remediation: string, evidence?: Record<string, unknown>): StepOutcome {
+export function blocked(
+  message: string,
+  remediation: string,
+  evidence?: Record<string, unknown>,
+): StepOutcome {
   return {
     status: 'blocked',
     message,
@@ -37,7 +41,9 @@ export function warning(message: string, evidence?: Record<string, unknown>): St
 }
 
 export function isFinalSuccess(outcome: StepOutcome): boolean {
-  return outcome.status === 'succeeded' || outcome.status === 'skipped' || outcome.status === 'warning';
+  return (
+    outcome.status === 'succeeded' || outcome.status === 'skipped' || outcome.status === 'warning'
+  );
 }
 
 export function isBlocking(outcome: StepOutcome): boolean {

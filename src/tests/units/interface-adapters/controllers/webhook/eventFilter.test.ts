@@ -1,6 +1,7 @@
-import { vi } from 'vitest'
-import { GitLabEventFactory } from '../../../../factories/gitLabEvent.factory.js'
-import { GitHubEventFactory } from '../../../../factories/gitHubEvent.factory.js'
+import { vi } from 'vitest';
+
+import { GitHubEventFactory } from '../../../../factories/gitHubEvent.factory.js';
+import { GitLabEventFactory } from '../../../../factories/gitLabEvent.factory.js';
 
 vi.mock('../../../../../config/loader.js', () => ({
   loadConfig: vi.fn(() => ({
@@ -9,9 +10,9 @@ vi.mock('../../../../../config/loader.js', () => ({
       githubUsername: 'claude-reviewer',
     },
   })),
-}))
+}));
 
-import { loadConfig } from '../../../../../config/loader.js'
+import type { GitHubPullRequestReviewEvent } from '@/modules/platform-integration/entities/github/githubPullRequestReviewEvent.guard.js';
 import {
   filterGitLabEvent,
   filterGitLabMrUpdate,
@@ -24,98 +25,99 @@ import {
   filterGitHubPrUpdate,
   filterGitHubPullRequestReviewEvent,
   REVIEW_TRIGGER_LABEL,
-} from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js'
-import type { GitHubPullRequestReviewEvent } from '@/modules/platform-integration/entities/github/githubPullRequestReviewEvent.guard.js'
+} from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
+
+import { loadConfig } from '../../../../../config/loader.js';
 
 describe('filterGitLabEvent', () => {
   describe('when MR is opened with reviewer assigned', () => {
     it('should process when claude-reviewer is newly added as reviewer', () => {
-      const event = GitLabEventFactory.createWithReviewerAdded('claude-reviewer')
+      const event = GitLabEventFactory.createWithReviewerAdded('claude-reviewer');
 
-      const result = filterGitLabEvent(event)
+      const result = filterGitLabEvent(event);
 
-      expect(result.shouldProcess).toBe(true)
-      expect(result.reason).toContain('claude-reviewer')
+      expect(result.shouldProcess).toBe(true);
+      expect(result.reason).toContain('claude-reviewer');
       if (result.shouldProcess) {
-        expect(result.mergeRequestNumber).toBe(42)
-        expect(result.projectPath).toBe('test-org/test-project')
+        expect(result.mergeRequestNumber).toBe(42);
+        expect(result.projectPath).toBe('test-org/test-project');
       }
-    })
-  })
+    });
+  });
 
   describe('when MR is draft', () => {
     it('should not process draft MRs', () => {
-      const event = GitLabEventFactory.createDraftMr()
+      const event = GitLabEventFactory.createDraftMr();
       event.changes = {
         reviewers: {
           previous: [],
           current: [{ username: 'claude-reviewer' }],
         },
-      }
+      };
 
-      const result = filterGitLabEvent(event)
+      const result = filterGitLabEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('draft')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('draft');
+    });
+  });
 
   describe('when reviewer is not claude-reviewer', () => {
     it('should not process when different reviewer is added', () => {
-      const event = GitLabEventFactory.createWithReviewerAdded('other-reviewer')
+      const event = GitLabEventFactory.createWithReviewerAdded('other-reviewer');
 
-      const result = filterGitLabEvent(event)
+      const result = filterGitLabEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('claude-reviewer')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('claude-reviewer');
+    });
+  });
 
   describe('when MR is not in opened state', () => {
     it('should not process closed MRs', () => {
-      const event = GitLabEventFactory.createClosedMr()
+      const event = GitLabEventFactory.createClosedMr();
 
-      const result = filterGitLabEvent(event)
+      const result = filterGitLabEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('closed')
-    })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('closed');
+    });
 
     it('should not process merged MRs', () => {
-      const event = GitLabEventFactory.createMergedMr()
+      const event = GitLabEventFactory.createMergedMr();
 
-      const result = filterGitLabEvent(event)
+      const result = filterGitLabEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('merged')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('merged');
+    });
+  });
 
   describe('when object_kind is not merge_request', () => {
     it('should not process non-MR events', () => {
       const event = GitLabEventFactory.createMergeRequestEvent({
         object_kind: 'push' as 'merge_request',
-      })
+      });
 
-      const result = filterGitLabEvent(event)
+      const result = filterGitLabEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('Not a merge request')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('Not a merge request');
+    });
+  });
 
   describe('when reviewer was already assigned (no change)', () => {
     it('should not process when no reviewer change detected', () => {
       const event = GitLabEventFactory.createMergeRequestEvent({
         reviewers: [{ username: 'claude-reviewer', name: 'Claude' }],
-      })
+      });
 
-      const result = filterGitLabEvent(event)
+      const result = filterGitLabEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('was not added as reviewer')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('was not added as reviewer');
+    });
+  });
 
   describe('when reviewer was in previous and current', () => {
     it('should not trigger when reviewer was already present', () => {
@@ -128,29 +130,29 @@ describe('filterGitLabEvent', () => {
             current: [{ username: 'claude-reviewer' }],
           },
         },
-      })
+      });
 
-      const result = filterGitLabEvent(event)
+      const result = filterGitLabEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-    })
-  })
-})
+      expect(result.shouldProcess).toBe(false);
+    });
+  });
+});
 
 describe('filterGitLabMrUpdate', () => {
   describe('when MR receives update action', () => {
     it('should process update events for followup', () => {
-      const event = GitLabEventFactory.createMrUpdate()
+      const event = GitLabEventFactory.createMrUpdate();
 
-      const result = filterGitLabMrUpdate(event)
+      const result = filterGitLabMrUpdate(event);
 
-      expect(result.shouldProcess).toBe(true)
+      expect(result.shouldProcess).toBe(true);
       if (result.shouldProcess) {
-        expect(result.isFollowup).toBe(true)
+        expect(result.isFollowup).toBe(true);
       }
-      expect(result.reason).toContain('updated')
-    })
-  })
+      expect(result.reason).toContain('updated');
+    });
+  });
 
   describe('when MR is draft', () => {
     it('should not process draft MR updates', () => {
@@ -159,27 +161,27 @@ describe('filterGitLabMrUpdate', () => {
           action: 'update',
           draft: true,
         },
-      })
+      });
 
-      const result = filterGitLabMrUpdate(event)
+      const result = filterGitLabMrUpdate(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('draft')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('draft');
+    });
+  });
 
   describe('when action is not update', () => {
     it('should not process open actions', () => {
       const event = GitLabEventFactory.createMergeRequestEvent({
         object_attributes: { action: 'open' },
-      })
+      });
 
-      const result = filterGitLabMrUpdate(event)
+      const result = filterGitLabMrUpdate(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('open')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('open');
+    });
+  });
 
   describe('when MR state is not opened', () => {
     it('should not process closed MR updates', () => {
@@ -188,42 +190,42 @@ describe('filterGitLabMrUpdate', () => {
           state: 'closed',
           action: 'update',
         },
-      })
+      });
 
-      const result = filterGitLabMrUpdate(event)
+      const result = filterGitLabMrUpdate(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('closed')
-    })
-  })
-})
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('closed');
+    });
+  });
+});
 
 describe('filterGitLabMrClose', () => {
   describe('when MR is closed', () => {
     it('should detect closure for cleanup', () => {
-      const event = GitLabEventFactory.createClosedMr()
+      const event = GitLabEventFactory.createClosedMr();
 
-      const result = filterGitLabMrClose(event)
+      const result = filterGitLabMrClose(event);
 
-      expect(result.shouldProcess).toBe(true)
-      expect(result.reason).toContain('closed')
+      expect(result.shouldProcess).toBe(true);
+      expect(result.reason).toContain('closed');
       if (result.shouldProcess) {
-        expect(result.mergeRequestNumber).toBe(42)
+        expect(result.mergeRequestNumber).toBe(42);
       }
-    })
-  })
+    });
+  });
 
   describe('when action is not close', () => {
     it('should not process non-close actions', () => {
       const event = GitLabEventFactory.createMergeRequestEvent({
         object_attributes: { action: 'update' },
-      })
+      });
 
-      const result = filterGitLabMrClose(event)
+      const result = filterGitLabMrClose(event);
 
-      expect(result.shouldProcess).toBe(false)
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+    });
+  });
 
   describe('when state is not closed', () => {
     it('should not process if state mismatch', () => {
@@ -232,43 +234,43 @@ describe('filterGitLabMrClose', () => {
           action: 'close',
           state: 'opened',
         },
-      })
+      });
 
-      const result = filterGitLabMrClose(event)
+      const result = filterGitLabMrClose(event);
 
-      expect(result.shouldProcess).toBe(false)
-    })
-  })
-})
+      expect(result.shouldProcess).toBe(false);
+    });
+  });
+});
 
 describe('filterGitLabMrMerge', () => {
   describe('when MR is merged', () => {
     it('should detect merge event', () => {
-      const event = GitLabEventFactory.createMergedMr()
+      const event = GitLabEventFactory.createMergedMr();
 
-      const result = filterGitLabMrMerge(event)
+      const result = filterGitLabMrMerge(event);
 
-      expect(result.shouldProcess).toBe(true)
-      expect(result.reason).toContain('merged')
+      expect(result.shouldProcess).toBe(true);
+      expect(result.reason).toContain('merged');
       if (result.shouldProcess) {
-        expect(result.mergeRequestNumber).toBe(42)
-        expect(result.projectPath).toBe('test-org/test-project')
+        expect(result.mergeRequestNumber).toBe(42);
+        expect(result.projectPath).toBe('test-org/test-project');
       }
-    })
-  })
+    });
+  });
 
   describe('when action is not merge', () => {
     it('should not process non-merge actions', () => {
       const event = GitLabEventFactory.createMergeRequestEvent({
         object_attributes: { action: 'update' },
-      })
+      });
 
-      const result = filterGitLabMrMerge(event)
+      const result = filterGitLabMrMerge(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('update')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('update');
+    });
+  });
 
   describe('when state is not merged', () => {
     it('should not process if state mismatch', () => {
@@ -277,72 +279,72 @@ describe('filterGitLabMrMerge', () => {
           action: 'merge',
           state: 'opened',
         },
-      })
+      });
 
-      const result = filterGitLabMrMerge(event)
+      const result = filterGitLabMrMerge(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('opened')
-    })
-  })
-})
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('opened');
+    });
+  });
+});
 
 describe('filterGitLabMrApprove', () => {
   describe('when MR is approved', () => {
     it('should detect approval event', () => {
-      const event = GitLabEventFactory.createApprovedMr()
+      const event = GitLabEventFactory.createApprovedMr();
 
-      const result = filterGitLabMrApprove(event)
+      const result = filterGitLabMrApprove(event);
 
-      expect(result.shouldProcess).toBe(true)
-      expect(result.reason).toContain('approved')
+      expect(result.shouldProcess).toBe(true);
+      expect(result.reason).toContain('approved');
       if (result.shouldProcess) {
-        expect(result.mergeRequestNumber).toBe(42)
-        expect(result.projectPath).toBe('test-org/test-project')
+        expect(result.mergeRequestNumber).toBe(42);
+        expect(result.projectPath).toBe('test-org/test-project');
       }
-    })
-  })
+    });
+  });
 
   describe('when action is not approved', () => {
     it('should not process non-approved actions', () => {
       const event = GitLabEventFactory.createMergeRequestEvent({
         object_attributes: { action: 'update' },
-      })
+      });
 
-      const result = filterGitLabMrApprove(event)
+      const result = filterGitLabMrApprove(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('update')
-    })
-  })
-})
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('update');
+    });
+  });
+});
 
 describe('filterGitHubEvent', () => {
   describe('when PR has review_requested action with correct reviewer', () => {
     it('should process when claude-reviewer is requested', () => {
-      const event = GitHubEventFactory.createReviewRequestedPr('claude-reviewer')
+      const event = GitHubEventFactory.createReviewRequestedPr('claude-reviewer');
 
-      const result = filterGitHubEvent(event)
+      const result = filterGitHubEvent(event);
 
-      expect(result.shouldProcess).toBe(true)
-      expect(result.reason).toContain('claude-reviewer')
+      expect(result.shouldProcess).toBe(true);
+      expect(result.reason).toContain('claude-reviewer');
       if (result.shouldProcess) {
-        expect(result.mergeRequestNumber).toBe(123)
-        expect(result.projectPath).toBe('test-owner/test-repo')
+        expect(result.mergeRequestNumber).toBe(123);
+        expect(result.projectPath).toBe('test-owner/test-repo');
       }
-    })
-  })
+    });
+  });
 
   describe('when action is not review_requested', () => {
     it('should not process opened action', () => {
-      const event = GitHubEventFactory.createPullRequestEvent({ action: 'opened' })
+      const event = GitHubEventFactory.createPullRequestEvent({ action: 'opened' });
 
-      const result = filterGitHubEvent(event)
+      const result = filterGitHubEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('opened')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('opened');
+    });
+  });
 
   describe('when PR is draft', () => {
     it('should not process draft PRs even with review requested', () => {
@@ -350,25 +352,25 @@ describe('filterGitHubEvent', () => {
         action: 'review_requested',
         requested_reviewer: { login: 'claude-reviewer' },
         pull_request: { draft: true },
-      })
+      });
 
-      const result = filterGitHubEvent(event)
+      const result = filterGitHubEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('draft')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('draft');
+    });
+  });
 
   describe('when requested reviewer is not claude-reviewer', () => {
     it('should not process when different reviewer requested', () => {
-      const event = GitHubEventFactory.createReviewRequestedPr('other-reviewer')
+      const event = GitHubEventFactory.createReviewRequestedPr('other-reviewer');
 
-      const result = filterGitHubEvent(event)
+      const result = filterGitHubEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('other-reviewer')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('other-reviewer');
+    });
+  });
 
   describe('when PR state is not open', () => {
     it('should not process closed PRs', () => {
@@ -376,118 +378,118 @@ describe('filterGitHubEvent', () => {
         action: 'review_requested',
         requested_reviewer: { login: 'claude-reviewer' },
         pull_request: { state: 'closed' },
-      })
+      });
 
-      const result = filterGitHubEvent(event)
+      const result = filterGitHubEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('closed')
-    })
-  })
-})
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('closed');
+    });
+  });
+});
 
 describe('filterGitHubPrClose', () => {
   describe('when PR is closed', () => {
     it('should detect closure for cleanup', () => {
-      const event = GitHubEventFactory.createClosedPr()
+      const event = GitHubEventFactory.createClosedPr();
 
-      const result = filterGitHubPrClose(event)
+      const result = filterGitHubPrClose(event);
 
-      expect(result.shouldProcess).toBe(true)
-      expect(result.reason).toContain('closed')
+      expect(result.shouldProcess).toBe(true);
+      expect(result.reason).toContain('closed');
       if (result.shouldProcess) {
-        expect(result.mergeRequestNumber).toBe(123)
+        expect(result.mergeRequestNumber).toBe(123);
       }
-    })
-  })
+    });
+  });
 
   describe('when action is not closed', () => {
     it('should not process non-closed actions', () => {
-      const event = GitHubEventFactory.createPullRequestEvent({ action: 'opened' })
+      const event = GitHubEventFactory.createPullRequestEvent({ action: 'opened' });
 
-      const result = filterGitHubPrClose(event)
+      const result = filterGitHubPrClose(event);
 
-      expect(result.shouldProcess).toBe(false)
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+    });
+  });
 
   describe('when state is not closed', () => {
     it('should not process if state mismatch', () => {
       const event = GitHubEventFactory.createPullRequestEvent({
         action: 'closed',
         pull_request: { state: 'open' },
-      })
+      });
 
-      const result = filterGitHubPrClose(event)
+      const result = filterGitHubPrClose(event);
 
-      expect(result.shouldProcess).toBe(false)
-    })
-  })
-})
+      expect(result.shouldProcess).toBe(false);
+    });
+  });
+});
 
 describe('filterGitHubLabelEvent', () => {
   describe('when needs-review label is added', () => {
     it('should process when needs-review label is added', () => {
-      const event = GitHubEventFactory.createLabeledPr(REVIEW_TRIGGER_LABEL)
+      const event = GitHubEventFactory.createLabeledPr(REVIEW_TRIGGER_LABEL);
 
-      const result = filterGitHubLabelEvent(event)
+      const result = filterGitHubLabelEvent(event);
 
-      expect(result.shouldProcess).toBe(true)
-      expect(result.reason).toContain(REVIEW_TRIGGER_LABEL)
+      expect(result.shouldProcess).toBe(true);
+      expect(result.reason).toContain(REVIEW_TRIGGER_LABEL);
       if (result.shouldProcess) {
-        expect(result.mergeRequestNumber).toBe(123)
-        expect(result.projectPath).toBe('test-owner/test-repo')
+        expect(result.mergeRequestNumber).toBe(123);
+        expect(result.projectPath).toBe('test-owner/test-repo');
       }
-    })
-  })
+    });
+  });
 
   describe('when different label is added', () => {
     it('should not process other labels', () => {
-      const event = GitHubEventFactory.createLabeledPr('bug')
+      const event = GitHubEventFactory.createLabeledPr('bug');
 
-      const result = filterGitHubLabelEvent(event)
+      const result = filterGitHubLabelEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('bug')
-      expect(result.reason).toContain(REVIEW_TRIGGER_LABEL)
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('bug');
+      expect(result.reason).toContain(REVIEW_TRIGGER_LABEL);
+    });
+  });
 
   describe('when action is not labeled', () => {
     it('should not process non-labeled actions', () => {
-      const event = GitHubEventFactory.createPullRequestEvent({ action: 'opened' })
+      const event = GitHubEventFactory.createPullRequestEvent({ action: 'opened' });
 
-      const result = filterGitHubLabelEvent(event)
+      const result = filterGitHubLabelEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('opened')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('opened');
+    });
+  });
 
   describe('when PR is draft', () => {
     it('should not process draft PRs', () => {
-      const event = GitHubEventFactory.createLabeledPr(REVIEW_TRIGGER_LABEL)
-      event.pull_request.draft = true
+      const event = GitHubEventFactory.createLabeledPr(REVIEW_TRIGGER_LABEL);
+      event.pull_request.draft = true;
 
-      const result = filterGitHubLabelEvent(event)
+      const result = filterGitHubLabelEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('draft')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('draft');
+    });
+  });
 
   describe('when PR is closed', () => {
     it('should not process closed PRs', () => {
-      const event = GitHubEventFactory.createLabeledPr(REVIEW_TRIGGER_LABEL)
-      event.pull_request.state = 'closed'
+      const event = GitHubEventFactory.createLabeledPr(REVIEW_TRIGGER_LABEL);
+      event.pull_request.state = 'closed';
 
-      const result = filterGitHubLabelEvent(event)
+      const result = filterGitHubLabelEvent(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('closed')
-    })
-  })
-})
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('closed');
+    });
+  });
+});
 
 describe('filterGitHubPrUpdate', () => {
   describe('when PR receives synchronize action on open non-draft PR', () => {
@@ -495,106 +497,108 @@ describe('filterGitHubPrUpdate', () => {
       const event = GitHubEventFactory.createPullRequestEvent({
         action: 'synchronize',
         pull_request: { state: 'open', draft: false },
-      })
+      });
 
-      const result = filterGitHubPrUpdate(event)
+      const result = filterGitHubPrUpdate(event);
 
-      expect(result.shouldProcess).toBe(true)
+      expect(result.shouldProcess).toBe(true);
       if (result.shouldProcess) {
-        expect(result.isFollowup).toBe(true)
-        expect(result.mergeRequestNumber).toBe(123)
-        expect(result.projectPath).toBe('test-owner/test-repo')
+        expect(result.isFollowup).toBe(true);
+        expect(result.mergeRequestNumber).toBe(123);
+        expect(result.projectPath).toBe('test-owner/test-repo');
       }
-    })
-  })
+    });
+  });
 
   describe('when PR state is closed', () => {
     it('should not process synchronize events on closed PRs', () => {
       const event = GitHubEventFactory.createPullRequestEvent({
         action: 'synchronize',
         pull_request: { state: 'closed', draft: false },
-      })
+      });
 
-      const result = filterGitHubPrUpdate(event)
+      const result = filterGitHubPrUpdate(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('not open')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('not open');
+    });
+  });
 
   describe('when PR is a draft', () => {
     it('should not process synchronize events on draft PRs', () => {
       const event = GitHubEventFactory.createPullRequestEvent({
         action: 'synchronize',
         pull_request: { state: 'open', draft: true },
-      })
+      });
 
-      const result = filterGitHubPrUpdate(event)
+      const result = filterGitHubPrUpdate(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('draft')
-    })
-  })
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('draft');
+    });
+  });
 
   describe('when action is not synchronize', () => {
     it('should not process opened action', () => {
-      const event = GitHubEventFactory.createPullRequestEvent({ action: 'opened' })
+      const event = GitHubEventFactory.createPullRequestEvent({ action: 'opened' });
 
-      const result = filterGitHubPrUpdate(event)
+      const result = filterGitHubPrUpdate(event);
 
-      expect(result.shouldProcess).toBe(false)
-      expect(result.reason).toContain('not synchronize')
-    })
-  })
-})
+      expect(result.shouldProcess).toBe(false);
+      expect(result.reason).toContain('not synchronize');
+    });
+  });
+});
 
 describe('filterGitLabEvent with empty gitlabUsername', () => {
   it('should not process when gitlabUsername is empty', () => {
     vi.mocked(loadConfig).mockReturnValueOnce({
       user: { gitlabUsername: '', githubUsername: 'claude-reviewer' },
-    } as ReturnType<typeof loadConfig>)
-    const event = GitLabEventFactory.createWithReviewerAdded('claude-reviewer')
+    } as ReturnType<typeof loadConfig>);
+    const event = GitLabEventFactory.createWithReviewerAdded('claude-reviewer');
 
-    const result = filterGitLabEvent(event)
+    const result = filterGitLabEvent(event);
 
-    expect(result.shouldProcess).toBe(false)
-  })
-})
+    expect(result.shouldProcess).toBe(false);
+  });
+});
 
 describe('filterGitHubEvent with empty githubUsername', () => {
   it('should not process when githubUsername is empty', () => {
     vi.mocked(loadConfig).mockReturnValueOnce({
       user: { gitlabUsername: 'claude-reviewer', githubUsername: '' },
-    } as ReturnType<typeof loadConfig>)
-    const event = GitHubEventFactory.createReviewRequestedPr('claude-reviewer')
+    } as ReturnType<typeof loadConfig>);
+    const event = GitHubEventFactory.createReviewRequestedPr('claude-reviewer');
 
-    const result = filterGitHubEvent(event)
+    const result = filterGitHubEvent(event);
 
-    expect(result.shouldProcess).toBe(false)
-  })
-})
+    expect(result.shouldProcess).toBe(false);
+  });
+});
 
 describe('FilterResult type narrowing', () => {
   it('should have all required fields when shouldProcess is true', () => {
-    const event = GitHubEventFactory.createReviewRequestedPr('claude-reviewer')
+    const event = GitHubEventFactory.createReviewRequestedPr('claude-reviewer');
 
-    const result = filterGitHubEvent(event)
+    const result = filterGitHubEvent(event);
 
     if (result.shouldProcess) {
-      expect(result.mergeRequestNumber).toBe(123)
-      expect(result.projectPath).toBe('test-owner/test-repo')
-      expect(result.mergeRequestUrl).toBeDefined()
-      expect(result.sourceBranch).toBeDefined()
-      expect(result.targetBranch).toBeDefined()
+      expect(result.mergeRequestNumber).toBe(123);
+      expect(result.projectPath).toBe('test-owner/test-repo');
+      expect(result.mergeRequestUrl).toBeDefined();
+      expect(result.sourceBranch).toBeDefined();
+      expect(result.targetBranch).toBeDefined();
     }
-  })
-})
+  });
+});
 
 describe('filterGitHubPullRequestReviewEvent', () => {
-  function buildEvent(overrides: {
-    action?: string
-    reviewState?: string
-  } = {}): GitHubPullRequestReviewEvent {
+  function buildEvent(
+    overrides: {
+      action?: string;
+      reviewState?: string;
+    } = {},
+  ): GitHubPullRequestReviewEvent {
     return {
       action: overrides.action ?? 'submitted',
       review: {
@@ -613,38 +617,40 @@ describe('filterGitHubPullRequestReviewEvent', () => {
         clone_url: 'https://github.com/test-owner/test-repo.git',
       },
       sender: { login: 'alice' },
-    }
+    };
   }
 
   it('processes a submitted approval', () => {
-    const result = filterGitHubPullRequestReviewEvent(buildEvent())
+    const result = filterGitHubPullRequestReviewEvent(buildEvent());
 
-    expect(result.shouldProcess).toBe(true)
+    expect(result.shouldProcess).toBe(true);
     if (result.shouldProcess) {
-      expect(result.mergeRequestNumber).toBe(7)
-      expect(result.projectPath).toBe('test-owner/test-repo')
-      expect(result.reviewId).toBe(99)
-      expect(result.reviewerLogin).toBe('alice')
+      expect(result.mergeRequestNumber).toBe(7);
+      expect(result.projectPath).toBe('test-owner/test-repo');
+      expect(result.reviewId).toBe(99);
+      expect(result.reviewerLogin).toBe('alice');
     }
-  })
+  });
 
   it('ignores a changes_requested review', () => {
-    const result = filterGitHubPullRequestReviewEvent(buildEvent({ reviewState: 'changes_requested' }))
-    expect(result.shouldProcess).toBe(false)
-  })
+    const result = filterGitHubPullRequestReviewEvent(
+      buildEvent({ reviewState: 'changes_requested' }),
+    );
+    expect(result.shouldProcess).toBe(false);
+  });
 
   it('ignores a commented review', () => {
-    const result = filterGitHubPullRequestReviewEvent(buildEvent({ reviewState: 'commented' }))
-    expect(result.shouldProcess).toBe(false)
-  })
+    const result = filterGitHubPullRequestReviewEvent(buildEvent({ reviewState: 'commented' }));
+    expect(result.shouldProcess).toBe(false);
+  });
 
   it('ignores a dismissed review', () => {
-    const result = filterGitHubPullRequestReviewEvent(buildEvent({ reviewState: 'dismissed' }))
-    expect(result.shouldProcess).toBe(false)
-  })
+    const result = filterGitHubPullRequestReviewEvent(buildEvent({ reviewState: 'dismissed' }));
+    expect(result.shouldProcess).toBe(false);
+  });
 
   it('ignores an edited action', () => {
-    const result = filterGitHubPullRequestReviewEvent(buildEvent({ action: 'edited' }))
-    expect(result.shouldProcess).toBe(false)
-  })
-})
+    const result = filterGitHubPullRequestReviewEvent(buildEvent({ action: 'edited' }));
+    expect(result.shouldProcess).toBe(false);
+  });
+});

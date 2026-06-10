@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest';
 import Fastify from 'fastify';
+import { describe, it, expect } from 'vitest';
+
+import type { TokenUsageGateway } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.gateway.js';
+import type { TokenUsageRecord } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
 import { tokenUsageRoutes } from '@/modules/token-accounting/interface-adapters/controllers/http/tokenUsage.routes.js';
 import { TokenUsageSummaryPresenter } from '@/modules/token-accounting/interface-adapters/presenters/tokenUsageSummary.presenter.js';
 import { SummarizeTokenUsageUseCase } from '@/modules/token-accounting/usecases/summarizeTokenUsage/summarizeTokenUsage.usecase.js';
-import type { TokenUsageGateway } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.gateway.js';
-import type { TokenUsageRecord } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
 
 class StubTokenUsageGateway implements TokenUsageGateway {
   constructor(private readonly records: TokenUsageRecord[]) {}
@@ -94,8 +95,14 @@ describe('tokenUsageRoutes', () => {
 
     it('filters records by the since query parameter', async () => {
       const app = await buildAppWith([
-        makeRecord({ recordedAt: '2026-05-01T00:00:00.000Z', usage: { ...makeRecord().usage, costUsd: 0.5 } }),
-        makeRecord({ recordedAt: '2026-05-15T00:00:00.000Z', usage: { ...makeRecord().usage, costUsd: 0.1 } }),
+        makeRecord({
+          recordedAt: '2026-05-01T00:00:00.000Z',
+          usage: { ...makeRecord().usage, costUsd: 0.5 },
+        }),
+        makeRecord({
+          recordedAt: '2026-05-15T00:00:00.000Z',
+          usage: { ...makeRecord().usage, costUsd: 0.1 },
+        }),
       ]);
 
       const response = await app.inject({

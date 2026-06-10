@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   MAX_RECONNECT_ATTEMPTS,
   RECONNECT_DELAY,

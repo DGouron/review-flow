@@ -1,11 +1,11 @@
-import type { McpCompletionBridge } from '@/modules/claude-invocation/entities/sessionCompletion/mcpCompletion.gateway.js';
 import type { ClaudeSessionGateway } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
+import { isExpired } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.js';
 import type { ClaudeSession } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
+import type { McpCompletionBridge } from '@/modules/claude-invocation/entities/sessionCompletion/mcpCompletion.gateway.js';
 import type {
   SessionCompletion,
   SessionCompletionOutcome,
 } from '@/modules/claude-invocation/entities/sessionCompletion/sessionCompletion.schema.js';
-import { isExpired } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.js';
 
 export interface AwaitSessionCompletionInput {
   session: ClaudeSession;
@@ -34,7 +34,7 @@ export function awaitSessionCompletion(
   const { session, timeoutMs, pollIntervalMs } = input;
   const { sessionGateway, completionBridge, now } = deps;
 
-  return new Promise<SessionCompletion>(resolve => {
+  return new Promise<SessionCompletion>((resolve) => {
     let settled = false;
     let pollTimer: NodeJS.Timeout | null = null;
 
@@ -50,7 +50,7 @@ export function awaitSessionCompletion(
       resolve(completion);
     };
 
-    completionBridge.subscribe(session.jobId, completion => {
+    completionBridge.subscribe(session.jobId, (completion) => {
       settle({ ...completion, source: completion.source });
     });
 
@@ -62,7 +62,7 @@ export function awaitSessionCompletion(
       }
       try {
         const agents = await sessionGateway.listAgents();
-        const entry = agents.find(item => item.sessionId === session.sessionId);
+        const entry = agents.find((item) => item.sessionId === session.sessionId);
         if (entry && TERMINAL_AGENT_STATUSES.has(entry.status)) {
           settle({
             source: 'polling',

@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
+
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 class FakeChildProcess extends EventEmitter {
   stdout = new EventEmitter();
@@ -30,9 +31,8 @@ vi.mock('@/shared/services/claudePathResolver.js', () => ({
   resolveClaudePath: () => '/usr/bin/claude',
 }));
 
-const { cliStatusRoutes } = await import(
-  '@/modules/cli-configuration/interface-adapters/controllers/http/cliStatus.routes.js'
-);
+const { cliStatusRoutes } =
+  await import('@/modules/cli-configuration/interface-adapters/controllers/http/cliStatus.routes.js');
 
 describe('cliStatus routes', () => {
   let app: FastifyInstance;

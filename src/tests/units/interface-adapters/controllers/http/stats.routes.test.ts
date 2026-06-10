@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
+import { describe, it, expect, beforeEach } from 'vitest';
+
 import { statsRoutes } from '@/modules/statistics-insights/interface-adapters/controllers/http/stats.routes.js';
-import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 
 interface RepositoryInfo {
   localPath: string;
@@ -70,9 +71,7 @@ describe('stats routes', () => {
     });
 
     it('should return stats and summary when project has stats', async () => {
-      const reviews = [
-        ReviewStatsFactory.create({ id: 'r1', mrNumber: 1, score: 8 }),
-      ];
+      const reviews = [ReviewStatsFactory.create({ id: 'r1', mrNumber: 1, score: 8 })];
       statsGateway.saveProjectStats('/known/project', ProjectStatsFactory.withReviews(reviews));
       await register();
 
@@ -103,9 +102,7 @@ describe('stats routes', () => {
 
   describe('GET /api/stats listing all repositories', () => {
     it('should skip disabled repositories', async () => {
-      repositories = [
-        { localPath: '/disabled/project', name: 'Disabled', enabled: false },
-      ];
+      repositories = [{ localPath: '/disabled/project', name: 'Disabled', enabled: false }];
       statsGateway.saveProjectStats('/disabled/project', ProjectStatsFactory.withReviews([]));
       await register();
 
@@ -116,9 +113,7 @@ describe('stats routes', () => {
     });
 
     it('should skip enabled repositories without stats', async () => {
-      repositories = [
-        { localPath: '/enabled/no-stats', name: 'NoStats', enabled: true },
-      ];
+      repositories = [{ localPath: '/enabled/no-stats', name: 'NoStats', enabled: true }];
       await register();
 
       const response = await app.inject({ method: 'GET', url: '/api/stats' });
@@ -128,11 +123,12 @@ describe('stats routes', () => {
     });
 
     it('should include enabled repositories with stats', async () => {
-      repositories = [
-        { localPath: '/enabled/with-stats', name: 'WithStats', enabled: true },
-      ];
+      repositories = [{ localPath: '/enabled/with-stats', name: 'WithStats', enabled: true }];
       const reviews = [ReviewStatsFactory.create({ id: 'r1', mrNumber: 1, score: 7 })];
-      statsGateway.saveProjectStats('/enabled/with-stats', ProjectStatsFactory.withReviews(reviews));
+      statsGateway.saveProjectStats(
+        '/enabled/with-stats',
+        ProjectStatsFactory.withReviews(reviews),
+      );
       await register();
 
       const response = await app.inject({ method: 'GET', url: '/api/stats' });
@@ -200,9 +196,7 @@ describe('stats routes', () => {
     });
 
     it('should return 404 when the matching repository is disabled', async () => {
-      repositories = [
-        { localPath: '/disabled/project', name: 'Disabled', enabled: false },
-      ];
+      repositories = [{ localPath: '/disabled/project', name: 'Disabled', enabled: false }];
       await register();
 
       const response = await app.inject({
@@ -215,9 +209,7 @@ describe('stats routes', () => {
     });
 
     it('should start recalculation for an enabled repository without optional dependencies', async () => {
-      repositories = [
-        { localPath: '/enabled/project', name: 'Enabled', enabled: true },
-      ];
+      repositories = [{ localPath: '/enabled/project', name: 'Enabled', enabled: true }];
       statsGateway.saveProjectStats('/enabled/project', ProjectStatsFactory.withReviews([]));
       await register();
 

@@ -1,5 +1,5 @@
-import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { join } from 'node:path';
 
 export function getConfigDir(): string {
   const platform = process.platform;

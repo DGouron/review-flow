@@ -1,10 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getInsightsWithAiStatus } from '@/modules/statistics-insights/usecases/insights/getInsightsWithAiStatus.usecase.js';
-import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
-import { InMemoryInsightsGateway } from '@/tests/stubs/insights.stub.js';
-import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
-import { PersistedInsightsDataFactory, PersistedDeveloperMetricsFactory } from '@/tests/factories/persistedInsightsData.factory.js';
+
 import type { AiInsightsResult } from '@/modules/statistics-insights/entities/insight/aiInsight.js';
+import { getInsightsWithAiStatus } from '@/modules/statistics-insights/usecases/insights/getInsightsWithAiStatus.usecase.js';
+import {
+  PersistedInsightsDataFactory,
+  PersistedDeveloperMetricsFactory,
+} from '@/tests/factories/persistedInsightsData.factory.js';
+import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+import { InMemoryInsightsGateway } from '@/tests/stubs/insights.stub.js';
+import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 
 const validAiInsights: AiInsightsResult = {
   developers: [

@@ -1,4 +1,4 @@
-import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js'
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 
 export class ReviewJobFactory {
   static create(overrides?: Partial<ReviewJob>): ReviewJob {
@@ -15,26 +15,26 @@ export class ReviewJobFactory {
       jobType: 'review',
       language: 'en',
       ...overrides,
-    }
+    };
   }
 
   static createQueued(overrides?: Partial<ReviewJob>): ReviewJob {
-    return this.create(overrides)
+    return this.create(overrides);
   }
 
   static createRunning(overrides?: Partial<ReviewJob>): ReviewJob {
-    return this.create(overrides)
+    return this.create(overrides);
   }
 
   static createCompleted(overrides?: Partial<ReviewJob>): ReviewJob {
-    return this.create(overrides)
+    return this.create(overrides);
   }
 
   static createFollowup(overrides?: Partial<ReviewJob>): ReviewJob {
     return this.create({
       jobType: 'followup',
       ...overrides,
-    })
+    });
   }
 
   static createGitHub(overrides?: Partial<ReviewJob>): ReviewJob {
@@ -45,6 +45,6 @@ export class ReviewJobFactory {
       mrUrl: 'https://github.com/test-owner/test-repo/pull/123',
       mrNumber: 123,
       ...overrides,
-    })
+    });
   }
 }

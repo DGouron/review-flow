@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { lastSweepSummarySchema } from '@/modules/worktree-management/entities/sweep/lastSweepSummary.schema.js';
 
 describe('lastSweepSummarySchema', () => {

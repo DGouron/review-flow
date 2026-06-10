@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { StubEmberAnswerTransportGateway } from '@/tests/stubs/emberAnswerTransport.stub.js';
-import { StubEmberReadDataGateway } from '@/tests/stubs/emberReadData.stub.js';
-import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
-import { StubEmberMemoryGateway } from '@/tests/stubs/emberMemory.stub.js';
+
 import { askEmber } from '@/modules/ember-chat/usecases/askEmber/askEmber.usecase.js';
 import type { EmberStreamSubscriber } from '@/modules/ember-chat/usecases/askEmber/askEmber.usecase.js';
-import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 import { EmberMemoryTurnFactory } from '@/tests/factories/emberMemory.factory.js';
+import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+import { StubEmberAnswerTransportGateway } from '@/tests/stubs/emberAnswerTransport.stub.js';
+import { StubEmberMemoryGateway } from '@/tests/stubs/emberMemory.stub.js';
+import { StubEmberReadDataGateway } from '@/tests/stubs/emberReadData.stub.js';
+import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
 
 const PROJECT_PATH = '/projects/alpha';
 const FIXED_NOW = (): Date => new Date('2026-05-28T10:00:00Z');

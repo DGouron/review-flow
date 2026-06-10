@@ -1,10 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { WizardStreamEventFactory } from '@/tests/factories/wizardStreamEvent.factory.js';
+
+import { avatarStateFromEvents, shouldUseAvatar } from '@/dashboard/modules/setupWizardAvatar.js';
 import { wizardStreamEventGuard } from '@/modules/setup-wizard/entities/wizardStreamEvent/wizardStreamEvent.guard.js';
-import {
-  avatarStateFromEvents,
-  shouldUseAvatar,
-} from '@/dashboard/modules/setupWizardAvatar.js';
+import { WizardStreamEventFactory } from '@/tests/factories/wizardStreamEvent.factory.js';
 
 function validEventsFrom(lines: string[]): Record<string, unknown>[] {
   const parsed = lines.map((line) => JSON.parse(line));

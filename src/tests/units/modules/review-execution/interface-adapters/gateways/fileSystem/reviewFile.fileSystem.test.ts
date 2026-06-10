@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { FileSystemReviewFileGateway } from '@/modules/review-execution/interface-adapters/gateways/fileSystem/reviewFile.fileSystem.js';
 
 function reviewsDir(projectPath: string): string {
@@ -50,7 +52,7 @@ describe('FileSystemReviewFileGateway (integration with real filesystem)', () =>
       const result = await gateway.listReviews(projectPath);
 
       expect(result).toHaveLength(2);
-      const byNumber = new Map(result.map(review => [review.mrNumber, review]));
+      const byNumber = new Map(result.map((review) => [review.mrNumber, review]));
       const mrReview = byNumber.get('42');
       const prReview = byNumber.get('123');
       expect(mrReview?.date).toBe('2024-01-15');

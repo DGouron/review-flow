@@ -1,4 +1,5 @@
 import type { Logger } from 'pino';
+
 import type { JobHistoryGateway } from '@/modules/review-execution/entities/job/jobHistory.gateway.js';
 import type { JobRecord } from '@/modules/review-execution/entities/job/jobRecord.schema.js';
 
@@ -20,6 +21,8 @@ export class LoadRecentJobHistoryUseCase {
       input.retentionDays,
       input.now(),
     );
-    return [...records].sort((left, right) => right.completedAt.localeCompare(left.completedAt));
+    return [...records].toSorted((left, right) =>
+      right.completedAt.localeCompare(left.completedAt),
+    );
   }
 }

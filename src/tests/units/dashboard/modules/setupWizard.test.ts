@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   buildStepRowsModel,
   buildBannerModel,
@@ -43,7 +44,12 @@ describe('buildStepRowsModel', () => {
 
   it('carries the remediation on a blocked step', () => {
     const rows = buildStepRowsModel([
-      { step: 'pipeline', status: 'blocked', message: 'No remote', remediation: 'Add a git remote' },
+      {
+        step: 'pipeline',
+        status: 'blocked',
+        message: 'No remote',
+        remediation: 'Add a git remote',
+      },
     ]);
 
     const row = rows.find((entry) => entry.id === 'pipeline');

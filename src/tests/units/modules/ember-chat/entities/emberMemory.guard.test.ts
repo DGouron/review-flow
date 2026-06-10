@@ -1,12 +1,11 @@
 import { describe, it, expect } from 'vitest';
+
 import { emberMemoryGuard } from '@/modules/ember-chat/entities/emberMemory/emberMemory.guard.js';
 
 describe('emberMemoryGuard', () => {
   it('accepts a memory holding conversation turns', () => {
     const result = emberMemoryGuard.safeParse({
-      turns: [
-        { question: 'Quel projet régresse ?', answer: 'Le projet X régresse le vendredi.' },
-      ],
+      turns: [{ question: 'Quel projet régresse ?', answer: 'Le projet X régresse le vendredi.' }],
     });
 
     expect(result.success).toBe(true);

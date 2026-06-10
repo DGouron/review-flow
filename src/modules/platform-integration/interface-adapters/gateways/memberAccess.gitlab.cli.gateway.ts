@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import type { MemberAccessGateway } from '@/modules/platform-integration/entities/memberAccess/memberAccess.gateway.js';
 import {
   MEMBER_ACCESS_LEVELS,
@@ -96,9 +97,7 @@ export class GitLabMemberAccessCliGateway implements MemberAccessGateway {
   private resolveMembership(projectPath: string, userId: number): ResolvedAccessLevel {
     try {
       const encodedProject = projectPath.replace(/\//g, '%2F');
-      const response = this.executor(
-        `glab api projects/${encodedProject}/members/all/${userId}`,
-      );
+      const response = this.executor(`glab api projects/${encodedProject}/members/all/${userId}`);
       const parsed = gitLabMemberSchema.safeParse(JSON.parse(response));
       if (!parsed.success) {
         return null;

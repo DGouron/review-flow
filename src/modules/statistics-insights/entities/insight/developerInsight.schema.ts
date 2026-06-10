@@ -1,7 +1,8 @@
 import { z } from 'zod';
+
+import { developerTitleSchema } from '@/modules/statistics-insights/entities/insight/developerTitle.js';
 import { insightCategorySchema } from '@/modules/statistics-insights/entities/insight/insightCategory.js';
 import { insightTrendSchema } from '@/modules/statistics-insights/entities/insight/insightTrend.js';
-import { developerTitleSchema } from '@/modules/statistics-insights/entities/insight/developerTitle.js';
 
 export const categoryLevelSchema = z.object({
   level: z.number().int().min(1).max(10),

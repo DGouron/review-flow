@@ -1,13 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+import { InMemoryBillingStateGateway } from '@/modules/claude-invocation/interface-adapters/gateways/billingState.memory.gateway.js';
 import { ClaudeSessionCliGateway } from '@/modules/claude-invocation/interface-adapters/gateways/claudeSession.cli.gateway.js';
 import type { ClaudeProcessRunner } from '@/modules/claude-invocation/interface-adapters/gateways/claudeSession.cli.gateway.js';
+import { ProcessEnvironmentGateway } from '@/modules/claude-invocation/interface-adapters/gateways/environment.process.gateway.js';
 import { FileSystemMcpCompletionBridge } from '@/modules/claude-invocation/interface-adapters/gateways/mcpCompletion.fileSystem.gateway.js';
 import { ReviewReportFileSystemGateway } from '@/modules/claude-invocation/interface-adapters/gateways/reviewReport.fileSystem.gateway.js';
-import { InMemoryBillingStateGateway } from '@/modules/claude-invocation/interface-adapters/gateways/billingState.memory.gateway.js';
-import { ProcessEnvironmentGateway } from '@/modules/claude-invocation/interface-adapters/gateways/environment.process.gateway.js';
 import { runClaudeReviewJob } from '@/modules/claude-invocation/usecases/runClaudeReviewJob.usecase.js';
 
 // Integration scope:
@@ -43,7 +45,7 @@ function makeFakeRunner(): {
 } {
   const responses = new Map<string, FakeRunnerResponse>();
   const calls: FakeRunnerCall[] = [];
-  const runner: ClaudeProcessRunner = async request => {
+  const runner: ClaudeProcessRunner = async (request) => {
     calls.push({ args: request.args, cwd: request.cwd, env: request.env });
     const subcommand = request.args[0] ?? '';
     const response = responses.get(subcommand);
@@ -139,14 +141,14 @@ describe('SPEC-169 — end-to-end integration: production wire-up reaches runCla
     }
 
     // The dispatch arguments must contain --bg and never -p / --print.
-    const dispatchCall = calls.find(call => call.args.includes('--bg'));
+    const dispatchCall = calls.find((call) => call.args.includes('--bg'));
     expect(dispatchCall).toBeDefined();
     expect(dispatchCall?.args).not.toContain('-p');
     expect(dispatchCall?.args).not.toContain('--print');
 
     // Cleanup must have called both stop and rm on the captured session id.
-    const stopCall = calls.find(call => call.args[0] === 'stop');
-    const rmCall = calls.find(call => call.args[0] === 'rm');
+    const stopCall = calls.find((call) => call.args[0] === 'stop');
+    const rmCall = calls.find((call) => call.args[0] === 'rm');
     expect(stopCall?.args).toContain('abc12345');
     expect(rmCall?.args).toContain('abc12345');
   });

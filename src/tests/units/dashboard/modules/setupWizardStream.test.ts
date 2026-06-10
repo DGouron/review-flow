@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   parseStreamMessage,
   appendEvent,
@@ -11,7 +12,9 @@ import {
 
 describe('parseStreamMessage', () => {
   it('parses a valid wizard event from an SSE data payload', () => {
-    const event = parseStreamMessage('{"step":"dependencies","status":"in_progress","message":"x"}');
+    const event = parseStreamMessage(
+      '{"step":"dependencies","status":"in_progress","message":"x"}',
+    );
 
     expect(event).not.toBeNull();
     expect(event?.step).toBe('dependencies');

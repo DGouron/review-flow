@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
 import { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
 import { GetBudgetStatusUseCase } from '@/modules/token-accounting/usecases/getBudgetStatus/getBudgetStatus.usecase.js';
+import { TokenUsageRecordFactory } from '@/tests/factories/tokenUsage.factory.js';
 import { StubBudgetGateway } from '@/tests/stubs/budget.stub.js';
 import { StubTokenUsageGateway } from '@/tests/stubs/tokenUsage.stub.js';
-import { TokenUsageRecordFactory } from '@/tests/factories/tokenUsage.factory.js';
 
 describe('EnforceBudgetUseCase', () => {
   let budgetGateway: StubBudgetGateway;
@@ -24,7 +25,13 @@ describe('EnforceBudgetUseCase', () => {
     tokenUsageGateway.setRecords([
       TokenUsageRecordFactory.create({
         recordedAt: '2026-05-10T00:00:00Z',
-        usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 199.99 },
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+          costUsd: 199.99,
+        },
       }),
     ]);
 
@@ -38,7 +45,13 @@ describe('EnforceBudgetUseCase', () => {
     tokenUsageGateway.setRecords([
       TokenUsageRecordFactory.create({
         recordedAt: '2026-05-10T00:00:00Z',
-        usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 200.1 },
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+          costUsd: 200.1,
+        },
       }),
     ]);
 
@@ -52,7 +65,13 @@ describe('EnforceBudgetUseCase', () => {
     tokenUsageGateway.setRecords([
       TokenUsageRecordFactory.create({
         recordedAt: '2026-05-10T00:00:00Z',
-        usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 250 },
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+          costUsd: 250,
+        },
       }),
     ]);
 

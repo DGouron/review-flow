@@ -1,5 +1,5 @@
-import type { UseCase } from '@/shared/foundation/usecase.base.js';
 import type { RepositoryEntry } from '@/modules/cli-configuration/entities/repositoryEntry/repositoryEntry.js';
+import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
 export interface RemoveRepositoryFromConfigDependencies {
   readFileSync: (path: string, encoding: BufferEncoding) => string;
@@ -17,9 +17,10 @@ export interface RemoveRepositoryFromConfigResult {
   configPath: string;
 }
 
-export class RemoveRepositoryFromConfigUseCase
-  implements UseCase<RemoveRepositoryFromConfigInput, RemoveRepositoryFromConfigResult>
-{
+export class RemoveRepositoryFromConfigUseCase implements UseCase<
+  RemoveRepositoryFromConfigInput,
+  RemoveRepositoryFromConfigResult
+> {
   constructor(private readonly deps: RemoveRepositoryFromConfigDependencies) {}
 
   execute(input: RemoveRepositoryFromConfigInput): RemoveRepositoryFromConfigResult {

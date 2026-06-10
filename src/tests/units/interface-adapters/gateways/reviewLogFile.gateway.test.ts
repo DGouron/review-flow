@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { InMemoryReviewLogFileGateway } from '@/tests/stubs/reviewLogFile.stub.js';
 
 describe('ReviewLogFileGateway', () => {

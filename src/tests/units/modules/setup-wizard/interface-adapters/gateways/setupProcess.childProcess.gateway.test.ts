@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { splitLines } from '@/modules/setup-wizard/interface-adapters/gateways/setupProcess.childProcess.gateway.js';
 
 describe('splitLines (subprocess stdout line buffering)', () => {

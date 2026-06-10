@@ -1,9 +1,9 @@
+import type { WorktreeEntry } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 import type {
   WorktreeHealth,
   WorktreeHealthReport,
   DegradedReason,
 } from '@/modules/worktree-management/entities/worktree/worktreeHealth.schema.js';
-import type { WorktreeEntry } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 import type {
   HealthSignals,
   WorktreeHealthProbeGateway,

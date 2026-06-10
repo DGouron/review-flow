@@ -1,4 +1,4 @@
-import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import type {
   PendingReviewRequest,
   TriggerSource,
