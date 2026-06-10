@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.36.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.36.0...reviewflow-v3.36.1) (2026-06-10)
+
+
+### Fixed
+
+* **setup-wizard:** replace hanging `claude /status` with `claude auth status` ([0f80032](https://github.com/DGouron/review-flow/commit/0f800323c36c3fce6d01d139f543f030e6be3969))
+
+
+### Changed
+
+* address auto-review findings on oxlint migration ([e933cf8](https://github.com/DGouron/review-flow/commit/e933cf8093e3a7e7742e714c7c6ae15f61401a96))
+
 ## [3.36.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.35.0...reviewflow-v3.36.0) (2026-06-02)
 
 
