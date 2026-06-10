@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { cleanupExpiredReviews } from '@/modules/data-lifecycle/usecases/cleanup/cleanupExpiredReviews.usecase.js';
 import { InMemoryReviewFileGateway } from '@/tests/stubs/reviewFile.stub.js';
 import { InMemoryReviewLogFileGateway } from '@/tests/stubs/reviewLogFile.stub.js';
@@ -10,10 +11,15 @@ describe('cleanupExpiredReviews', () => {
     const reviewFileGateway = new InMemoryReviewFileGateway();
     const reviewLogFileGateway = new InMemoryReviewLogFileGateway();
 
-    const result = await cleanupExpiredReviews('/my/project', 14, {
-      reviewFileGateway,
-      reviewLogFileGateway,
-    }, now);
+    const result = await cleanupExpiredReviews(
+      '/my/project',
+      14,
+      {
+        reviewFileGateway,
+        reviewLogFileGateway,
+      },
+      now,
+    );
 
     expect(result.deletedReviewFiles).toEqual([]);
     expect(result.deletedLogFiles).toEqual([]);
@@ -27,15 +33,24 @@ describe('cleanupExpiredReviews', () => {
     reviewFileGateway.addReview('/my/project', '2026-02-01-MR-42-review.md', '# Old review');
     reviewFileGateway.addReview('/my/project', '2026-03-13-MR-99-review.md', '# Recent review');
 
-    const result = await cleanupExpiredReviews('/my/project', 14, {
-      reviewFileGateway,
-      reviewLogFileGateway,
-    }, now);
+    const result = await cleanupExpiredReviews(
+      '/my/project',
+      14,
+      {
+        reviewFileGateway,
+        reviewLogFileGateway,
+      },
+      now,
+    );
 
     expect(result.deletedReviewFiles).toEqual(['2026-02-01-MR-42-review.md']);
     expect(result.totalDeletedCount).toBe(1);
-    expect(await reviewFileGateway.reviewExists('/my/project', '2026-02-01-MR-42-review.md')).toBe(false);
-    expect(await reviewFileGateway.reviewExists('/my/project', '2026-03-13-MR-99-review.md')).toBe(true);
+    expect(await reviewFileGateway.reviewExists('/my/project', '2026-02-01-MR-42-review.md')).toBe(
+      false,
+    );
+    expect(await reviewFileGateway.reviewExists('/my/project', '2026-03-13-MR-99-review.md')).toBe(
+      true,
+    );
   });
 
   it('should delete expired log files based on mtime', async () => {
@@ -51,10 +66,15 @@ describe('cleanupExpiredReviews', () => {
       size: 512,
     });
 
-    const result = await cleanupExpiredReviews('/my/project', 14, {
-      reviewFileGateway,
-      reviewLogFileGateway,
-    }, now);
+    const result = await cleanupExpiredReviews(
+      '/my/project',
+      14,
+      {
+        reviewFileGateway,
+        reviewLogFileGateway,
+      },
+      now,
+    );
 
     expect(result.deletedLogFiles).toEqual(['old-stdout.log']);
     expect(result.totalDeletedCount).toBe(1);
@@ -70,10 +90,15 @@ describe('cleanupExpiredReviews', () => {
       size: 1024,
     });
 
-    const result = await cleanupExpiredReviews('/my/project', 14, {
-      reviewFileGateway,
-      reviewLogFileGateway,
-    }, now);
+    const result = await cleanupExpiredReviews(
+      '/my/project',
+      14,
+      {
+        reviewFileGateway,
+        reviewLogFileGateway,
+      },
+      now,
+    );
 
     expect(result.deletedReviewFiles).toEqual(['2026-01-15-MR-10-review.md']);
     expect(result.deletedLogFiles).toEqual(['old-stdout.log']);
@@ -90,10 +115,15 @@ describe('cleanupExpiredReviews', () => {
       size: 512,
     });
 
-    const result = await cleanupExpiredReviews('/my/project', 14, {
-      reviewFileGateway,
-      reviewLogFileGateway,
-    }, now);
+    const result = await cleanupExpiredReviews(
+      '/my/project',
+      14,
+      {
+        reviewFileGateway,
+        reviewLogFileGateway,
+      },
+      now,
+    );
 
     expect(result.deletedReviewFiles).toEqual([]);
     expect(result.deletedLogFiles).toEqual([]);

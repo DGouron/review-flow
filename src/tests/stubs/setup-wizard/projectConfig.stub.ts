@@ -1,4 +1,7 @@
-import type { ProjectConfigGateway, ProjectConfigContents } from '@/modules/setup-wizard/entities/projectConfig/projectConfig.gateway.js';
+import type {
+  ProjectConfigGateway,
+  ProjectConfigContents,
+} from '@/modules/setup-wizard/entities/projectConfig/projectConfig.gateway.js';
 
 export class StubProjectConfigGateway implements ProjectConfigGateway {
   private readonly store = new Map<string, ProjectConfigContents>();

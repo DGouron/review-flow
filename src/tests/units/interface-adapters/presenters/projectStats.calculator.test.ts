@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
+
 import { ProjectStatsCalculator } from '@/modules/statistics-insights/interface-adapters/presenters/projectStats.calculator.js';
+
 import { TrackedMrFactory } from '../../../factories/trackedMr.factory.js';
 
 describe('ProjectStatsCalculator', () => {
@@ -19,10 +21,7 @@ describe('ProjectStatsCalculator', () => {
   });
 
   it('should count total MRs', () => {
-    const mrs = [
-      TrackedMrFactory.create({ id: 'mr-1' }),
-      TrackedMrFactory.create({ id: 'mr-2' }),
-    ];
+    const mrs = [TrackedMrFactory.create({ id: 'mr-1' }), TrackedMrFactory.create({ id: 'mr-2' })];
 
     const result = calculator.compute(mrs);
 
@@ -72,9 +71,7 @@ describe('ProjectStatsCalculator', () => {
   });
 
   it('should return null average time when no MR is approved', () => {
-    const mrs = [
-      TrackedMrFactory.create({ approvedAt: null }),
-    ];
+    const mrs = [TrackedMrFactory.create({ approvedAt: null })];
 
     const result = calculator.compute(mrs);
 
@@ -83,10 +80,18 @@ describe('ProjectStatsCalculator', () => {
 
   it('should rank top assigners by count', () => {
     const mrs = [
-      TrackedMrFactory.create({ assignment: { username: 'alice', assignedAt: '2024-01-15T10:00:00Z' } }),
-      TrackedMrFactory.create({ assignment: { username: 'bob', assignedAt: '2024-01-15T10:00:00Z' } }),
-      TrackedMrFactory.create({ assignment: { username: 'alice', assignedAt: '2024-01-15T10:00:00Z' } }),
-      TrackedMrFactory.create({ assignment: { username: 'alice', assignedAt: '2024-01-15T10:00:00Z' } }),
+      TrackedMrFactory.create({
+        assignment: { username: 'alice', assignedAt: '2024-01-15T10:00:00Z' },
+      }),
+      TrackedMrFactory.create({
+        assignment: { username: 'bob', assignedAt: '2024-01-15T10:00:00Z' },
+      }),
+      TrackedMrFactory.create({
+        assignment: { username: 'alice', assignedAt: '2024-01-15T10:00:00Z' },
+      }),
+      TrackedMrFactory.create({
+        assignment: { username: 'alice', assignedAt: '2024-01-15T10:00:00Z' },
+      }),
     ];
 
     const result = calculator.compute(mrs);
@@ -100,7 +105,7 @@ describe('ProjectStatsCalculator', () => {
       TrackedMrFactory.create({
         id: `mr-${index}`,
         assignment: { username: `user-${index}`, assignedAt: '2024-01-15T10:00:00Z' },
-      })
+      }),
     );
 
     const result = calculator.compute(mrs);

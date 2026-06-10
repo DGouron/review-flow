@@ -1,7 +1,11 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+
 import type { TokenUsageGateway } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.gateway.js';
-import { tokenUsageRecordSchema, type TokenUsageRecord } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
+import {
+  tokenUsageRecordSchema,
+  type TokenUsageRecord,
+} from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
 
 const USAGE_FILE = '.claude/reviews/usage.jsonl';
 
@@ -22,7 +26,7 @@ export class FilesystemTokenUsageGateway implements TokenUsageGateway {
     }
 
     const content = readFileSync(filePath, 'utf-8');
-    const lines = content.split('\n').filter(line => line.trim() !== '');
+    const lines = content.split('\n').filter((line) => line.trim() !== '');
     const records: TokenUsageRecord[] = [];
 
     for (const line of lines) {

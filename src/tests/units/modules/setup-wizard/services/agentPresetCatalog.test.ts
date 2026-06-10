@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { getAgentsForPreset, getFullAgentCatalog } from '@/modules/setup-wizard/services/agentPresetCatalog.js';
+
+import {
+  getAgentsForPreset,
+  getFullAgentCatalog,
+} from '@/modules/setup-wizard/services/agentPresetCatalog.js';
 
 describe('agentPresetCatalog', () => {
   it('returns specific agents for the backend preset', () => {

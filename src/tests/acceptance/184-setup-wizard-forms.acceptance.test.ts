@@ -1,20 +1,18 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
-import { setupWizardRoutes } from '@/modules/setup-wizard/interface-adapters/controllers/http/setupWizard.routes.js';
-import { SetupRunRegistry } from '@/modules/setup-wizard/usecases/streamSetupRun.usecase.js';
-import { StubSetupProcessGateway } from '@/tests/stubs/setupProcess.stub.js';
-import { WizardStreamEventFactory } from '@/tests/factories/wizardStreamEvent.factory.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+import { buildFormModel, buildInputPayload } from '@/dashboard/modules/setupWizardForms.js';
 import { serializeSetupInput } from '@/modules/setup-wizard/entities/setupInput/setupInput.schema.js';
-import {
-  buildFormModel,
-  buildInputPayload,
-} from '@/dashboard/modules/setupWizardForms.js';
 import type {
   SetupStateGateway,
   SetupStateLoadResult,
 } from '@/modules/setup-wizard/entities/setupState/setupState.gateway.js';
+import { setupWizardRoutes } from '@/modules/setup-wizard/interface-adapters/controllers/http/setupWizard.routes.js';
+import { SetupRunRegistry } from '@/modules/setup-wizard/usecases/streamSetupRun.usecase.js';
+import { WizardStreamEventFactory } from '@/tests/factories/wizardStreamEvent.factory.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { StubSetupProcessGateway } from '@/tests/stubs/setupProcess.stub.js';
 
 class NullSetupStateGateway implements SetupStateGateway {
   load(): SetupStateLoadResult {

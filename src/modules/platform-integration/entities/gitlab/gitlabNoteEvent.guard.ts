@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { createGuard } from '@/shared/foundation/guard.base.js';
 
 const gitLabNoteEventSchema = z.object({

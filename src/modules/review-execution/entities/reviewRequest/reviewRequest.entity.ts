@@ -3,11 +3,7 @@ import { z } from 'zod';
 export const PlatformSchema = z.enum(['gitlab', 'github']);
 export type Platform = z.infer<typeof PlatformSchema>;
 
-export const ReviewRequestStateSchema = z.enum([
-  'open',
-  'closed',
-  'merged',
-]);
+export const ReviewRequestStateSchema = z.enum(['open', 'closed', 'merged']);
 export type ReviewRequestState = z.infer<typeof ReviewRequestStateSchema>;
 
 export const ReviewRequestSchema = z.object({

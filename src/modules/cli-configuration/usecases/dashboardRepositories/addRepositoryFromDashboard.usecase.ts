@@ -1,8 +1,14 @@
 import { basename } from 'node:path';
-import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
+
 import type { RepositoryEntry } from '@/modules/cli-configuration/entities/repositoryEntry/repositoryEntry.js';
-import type { AddRepositoryRouteResult } from '@/modules/cli-configuration/interface-adapters/controllers/http/repositories.routes.js';
 import type { AddRepositoriesToConfigUseCase } from '@/modules/cli-configuration/usecases/cli/addRepositoriesToConfig.usecase.js';
+import type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
+
+export type AddRepositoryRouteResult =
+  | { status: 'ok'; repositories: RepositoryConfig[] }
+  | { status: 'not-a-directory' }
+  | { status: 'duplicate' }
+  | { status: 'write-failed' };
 
 export interface AddRepositoryFromDashboardDependencies {
   isDirectory: (path: string) => boolean;

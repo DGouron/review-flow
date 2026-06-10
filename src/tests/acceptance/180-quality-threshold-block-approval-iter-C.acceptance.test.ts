@@ -13,8 +13,9 @@
  * Both platforms (GitLab + GitHub) — the spec rule applies symmetrically.
  */
 
-import { vi } from 'vitest';
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import { vi } from 'vitest';
+
 import type { RepositoryConfig } from '@/config/loader.js';
 
 const mockRepoConfig: RepositoryConfig = {
@@ -60,7 +61,8 @@ vi.mock('@/security/verifier.js', () => ({
 
 vi.mock('@/frameworks/queue/pQueueAdapter.js', () => ({
   createJobId: vi.fn(
-    (prefix: string, projectPath: string, mrNumber: number) => `${prefix}-${projectPath}-${mrNumber}`,
+    (prefix: string, projectPath: string, mrNumber: number) =>
+      `${prefix}-${projectPath}-${mrNumber}`,
   ),
   enqueueReview: vi.fn(() => Promise.resolve(true)),
   updateJobProgress: vi.fn(),
@@ -86,23 +88,24 @@ vi.mock('@/config/projectConfig.js', () => ({
 }));
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { handleGitLabWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
-import type { GitLabWebhookDependencies } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
+
 import { handleGitHubWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
 import type { GitHubWebhookDependencies } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
-import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
-import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
-import { StubApprovalRevocationGateway } from '@/tests/stubs/approvalRevocation.stub.js';
-import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
-import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
-import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
-import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
-import { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
-import { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
+import { handleGitLabWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
+import type { GitLabWebhookDependencies } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
 import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
-import { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
 import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
+import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
+import { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
+import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
+import { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
+import { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
+import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
+import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
+import { StubApprovalRevocationGateway } from '@/tests/stubs/approvalRevocation.stub.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
+import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 
 const PROJECT_PATH = '/home/user/projects/test-project';
 const MR_NUMBER = 42;

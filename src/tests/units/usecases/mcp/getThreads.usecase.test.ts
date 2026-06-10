@@ -1,93 +1,95 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { JobContextMemoryGateway } from "@/modules/review-execution/interface-adapters/gateways/jobContext.memory.gateway.js";
-import { ReviewContextFileSystemGateway } from "@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js";
-import { getThreads } from "@/modules/review-execution/usecases/mcp/getThreads.usecase.js";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import * as os from "node:os";
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 
-describe("getThreads usecase", () => {
-	let tempDir: string;
-	let jobContextGateway: JobContextMemoryGateway;
-	let reviewContextGateway: ReviewContextFileSystemGateway;
+import { describe, it, expect, beforeEach } from 'vitest';
 
-	beforeEach(() => {
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "getThreads-test-"));
-		jobContextGateway = new JobContextMemoryGateway();
-		reviewContextGateway = new ReviewContextFileSystemGateway();
-	});
+import { JobContextMemoryGateway } from '@/modules/review-execution/interface-adapters/gateways/jobContext.memory.gateway.js';
+import { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
+import { getThreads } from '@/modules/review-execution/usecases/mcp/getThreads.usecase.js';
 
-	it("should return threads from review context", () => {
-		const jobId = "gitlab:project/path:123";
-		const mergeRequestId = "gitlab-project-path-123";
+describe('getThreads usecase', () => {
+  let tempDir: string;
+  let jobContextGateway: JobContextMemoryGateway;
+  let reviewContextGateway: ReviewContextFileSystemGateway;
 
-		jobContextGateway.register(jobId, { localPath: tempDir, mergeRequestId });
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'getThreads-test-'));
+    jobContextGateway = new JobContextMemoryGateway();
+    reviewContextGateway = new ReviewContextFileSystemGateway();
+  });
 
-		reviewContextGateway.create({
-			localPath: tempDir,
-			mergeRequestId,
-			platform: "gitlab",
-			projectPath: "project/path",
-			mergeRequestNumber: 123,
-			threads: [
-				{ id: "thread-1", file: "src/app.ts", line: 10, status: "open", body: "Fix this" },
-				{ id: "thread-2", file: "src/util.ts", line: 5, status: "resolved", body: "Done" },
-			],
-		});
+  it('should return threads from review context', () => {
+    const jobId = 'gitlab:project/path:123';
+    const mergeRequestId = 'gitlab-project-path-123';
 
-		const result = getThreads(jobId, { jobContextGateway, reviewContextGateway });
+    jobContextGateway.register(jobId, { localPath: tempDir, mergeRequestId });
 
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.threads).toHaveLength(2);
-			expect(result.threads[0].id).toBe("thread-1");
-			expect(result.threads[0].status).toBe("open");
-			expect(result.threads[1].id).toBe("thread-2");
-			expect(result.threads[1].status).toBe("resolved");
-		}
-	});
+    reviewContextGateway.create({
+      localPath: tempDir,
+      mergeRequestId,
+      platform: 'gitlab',
+      projectPath: 'project/path',
+      mergeRequestNumber: 123,
+      threads: [
+        { id: 'thread-1', file: 'src/app.ts', line: 10, status: 'open', body: 'Fix this' },
+        { id: 'thread-2', file: 'src/util.ts', line: 5, status: 'resolved', body: 'Done' },
+      ],
+    });
 
-	it("should return error when job context not found", () => {
-		const result = getThreads("unknown-job", { jobContextGateway, reviewContextGateway });
+    const result = getThreads(jobId, { jobContextGateway, reviewContextGateway });
 
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error).toContain("Job context not found");
-		}
-	});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.threads).toHaveLength(2);
+      expect(result.threads[0].id).toBe('thread-1');
+      expect(result.threads[0].status).toBe('open');
+      expect(result.threads[1].id).toBe('thread-2');
+      expect(result.threads[1].status).toBe('resolved');
+    }
+  });
 
-	it("should return error when review context not found", () => {
-		const jobId = "gitlab:project/path:123";
-		jobContextGateway.register(jobId, { localPath: tempDir, mergeRequestId: "non-existent" });
+  it('should return error when job context not found', () => {
+    const result = getThreads('unknown-job', { jobContextGateway, reviewContextGateway });
 
-		const result = getThreads(jobId, { jobContextGateway, reviewContextGateway });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain('Job context not found');
+    }
+  });
 
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error).toContain("Review context not found");
-		}
-	});
+  it('should return error when review context not found', () => {
+    const jobId = 'gitlab:project/path:123';
+    jobContextGateway.register(jobId, { localPath: tempDir, mergeRequestId: 'non-existent' });
 
-	it("should return empty array when no threads exist", () => {
-		const jobId = "gitlab:project/path:123";
-		const mergeRequestId = "gitlab-project-path-123";
+    const result = getThreads(jobId, { jobContextGateway, reviewContextGateway });
 
-		jobContextGateway.register(jobId, { localPath: tempDir, mergeRequestId });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain('Review context not found');
+    }
+  });
 
-		reviewContextGateway.create({
-			localPath: tempDir,
-			mergeRequestId,
-			platform: "gitlab",
-			projectPath: "project/path",
-			mergeRequestNumber: 123,
-			threads: [],
-		});
+  it('should return empty array when no threads exist', () => {
+    const jobId = 'gitlab:project/path:123';
+    const mergeRequestId = 'gitlab-project-path-123';
 
-		const result = getThreads(jobId, { jobContextGateway, reviewContextGateway });
+    jobContextGateway.register(jobId, { localPath: tempDir, mergeRequestId });
 
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.threads).toHaveLength(0);
-		}
-	});
+    reviewContextGateway.create({
+      localPath: tempDir,
+      mergeRequestId,
+      platform: 'gitlab',
+      projectPath: 'project/path',
+      mergeRequestNumber: 123,
+      threads: [],
+    });
+
+    const result = getThreads(jobId, { jobContextGateway, reviewContextGateway });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.threads).toHaveLength(0);
+    }
+  });
 });

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { InMemorySupervisorHealthGateway } from '@/modules/claude-invocation/interface-adapters/gateways/supervisorHealth.memory.gateway.js';
 
 describe('InMemorySupervisorHealthGateway', () => {

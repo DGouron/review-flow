@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { ClaudeAuthCliGateway } from '@/modules/setup-wizard/interface-adapters/gateways/claudeAuth.cli.gateway.js';
 
 function recordingExecutor(responses: Record<string, string>, calls: string[]) {

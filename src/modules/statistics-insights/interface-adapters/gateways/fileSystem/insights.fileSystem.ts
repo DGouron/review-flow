@@ -1,8 +1,9 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+
 import type { InsightsGateway } from '@/modules/statistics-insights/entities/insight/insights.gateway.js';
-import type { PersistedInsightsData } from '@/modules/statistics-insights/entities/insight/persistedInsightsData.js';
 import { safeParsePersistedInsightsData } from '@/modules/statistics-insights/entities/insight/persistedInsightsData.guard.js';
+import type { PersistedInsightsData } from '@/modules/statistics-insights/entities/insight/persistedInsightsData.js';
 
 function getInsightsPath(projectPath: string): string {
   return join(projectPath, '.claude', 'reviews', 'insights.json');

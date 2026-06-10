@@ -1,11 +1,21 @@
-import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
-import type { DeveloperInsight, CategoryLevels, InsightDescription } from '@/modules/statistics-insights/entities/insight/developerInsight.js';
-import type { TeamInsight } from '@/modules/statistics-insights/entities/insight/teamInsight.js';
+import type {
+  DeveloperInsight,
+  CategoryLevels,
+  InsightDescription,
+} from '@/modules/statistics-insights/entities/insight/developerInsight.js';
 import type { InsightCategory } from '@/modules/statistics-insights/entities/insight/insightCategory.js';
 import type { InsightTrend } from '@/modules/statistics-insights/entities/insight/insightTrend.js';
-import type { PersistedInsightsData, PersistedDeveloperMetrics } from '@/modules/statistics-insights/entities/insight/persistedInsightsData.js';
+import type {
+  PersistedInsightsData,
+  PersistedDeveloperMetrics,
+} from '@/modules/statistics-insights/entities/insight/persistedInsightsData.js';
+import type { TeamInsight } from '@/modules/statistics-insights/entities/insight/teamInsight.js';
+import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
 import { computeTeamInsights } from '@/modules/statistics-insights/usecases/insights/computeTeamInsights.usecase.js';
-import type { DeveloperMetrics as ServiceDeveloperMetrics, TeamMetrics } from '@/modules/statistics-insights/usecases/insights/insightLevelComputation.service.js';
+import type {
+  DeveloperMetrics as ServiceDeveloperMetrics,
+  TeamMetrics,
+} from '@/modules/statistics-insights/usecases/insights/insightLevelComputation.service.js';
 import {
   MINIMUM_REVIEWS_THRESHOLD,
   ABSOLUTE_BENCHMARKS,
@@ -34,10 +44,7 @@ export function computeInsightsWithPersistence(
   const processedIds = new Set(currentPersistedData.processedReviewIds);
   const newReviews = reviews.filter((review) => !processedIds.has(review.id));
 
-  const updatedDevelopers = updateDeveloperMetrics(
-    currentPersistedData.developers,
-    newReviews,
-  );
+  const updatedDevelopers = updateDeveloperMetrics(currentPersistedData.developers, newReviews);
 
   const allProcessedIds = [
     ...currentPersistedData.processedReviewIds,
@@ -81,7 +88,10 @@ function updateDeveloperMetrics(
   const developerMap = new Map<string, PersistedDeveloperMetrics>();
 
   for (const developer of existingDevelopers) {
-    developerMap.set(developer.developerName, { ...developer, recentReviews: [...developer.recentReviews] });
+    developerMap.set(developer.developerName, {
+      ...developer,
+      recentReviews: [...developer.recentReviews],
+    });
   }
 
   for (const review of newReviews) {
@@ -100,14 +110,11 @@ function updateDeveloperMetrics(
   return Array.from(developerMap.values());
 }
 
-function updateExistingDeveloper(
-  developer: PersistedDeveloperMetrics,
-  review: ReviewStats,
-): void {
+function updateExistingDeveloper(developer: PersistedDeveloperMetrics, review: ReviewStats): void {
   developer.totalReviews += 1;
   developer.totalBlocking += review.blocking;
   developer.totalWarnings += review.warnings;
-  developer.totalSuggestions += (review.suggestions ?? 0);
+  developer.totalSuggestions += review.suggestions ?? 0;
   developer.totalDuration += review.duration;
 
   if (review.score !== null) {
@@ -139,7 +146,7 @@ function createDeveloperFromReview(review: ReviewStats): PersistedDeveloperMetri
     totalDuration: review.duration,
     totalAdditions: review.diffStats?.additions ?? 0,
     totalDeletions: review.diffStats?.deletions ?? 0,
-    diffStatsReviewCount: (review.diffStats !== null && review.diffStats !== undefined) ? 1 : 0,
+    diffStatsReviewCount: review.diffStats !== null && review.diffStats !== undefined ? 1 : 0,
     recentReviews: [review],
   };
 }
@@ -178,12 +185,14 @@ function computeInsightsFromPersistedMetrics(
       categoryLevels,
     );
 
-    const averageAdditions = developer.diffStatsReviewCount > 0
-      ? developer.totalAdditions / developer.diffStatsReviewCount
-      : 0;
-    const averageDeletions = developer.diffStatsReviewCount > 0
-      ? developer.totalDeletions / developer.diffStatsReviewCount
-      : 0;
+    const averageAdditions =
+      developer.diffStatsReviewCount > 0
+        ? developer.totalAdditions / developer.diffStatsReviewCount
+        : 0;
+    const averageDeletions =
+      developer.diffStatsReviewCount > 0
+        ? developer.totalDeletions / developer.diffStatsReviewCount
+        : 0;
 
     insights.push({
       developerName: developer.developerName,
@@ -223,22 +232,21 @@ function buildReviewsByDeveloperMap(
   return map;
 }
 
-function buildDeveloperMetricsFromCumulative(developer: PersistedDeveloperMetrics): ServiceDeveloperMetrics {
-  const averageScore = developer.scoredReviewCount > 0
-    ? developer.totalScore / developer.scoredReviewCount
-    : 5;
-  const averageBlocking = developer.totalReviews > 0
-    ? developer.totalBlocking / developer.totalReviews
-    : 0;
-  const averageWarnings = developer.totalReviews > 0
-    ? developer.totalWarnings / developer.totalReviews
-    : 0;
-  const averageDuration = developer.totalReviews > 0
-    ? developer.totalDuration / developer.totalReviews
-    : 0;
-  const averageCodeVolume = developer.diffStatsReviewCount > 0
-    ? (developer.totalAdditions + developer.totalDeletions) / developer.diffStatsReviewCount
-    : 0;
+function buildDeveloperMetricsFromCumulative(
+  developer: PersistedDeveloperMetrics,
+): ServiceDeveloperMetrics {
+  const averageScore =
+    developer.scoredReviewCount > 0 ? developer.totalScore / developer.scoredReviewCount : 5;
+  const averageBlocking =
+    developer.totalReviews > 0 ? developer.totalBlocking / developer.totalReviews : 0;
+  const averageWarnings =
+    developer.totalReviews > 0 ? developer.totalWarnings / developer.totalReviews : 0;
+  const averageDuration =
+    developer.totalReviews > 0 ? developer.totalDuration / developer.totalReviews : 0;
+  const averageCodeVolume =
+    developer.diffStatsReviewCount > 0
+      ? (developer.totalAdditions + developer.totalDeletions) / developer.diffStatsReviewCount
+      : 0;
 
   const correlation = computeVolumeScoreCorrelationFromRecent(developer.recentReviews);
 
@@ -255,9 +263,7 @@ function buildDeveloperMetricsFromCumulative(developer: PersistedDeveloperMetric
 function computeVolumeScoreCorrelationFromRecent(reviews: ReviewStats[]): number {
   const reviewsWithBoth = reviews.filter(
     (review) =>
-      review.score !== null &&
-      review.diffStats !== null &&
-      review.diffStats !== undefined,
+      review.score !== null && review.diffStats !== null && review.diffStats !== undefined,
   );
 
   if (reviewsWithBoth.length < 3) return 0;
@@ -323,7 +329,8 @@ function generateInsightDescriptions(
   const descriptions: InsightDescription[] = [];
 
   for (const category of strengths) {
-    const isTrendBased = categoryLevels[category].level < 7 && categoryLevels[category].trend === 'improving';
+    const isTrendBased =
+      categoryLevels[category].level < 7 && categoryLevels[category].trend === 'improving';
     const description = isTrendBased
       ? generateTrendStrengthDescription(category, categoryLevels[category].trend)
       : generateStrengthDescription(category, serviceMetrics, teamMetrics, reviews);
@@ -375,7 +382,10 @@ function generateStrengthDescription(
       };
     }
     case 'responsiveness': {
-      const percent = computePercentDifference(teamMetrics.averageDuration, metrics.averageDuration);
+      const percent = computePercentDifference(
+        teamMetrics.averageDuration,
+        metrics.averageDuration,
+      );
       return {
         category: 'responsiveness',
         type: 'strength',
@@ -414,7 +424,10 @@ function generateWeaknessDescription(
 ): InsightDescription | null {
   switch (category) {
     case 'quality': {
-      const percent = computePercentDifference(metrics.averageBlocking, teamMetrics.averageBlocking);
+      const percent = computePercentDifference(
+        metrics.averageBlocking,
+        teamMetrics.averageBlocking,
+      );
       return {
         category: 'quality',
         type: 'weakness',
@@ -427,7 +440,10 @@ function generateWeaknessDescription(
       };
     }
     case 'responsiveness': {
-      const percent = computePercentDifference(metrics.averageDuration, teamMetrics.averageDuration);
+      const percent = computePercentDifference(
+        metrics.averageDuration,
+        teamMetrics.averageDuration,
+      );
       return {
         category: 'responsiveness',
         type: 'weakness',

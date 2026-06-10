@@ -1,34 +1,49 @@
-import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyWebsocket from '@fastify/websocket';
+import Fastify, { type FastifyInstance } from 'fastify';
+
+import { startClaudeInvocationTimers } from '@/frameworks/claude/timers/claudeInvocationTimers.js';
+import { startSupervisorScheduler } from '@/frameworks/scheduler/supervisorScheduler.js';
+import {
+  configureSettingsLogger,
+  configureSettingsPath,
+  getDefaultSettingsPath,
+  loadSettingsFromDisk,
+} from '@/frameworks/settings/runtimeSettings.js';
+import { InMemorySupervisorHealthGateway } from '@/modules/claude-invocation/interface-adapters/gateways/supervisorHealth.memory.gateway.js';
+import type { JobRecord } from '@/modules/review-execution/entities/job/jobRecord.schema.js';
+import { JobHistoryFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/fileSystem/jobHistory.fileSystem.gateway.js';
+import { executeActionsFromContext } from '@/modules/review-execution/services/contextActionsExecutor.js';
+import { runReviewRecovery } from '@/modules/review-execution/services/reviewRecovery.service.js';
+import { defaultCommandExecutor } from '@/modules/review-execution/services/threadActionsExecutor.js';
+import { LoadRecentJobHistoryUseCase } from '@/modules/review-execution/usecases/jobHistory/loadRecentJobHistory.usecase.js';
+import { PersistJobRecordUseCase } from '@/modules/review-execution/usecases/jobHistory/persistJobRecord.usecase.js';
+import { PruneJobHistoryUseCase } from '@/modules/review-execution/usecases/jobHistory/pruneJobHistory.usecase.js';
+import {
+  SupervisorCliGateway,
+  createDefaultSupervisorProbe,
+  createDefaultSupervisorSpawner,
+} from '@/modules/supervisor-management/interface-adapters/gateways/supervisor.cli.gateway.js';
+import {
+  SupervisorLockFileSystemGateway,
+  createDefaultSupervisorLockFileSystem,
+  getDefaultSupervisorLockFilePath,
+} from '@/modules/supervisor-management/interface-adapters/gateways/supervisorLock.fileSystem.gateway.js';
+import { transportTrustProxyValue } from '@/security/transportGuardConfig.js';
+
 import { loadConfig, type Config } from '../config/loader.js';
-import { createDependencies, type Dependencies } from './dependencies.js';
-import { registerRoutes } from './routes.js';
-import { setupWebSocketCallbacks } from './websocket.js';
 import {
   initQueue,
   replaceCompletedJobs,
   setPersistJobRecordCallback,
   type JobStatus,
 } from '../frameworks/queue/pQueueAdapter.js';
-import { JobHistoryFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/fileSystem/jobHistory.fileSystem.gateway.js';
-import { PersistJobRecordUseCase } from '@/modules/review-execution/usecases/jobHistory/persistJobRecord.usecase.js';
-import { LoadRecentJobHistoryUseCase } from '@/modules/review-execution/usecases/jobHistory/loadRecentJobHistory.usecase.js';
-import { PruneJobHistoryUseCase } from '@/modules/review-execution/usecases/jobHistory/pruneJobHistory.usecase.js';
-import type { JobRecord } from '@/modules/review-execution/entities/job/jobRecord.schema.js';
-import { removePidFile } from '../shared/services/pidFileManager.js';
-import { PID_FILE_PATH } from '../shared/services/daemonPaths.js';
 import { startCleanupScheduler } from '../frameworks/scheduler/cleanupScheduler.js';
 import { startWorktreeSweepScheduler } from '../frameworks/scheduler/worktreeSweepScheduler.js';
-import { startClaudeInvocationTimers } from '@/frameworks/claude/timers/claudeInvocationTimers.js';
-import { InMemorySupervisorHealthGateway } from '@/modules/claude-invocation/interface-adapters/gateways/supervisorHealth.memory.gateway.js';
-import { startSupervisorScheduler } from '@/frameworks/scheduler/supervisorScheduler.js';
-import { SupervisorCliGateway, createDefaultSupervisorProbe, createDefaultSupervisorSpawner } from '@/modules/supervisor-management/interface-adapters/gateways/supervisor.cli.gateway.js';
-import { SupervisorLockFileSystemGateway, createDefaultSupervisorLockFileSystem, getDefaultSupervisorLockFilePath } from '@/modules/supervisor-management/interface-adapters/gateways/supervisorLock.fileSystem.gateway.js';
-import { runReviewRecovery } from '@/modules/review-execution/services/reviewRecovery.service.js';
-import { executeActionsFromContext } from '@/modules/review-execution/services/contextActionsExecutor.js';
-import { defaultCommandExecutor } from '@/modules/review-execution/services/threadActionsExecutor.js';
-import { configureSettingsLogger, configureSettingsPath, getDefaultSettingsPath, loadSettingsFromDisk } from '@/frameworks/settings/runtimeSettings.js';
-import { transportTrustProxyValue } from '@/security/transportGuardConfig.js';
+import { PID_FILE_PATH } from '../shared/services/daemonPaths.js';
+import { removePidFile } from '../shared/services/pidFileManager.js';
+import { createDependencies, type Dependencies } from './dependencies.js';
+import { registerRoutes } from './routes.js';
+import { setupWebSocketCallbacks } from './websocket.js';
 
 export interface ServerOptions {
   config?: Config;
@@ -36,19 +51,15 @@ export interface ServerOptions {
 }
 
 function addRawBodyParser(app: FastifyInstance): void {
-  app.addContentTypeParser(
-    'application/json',
-    { parseAs: 'buffer' },
-    (req, body: Buffer, done) => {
-      (req as typeof req & { rawBody: Buffer }).rawBody = body;
-      try {
-        const json = JSON.parse(body.toString());
-        done(null, json);
-      } catch (err) {
-        done(err as Error, undefined);
-      }
+  app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body: Buffer, done) => {
+    Object.assign(req, { rawBody: body });
+    try {
+      const json = JSON.parse(body.toString());
+      done(null, json);
+    } catch (err) {
+      done(err instanceof Error ? err : new Error(String(err)), undefined);
     }
-  );
+  });
 }
 
 // Revives a historical JobRecord into a JobStatus to seed the in-memory recent list at startup.
@@ -218,30 +229,31 @@ export async function startServer(options: ServerOptions = {}): Promise<FastifyI
   // Recovery runs as a non-blocking background task so the HTTP listener is
   // available immediately at boot. A long replay backlog can't delay health
   // checks or webhook reception.
-  void runReviewRecovery({
-    repositories: config.repositories.filter((repo) => repo.enabled),
-    reviewContextGateway: deps.reviewContextGateway,
-    executeActions: async (context, localPath) => {
-      const result = await executeActionsFromContext(
-        context,
-        localPath,
-        deps.logger,
-        defaultCommandExecutor,
-      );
-      return { posted: result.succeeded, failed: result.failed };
-    },
-    now: () => Date.now(),
-    logger: deps.logger,
-  })
-    .then((summary) => {
+  void (async () => {
+    try {
+      const summary = await runReviewRecovery({
+        repositories: config.repositories.filter((repo) => repo.enabled),
+        reviewContextGateway: deps.reviewContextGateway,
+        executeActions: async (context, localPath) => {
+          const result = await executeActionsFromContext(
+            context,
+            localPath,
+            deps.logger,
+            defaultCommandExecutor,
+          );
+          return { posted: result.succeeded, failed: result.failed };
+        },
+        now: () => Date.now(),
+        logger: deps.logger,
+      });
       deps.logger.info(summary, 'Review recovery completed in background');
-    })
-    .catch((error) => {
+    } catch (error) {
       deps.logger.error(
         { error: error instanceof Error ? error.message : String(error) },
         'Review recovery threw unexpectedly',
       );
-    });
+    }
+  })();
 
   const shutdown = async () => {
     deps.logger.info('Shutting down...');

@@ -1,5 +1,8 @@
-import type { ProjectStats, ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
 import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
+import type {
+  ProjectStats,
+  ReviewStats,
+} from '@/modules/statistics-insights/entities/stats/projectStats.js';
 
 export class ReviewStatsFactory {
   static create(overrides: Partial<ReviewStats> = {}): ReviewStats {
@@ -44,13 +47,20 @@ export class ProjectStatsFactory {
   static withReviews(reviews: ReviewStats[]): ProjectStats {
     const totalDuration = reviews.reduce((sum, r) => sum + r.duration, 0);
     const reviewsWithScore = reviews.filter((r) => r.score !== null);
-    const averageScore = reviewsWithScore.length > 0
-      ? reviewsWithScore.reduce((sum, r) => sum + (r.score ?? 0), 0) / reviewsWithScore.length
-      : null;
+    const averageScore =
+      reviewsWithScore.length > 0
+        ? reviewsWithScore.reduce((sum, r) => sum + (r.score ?? 0), 0) / reviewsWithScore.length
+        : null;
 
     const reviewsWithDiffStats = reviews.filter((r) => r.diffStats != null);
-    const totalAdditions = reviewsWithDiffStats.reduce((sum, r) => sum + (r.diffStats?.additions ?? 0), 0);
-    const totalDeletions = reviewsWithDiffStats.reduce((sum, r) => sum + (r.diffStats?.deletions ?? 0), 0);
+    const totalAdditions = reviewsWithDiffStats.reduce(
+      (sum, r) => sum + (r.diffStats?.additions ?? 0),
+      0,
+    );
+    const totalDeletions = reviewsWithDiffStats.reduce(
+      (sum, r) => sum + (r.diffStats?.deletions ?? 0),
+      0,
+    );
 
     return this.create({
       totalReviews: reviews.length,
@@ -61,8 +71,10 @@ export class ProjectStatsFactory {
       totalWarnings: reviews.reduce((sum, r) => sum + r.warnings, 0),
       totalAdditions,
       totalDeletions,
-      averageAdditions: reviewsWithDiffStats.length > 0 ? totalAdditions / reviewsWithDiffStats.length : null,
-      averageDeletions: reviewsWithDiffStats.length > 0 ? totalDeletions / reviewsWithDiffStats.length : null,
+      averageAdditions:
+        reviewsWithDiffStats.length > 0 ? totalAdditions / reviewsWithDiffStats.length : null,
+      averageDeletions:
+        reviewsWithDiffStats.length > 0 ? totalDeletions / reviewsWithDiffStats.length : null,
       reviews,
     });
   }

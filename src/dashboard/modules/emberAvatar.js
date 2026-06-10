@@ -37,9 +37,33 @@ export const FLAME_BASE_Y = -1.15;
 
 /** @type {Record<EmberState, EmberVisual>} */
 const EMBER_VISUALS = {
-  idle: { color: '--accent', lineWidth: 1.5, rotationSpeed: 0.3, swaySpeed: 0.0011, swayAmount: 0.08, flicker: 0.025, glow: 10 },
-  working: { color: '--accent', lineWidth: 1.8, rotationSpeed: 0.6, swaySpeed: 0.0026, swayAmount: 0.22, flicker: 0.16, glow: 16 },
-  error: { color: '--danger', lineWidth: 2, rotationSpeed: 0.18, swaySpeed: 0.0018, swayAmount: 0.14, flicker: 0.22, glow: 12 },
+  idle: {
+    color: '--accent',
+    lineWidth: 1.5,
+    rotationSpeed: 0.3,
+    swaySpeed: 0.0011,
+    swayAmount: 0.08,
+    flicker: 0.025,
+    glow: 10,
+  },
+  working: {
+    color: '--accent',
+    lineWidth: 1.8,
+    rotationSpeed: 0.6,
+    swaySpeed: 0.0026,
+    swayAmount: 0.22,
+    flicker: 0.16,
+    glow: 16,
+  },
+  error: {
+    color: '--danger',
+    lineWidth: 2,
+    rotationSpeed: 0.18,
+    swaySpeed: 0.0018,
+    swayAmount: 0.14,
+    flicker: 0.22,
+    glow: 12,
+  },
 };
 
 /**

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { budgetConfigGuard } from '@/modules/token-accounting/entities/budget/budgetConfig.guard.js';
 import {
   BUDGET_FLOOR_USD,

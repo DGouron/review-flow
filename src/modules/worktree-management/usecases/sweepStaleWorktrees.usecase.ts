@@ -1,9 +1,9 @@
+import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import type {
   RemoveResult,
   WorktreeEntry,
   WorktreeIdentity,
 } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
-import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const STALE_THRESHOLD_MS = 7 * ONE_DAY_MS;
@@ -75,9 +75,7 @@ export async function sweepStaleWorktrees(
   for (const entry of entries) {
     const tracked = findTrackedMr(entry.identity, deps.trackingGateway, repositories);
     const shouldRemove =
-      tracked === null
-      || isClosedOrMergedOverThreshold(tracked, now)
-      || isStale(entry, now);
+      tracked === null || isClosedOrMergedOverThreshold(tracked, now) || isStale(entry, now);
 
     if (!shouldRemove) continue;
 

@@ -93,7 +93,11 @@ describe('createEgressScanner', () => {
     });
 
     it('blocks a body over the cap in block mode', () => {
-      const scanner = createEgressScanner({ ...baseConfig, lengthMode: 'block', maxBodyLength: 20 });
+      const scanner = createEgressScanner({
+        ...baseConfig,
+        lengthMode: 'block',
+        maxBodyLength: 20,
+      });
 
       const result = scanner.scan({
         body: 'x'.repeat(100),

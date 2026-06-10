@@ -1,8 +1,8 @@
-import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
-import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
-import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
 import type { Platform } from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
+import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
 import { succeeded, blocked } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
+import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
+import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
 
 export class AddProjectStep implements SetupStep {
   readonly id = 'add-project' as const;
@@ -16,17 +16,29 @@ export class AddProjectStep implements SetupStep {
     let path = context.project.localPath;
     if (!path) {
       if (context.flags.yes) {
-        return blocked('Aucun chemin projet fourni', "Relancez avec 'reviewflow setup /chemin/projet'");
+        return blocked(
+          'Aucun chemin projet fourni',
+          "Relancez avec 'reviewflow setup /chemin/projet'",
+        );
       }
-      path = await context.gateways.prompt.askText('Chemin du projet à ajouter (cwd par défaut) ?', process.cwd());
+      path = await context.gateways.prompt.askText(
+        'Chemin du projet à ajouter (cwd par défaut) ?',
+        process.cwd(),
+      );
     }
 
     if (!context.gateways.gitRemote.isRepo(path)) {
-      return blocked("Le dossier n'est pas un dépôt git", "Initialisez 'git init' puis ajoutez un remote");
+      return blocked(
+        "Le dossier n'est pas un dépôt git",
+        "Initialisez 'git init' puis ajoutez un remote",
+      );
     }
     const remoteUrl = context.gateways.gitRemote.getOriginRemote(path);
     if (!remoteUrl) {
-      return blocked("Aucun remote git configuré, ajoutez 'origin' avant de continuer", "git remote add origin <url>");
+      return blocked(
+        "Aucun remote git configuré, ajoutez 'origin' avant de continuer",
+        'git remote add origin <url>',
+      );
     }
 
     let platform: Platform = context.gateways.gitRemote.detectPlatform(remoteUrl);
@@ -42,13 +54,16 @@ export class AddProjectStep implements SetupStep {
       if (context.flags.yes) {
         return blocked(
           'Plateforme inconnue en mode non-interactif',
-          "Relancez sans -y ou ajoutez un remote github/gitlab connu",
+          'Relancez sans -y ou ajoutez un remote github/gitlab connu',
         );
       }
-      const choice = await context.gateways.prompt.askChoice('Plateforme inconnue, choisissez github ou gitlab', [
-        { label: 'GitHub', value: 'github' },
-        { label: 'GitLab', value: 'gitlab' },
-      ]);
+      const choice = await context.gateways.prompt.askChoice(
+        'Plateforme inconnue, choisissez github ou gitlab',
+        [
+          { label: 'GitHub', value: 'github' },
+          { label: 'GitLab', value: 'gitlab' },
+        ],
+      );
       if (choice !== 'github' && choice !== 'gitlab') {
         return blocked('Plateforme invalide', 'Sélectionnez github ou gitlab');
       }

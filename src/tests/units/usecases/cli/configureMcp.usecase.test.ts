@@ -1,12 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   ConfigureMcpUseCase,
   type ConfigureMcpDependencies,
 } from '@/modules/cli-configuration/usecases/cli/configureMcp.usecase.js';
 
-function createFakeDeps(
-  overrides?: Partial<ConfigureMcpDependencies>,
-): ConfigureMcpDependencies {
+function createFakeDeps(overrides?: Partial<ConfigureMcpDependencies>): ConfigureMcpDependencies {
   return {
     isClaudeInstalled: vi.fn(() => true),
     readFileSync: vi.fn(() => '{}'),
@@ -38,8 +37,11 @@ describe('ConfigureMcpUseCase', () => {
     });
     const deps = createFakeDeps({
       existsSync: vi.fn(() => false),
-      readFileSync: vi.fn()
-        .mockImplementationOnce(() => { throw new Error('ENOENT'); })
+      readFileSync: vi
+        .fn()
+        .mockImplementationOnce(() => {
+          throw new Error('ENOENT');
+        })
         .mockReturnValueOnce(validWrittenSettings),
     });
     const usecase = new ConfigureMcpUseCase(deps);
@@ -93,7 +95,8 @@ describe('ConfigureMcpUseCase', () => {
       },
     });
     const deps = createFakeDeps({
-      readFileSync: vi.fn()
+      readFileSync: vi
+        .fn()
         .mockReturnValueOnce(existingSettings)
         .mockReturnValueOnce(updatedSettings),
     });
@@ -118,7 +121,8 @@ describe('ConfigureMcpUseCase', () => {
       },
     });
     const deps = createFakeDeps({
-      readFileSync: vi.fn()
+      readFileSync: vi
+        .fn()
         .mockReturnValueOnce(existingSettings)
         .mockReturnValueOnce(updatedSettings),
     });
@@ -141,9 +145,7 @@ describe('ConfigureMcpUseCase', () => {
       },
     });
     const deps = createFakeDeps({
-      readFileSync: vi.fn()
-        .mockReturnValueOnce('{}')
-        .mockReturnValueOnce(validWrittenSettings),
+      readFileSync: vi.fn().mockReturnValueOnce('{}').mockReturnValueOnce(validWrittenSettings),
     });
     const usecase = new ConfigureMcpUseCase(deps);
 
@@ -162,7 +164,8 @@ describe('ConfigureMcpUseCase', () => {
       },
     });
     const deps = createFakeDeps({
-      readFileSync: vi.fn()
+      readFileSync: vi
+        .fn()
         .mockReturnValueOnce('{}')
         .mockReturnValueOnce(settingsWithoutReviewProgress),
     });
@@ -175,9 +178,7 @@ describe('ConfigureMcpUseCase', () => {
 
   it('should return validation-failed when written file is not valid', () => {
     const deps = createFakeDeps({
-      readFileSync: vi.fn()
-        .mockReturnValueOnce('{}')
-        .mockReturnValueOnce('not json'),
+      readFileSync: vi.fn().mockReturnValueOnce('{}').mockReturnValueOnce('not json'),
     });
     const usecase = new ConfigureMcpUseCase(deps);
 

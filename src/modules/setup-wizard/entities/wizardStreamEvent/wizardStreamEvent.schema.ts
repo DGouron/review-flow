@@ -1,10 +1,11 @@
 import { z } from 'zod';
-import { stepIdSchema } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
-import { stepOutcomeStatusSchema } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
+
 import {
   promptKindSchema,
   promptOptionSchema,
 } from '@/modules/setup-wizard/entities/promptOption/promptOption.schema.js';
+import { stepIdSchema } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
+import { stepOutcomeStatusSchema } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
 
 export const stepStartedEventSchema = z.object({
   step: stepIdSchema,

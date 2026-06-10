@@ -33,8 +33,10 @@ yarn dev                 # Start dev server (tsx watch)
 yarn build               # Build TypeScript + resolve aliases + copy assets
 yarn start               # Start production server
 yarn typecheck           # TypeScript validation only
-yarn lint                # Biome linting check
+yarn lint                # Oxlint check
 yarn lint:fix            # Auto-fix linting issues
+yarn format              # Format with oxfmt
+yarn format:check        # Check formatting without writing
 
 # Testing
 yarn test                # Run tests with UI
@@ -194,7 +196,7 @@ All tests in `/src/tests/` mirroring source code:
 - **p-queue** for review job queuing with concurrency control
 - **MCP SDK** (`@modelcontextprotocol/sdk`) for Model Context Protocol server
 - **Vitest** for testing
-- **Biome** for linting and formatting
+- **Oxlint** for linting + **oxfmt** for formatting (architecture rules enforced via `no-restricted-imports` overrides)
 - **VitePress** for documentation site
 
 ## Code Quality
@@ -301,8 +303,9 @@ Bug found → gh issue create --label bug,P{1,2,3},scope
 3. Only then create the PR
 
 ### Linting & Formatting
-- **Biome.js** for both linting and formatting
-- Run `yarn lint:fix` for auto-corrections
+- **Oxlint** for linting, **oxfmt** for formatting (`.oxlintrc.json` / `.oxfmtrc.json`)
+- Run `yarn lint:fix` and `yarn format` for auto-corrections
+- Dependency Rule and size limits (functions ≤30 lines, files ≤200, params ≤3) checked by oxlint — size limits are warnings (tracked debt)
 
 ## Refactoring
 

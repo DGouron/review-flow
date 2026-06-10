@@ -1,4 +1,5 @@
 import type { Logger } from 'pino';
+
 import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
 

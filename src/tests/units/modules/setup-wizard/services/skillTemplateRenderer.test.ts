@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { renderSkill } from '@/modules/setup-wizard/services/skillTemplateRenderer.js';
 
 describe('renderSkill', () => {

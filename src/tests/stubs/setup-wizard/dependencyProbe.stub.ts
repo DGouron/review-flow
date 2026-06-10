@@ -1,4 +1,8 @@
-import type { DependencyProbeGateway, DependencyProbeReport, DependencyProbeResult } from '@/modules/setup-wizard/entities/dependencyProbe/dependencyProbe.gateway.js';
+import type {
+  DependencyProbeGateway,
+  DependencyProbeReport,
+  DependencyProbeResult,
+} from '@/modules/setup-wizard/entities/dependencyProbe/dependencyProbe.gateway.js';
 
 interface StubOptions {
   node?: DependencyProbeResult;

@@ -44,6 +44,10 @@ export interface BypassRecord {
   recordedAt: string;
 }
 
-export function createTrackedMrId(platform: 'gitlab' | 'github', project: string, mrNumber: number): string {
+export function createTrackedMrId(
+  platform: 'gitlab' | 'github',
+  project: string,
+  mrNumber: number,
+): string {
   return `${platform}-${project}-${mrNumber}`;
 }

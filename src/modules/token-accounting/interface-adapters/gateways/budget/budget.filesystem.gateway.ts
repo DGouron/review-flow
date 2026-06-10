@@ -1,8 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+
 import type { BudgetGateway } from '@/modules/token-accounting/entities/budget/budget.gateway.js';
-import type { BudgetConfig } from '@/modules/token-accounting/entities/budget/budgetConfig.schema.js';
 import { budgetConfigGuard } from '@/modules/token-accounting/entities/budget/budgetConfig.guard.js';
+import type { BudgetConfig } from '@/modules/token-accounting/entities/budget/budgetConfig.schema.js';
 import { getConfigDir } from '@/shared/services/configDir.js';
 
 const BUDGET_FILE_NAME = 'budget.json';

@@ -1,13 +1,15 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import type {
-  ReviewRequestTrackingGateway,
-  Platform,
-} from '../reviewRequestTracking.gateway.js';
-import { createEmptyStats, type MrTrackingData } from '@/modules/tracking/entities/tracking/mrTrackingData.js';
-import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
-import type { ReviewEvent } from '@/modules/tracking/entities/tracking/reviewEvent.js';
+
 import type { ProjectStatsCalculator } from '@/modules/statistics-insights/interface-adapters/presenters/projectStats.calculator.js';
+import {
+  createEmptyStats,
+  type MrTrackingData,
+} from '@/modules/tracking/entities/tracking/mrTrackingData.js';
+import type { ReviewEvent } from '@/modules/tracking/entities/tracking/reviewEvent.js';
+import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+
+import type { ReviewRequestTrackingGateway, Platform } from '../reviewRequestTracking.gateway.js';
 
 function getTrackingPath(projectPath: string): string {
   return join(projectPath, '.claude', 'reviews', 'mr-tracking.json');
@@ -33,7 +35,7 @@ export class FileSystemReviewRequestTrackingGateway implements ReviewRequestTrac
 
     try {
       const content = readFileSync(trackingPath, 'utf-8');
-      const data = JSON.parse(content) as MrTrackingData;
+      const data: MrTrackingData = JSON.parse(content);
 
       if (!Array.isArray(data.mrs)) {
         data.mrs = [];
@@ -71,14 +73,14 @@ export class FileSystemReviewRequestTrackingGateway implements ReviewRequestTrac
   getByNumber(
     projectPath: string,
     reviewRequestNumber: number,
-    platform: Platform
+    platform: Platform,
   ): TrackedMr | null {
     const data = this.loadTracking(projectPath);
     if (!data) return null;
 
-    return data.mrs.find(
-      (mr) => mr.mrNumber === reviewRequestNumber && mr.platform === platform
-    ) ?? null;
+    return (
+      data.mrs.find((mr) => mr.mrNumber === reviewRequestNumber && mr.platform === platform) ?? null
+    );
   }
 
   create(projectPath: string, reviewRequest: TrackedMr): void {
@@ -92,11 +94,7 @@ export class FileSystemReviewRequestTrackingGateway implements ReviewRequestTrac
     this.saveTracking(projectPath, data);
   }
 
-  update(
-    projectPath: string,
-    reviewRequestId: string,
-    updates: Partial<TrackedMr>
-  ): void {
+  update(projectPath: string, reviewRequestId: string, updates: Partial<TrackedMr>): void {
     const data = this.loadTracking(projectPath);
     if (!data) return;
 
@@ -138,11 +136,7 @@ export class FileSystemReviewRequestTrackingGateway implements ReviewRequestTrac
     return this.remove(projectPath, reviewRequestId);
   }
 
-  recordReviewEvent(
-    projectPath: string,
-    reviewRequestId: string,
-    event: ReviewEvent
-  ): void {
+  recordReviewEvent(projectPath: string, reviewRequestId: string, event: ReviewEvent): void {
     const data = this.loadTracking(projectPath);
     if (!data) return;
 
@@ -171,14 +165,12 @@ export class FileSystemReviewRequestTrackingGateway implements ReviewRequestTrac
   recordPush(
     projectPath: string,
     reviewRequestNumber: number,
-    platform: Platform
+    platform: Platform,
   ): TrackedMr | null {
     const data = this.loadTracking(projectPath);
     if (!data) return null;
 
-    const mr = data.mrs.find(
-      (m) => m.mrNumber === reviewRequestNumber && m.platform === platform
-    );
+    const mr = data.mrs.find((m) => m.mrNumber === reviewRequestNumber && m.platform === platform);
     if (!mr) return null;
 
     mr.lastPushAt = new Date().toISOString();

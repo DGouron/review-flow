@@ -13,6 +13,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { beforeEach, describe, expect, it } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -179,8 +180,12 @@ describe('SPEC-181 — Dashboard Empty-State Restructure & Team-First Layout', (
     });
 
     it('wires open and close handlers via onclick attributes', () => {
-      expect(indexHtml).toMatch(/id="open-economics-sheet-btn"[^>]*onclick="openEconomicsSheet\(\)"/);
-      expect(indexHtml).toMatch(/id="economics-sheet-overlay"[^>]*onclick="closeEconomicsSheet\(\)"/);
+      expect(indexHtml).toMatch(
+        /id="open-economics-sheet-btn"[^>]*onclick="openEconomicsSheet\(\)"/,
+      );
+      expect(indexHtml).toMatch(
+        /id="economics-sheet-overlay"[^>]*onclick="closeEconomicsSheet\(\)"/,
+      );
     });
 
     it('contains a sheet-close button inside the economics sheet', () => {
@@ -224,10 +229,14 @@ describe('SPEC-181 — Dashboard Empty-State Restructure & Team-First Layout', (
 
     it('#active-reviews-section is still present but #i18n-empty-active-reviews placeholder div is gone', () => {
       expect(mainBlock).toMatch(/id="active-reviews-section"/);
-      const activeReviewsMatch = mainBlock.match(/<div[^>]*id="active-reviews-section"[\s\S]*?<\/div>\s*<\/div>/);
+      const activeReviewsMatch = mainBlock.match(
+        /<div[^>]*id="active-reviews-section"[\s\S]*?<\/div>\s*<\/div>/,
+      );
       expect(activeReviewsMatch).not.toBeNull();
       const activeReviewsBlock = activeReviewsMatch?.[0] ?? '';
-      expect(activeReviewsBlock).not.toMatch(/<div[^>]*id="i18n-empty-active-reviews"[^>]*>\s*<\/div>/);
+      expect(activeReviewsBlock).not.toMatch(
+        /<div[^>]*id="i18n-empty-active-reviews"[^>]*>\s*<\/div>/,
+      );
     });
   });
 

@@ -1,6 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { sanitizeJobId, getJobContextFilePath } from '../../../../shared/services/mcpJobContext.js';
 import * as os from 'node:os';
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { sanitizeJobId, getJobContextFilePath } from '../../../../shared/services/mcpJobContext.js';
 
 vi.mock('node:os');
 

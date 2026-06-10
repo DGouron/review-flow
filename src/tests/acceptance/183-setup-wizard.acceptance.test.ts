@@ -9,39 +9,42 @@
  * through the orchestrator.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
+import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
+import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
+import { SetupStateFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupState.fileSystem.gateway.js';
+import { NextActionsPresenter } from '@/modules/setup-wizard/interface-adapters/presenters/nextActions.presenter.js';
+import { HumanWizardEventEmitter } from '@/modules/setup-wizard/services/humanWizardEventEmitter.js';
+import { JsonWizardEventEmitter } from '@/modules/setup-wizard/services/jsonWizardEventEmitter.js';
 import { OrchestrateSetupUseCase } from '@/modules/setup-wizard/usecases/orchestrateSetup.usecase.js';
+import { AddProjectStep } from '@/modules/setup-wizard/usecases/steps/addProject.step.js';
 import { CheckDependenciesStep } from '@/modules/setup-wizard/usecases/steps/checkDependencies.step.js';
 import { ClaudeLoginStep } from '@/modules/setup-wizard/usecases/steps/claudeLogin.step.js';
-import { DaemonInstallStep } from '@/modules/setup-wizard/usecases/steps/daemonInstall.step.js';
-import { GenerateSecretsStep } from '@/modules/setup-wizard/usecases/steps/generateSecrets.step.js';
-import { AddProjectStep } from '@/modules/setup-wizard/usecases/steps/addProject.step.js';
 import { ConfigurePipelineStep } from '@/modules/setup-wizard/usecases/steps/configurePipeline.step.js';
+import { DaemonInstallStep } from '@/modules/setup-wizard/usecases/steps/daemonInstall.step.js';
+import { DisplayNextActionsStep } from '@/modules/setup-wizard/usecases/steps/displayNextActions.step.js';
 import { GenerateFilesStep } from '@/modules/setup-wizard/usecases/steps/generateFiles.step.js';
+import { GenerateSecretsStep } from '@/modules/setup-wizard/usecases/steps/generateSecrets.step.js';
 import { RegisterProjectStep } from '@/modules/setup-wizard/usecases/steps/registerProject.step.js';
 import { ValidateSetupStep } from '@/modules/setup-wizard/usecases/steps/validateSetup.step.js';
-import { DisplayNextActionsStep } from '@/modules/setup-wizard/usecases/steps/displayNextActions.step.js';
-import { StubDependencyProbeGateway } from '@/tests/stubs/setup-wizard/dependencyProbe.stub.js';
+import { StubAiFallbackGateway } from '@/tests/stubs/setup-wizard/aiFallback.stub.js';
 import { StubClaudeAuthGateway } from '@/tests/stubs/setup-wizard/claudeAuth.stub.js';
-import { StubDaemonServiceGateway } from '@/tests/stubs/setup-wizard/daemonService.stub.js';
 import { StubDaemonHealthProbeGateway } from '@/tests/stubs/setup-wizard/daemonHealthProbe.stub.js';
+import { StubDaemonServiceGateway } from '@/tests/stubs/setup-wizard/daemonService.stub.js';
+import { StubDependencyProbeGateway } from '@/tests/stubs/setup-wizard/dependencyProbe.stub.js';
 import { StubEnvFileGateway } from '@/tests/stubs/setup-wizard/envFile.stub.js';
 import { StubGitRemoteGateway } from '@/tests/stubs/setup-wizard/gitRemote.stub.js';
 import { StubProjectConfigGateway } from '@/tests/stubs/setup-wizard/projectConfig.stub.js';
-import { StubSkillTemplateGateway } from '@/tests/stubs/setup-wizard/skillTemplate.stub.js';
-import { StubServerConfigGateway } from '@/tests/stubs/setup-wizard/serverConfig.stub.js';
-import { StubValidationGateway } from '@/tests/stubs/setup-wizard/validation.stub.js';
-import { StubAiFallbackGateway } from '@/tests/stubs/setup-wizard/aiFallback.stub.js';
 import { StubPromptGateway } from '@/tests/stubs/setup-wizard/prompt.stub.js';
-import { SetupStateFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupState.fileSystem.gateway.js';
-import { JsonWizardEventEmitter } from '@/modules/setup-wizard/services/jsonWizardEventEmitter.js';
-import { HumanWizardEventEmitter } from '@/modules/setup-wizard/services/humanWizardEventEmitter.js';
-import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
-import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
-import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
+import { StubServerConfigGateway } from '@/tests/stubs/setup-wizard/serverConfig.stub.js';
+import { StubSkillTemplateGateway } from '@/tests/stubs/setup-wizard/skillTemplate.stub.js';
+import { StubValidationGateway } from '@/tests/stubs/setup-wizard/validation.stub.js';
 
 interface BuildContextOverrides {
   flags?: Partial<WizardContext['flags']>;
@@ -90,16 +93,17 @@ describe('Acceptance — SPEC-183: Setup Wizard CLI orchestrator', () => {
       new GenerateFilesStep(),
       new RegisterProjectStep(),
       new ValidateSetupStep(),
-      new DisplayNextActionsStep(),
+      new DisplayNextActionsStep(new NextActionsPresenter()),
     ];
   }
 
   function buildContext(overrides: BuildContextOverrides = {}): WizardContext {
     const stubs = overrides.stubs ?? {};
     const jsonLines = overrides.jsonLines ?? [];
-    const emitter = overrides.emitter === 'json'
-      ? new JsonWizardEventEmitter((line) => jsonLines.push(line))
-      : new HumanWizardEventEmitter(() => undefined);
+    const emitter =
+      overrides.emitter === 'json'
+        ? new JsonWizardEventEmitter((line) => jsonLines.push(line))
+        : new HumanWizardEventEmitter(() => undefined);
     return {
       state: null,
       currentStepId: null,
@@ -126,7 +130,13 @@ describe('Acceptance — SPEC-183: Setup Wizard CLI orchestrator', () => {
         daemonService: stubs.daemonService ?? new StubDaemonServiceGateway(),
         daemonHealthProbe: stubs.daemonHealthProbe ?? new StubDaemonHealthProbeGateway(),
         envFile: stubs.envFile ?? new StubEnvFileGateway(),
-        gitRemote: stubs.gitRemote ?? new StubGitRemoteGateway({ projectPath, platform: 'github', remoteUrl: 'git@github.com:org/repo.git' }),
+        gitRemote:
+          stubs.gitRemote ??
+          new StubGitRemoteGateway({
+            projectPath,
+            platform: 'github',
+            remoteUrl: 'git@github.com:org/repo.git',
+          }),
         projectConfig: stubs.projectConfig ?? new StubProjectConfigGateway(),
         skillTemplate: stubs.skillTemplate ?? new StubSkillTemplateGateway(),
         serverConfig: stubs.serverConfig ?? new StubServerConfigGateway(),
@@ -186,7 +196,15 @@ describe('Acceptance — SPEC-183: Setup Wizard CLI orchestrator', () => {
 
     expect(result.exitCode).toBe(0);
     // Step 10 (display next actions) always returns succeeded, others can be skipped.
-    const skippableSteps: StepId[] = ['dependencies', 'claude-login', 'daemon', 'secrets', 'add-project', 'generate-files', 'register-project'];
+    const skippableSteps: StepId[] = [
+      'dependencies',
+      'claude-login',
+      'daemon',
+      'secrets',
+      'add-project',
+      'generate-files',
+      'register-project',
+    ];
     for (const stepId of skippableSteps) {
       const status = result.finalState.steps[stepId]?.status;
       expect(['skipped', 'succeeded']).toContain(status);
@@ -213,18 +231,22 @@ describe('Acceptance — SPEC-183: Setup Wizard CLI orchestrator', () => {
     // Pre-populate a state file with steps 1-5 succeeded
     writeFileSync(
       stateFilePath,
-      JSON.stringify({
-        version: 1,
-        startedAt: '2026-05-28T09:00:00.000Z',
-        updatedAt: '2026-05-28T09:30:00.000Z',
-        steps: {
-          dependencies: { status: 'succeeded' },
-          'claude-login': { status: 'succeeded' },
-          daemon: { status: 'succeeded' },
-          secrets: { status: 'succeeded' },
-          'add-project': { status: 'succeeded' },
+      JSON.stringify(
+        {
+          version: 1,
+          startedAt: '2026-05-28T09:00:00.000Z',
+          updatedAt: '2026-05-28T09:30:00.000Z',
+          steps: {
+            dependencies: { status: 'succeeded' },
+            'claude-login': { status: 'succeeded' },
+            daemon: { status: 'succeeded' },
+            secrets: { status: 'succeeded' },
+            'add-project': { status: 'succeeded' },
+          },
         },
-      }, null, 2),
+        null,
+        2,
+      ),
       'utf-8',
     );
 
@@ -271,7 +293,11 @@ describe('Acceptance — SPEC-183: Setup Wizard CLI orchestrator', () => {
 
   it('Test 7 — --ai requested but agent fallback unavailable: warns and falls through to the scripted prompt', async () => {
     const orchestrator = new OrchestrateSetupUseCase();
-    const gitRemote = new StubGitRemoteGateway({ projectPath, platform: 'unknown', remoteUrl: 'git@custom.com:org/repo.git' });
+    const gitRemote = new StubGitRemoteGateway({
+      projectPath,
+      platform: 'unknown',
+      remoteUrl: 'git@custom.com:org/repo.git',
+    });
     const prompt = new StubPromptGateway();
     prompt.queueChoice('github');
     const jsonLines: string[] = [];
@@ -300,7 +326,11 @@ describe('Acceptance — SPEC-183: Setup Wizard CLI orchestrator', () => {
 
   it('Test 8 — ambiguous platform: prompt asked, project added correctly', async () => {
     const orchestrator = new OrchestrateSetupUseCase();
-    const gitRemote = new StubGitRemoteGateway({ projectPath, platform: 'unknown', remoteUrl: 'git@custom.com:org/repo.git' });
+    const gitRemote = new StubGitRemoteGateway({
+      projectPath,
+      platform: 'unknown',
+      remoteUrl: 'git@custom.com:org/repo.git',
+    });
     const prompt = new StubPromptGateway();
     prompt.queueChoice('gitlab');
     const context = buildContext({

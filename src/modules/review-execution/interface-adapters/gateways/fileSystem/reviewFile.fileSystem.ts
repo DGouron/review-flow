@@ -1,5 +1,6 @@
 import { readdir, stat, readFile, unlink, access } from 'node:fs/promises';
 import { join } from 'node:path';
+
 import type { ReviewFileGateway, ReviewFileInfo } from '../reviewFile.gateway.js';
 
 export class FileSystemReviewFileGateway implements ReviewFileGateway {
@@ -42,7 +43,7 @@ export class FileSystemReviewFileGateway implements ReviewFileGateway {
       // Directory doesn't exist or not readable
     }
 
-    return reviews.sort((a, b) => b.mtime.localeCompare(a.mtime));
+    return reviews.toSorted((a, b) => b.mtime.localeCompare(a.mtime));
   }
 
   private extractTitle(content: string): string | undefined {

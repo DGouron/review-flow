@@ -1,4 +1,5 @@
 import type { Logger } from 'pino';
+
 import type { SupervisorGateway } from '@/modules/supervisor-management/entities/supervisor/supervisor.gateway.js';
 import type { SupervisorLockGateway } from '@/modules/supervisor-management/entities/supervisor/supervisorLock.gateway.js';
 import type { SupervisorStatusStore } from '@/modules/supervisor-management/entities/supervisor/supervisorStatusStore.gateway.js';
@@ -30,10 +31,7 @@ export function startSupervisorScheduler(
         now: deps.now,
       });
     } catch (error) {
-      deps.logger.error(
-        { error },
-        'Supervisor scheduler tick failed',
-      );
+      deps.logger.error({ error }, 'Supervisor scheduler tick failed');
     }
   };
 

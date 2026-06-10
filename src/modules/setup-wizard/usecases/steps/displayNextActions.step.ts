@@ -1,9 +1,9 @@
-import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
-import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
-import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
+import type { NextActionsPort } from '@/modules/setup-wizard/entities/nextActions/nextActions.port.js';
 import type { Platform } from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
+import type { SetupStep } from '@/modules/setup-wizard/entities/setupStep/setupStep.js';
 import { succeeded } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
-import { NextActionsPresenter } from '@/modules/setup-wizard/interface-adapters/presenters/nextActions.presenter.js';
+import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
+import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
 import { isValidSecret } from '@/shared/services/secretGenerator.js';
 
 const DEFAULT_HOST = 'YOUR_HOST';
@@ -18,12 +18,13 @@ export class DisplayNextActionsStep implements SetupStep {
   readonly id = 'next-actions' as const;
   readonly title = 'Prochaines actions';
 
+  constructor(private readonly presenter: NextActionsPort) {}
+
   async detect(_context: WizardContext): Promise<StepOutcome | null> {
     return null;
   }
 
   async execute(context: WizardContext): Promise<StepOutcome> {
-    const presenter = new NextActionsPresenter();
     const platform = pickPlatformOrDefault(context.project.platform);
     const projectPath = context.project.localPath ?? '/unknown';
     const envContents = context.gateways.envFile.read(projectPath);
@@ -31,7 +32,7 @@ export class DisplayNextActionsStep implements SetupStep {
       platform === 'github' ? envContents.githubSecret : envContents.gitlabSecret;
     const webhookSecret = candidateSecret && isValidSecret(candidateSecret) ? candidateSecret : '';
 
-    const viewModel = presenter.present({
+    const viewModel = this.presenter.present({
       platform,
       host: DEFAULT_HOST,
       port: DEFAULT_PORT,

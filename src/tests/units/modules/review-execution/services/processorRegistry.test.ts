@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
 import { ProcessorRegistry } from '@/modules/review-execution/services/processorRegistry.js';
 import { PendingReviewRequestFactory } from '@/tests/factories/pendingReviewRequest.factory.js';
@@ -49,7 +50,9 @@ describe('ProcessorRegistry', () => {
       jobType: 'followup',
     });
 
-    expect(() => registry.resolve(pending)).toThrow(/Available keys.*webhook-initial:gitlab:review/);
+    expect(() => registry.resolve(pending)).toThrow(
+      /Available keys.*webhook-initial:gitlab:review/,
+    );
   });
 
   it('replaces an existing builder when register is called twice with the same key', () => {

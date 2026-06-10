@@ -1,4 +1,7 @@
-import type { EnvFileGateway, EnvFileContents } from '@/modules/setup-wizard/entities/envFile/envFile.gateway.js';
+import type {
+  EnvFileGateway,
+  EnvFileContents,
+} from '@/modules/setup-wizard/entities/envFile/envFile.gateway.js';
 
 export class StubEnvFileGateway implements EnvFileGateway {
   private readonly fileStore = new Map<string, EnvFileContents>();
@@ -20,7 +23,11 @@ export class StubEnvFileGateway implements EnvFileGateway {
     this.gitignoredPaths.add(projectPath);
   }
 
-  seedSecrets(projectPath: string, gitlabSecret = 'a'.repeat(64), githubSecret = 'b'.repeat(64)): void {
+  seedSecrets(
+    projectPath: string,
+    gitlabSecret = 'a'.repeat(64),
+    githubSecret = 'b'.repeat(64),
+  ): void {
     this.fileStore.set(projectPath, { gitlabSecret, githubSecret });
   }
 

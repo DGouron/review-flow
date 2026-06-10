@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
+
 import { clearEmberMemory } from '@/modules/ember-chat/usecases/clearEmberMemory/clearEmberMemory.usecase.js';
-import { StubEmberMemoryGateway } from '@/tests/stubs/emberMemory.stub.js';
 import { EmberMemoryTurnFactory } from '@/tests/factories/emberMemory.factory.js';
+import { StubEmberMemoryGateway } from '@/tests/stubs/emberMemory.stub.js';
 
 const PROJECT_PATH = '/projects/alpha';
 

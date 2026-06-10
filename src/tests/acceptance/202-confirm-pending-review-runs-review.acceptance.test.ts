@@ -1,16 +1,17 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
 import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
-import { ConfirmPendingReviewUseCase } from '@/modules/review-execution/usecases/confirmPendingReview.usecase.js';
-import { ProcessorRegistry } from '@/modules/review-execution/services/processorRegistry.js';
-import type { ProcessorBuilder } from '@/modules/review-execution/services/processorRegistry.js';
-import type { GateClaudeInvocationProcessor } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
 import type {
   PendingReviewRequest,
   TriggerSource,
 } from '@/modules/review-execution/entities/pendingReviewRequest/pendingReviewRequest.schema.js';
-import { StubPendingReviewRequestGateway } from '@/tests/stubs/pendingReviewRequest.stub.js';
+import { ProcessorRegistry } from '@/modules/review-execution/services/processorRegistry.js';
+import type { ProcessorBuilder } from '@/modules/review-execution/services/processorRegistry.js';
+import { ConfirmPendingReviewUseCase } from '@/modules/review-execution/usecases/confirmPendingReview.usecase.js';
+import type { GateClaudeInvocationProcessor } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
 import { PendingReviewRequestFactory } from '@/tests/factories/pendingReviewRequest.factory.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { StubPendingReviewRequestGateway } from '@/tests/stubs/pendingReviewRequest.stub.js';
 
 type Platform = 'gitlab' | 'github';
 
@@ -71,8 +72,7 @@ class AcceptanceWorld {
         return true;
       },
       resolveProcessor: (pending) => this.registry.resolve(pending),
-      isProjectRunnable: (pending) =>
-        this.configuredProjectPaths.has(pending.job.projectPath),
+      isProjectRunnable: (pending) => this.configuredProjectPaths.has(pending.job.projectPath),
       logger: this.logger,
     });
   }
@@ -111,9 +111,7 @@ describe('Confirm a parked review runs the real review (acceptance, spec-202)', 
 
           expect(result.status).toBe('confirmed');
           expect(world.enqueued).toHaveLength(1);
-          expect(world.runs).toEqual([
-            { platform, jobType: 'review', jobId: pending.job.id },
-          ]);
+          expect(world.runs).toEqual([{ platform, jobType: 'review', jobId: pending.job.id }]);
           expect(await world.gateway.listAll()).toHaveLength(0);
         });
       });
@@ -156,9 +154,7 @@ describe('Confirm a parked review runs the real review (acceptance, spec-202)', 
             .execute({ pendingId: pending.pendingReviewRequestId });
 
           expect(result.status).toBe('confirmed');
-          expect(world.runs).toEqual([
-            { platform, jobType: 'followup', jobId: pending.job.id },
-          ]);
+          expect(world.runs).toEqual([{ platform, jobType: 'followup', jobId: pending.job.id }]);
         });
       });
 

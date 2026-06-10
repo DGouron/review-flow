@@ -12,9 +12,7 @@ export type WorktreeIdentity = z.infer<typeof worktreeIdentitySchema>;
 
 export type WorktreePath = string & { readonly __brand: 'WorktreePath' };
 
-export type MrSource =
-  | { kind: 'origin' }
-  | { kind: 'fork'; cloneUrl: string };
+export type MrSource = { kind: 'origin' } | { kind: 'fork'; cloneUrl: string };
 
 export interface FetchRef {
   remote: string;

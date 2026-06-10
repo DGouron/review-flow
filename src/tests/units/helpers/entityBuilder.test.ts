@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { EntityBuilder } from '@/tests/helpers/entityBuilder.js';
 
 interface CountProps {
@@ -33,7 +34,7 @@ describe('EntityBuilder', () => {
     const builder = new CounterBuilder().withValue(7);
     const entities = builder.buildMany(3);
     expect(entities).toHaveLength(3);
-    expect(entities.every(entity => entity.value === 7)).toBe(true);
+    expect(entities.every((entity) => entity.value === 7)).toBe(true);
     expect(entities[0]).not.toBe(entities[1]);
   });
 });

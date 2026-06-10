@@ -1,6 +1,6 @@
-import type { ReviewFileGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewFile.gateway.js';
-import type { ReviewLogFileGateway } from '@/modules/data-lifecycle/interface-adapters/gateways/reviewLogFile.gateway.js';
 import { RetentionPolicy } from '@/modules/data-lifecycle/entities/cleanup/retentionPolicy.valueObject.js';
+import type { ReviewLogFileGateway } from '@/modules/data-lifecycle/entities/reviewLog/reviewLogFile.gateway.js';
+import type { ReviewFileGateway } from '@/modules/review-execution/entities/review/reviewFile.gateway.js';
 
 export interface CleanupResult {
   deletedReviewFiles: string[];
@@ -17,7 +17,7 @@ export async function cleanupExpiredReviews(
   projectPath: string,
   retentionDays: number,
   dependencies: CleanupDependencies,
-  now: Date = new Date()
+  now: Date = new Date(),
 ): Promise<CleanupResult> {
   const { reviewFileGateway, reviewLogFileGateway } = dependencies;
   const retentionPolicy = RetentionPolicy.create(retentionDays);
@@ -26,14 +26,14 @@ export async function cleanupExpiredReviews(
     projectPath,
     retentionPolicy,
     reviewFileGateway,
-    now
+    now,
   );
 
   const deletedLogFiles = await deleteExpiredLogFiles(
     projectPath,
     retentionPolicy,
     reviewLogFileGateway,
-    now
+    now,
   );
 
   return {
@@ -47,7 +47,7 @@ async function deleteExpiredReviewFiles(
   projectPath: string,
   retentionPolicy: RetentionPolicy,
   reviewFileGateway: ReviewFileGateway,
-  now: Date
+  now: Date,
 ): Promise<string[]> {
   const reviews = await reviewFileGateway.listReviews(projectPath);
   const deletedFiles: string[] = [];
@@ -69,7 +69,7 @@ async function deleteExpiredLogFiles(
   projectPath: string,
   retentionPolicy: RetentionPolicy,
   reviewLogFileGateway: ReviewLogFileGateway,
-  now: Date
+  now: Date,
 ): Promise<string[]> {
   const logFiles = await reviewLogFileGateway.listLogFiles(projectPath);
   const deletedFiles: string[] = [];

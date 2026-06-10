@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+
 import type {
   SupervisorGateway,
   SupervisorProbeResult,
@@ -29,12 +30,12 @@ const PROBE_TIMEOUT_MS = 5000;
 
 export function createDefaultSupervisorProbe(): SupervisorProcessProbe {
   return () =>
-    new Promise<SupervisorProcessProbeResult>(resolve => {
+    new Promise<SupervisorProcessProbeResult>((resolve) => {
       const child = spawn('claude', ['agents', '--json'], { timeout: PROBE_TIMEOUT_MS });
       let stdout = '';
       let timedOut = false;
 
-      child.stdout?.on('data', chunk => {
+      child.stdout?.on('data', (chunk) => {
         stdout += chunk.toString();
       });
 
@@ -83,7 +84,10 @@ export class SupervisorCliGateway implements SupervisorGateway {
     }
 
     if (probeResult.exitCode !== 0) {
-      return { state: 'down', reason: `claude agents --json exited with code ${probeResult.exitCode}` };
+      return {
+        state: 'down',
+        reason: `claude agents --json exited with code ${probeResult.exitCode}`,
+      };
     }
 
     let parsed: unknown;

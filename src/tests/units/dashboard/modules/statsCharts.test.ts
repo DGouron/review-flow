@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { animateCounter } from '@/dashboard/modules/statsCharts.js';
 
 /**

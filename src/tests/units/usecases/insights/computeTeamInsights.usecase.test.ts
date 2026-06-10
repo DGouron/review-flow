@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
+
+import type { DeveloperInsight } from '@/modules/statistics-insights/entities/insight/developerInsight.js';
 import { computeTeamInsights } from '@/modules/statistics-insights/usecases/insights/computeTeamInsights.usecase.js';
 import { DeveloperInsightFactory } from '@/tests/factories/developerInsight.factory.js';
-import type { DeveloperInsight } from '@/modules/statistics-insights/entities/insight/developerInsight.js';
 
 describe('computeTeamInsights', () => {
   it('should return empty team insight when no developers provided', () => {

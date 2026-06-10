@@ -1,4 +1,7 @@
-import type { ValidationGateway, ValidationReport } from '@/modules/setup-wizard/entities/validation/validation.gateway.js';
+import type {
+  ValidationGateway,
+  ValidationReport,
+} from '@/modules/setup-wizard/entities/validation/validation.gateway.js';
 
 interface StubOptions {
   report?: ValidationReport;

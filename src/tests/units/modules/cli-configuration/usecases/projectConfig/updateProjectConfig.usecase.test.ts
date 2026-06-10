@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+
+import type { ProjectConfig } from '@/config/projectConfig.js';
 import { UpdateProjectConfigUseCase } from '@/modules/cli-configuration/usecases/projectConfig/updateProjectConfig.usecase.js';
 import { StubProjectConfigGateway } from '@/tests/stubs/projectConfigGateway.stub.js';
-import type { ProjectConfig } from '@/config/projectConfig.js';
 
 function base(overrides: Partial<ProjectConfig> = {}): ProjectConfig {
   return {
@@ -19,12 +20,15 @@ function base(overrides: Partial<ProjectConfig> = {}): ProjectConfig {
 describe('UpdateProjectConfigUseCase', () => {
   it('merges only whitelisted fields (language, defaultModel, reviewSkill, reviewFollowupSkill, externalLink)', () => {
     const gateway = new StubProjectConfigGateway();
-    gateway.set('/repo/A', base({
-      language: 'fr',
-      agents: [{ name: 'security', displayName: 'Security' }],
-      routingPolicy: { haikuMaxLines: 50, sonnetMaxLines: 500 },
-      retentionDays: 30,
-    }));
+    gateway.set(
+      '/repo/A',
+      base({
+        language: 'fr',
+        agents: [{ name: 'security', displayName: 'Security' }],
+        routingPolicy: { haikuMaxLines: 50, sonnetMaxLines: 500 },
+        retentionDays: 30,
+      }),
+    );
     const usecase = new UpdateProjectConfigUseCase(gateway);
 
     const result = usecase.execute({ path: '/repo/A', patch: { language: 'en' } });

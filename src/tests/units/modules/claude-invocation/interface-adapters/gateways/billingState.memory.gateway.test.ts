@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { InMemoryBillingStateGateway } from '@/modules/claude-invocation/interface-adapters/gateways/billingState.memory.gateway.js';
 
 describe('InMemoryBillingStateGateway', () => {

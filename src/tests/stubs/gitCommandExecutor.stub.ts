@@ -33,6 +33,6 @@ export class StubGitCommandExecutor implements GitCommandExecutor {
   }
 
   callsOfKind(kind: GitCommandKind): GitCommand[] {
-    return this.calls.filter(call => call.kind === kind);
+    return this.calls.filter((call) => call.kind === kind);
   }
 }

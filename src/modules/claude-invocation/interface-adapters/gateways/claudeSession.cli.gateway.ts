@@ -1,7 +1,9 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+
 import { z } from 'zod';
+
 import type {
   AgentStatusEntry,
   AgentStatusValue,
@@ -115,7 +117,10 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
 
     const result = await this.runner({ args, cwd: input.localPath });
 
-    if (RATE_LIMIT_DETECTION_REGEX.test(result.stderr) || RATE_LIMIT_DETECTION_REGEX.test(result.stdout)) {
+    if (
+      RATE_LIMIT_DETECTION_REGEX.test(result.stderr) ||
+      RATE_LIMIT_DETECTION_REGEX.test(result.stdout)
+    ) {
       return { status: 'rate-limited', rawStderr: result.stderr || result.stdout };
     }
 
@@ -125,7 +130,10 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
 
     const match = result.stdout.match(SESSION_ID_REGEX);
     if (!match) {
-      return { status: 'failed', rawStderr: `unable to parse session id from stdout: ${result.stdout}` };
+      return {
+        status: 'failed',
+        rawStderr: `unable to parse session id from stdout: ${result.stdout}`,
+      };
     }
     return { status: 'dispatched', sessionId: parseSessionId(match[1]) };
   }
@@ -153,7 +161,7 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
       const parsed: unknown = JSON.parse(result.stdout);
       const safe = agentArraySchema.safeParse(parsed);
       if (!safe.success) return [];
-      return safe.data.map(entry => ({
+      return safe.data.map((entry) => ({
         sessionId: parseSessionId(entry.id),
         status: classifyAgentStatus(entry.status),
       }));
@@ -180,10 +188,7 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
     return { usesApiPool, raw };
   }
 
-  async getSessionUsage(
-    sessionId: SessionId,
-    cwd: string,
-  ): Promise<SessionUsageSnapshot | null> {
+  async getSessionUsage(sessionId: SessionId, cwd: string): Promise<SessionUsageSnapshot | null> {
     const slug = cwd.replace(/\//g, '-');
     const transcriptPath = join(this.homeDir, '.claude', 'projects', slug, `${sessionId}.jsonl`);
     if (!existsSync(transcriptPath)) {
@@ -199,8 +204,8 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
 
     const entries = raw
       .split('\n')
-      .filter(line => line.trim().length > 0)
-      .map(line => safeParseAssistantUsage(line))
+      .filter((line) => line.trim().length > 0)
+      .map((line) => safeParseAssistantUsage(line))
       .filter((entry): entry is z.infer<typeof assistantUsageLineSchema> => entry !== null);
 
     if (entries.length === 0) {

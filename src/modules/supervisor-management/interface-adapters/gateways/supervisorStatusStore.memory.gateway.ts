@@ -1,8 +1,8 @@
-import type { SupervisorStatusStore } from '@/modules/supervisor-management/entities/supervisor/supervisorStatusStore.gateway.js';
 import {
   createSupervisorStatus,
   type SupervisorStatus,
 } from '@/modules/supervisor-management/entities/supervisor/supervisorStatus.schema.js';
+import type { SupervisorStatusStore } from '@/modules/supervisor-management/entities/supervisor/supervisorStatusStore.gateway.js';
 
 const EPOCH = new Date(0);
 

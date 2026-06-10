@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   AVATAR_STATES,
   avatarStateFromEvents,
@@ -34,14 +35,26 @@ describe('avatarStateFromEvents', () => {
 
   it('returns error when the latest step is blocked', () => {
     const events = [
-      { step: 'pipeline', status: 'blocked', message: 'Aucun remote git', remediation: 'Add a remote' },
+      {
+        step: 'pipeline',
+        status: 'blocked',
+        message: 'Aucun remote git',
+        remediation: 'Add a remote',
+      },
     ];
     expect(avatarStateFromEvents(events)).toBe('error');
   });
 
   it('returns listening when the latest step awaits input', () => {
     const events = [
-      { step: 'add-project', status: 'awaiting_input', prompt: 'Chemin ?', kind: 'choice', options: [], defaultValue: null },
+      {
+        step: 'add-project',
+        status: 'awaiting_input',
+        prompt: 'Chemin ?',
+        kind: 'choice',
+        options: [],
+        defaultValue: null,
+      },
     ];
     expect(avatarStateFromEvents(events)).toBe('listening');
   });

@@ -1,9 +1,9 @@
-import type { Presenter } from '@/shared/foundation/presenter.base.js';
-import { Duration } from '@/modules/shared-kernel/entities/shared/duration.valueObject.js';
 import type {
   PendingReviewRequest,
   TriggerSource,
 } from '@/modules/review-execution/entities/pendingReviewRequest/pendingReviewRequest.schema.js';
+import { Duration } from '@/modules/shared-kernel/entities/shared/duration.valueObject.js';
+import type { Presenter } from '@/shared/foundation/presenter.base.js';
 
 export interface PendingReviewViewModel {
   identifier: string;
@@ -28,7 +28,10 @@ const TRIGGER_SOURCE_LABELS: Record<TriggerSource, string> = {
   'dashboard-manual': 'Manuel',
 };
 
-export class PendingReviewPresenter implements Presenter<PendingReviewRequest, PendingReviewViewModel> {
+export class PendingReviewPresenter implements Presenter<
+  PendingReviewRequest,
+  PendingReviewViewModel
+> {
   private readonly now: () => Date;
 
   constructor(options: PendingReviewPresenterOptions = {}) {

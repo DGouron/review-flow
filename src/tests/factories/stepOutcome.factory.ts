@@ -1,4 +1,7 @@
-import type { StepOutcome, StepOutcomeStatus } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
+import type {
+  StepOutcome,
+  StepOutcomeStatus,
+} from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
 
 interface StepOutcomeOverrides {
   status?: StepOutcomeStatus;

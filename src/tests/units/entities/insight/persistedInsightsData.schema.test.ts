@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   persistedDeveloperMetricsSchema,
   persistedInsightsDataSchema,
@@ -83,20 +84,22 @@ describe('persistedInsightsDataSchema', () => {
 
   it('should accept data with developer metrics', () => {
     const validData = {
-      developers: [{
-        developerName: 'alice',
-        totalReviews: 10,
-        totalScore: 75,
-        scoredReviewCount: 9,
-        totalBlocking: 5,
-        totalWarnings: 12,
-        totalSuggestions: 20,
-        totalDuration: 600000,
-        totalAdditions: 1500,
-        totalDeletions: 300,
-        diffStatsReviewCount: 8,
-        recentReviews: [],
-      }],
+      developers: [
+        {
+          developerName: 'alice',
+          totalReviews: 10,
+          totalScore: 75,
+          scoredReviewCount: 9,
+          totalBlocking: 5,
+          totalWarnings: 12,
+          totalSuggestions: 20,
+          totalDuration: 600000,
+          totalAdditions: 1500,
+          totalDeletions: 300,
+          diffStatsReviewCount: 8,
+          recentReviews: [],
+        },
+      ],
       processedReviewIds: ['review-1'],
       lastUpdated: '2024-01-15T10:00:00Z',
     };

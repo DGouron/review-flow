@@ -1,20 +1,22 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js'
+import { mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+import { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
 
 describe('ReviewContextFileSystemGateway', () => {
-  const testDir = '/tmp/test-review-context'
-  let gateway: ReviewContextFileSystemGateway
+  const testDir = '/tmp/test-review-context';
+  let gateway: ReviewContextFileSystemGateway;
 
   beforeEach(() => {
-    mkdirSync(testDir, { recursive: true })
-    gateway = new ReviewContextFileSystemGateway()
-  })
+    mkdirSync(testDir, { recursive: true });
+    gateway = new ReviewContextFileSystemGateway();
+  });
 
   afterEach(() => {
-    rmSync(testDir, { recursive: true, force: true })
-  })
+    rmSync(testDir, { recursive: true, force: true });
+  });
 
   describe('create', () => {
     it('should create a context file with basic merge request info', () => {
@@ -24,17 +26,17 @@ describe('ReviewContextFileSystemGateway', () => {
         platform: 'github',
         projectPath: 'owner/repo',
         mergeRequestNumber: 42,
-      })
+      });
 
-      expect(result.success).toBe(true)
-      expect(existsSync(result.filePath)).toBe(true)
+      expect(result.success).toBe(true);
+      expect(existsSync(result.filePath)).toBe(true);
 
-      const content = JSON.parse(readFileSync(result.filePath, 'utf-8'))
-      expect(content.mergeRequestId).toBe('github-owner/repo-42')
-      expect(content.platform).toBe('github')
-      expect(content.projectPath).toBe('owner/repo')
-      expect(content.mergeRequestNumber).toBe(42)
-    })
+      const content = JSON.parse(readFileSync(result.filePath, 'utf-8'));
+      expect(content.mergeRequestId).toBe('github-owner/repo-42');
+      expect(content.platform).toBe('github');
+      expect(content.projectPath).toBe('owner/repo');
+      expect(content.mergeRequestNumber).toBe(42);
+    });
 
     it('should create a context file with pre-injected threads', () => {
       const threads = [
@@ -52,7 +54,7 @@ describe('ReviewContextFileSystemGateway', () => {
           status: 'open' as const,
           body: 'Consider using a guard here',
         },
-      ]
+      ];
 
       const result = gateway.create({
         localPath: testDir,
@@ -61,14 +63,14 @@ describe('ReviewContextFileSystemGateway', () => {
         projectPath: 'owner/repo',
         mergeRequestNumber: 42,
         threads,
-      })
+      });
 
-      const content = JSON.parse(readFileSync(result.filePath, 'utf-8'))
-      expect(content.threads).toHaveLength(2)
-      expect(content.threads[0].id).toBe('PRRT_kwDONxxx123')
-      expect(content.threads[1].id).toBe('PRRT_kwDONyyy456')
-    })
-  })
+      const content = JSON.parse(readFileSync(result.filePath, 'utf-8'));
+      expect(content.threads).toHaveLength(2);
+      expect(content.threads[0].id).toBe('PRRT_kwDONxxx123');
+      expect(content.threads[1].id).toBe('PRRT_kwDONyyy456');
+    });
+  });
 
   describe('delete', () => {
     it('should delete the context file and return deleted true', () => {
@@ -78,22 +80,22 @@ describe('ReviewContextFileSystemGateway', () => {
         platform: 'github',
         projectPath: 'owner/repo',
         mergeRequestNumber: 42,
-      })
+      });
 
-      const result = gateway.delete(testDir, 'github-owner/repo-42')
+      const result = gateway.delete(testDir, 'github-owner/repo-42');
 
-      expect(result.success).toBe(true)
-      expect(result.deleted).toBe(true)
-      expect(gateway.exists(testDir, 'github-owner/repo-42')).toBe(false)
-    })
+      expect(result.success).toBe(true);
+      expect(result.deleted).toBe(true);
+      expect(gateway.exists(testDir, 'github-owner/repo-42')).toBe(false);
+    });
 
     it('should return deleted false when file does not exist', () => {
-      const result = gateway.delete(testDir, 'github-nonexistent-99')
+      const result = gateway.delete(testDir, 'github-nonexistent-99');
 
-      expect(result.success).toBe(true)
-      expect(result.deleted).toBe(false)
-    })
-  })
+      expect(result.success).toBe(true);
+      expect(result.deleted).toBe(false);
+    });
+  });
 
   describe('appendAction', () => {
     it('should append a single action to the context file', () => {
@@ -103,24 +105,24 @@ describe('ReviewContextFileSystemGateway', () => {
         platform: 'github',
         projectPath: 'owner/repo',
         mergeRequestNumber: 42,
-      })
+      });
 
       const result = gateway.appendAction(testDir, 'github-owner/repo-42', {
         type: 'THREAD_RESOLVE',
         threadId: 'PRRT_kwDONxxx',
         message: 'Fixed - Added null check',
-      })
+      });
 
-      expect(result.success).toBe(true)
+      expect(result.success).toBe(true);
 
-      const context = gateway.read(testDir, 'github-owner/repo-42')
-      expect(context?.actions).toHaveLength(1)
+      const context = gateway.read(testDir, 'github-owner/repo-42');
+      expect(context?.actions).toHaveLength(1);
       expect(context?.actions[0]).toEqual({
         type: 'THREAD_RESOLVE',
         threadId: 'PRRT_kwDONxxx',
         message: 'Fixed - Added null check',
-      })
-    })
+      });
+    });
 
     it('should append multiple actions preserving order', () => {
       gateway.create({
@@ -129,37 +131,37 @@ describe('ReviewContextFileSystemGateway', () => {
         platform: 'github',
         projectPath: 'owner/repo',
         mergeRequestNumber: 42,
-      })
+      });
 
       gateway.appendAction(testDir, 'github-owner/repo-42', {
         type: 'THREAD_RESOLVE',
         threadId: 'thread-1',
-      })
+      });
       gateway.appendAction(testDir, 'github-owner/repo-42', {
         type: 'POST_COMMENT',
         body: 'Review complete',
-      })
+      });
       gateway.appendAction(testDir, 'github-owner/repo-42', {
         type: 'ADD_LABEL',
         label: 'needs_approve',
-      })
+      });
 
-      const context = gateway.read(testDir, 'github-owner/repo-42')
-      expect(context?.actions).toHaveLength(3)
-      expect(context?.actions[0].type).toBe('THREAD_RESOLVE')
-      expect(context?.actions[1].type).toBe('POST_COMMENT')
-      expect(context?.actions[2].type).toBe('ADD_LABEL')
-    })
+      const context = gateway.read(testDir, 'github-owner/repo-42');
+      expect(context?.actions).toHaveLength(3);
+      expect(context?.actions[0].type).toBe('THREAD_RESOLVE');
+      expect(context?.actions[1].type).toBe('POST_COMMENT');
+      expect(context?.actions[2].type).toBe('ADD_LABEL');
+    });
 
     it('should return success false when context file does not exist', () => {
       const result = gateway.appendAction(testDir, 'github-nonexistent-99', {
         type: 'THREAD_RESOLVE',
         threadId: 'xxx',
-      })
+      });
 
-      expect(result.success).toBe(false)
-    })
-  })
+      expect(result.success).toBe(false);
+    });
+  });
 
   describe('updateProgress', () => {
     it('should update progress phase and currentStep', () => {
@@ -169,19 +171,19 @@ describe('ReviewContextFileSystemGateway', () => {
         platform: 'github',
         projectPath: 'owner/repo',
         mergeRequestNumber: 42,
-      })
+      });
 
       const result = gateway.updateProgress(testDir, 'github-owner/repo-42', {
         phase: 'agents-running',
         currentStep: 'verify',
-      })
+      });
 
-      expect(result.success).toBe(true)
+      expect(result.success).toBe(true);
 
-      const context = gateway.read(testDir, 'github-owner/repo-42')
-      expect(context?.progress.phase).toBe('agents-running')
-      expect(context?.progress.currentStep).toBe('verify')
-    })
+      const context = gateway.read(testDir, 'github-owner/repo-42');
+      expect(context?.progress.phase).toBe('agents-running');
+      expect(context?.progress.currentStep).toBe('verify');
+    });
 
     it('should update stepsCompleted array', () => {
       gateway.create({
@@ -190,32 +192,32 @@ describe('ReviewContextFileSystemGateway', () => {
         platform: 'github',
         projectPath: 'owner/repo',
         mergeRequestNumber: 42,
-      })
+      });
 
       gateway.updateProgress(testDir, 'github-owner/repo-42', {
         phase: 'agents-running',
         currentStep: 'scan',
         stepsCompleted: ['context', 'verify'],
-      })
+      });
 
-      const context = gateway.read(testDir, 'github-owner/repo-42')
-      expect(context?.progress.stepsCompleted).toEqual(['context', 'verify'])
-    })
+      const context = gateway.read(testDir, 'github-owner/repo-42');
+      expect(context?.progress.stepsCompleted).toEqual(['context', 'verify']);
+    });
 
     it('should return success false when context file does not exist', () => {
       const result = gateway.updateProgress(testDir, 'github-nonexistent-99', {
         phase: 'completed',
         currentStep: null,
-      })
+      });
 
-      expect(result.success).toBe(false)
-    })
-  })
+      expect(result.success).toBe(false);
+    });
+  });
 
   describe('listAll', () => {
     it('returns an empty array when no logs directory exists', () => {
-      expect(gateway.listAll(testDir)).toEqual([])
-    })
+      expect(gateway.listAll(testDir)).toEqual([]);
+    });
 
     it('returns every context, even when mergeRequestId contains a slash (subdir)', () => {
       gateway.create({
@@ -224,53 +226,53 @@ describe('ReviewContextFileSystemGateway', () => {
         platform: 'github',
         projectPath: 'owner/repo',
         mergeRequestNumber: 1,
-      })
+      });
       gateway.create({
         localPath: testDir,
         mergeRequestId: 'github-owner/repo-2',
         platform: 'github',
         projectPath: 'owner/repo',
         mergeRequestNumber: 2,
-      })
+      });
       gateway.create({
         localPath: testDir,
         mergeRequestId: 'gitlab-flat-id-3',
         platform: 'gitlab',
         projectPath: 'group/proj',
         mergeRequestNumber: 3,
-      })
+      });
 
-      const all = gateway.listAll(testDir)
-      const ids = all.map((c) => c.mergeRequestId).sort()
-      expect(ids).toEqual(['github-owner/repo-1', 'github-owner/repo-2', 'gitlab-flat-id-3'])
-    })
+      const all = gateway.listAll(testDir);
+      const ids = all.map((c) => c.mergeRequestId).toSorted();
+      expect(ids).toEqual(['github-owner/repo-1', 'github-owner/repo-2', 'gitlab-flat-id-3']);
+    });
 
     it('skips malformed JSON files and writes a warning to stderr', () => {
-      const logsDir = join(testDir, '.claude', 'reviews', 'logs')
-      mkdirSync(logsDir, { recursive: true })
-      writeFileSync(join(logsDir, 'broken.json'), '{ not valid json')
+      const logsDir = join(testDir, '.claude', 'reviews', 'logs');
+      mkdirSync(logsDir, { recursive: true });
+      writeFileSync(join(logsDir, 'broken.json'), '{ not valid json');
       gateway.create({
         localPath: testDir,
         mergeRequestId: 'github-owner/repo-1',
         platform: 'github',
         projectPath: 'owner/repo',
         mergeRequestNumber: 1,
-      })
+      });
 
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
       try {
-        const all = gateway.listAll(testDir)
-        expect(all.map((c) => c.mergeRequestId)).toEqual(['github-owner/repo-1'])
-        expect(stderrSpy).toHaveBeenCalledOnce()
-        const message = stderrSpy.mock.calls[0]?.[0] as string
-        expect(message).toContain('malformed JSON skipped')
-        expect(message).toContain('broken.json')
+        const all = gateway.listAll(testDir);
+        expect(all.map((c) => c.mergeRequestId)).toEqual(['github-owner/repo-1']);
+        expect(stderrSpy).toHaveBeenCalledOnce();
+        const message = stderrSpy.mock.calls[0]?.[0] as string;
+        expect(message).toContain('malformed JSON skipped');
+        expect(message).toContain('broken.json');
       } finally {
-        stderrSpy.mockRestore()
+        stderrSpy.mockRestore();
       }
-    })
-  })
+    });
+  });
 
   describe('setResult', () => {
     it('should set the review result', () => {
@@ -280,7 +282,7 @@ describe('ReviewContextFileSystemGateway', () => {
         platform: 'github',
         projectPath: 'owner/repo',
         mergeRequestNumber: 42,
-      })
+      });
 
       const result = gateway.setResult(testDir, 'github-owner/repo-42', {
         kind: 'measured',
@@ -289,16 +291,16 @@ describe('ReviewContextFileSystemGateway', () => {
         suggestions: 3,
         score: 10,
         verdict: 'ready_to_merge',
-      })
+      });
 
-      expect(result.success).toBe(true)
+      expect(result.success).toBe(true);
 
-      const context = gateway.read(testDir, 'github-owner/repo-42')
-      expect(context?.result?.kind).toBe('measured')
+      const context = gateway.read(testDir, 'github-owner/repo-42');
+      expect(context?.result?.kind).toBe('measured');
       if (context?.result?.kind === 'measured') {
-        expect(context.result.blocking).toBe(0)
-        expect(context.result.verdict).toBe('ready_to_merge')
+        expect(context.result.blocking).toBe(0);
+        expect(context.result.verdict).toBe('ready_to_merge');
       }
-    })
-  })
-})
+    });
+  });
+});

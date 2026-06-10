@@ -1,10 +1,11 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { describe, expect, it } from 'vitest';
+
+import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
 import {
   repositoriesRoutes,
   type RepositoriesRoutesOptions,
 } from '@/modules/cli-configuration/interface-adapters/controllers/http/repositories.routes.js';
-import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
 import { RepositoryConfigFactory } from '@/tests/factories/repositoryConfig.factory.js';
 
 async function buildApp(repositories: RepositoryConfig[]): Promise<FastifyInstance> {
@@ -54,10 +55,22 @@ describe('repositoriesRoutes — GET /api/repositories', () => {
 
     expect(response.statusCode).toBe(200);
     const body = response.json() as {
-      repositories: Array<{ name: string; localPath: string; platform: string; enabled: boolean; remoteUrl: string }>;
+      repositories: Array<{
+        name: string;
+        localPath: string;
+        platform: string;
+        enabled: boolean;
+        remoteUrl: string;
+      }>;
     };
     expect(body.repositories).toEqual([
-      { name: 'frontend', localPath: '/repos/frontend', platform: 'gitlab', enabled: true, remoteUrl: 'https://gitlab.com/org/sample-project' },
+      {
+        name: 'frontend',
+        localPath: '/repos/frontend',
+        platform: 'gitlab',
+        enabled: true,
+        remoteUrl: 'https://gitlab.com/org/sample-project',
+      },
     ]);
 
     await app.close();
@@ -65,8 +78,16 @@ describe('repositoriesRoutes — GET /api/repositories', () => {
 
   it('returns disabled repositories alongside enabled ones', async () => {
     const app = await buildApp([
-      RepositoryConfigFactory.create({ name: 'enabled-repo', localPath: '/repos/enabled', enabled: true }),
-      RepositoryConfigFactory.create({ name: 'disabled-repo', localPath: '/repos/disabled', enabled: false }),
+      RepositoryConfigFactory.create({
+        name: 'enabled-repo',
+        localPath: '/repos/enabled',
+        enabled: true,
+      }),
+      RepositoryConfigFactory.create({
+        name: 'disabled-repo',
+        localPath: '/repos/disabled',
+        enabled: false,
+      }),
     ]);
 
     const response = await app.inject({ method: 'GET', url: '/api/repositories' });
@@ -97,8 +118,12 @@ describe('repositoriesRoutes — GET /api/repositories', () => {
     const response = await app.inject({ method: 'GET', url: '/api/repositories' });
 
     const body = response.json() as { repositories: Array<{ name: string; platform: string }> };
-    expect(body.repositories.find((repository) => repository.name === 'gh-repo')?.platform).toBe('github');
-    expect(body.repositories.find((repository) => repository.name === 'gl-repo')?.platform).toBe('gitlab');
+    expect(body.repositories.find((repository) => repository.name === 'gh-repo')?.platform).toBe(
+      'github',
+    );
+    expect(body.repositories.find((repository) => repository.name === 'gl-repo')?.platform).toBe(
+      'gitlab',
+    );
 
     await app.close();
   });

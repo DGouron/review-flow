@@ -1,27 +1,28 @@
 import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { WORKTREE_BASE_DIR } from '@/shared/services/daemonPaths.js';
-import {
-  createWorktreePath,
-  deriveWorktreePath,
-  parseWorktreeDirectoryName,
-} from '@/modules/worktree-management/entities/worktree/worktree.js';
+
+import type { GitCommandExecutor } from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
 // deriveWorktreePath is re-exported for callers; eslint-disable-next-line is unnecessary.
 import type {
   EnsureWorktreeRequest,
   RemoveWorktreeRequest,
   WorktreeGateway,
 } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
+import {
+  createWorktreePath,
+  deriveWorktreePath,
+  parseWorktreeDirectoryName,
+} from '@/modules/worktree-management/entities/worktree/worktree.js';
 import type {
   EnsureResult,
   RemoveResult,
   WorktreeEntry,
   WorktreeIdentity,
 } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+import { writeWorktreeSettings } from '@/modules/worktree-management/services/worktreeSettingsWriter.js';
 import { ensureWorktree } from '@/modules/worktree-management/usecases/ensureWorktree.usecase.js';
 import { removeWorktree } from '@/modules/worktree-management/usecases/removeWorktree.usecase.js';
-import { writeWorktreeSettings } from '@/modules/worktree-management/services/worktreeSettingsWriter.js';
-import type { GitCommandExecutor } from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
+import { WORKTREE_BASE_DIR } from '@/shared/services/daemonPaths.js';
 
 export interface WorktreeFileSystemGatewayDependencies {
   executor: GitCommandExecutor;
@@ -48,7 +49,7 @@ export class WorktreeFileSystemGateway implements WorktreeGateway {
       },
       {
         executor: this.executor,
-        worktreeExists: async path => existsSync(path),
+        worktreeExists: async (path) => existsSync(path),
         writeWorktreeSettings,
       },
     );
@@ -64,7 +65,7 @@ export class WorktreeFileSystemGateway implements WorktreeGateway {
         },
         {
           executor: this.executor,
-          worktreeExists: async path => existsSync(path),
+          worktreeExists: async (path) => existsSync(path),
         },
       );
     } catch (error) {

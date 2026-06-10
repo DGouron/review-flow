@@ -1,16 +1,22 @@
-import type { ReviewContext } from '@/modules/review-execution/entities/reviewContext/reviewContext.js'
-import type { ReviewAction } from '@/modules/review-execution/entities/reviewAction/reviewAction.js'
-import { GitLabReviewActionCliGateway } from '@/modules/review-execution/interface-adapters/gateways/cli/reviewAction.gitlab.cli.gateway.js'
-import { GitHubReviewActionCliGateway } from '@/modules/review-execution/interface-adapters/gateways/cli/reviewAction.github.cli.gateway.js'
-import type { ExecutionResult, CommandExecutor } from '@/modules/review-execution/entities/reviewAction/reviewAction.gateway.js'
-import type { NoteCommentPostGateway } from '@/modules/platform-integration/entities/noteComment/noteCommentPost.gateway.js'
-import { executePublicOutput, isPublicOutputAction } from '@/modules/review-execution/services/publicOutputExecutor.js'
-import { filterAutoExecutorActions } from '@/modules/platform-integration/services/autoExecutorActionFilter.js'
+import type { NoteCommentPostGateway } from '@/modules/platform-integration/entities/noteComment/noteCommentPost.gateway.js';
+import { filterAutoExecutorActions } from '@/modules/platform-integration/services/autoExecutorActionFilter.js';
+import type {
+  ExecutionResult,
+  CommandExecutor,
+} from '@/modules/review-execution/entities/reviewAction/reviewAction.gateway.js';
+import type { ReviewAction } from '@/modules/review-execution/entities/reviewAction/reviewAction.js';
+import type { ReviewContext } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
+import { GitHubReviewActionCliGateway } from '@/modules/review-execution/interface-adapters/gateways/cli/reviewAction.github.cli.gateway.js';
+import { GitLabReviewActionCliGateway } from '@/modules/review-execution/interface-adapters/gateways/cli/reviewAction.gitlab.cli.gateway.js';
+import {
+  executePublicOutput,
+  isPublicOutputAction,
+} from '@/modules/review-execution/services/publicOutputExecutor.js';
 
 /**
  * @deprecated Use ReviewContextAction from reviewAction entity instead
  */
-export type { ReviewAction as ReviewContextAction }
+export type { ReviewAction as ReviewContextAction };
 
 /**
  * The auto-path capability filter drops THREAD_RESOLVE (it requires a privileged role).
@@ -23,28 +29,28 @@ function selectExecutableContextActions(
   actions: ReviewAction[],
   authenticatedThreadIds: ReadonlySet<string>,
 ): { allowed: ReviewAction[]; dropped: ReviewAction[] } {
-  const { allowed, dropped } = filterAutoExecutorActions(actions)
+  const { allowed, dropped } = filterAutoExecutorActions(actions);
 
-  const reinstated: ReviewAction[] = []
-  const stillDropped: ReviewAction[] = []
+  const reinstated: ReviewAction[] = [];
+  const stillDropped: ReviewAction[] = [];
   for (const action of dropped) {
     if (action.type === 'THREAD_RESOLVE' && authenticatedThreadIds.has(action.threadId.trim())) {
-      reinstated.push({ ...action, threadId: action.threadId.trim() })
+      reinstated.push({ ...action, threadId: action.threadId.trim() });
     } else {
-      stillDropped.push(action)
+      stillDropped.push(action);
     }
   }
 
-  return { allowed: [...allowed, ...reinstated], dropped: stillDropped }
+  return { allowed: [...allowed, ...reinstated], dropped: stillDropped };
 }
 
-export type { ExecutionResult, CommandExecutor }
+export type { ExecutionResult, CommandExecutor };
 
 interface Logger {
-  info: (obj: object, msg: string) => void
-  warn: (obj: object, msg: string) => void
-  error: (obj: object, msg: string) => void
-  debug: (obj: object, msg: string) => void
+  info: (obj: object, msg: string) => void;
+  warn: (obj: object, msg: string) => void;
+  error: (obj: object, msg: string) => void;
+  debug: (obj: object, msg: string) => void;
 }
 
 /**
@@ -64,45 +70,45 @@ export async function executeActionsFromContext(
     localPath,
     diffMetadata: context.diffMetadata,
     baseUrl,
-  }
+  };
 
-  const authenticatedThreadIds = new Set(context.threads.map(thread => thread.id))
+  const authenticatedThreadIds = new Set(context.threads.map((thread) => thread.id));
   const { allowed, dropped } = selectExecutableContextActions(
-    context.actions as ReviewAction[],
+    context.actions,
     authenticatedThreadIds,
-  )
+  );
 
   if (dropped.length > 0) {
     logger.warn(
-      { droppedTypes: dropped.map(action => action.type) },
+      { droppedTypes: dropped.map((action) => action.type) },
       'Auto executor dropped write-capable actions outside the read+postComment capability set',
-    )
+    );
   }
 
   const gateway =
     context.platform === 'gitlab'
       ? new GitLabReviewActionCliGateway(executor)
-      : new GitHubReviewActionCliGateway(executor)
+      : new GitHubReviewActionCliGateway(executor);
 
   if (postGateway === null) {
-    return gateway.execute(allowed, gatewayContext)
+    return gateway.execute(allowed, gatewayContext);
   }
 
-  const publicOutputActions = allowed.filter(isPublicOutputAction)
-  const remainingActions = allowed.filter(action => !isPublicOutputAction(action))
+  const publicOutputActions = allowed.filter(isPublicOutputAction);
+  const remainingActions = allowed.filter((action) => !isPublicOutputAction(action));
 
   await executePublicOutput(
     publicOutputActions,
     { projectPath: context.projectPath, mrNumber: context.mergeRequestNumber },
     postGateway,
-  )
+  );
 
-  const cliResult = await gateway.execute(remainingActions, gatewayContext)
+  const cliResult = await gateway.execute(remainingActions, gatewayContext);
 
   return {
     total: allowed.length,
     succeeded: cliResult.succeeded + publicOutputActions.length,
     failed: cliResult.failed,
     skipped: cliResult.skipped,
-  }
+  };
 }

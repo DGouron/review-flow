@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { developerTitleSchema, DEVELOPER_TITLES } from '@/modules/statistics-insights/entities/insight/developerTitle.js';
+
+import {
+  developerTitleSchema,
+  DEVELOPER_TITLES,
+} from '@/modules/statistics-insights/entities/insight/developerTitle.js';
 
 describe('DeveloperTitle', () => {
   it('should define six developer titles', () => {

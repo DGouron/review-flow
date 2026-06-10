@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { isValidMcpSettings, parseMcpSettings, hasServerEntry } from '@/modules/cli-configuration/entities/mcpSettings/mcpSettings.guard.js';
+
+import {
+  isValidMcpSettings,
+  parseMcpSettings,
+  hasServerEntry,
+} from '@/modules/cli-configuration/entities/mcpSettings/mcpSettings.guard.js';
 
 describe('McpSettings guard', () => {
   it('should validate a settings object with one mcp server', () => {

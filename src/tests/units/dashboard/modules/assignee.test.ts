@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { resolveReviewAssigneeDisplay } from '@/dashboard/modules/assignee.js';
 
 describe('resolveReviewAssigneeDisplay', () => {

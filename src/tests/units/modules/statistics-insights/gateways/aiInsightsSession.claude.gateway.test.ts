@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { AiInsightsSessionClaudeGateway } from '@/modules/statistics-insights/interface-adapters/gateways/aiInsightsSession.claude.gateway.js';
 import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
 
@@ -37,7 +39,10 @@ describe('AiInsightsSessionClaudeGateway (integration with real filesystem)', ()
   it('dispatches --bg in the target project, accumulates the transcript answer, and cleans up the session', async () => {
     const dir = transcriptDir(homeDir, PROJECT_PATH);
     const lines = [
-      JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: '{"part":' }] } }),
+      JSON.stringify({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: '{"part":' }] },
+      }),
       JSON.stringify({
         type: 'assistant',
         message: { content: [{ type: 'text', text: '1}' }], stop_reason: 'end_turn' },

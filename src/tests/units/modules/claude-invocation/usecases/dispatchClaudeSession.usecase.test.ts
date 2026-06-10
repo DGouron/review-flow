@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
+
 import { dispatchClaudeSession } from '@/modules/claude-invocation/usecases/dispatchClaudeSession.usecase.js';
+import { StubBillingStateGateway } from '@/tests/stubs/billingState.stub.js';
 import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
 import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
-import { StubBillingStateGateway } from '@/tests/stubs/billingState.stub.js';
 
 const baseInput = {
   jobId: 'gitlab:owner/repo:42',
@@ -77,7 +78,10 @@ describe('dispatchClaudeSession use case', () => {
 
   it('returns "rate-limited" when the gateway reports a rate limit', async () => {
     const sessionGateway = new StubClaudeSessionGateway();
-    sessionGateway.setDispatchResult({ status: 'rate-limited', rawStderr: '429 Too Many Requests' });
+    sessionGateway.setDispatchResult({
+      status: 'rate-limited',
+      rawStderr: '429 Too Many Requests',
+    });
     const environment = new StubEnvironmentGateway();
     const billingState = new StubBillingStateGateway();
 

@@ -1,5 +1,9 @@
 import { join } from 'node:path';
-import type { ReviewFileGateway, ReviewFileInfo } from '@/modules/review-execution/entities/review/reviewFile.gateway.js';
+
+import type {
+  ReviewFileGateway,
+  ReviewFileInfo,
+} from '@/modules/review-execution/entities/review/reviewFile.gateway.js';
 
 export class InMemoryReviewFileGateway implements ReviewFileGateway {
   private files = new Map<string, string>();
@@ -28,7 +32,7 @@ export class InMemoryReviewFileGateway implements ReviewFileGateway {
       }
     }
 
-    return reviews.sort((a, b) => b.mtime.localeCompare(a.mtime));
+    return reviews.toSorted((a, b) => b.mtime.localeCompare(a.mtime));
   }
 
   async readReview(projectPath: string, filename: string): Promise<string | null> {

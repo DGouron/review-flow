@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import {
   buildSettingsViewModel,
   renderSettingsModalHtml,
@@ -193,7 +194,7 @@ describe('settingsModal — extractFormPayload', () => {
 
     const payload = extractFormPayload(fakeForm);
 
-    expect(Object.keys(payload).sort()).toEqual([
+    expect(Object.keys(payload).toSorted()).toEqual([
       'defaultModel',
       'externalLink',
       'language',

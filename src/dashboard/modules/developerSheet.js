@@ -1,10 +1,6 @@
 import { escapeHtml } from './html.js';
 import { icon } from './icons.js';
-import {
-  getAvatarBorderClass,
-  renderLevelRing,
-  renderStatBar,
-} from './sharedViewHelpers.js';
+import { getAvatarBorderClass, renderLevelRing, renderStatBar } from './sharedViewHelpers.js';
 
 const CATEGORY_KEYS = ['quality', 'responsiveness', 'codeVolume', 'iteration'];
 
@@ -64,12 +60,16 @@ function renderMetricsSection(metrics, translate) {
           <div class="sheet-stat-value">${qualityRate}<span class="sheet-stat-unit">%</span></div>
         </div>
       </div>
-      ${metrics.averageAdditions > 0 ? `
+      ${
+        metrics.averageAdditions > 0
+          ? `
         <div class="dev-sheet-diff-row">
           <span class="dev-sheet-additions">+${Math.round(metrics.averageAdditions)}</span>
           <span class="dev-sheet-deletions">-${Math.round(metrics.averageDeletions)}</span>
         </div>
-      ` : ''}
+      `
+          : ''
+      }
     </div>
   `;
 }
@@ -87,10 +87,12 @@ function renderInsightDescriptions(descriptions, type, translate) {
   const iconName = type === 'strength' ? 'check-circle' : 'alert-circle';
   const itemClass = type === 'strength' ? 'strength' : 'weakness';
 
-  return filtered.map((description) => {
-    const text = translate(description.descriptionKey, description.params || {});
-    return `<li class="dev-sheet-list-item ${itemClass}">${icon(iconName)} ${escapeHtml(text)}</li>`;
-  }).join('');
+  return filtered
+    .map((description) => {
+      const text = translate(description.descriptionKey, description.params || {});
+      return `<li class="dev-sheet-list-item ${itemClass}">${icon(iconName)} ${escapeHtml(text)}</li>`;
+    })
+    .join('');
 }
 
 /**
@@ -107,17 +109,26 @@ function renderAiAnalysisSection(aiDeveloper, translate) {
     `;
   }
 
-  const strengthsList = aiDeveloper.strengths.map(
-    (strength) => `<li class="ai-list-item">${icon('check-circle', 'ai-list-icon')} ${escapeHtml(strength)}</li>`
-  ).join('');
+  const strengthsList = aiDeveloper.strengths
+    .map(
+      (strength) =>
+        `<li class="ai-list-item">${icon('check-circle', 'ai-list-icon')} ${escapeHtml(strength)}</li>`,
+    )
+    .join('');
 
-  const weaknessesList = aiDeveloper.weaknesses.map(
-    (weakness) => `<li class="ai-list-item">${icon('alert-circle', 'ai-list-icon')} ${escapeHtml(weakness)}</li>`
-  ).join('');
+  const weaknessesList = aiDeveloper.weaknesses
+    .map(
+      (weakness) =>
+        `<li class="ai-list-item">${icon('alert-circle', 'ai-list-icon')} ${escapeHtml(weakness)}</li>`,
+    )
+    .join('');
 
-  const recommendationsList = aiDeveloper.recommendations.map(
-    (recommendation) => `<li class="ai-list-item">${icon('lightbulb', 'ai-list-icon')} ${escapeHtml(recommendation)}</li>`
-  ).join('');
+  const recommendationsList = aiDeveloper.recommendations
+    .map(
+      (recommendation) =>
+        `<li class="ai-list-item">${icon('lightbulb', 'ai-list-icon')} ${escapeHtml(recommendation)}</li>`,
+    )
+    .join('');
 
   return `
     <div class="ai-section">
@@ -126,24 +137,36 @@ function renderAiAnalysisSection(aiDeveloper, translate) {
         <div class="ai-section-label">${icon('user')} ${translate('ai.summary')}</div>
         <div class="ai-summary">${escapeHtml(aiDeveloper.summary)}</div>
       </div>
-      ${aiDeveloper.strengths.length > 0 ? `
+      ${
+        aiDeveloper.strengths.length > 0
+          ? `
         <div class="ai-section-group">
           <div class="ai-section-label">${icon('check-circle')} ${translate('ai.strengths')}</div>
           <ul class="ai-list">${strengthsList}</ul>
         </div>
-      ` : ''}
-      ${aiDeveloper.weaknesses.length > 0 ? `
+      `
+          : ''
+      }
+      ${
+        aiDeveloper.weaknesses.length > 0
+          ? `
         <div class="ai-section-group">
           <div class="ai-section-label">${icon('alert-circle')} ${translate('ai.weaknesses')}</div>
           <ul class="ai-list">${weaknessesList}</ul>
         </div>
-      ` : ''}
-      ${aiDeveloper.recommendations.length > 0 ? `
+      `
+          : ''
+      }
+      ${
+        aiDeveloper.recommendations.length > 0
+          ? `
         <div class="ai-section-group">
           <div class="ai-section-label">${icon('lightbulb')} ${translate('ai.recommendations')}</div>
           <ul class="ai-list">${recommendationsList}</ul>
         </div>
-      ` : ''}
+      `
+          : ''
+      }
     </div>
   `;
 }
@@ -158,23 +181,29 @@ export function renderDeveloperSheetContent(developer, translate, aiDeveloper) {
   const initial = developer.developerName.charAt(0).toUpperCase();
   const avatarBorderClass = getAvatarBorderClass(developer.overallLevel);
 
-  const statBarsHtml = CATEGORY_KEYS.map(
-    (key) => renderStatBar(developer.categoryLevels[key], key, translate)
+  const statBarsHtml = CATEGORY_KEYS.map((key) =>
+    renderStatBar(developer.categoryLevels[key], key, translate),
   ).join('');
 
   const hasDescriptions = developer.insightDescriptions && developer.insightDescriptions.length > 0;
 
   const strengthsHtml = hasDescriptions
     ? renderInsightDescriptions(developer.insightDescriptions, 'strength', translate)
-    : developer.strengths.map(
-        (category) => `<li class="dev-sheet-list-item strength">${icon('check-circle')} ${translate('category.' + category)}</li>`
-      ).join('');
+    : developer.strengths
+        .map(
+          (category) =>
+            `<li class="dev-sheet-list-item strength">${icon('check-circle')} ${translate('category.' + category)}</li>`,
+        )
+        .join('');
 
   const weaknessesHtml = hasDescriptions
     ? renderInsightDescriptions(developer.insightDescriptions, 'weakness', translate)
-    : developer.weaknesses.map(
-        (category) => `<li class="dev-sheet-list-item weakness">${icon('alert-circle')} ${translate('category.' + category)}</li>`
-      ).join('');
+    : developer.weaknesses
+        .map(
+          (category) =>
+            `<li class="dev-sheet-list-item weakness">${icon('alert-circle')} ${translate('category.' + category)}</li>`,
+        )
+        .join('');
 
   const topPriorityHtml = developer.topPriority
     ? `<span class="dev-sheet-priority-value">${icon('target')} ${translate('category.' + developer.topPriority)}</span>`
@@ -303,7 +332,7 @@ export function drawRadarChart(canvasId, categoryLevels, translate) {
     ctx.moveTo(centerX, centerY);
     ctx.lineTo(
       centerX + Math.cos(axis.angle) * maxRadius,
-      centerY + Math.sin(axis.angle) * maxRadius
+      centerY + Math.sin(axis.angle) * maxRadius,
     );
     ctx.strokeStyle = COLORS.gridLine;
     ctx.lineWidth = 0.5;

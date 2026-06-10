@@ -1,47 +1,47 @@
-import type { ReviewContext } from '@/modules/review-execution/entities/reviewContext/reviewContext.js'
-import type { ReviewContextGateway } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js'
+import type { ReviewContextGateway } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js';
+import type { ReviewContext } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
 
-const DEFAULT_GRACE_WINDOW_MS = 30 * 60 * 1000
+const DEFAULT_GRACE_WINDOW_MS = 30 * 60 * 1000;
 
 export function shouldRecover(context: ReviewContext): boolean {
-  return context.progress.phase === 'completed' && context.actions.length > 0 && !context.result
+  return context.progress.phase === 'completed' && context.actions.length > 0 && !context.result;
 }
 
 export interface RecoveryLogger {
-  info: (obj: object, msg: string) => void
-  warn: (obj: object, msg: string) => void
-  error: (obj: object, msg: string) => void
+  info: (obj: object, msg: string) => void;
+  warn: (obj: object, msg: string) => void;
+  error: (obj: object, msg: string) => void;
 }
 
 export interface RecoveryRepository {
-  localPath: string
+  localPath: string;
 }
 
 export interface RecoverySummary {
-  scanned: number
-  recovered: number
-  partial: number
-  backfilled: number
-  skipped: number
-  failed: number
+  scanned: number;
+  recovered: number;
+  partial: number;
+  backfilled: number;
+  skipped: number;
+  failed: number;
 }
 
 export interface ExecuteActionsOutcome {
-  posted: number
-  failed: number
+  posted: number;
+  failed: number;
 }
 
 export interface RecoveryDeps {
-  repositories: RecoveryRepository[]
-  reviewContextGateway: ReviewContextGateway
-  executeActions: (context: ReviewContext, localPath: string) => Promise<ExecuteActionsOutcome>
-  now: () => number
-  logger: RecoveryLogger
-  graceWindowMs?: number
+  repositories: RecoveryRepository[];
+  reviewContextGateway: ReviewContextGateway;
+  executeActions: (context: ReviewContext, localPath: string) => Promise<ExecuteActionsOutcome>;
+  now: () => number;
+  logger: RecoveryLogger;
+  graceWindowMs?: number;
 }
 
 export async function runReviewRecovery(deps: RecoveryDeps): Promise<RecoverySummary> {
-  const graceWindowMs = deps.graceWindowMs ?? DEFAULT_GRACE_WINDOW_MS
+  const graceWindowMs = deps.graceWindowMs ?? DEFAULT_GRACE_WINDOW_MS;
   const summary: RecoverySummary = {
     scanned: 0,
     recovered: 0,
@@ -49,20 +49,20 @@ export async function runReviewRecovery(deps: RecoveryDeps): Promise<RecoverySum
     backfilled: 0,
     skipped: 0,
     failed: 0,
-  }
+  };
 
   for (const repository of deps.repositories) {
     for (const context of deps.reviewContextGateway.listAll(repository.localPath)) {
-      summary.scanned += 1
+      summary.scanned += 1;
 
       if (!shouldRecover(context)) {
-        summary.skipped += 1
-        continue
+        summary.skipped += 1;
+        continue;
       }
 
-      const lastActivityMs = lastActivityTime(context)
-      const ageMs = deps.now() - lastActivityMs
-      const isStale = ageMs > graceWindowMs
+      const lastActivityMs = lastActivityTime(context);
+      const ageMs = deps.now() - lastActivityMs;
+      const isStale = ageMs > graceWindowMs;
 
       if (isStale) {
         markBackfilled(
@@ -71,26 +71,26 @@ export async function runReviewRecovery(deps: RecoveryDeps): Promise<RecoverySum
           context,
           'stale-on-boot',
           deps.now,
-        )
+        );
         deps.logger.info(
           { mergeRequestId: context.mergeRequestId, ageMs },
           'Review context backfilled (older than grace window, not replayed)',
-        )
-        summary.backfilled += 1
-        continue
+        );
+        summary.backfilled += 1;
+        continue;
       }
 
       try {
-        const outcome = await deps.executeActions(context, repository.localPath)
+        const outcome = await deps.executeActions(context, repository.localPath);
         if (outcome.posted === 0) {
           // Nothing reached the platform — safe to retry on the next boot, so do
           // not finalize the context.
-          summary.failed += 1
+          summary.failed += 1;
           deps.logger.warn(
             { mergeRequestId: context.mergeRequestId, outcome },
             'Recovery posted zero actions, leaving context for retry',
-          )
-          continue
+          );
+          continue;
         }
         // At least one action was posted. Finalize the context regardless of
         // partial failures — re-running would double-post the successes.
@@ -100,45 +100,45 @@ export async function runReviewRecovery(deps: RecoveryDeps): Promise<RecoverySum
           context,
           'recovered-after-restart',
           deps.now,
-        )
+        );
         if (outcome.failed > 0) {
-          summary.partial += 1
+          summary.partial += 1;
           deps.logger.warn(
             { mergeRequestId: context.mergeRequestId, outcome },
             'Recovery completed with partial failures — context finalized to avoid double-post',
-          )
+          );
         } else {
-          summary.recovered += 1
+          summary.recovered += 1;
           deps.logger.info(
             { mergeRequestId: context.mergeRequestId, posted: outcome.posted },
             'Review context recovered after restart',
-          )
+          );
         }
       } catch (error) {
-        summary.failed += 1
+        summary.failed += 1;
         deps.logger.error(
           {
             mergeRequestId: context.mergeRequestId,
             error: error instanceof Error ? error.message : String(error),
           },
           'Recovery execution threw',
-        )
+        );
       }
     }
   }
 
-  return summary
+  return summary;
 }
 
 function lastActivityTime(context: ReviewContext): number {
-  const updatedAt = context.progress.updatedAt
+  const updatedAt = context.progress.updatedAt;
   if (updatedAt) {
-    const parsed = new Date(updatedAt).getTime()
+    const parsed = new Date(updatedAt).getTime();
     if (!Number.isNaN(parsed)) {
-      return parsed
+      return parsed;
     }
   }
-  return new Date(context.createdAt).getTime()
+  return new Date(context.createdAt).getTime();
 }
 
 function markBackfilled(
@@ -152,5 +152,5 @@ function markBackfilled(
     kind: 'backfilled',
     backfilledAt: new Date(now()).toISOString(),
     reason,
-  })
+  });
 }

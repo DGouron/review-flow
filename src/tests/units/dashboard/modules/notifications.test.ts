@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import {
   collectReviewNotifications,
   createReviewNotificationState,
@@ -63,7 +64,15 @@ describe('collectReviewNotifications', () => {
     const result = collectReviewNotifications(
       initializedState,
       [],
-      [{ id: 'r-2', type: 'review', status: 'completed', completedAt: '2026-02-14T13:00:00Z', mrNumber: 51 }],
+      [
+        {
+          id: 'r-2',
+          type: 'review',
+          status: 'completed',
+          completedAt: '2026-02-14T13:00:00Z',
+          mrNumber: 51,
+        },
+      ],
     );
 
     expect(result.notifications[0]?.kind).toBe('reviewCompleted');
@@ -92,7 +101,12 @@ describe('collectReviewNotifications', () => {
       [],
     ).nextState;
 
-    const reviewEvent = { id: 'r-4', type: 'review', status: 'completed', completedAt: '2026-02-14T14:00:00Z' };
+    const reviewEvent = {
+      id: 'r-4',
+      type: 'review',
+      status: 'completed',
+      completedAt: '2026-02-14T14:00:00Z',
+    };
     const firstPass = collectReviewNotifications(initializedState, [], [reviewEvent]);
     const secondPass = collectReviewNotifications(firstPass.nextState, [], [reviewEvent]);
 
@@ -117,19 +131,36 @@ describe('collectReviewNotifications', () => {
     );
 
     expect(startedTick.notifications).toEqual([
-      { kind: 'followupStarted', review: { id: 'f-fail', status: 'running', jobType: 'followup', mrNumber: 5019 } },
+      {
+        kind: 'followupStarted',
+        review: { id: 'f-fail', status: 'running', jobType: 'followup', mrNumber: 5019 },
+      },
     ]);
 
     const failedTick = collectReviewNotifications(
       startedTick.nextState,
       [{ id: 'r-running', status: 'running', jobType: 'review', mrNumber: 5352 }],
-      [{ id: 'f-fail', status: 'failed', jobType: 'followup', mrNumber: 5019, completedAt: '2026-05-26T18:59:29Z' }],
+      [
+        {
+          id: 'f-fail',
+          status: 'failed',
+          jobType: 'followup',
+          mrNumber: 5019,
+          completedAt: '2026-05-26T18:59:29Z',
+        },
+      ],
     );
 
     expect(failedTick.notifications).toEqual([
       {
         kind: 'reviewFailed',
-        review: { id: 'f-fail', status: 'failed', jobType: 'followup', mrNumber: 5019, completedAt: '2026-05-26T18:59:29Z' },
+        review: {
+          id: 'f-fail',
+          status: 'failed',
+          jobType: 'followup',
+          mrNumber: 5019,
+          completedAt: '2026-05-26T18:59:29Z',
+        },
       },
     ]);
   });

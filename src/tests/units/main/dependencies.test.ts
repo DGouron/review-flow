@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
+
+import { ReviewContextProgressPresenter } from '@/modules/review-execution/interface-adapters/presenters/reviewContextProgress.presenter.js';
+import { ReviewContextWatcherService } from '@/modules/review-execution/services/reviewContextWatcher.service.js';
+
 import { createDependencies } from '../../../main/dependencies.js';
 import { createTestConfig } from '../../factories/config.factory.js';
-import { ReviewContextWatcherService } from '@/modules/review-execution/services/reviewContextWatcher.service.js';
-import { ReviewContextProgressPresenter } from '@/modules/review-execution/interface-adapters/presenters/reviewContextProgress.presenter.js';
 
 describe('createDependencies', () => {
   it('should create all gateways from config', () => {

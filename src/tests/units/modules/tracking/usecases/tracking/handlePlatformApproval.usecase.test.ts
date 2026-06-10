@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
+
 import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
-import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
+import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 
 const PROJECT_PATH = '/project';
 const MR_ID = 'mr-1';
@@ -28,7 +29,11 @@ describe('HandlePlatformApprovalUseCase', () => {
         id: MR_ID,
         latestScore: 5,
         openThreads: 2,
-        bypass: { author: 'alice', reason: 'hotfix critique', recordedAt: '2026-05-25T08:00:00.000Z' },
+        bypass: {
+          author: 'alice',
+          reason: 'hotfix critique',
+          recordedAt: '2026-05-25T08:00:00.000Z',
+        },
       }),
     );
     const useCase = new HandlePlatformApprovalUseCase(gateway);

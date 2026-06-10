@@ -86,7 +86,8 @@ function sectionWithDefaults(section, emptyMessage) {
   }
   const typed = /** @type {Record<string, unknown>} */ (section);
   const items = Array.isArray(typed.items) ? typed.items : [];
-  const explicitMessage = typeof typed.emptyMessage === 'string' ? typed.emptyMessage : emptyMessage;
+  const explicitMessage =
+    typeof typed.emptyMessage === 'string' ? typed.emptyMessage : emptyMessage;
   return {
     items,
     isEmpty: items.length === 0,
@@ -165,7 +166,8 @@ function renderProjectExternalLink(externalLink) {
  * @returns {string}
  */
 function renderProjectCard(card) {
-  const sparkline = card.sparklinePoints.length === 0 ? '' : renderSparklineSvg(card.sparklinePoints);
+  const sparkline =
+    card.sparklinePoints.length === 0 ? '' : renderSparklineSvg(card.sparklinePoints);
   const externalAnchor = renderProjectExternalLink(card.externalLink);
   return `
     <button type="button" class="overview-project-card" data-project-path="${escapeHtml(card.projectPath)}">
@@ -238,9 +240,10 @@ function renderRecentReviewsSection(section) {
  * @returns {string}
  */
 export function renderOverviewHtml(viewModel) {
-  const source = viewModel && typeof viewModel === 'object'
-    ? /** @type {Record<string, unknown>} */ (viewModel)
-    : {};
+  const source =
+    viewModel && typeof viewModel === 'object'
+      ? /** @type {Record<string, unknown>} */ (viewModel)
+      : {};
   const activeReviews = /** @type {OverviewActiveReviewsSection} */ (
     sectionWithDefaults(source.activeReviews, 'Aucune review en cours')
   );

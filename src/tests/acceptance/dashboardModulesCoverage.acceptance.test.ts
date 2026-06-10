@@ -1,16 +1,11 @@
-import { describe, it, expect } from 'vitest';
 import { readdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const MODULES_DIR = resolve(
-  process.cwd(),
-  'src/dashboard/modules'
-);
+import { describe, it, expect } from 'vitest';
 
-const TESTS_DIR = resolve(
-  process.cwd(),
-  'src/tests/units/dashboard/modules'
-);
+const MODULES_DIR = resolve(process.cwd(), 'src/dashboard/modules');
+
+const TESTS_DIR = resolve(process.cwd(), 'src/tests/units/dashboard/modules');
 
 function listJsModules(): string[] {
   if (!existsSync(MODULES_DIR)) {
@@ -55,9 +50,6 @@ describe('Acceptance — Spec #51: dashboard modules coverage', () => {
   });
 
   it('dashboard modules directory exists', () => {
-    expect(
-      existsSync(MODULES_DIR),
-      'Aucun module dashboard détecté'
-    ).toBe(true);
+    expect(existsSync(MODULES_DIR), 'Aucun module dashboard détecté').toBe(true);
   });
 });

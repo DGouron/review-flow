@@ -1,7 +1,8 @@
 import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import type { SkillTemplateGateway } from '@/modules/setup-wizard/entities/skillTemplate/skillTemplate.gateway.js';
+
 import type { Language } from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
+import type { SkillTemplateGateway } from '@/modules/setup-wizard/entities/skillTemplate/skillTemplate.gateway.js';
 import { renderSkill } from '@/modules/setup-wizard/services/skillTemplateRenderer.js';
 
 interface SkillTemplateFileSystemGatewayDependencies {

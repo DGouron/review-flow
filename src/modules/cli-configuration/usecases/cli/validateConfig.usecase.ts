@@ -55,13 +55,18 @@ export class ValidateConfigUseCase {
   }
 
   private validateServer(config: Record<string, unknown>, issues: ValidationIssue[]): void {
-    const server = config.server as Record<string, unknown> | undefined;
+    const server = config.server;
     if (!server) {
       issues.push({ field: 'server', message: 'Missing server section', severity: 'error' });
       return;
     }
-    if (typeof server.port !== 'number' || server.port < 1 || server.port > 65535) {
-      issues.push({ field: 'server.port', message: 'Port must be between 1 and 65535', severity: 'error' });
+    const port = typeof server === 'object' && 'port' in server ? server.port : null;
+    if (typeof port !== 'number' || port < 1 || port > 65535) {
+      issues.push({
+        field: 'server.port',
+        message: 'Port must be between 1 and 65535',
+        severity: 'error',
+      });
     }
   }
 
@@ -80,12 +85,16 @@ export class ValidateConfigUseCase {
   private validateRepositories(config: Record<string, unknown>, issues: ValidationIssue[]): void {
     if (!Array.isArray(config.repositories)) return;
 
-    for (const repo of config.repositories) {
-      const entry = repo as Record<string, unknown>;
-      if (typeof entry.localPath === 'string' && !this.deps.existsSync(entry.localPath)) {
+    const repositories: unknown[] = config.repositories;
+    for (const repository of repositories) {
+      const localPath =
+        typeof repository === 'object' && repository !== null && 'localPath' in repository
+          ? repository.localPath
+          : null;
+      if (typeof localPath === 'string' && !this.deps.existsSync(localPath)) {
         issues.push({
           field: 'repositories',
-          message: `Path does not exist: ${entry.localPath}`,
+          message: `Path does not exist: ${localPath}`,
           severity: 'error',
         });
       }

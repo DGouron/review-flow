@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
+
 import { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
+
+import { TrackedMrFactory } from '../../../factories/trackedMr.factory.js';
 import { InMemoryReviewRequestTrackingGateway } from '../../../stubs/reviewRequestTracking.stub.js';
 import { InMemoryThreadFetchGateway } from '../../../stubs/threadFetch.stub.js';
-import { TrackedMrFactory } from '../../../factories/trackedMr.factory.js';
 
 describe('SyncThreadsUseCase', () => {
   it('should update thread counts from fetched threads', () => {
@@ -30,8 +32,8 @@ describe('SyncThreadsUseCase', () => {
     const result = useCase.execute({ projectPath: '/project', mrId: 'mr-1' });
 
     expect(result).not.toBeNull();
-    expect(result!.openThreads).toBe(2);
-    expect(result!.totalThreads).toBe(3);
+    expect(result?.openThreads).toBe(2);
+    expect(result?.totalThreads).toBe(3);
   });
 
   it('should return null when MR does not exist', () => {
@@ -64,7 +66,7 @@ describe('SyncThreadsUseCase', () => {
 
     const result = useCase.execute({ projectPath: '/project', mrId: 'mr-1' });
 
-    expect(result!.state).toBe('pending-fix');
+    expect(result?.state).toBe('pending-fix');
   });
 
   it('should transition to pending-approval when all threads resolved', () => {
@@ -88,6 +90,6 @@ describe('SyncThreadsUseCase', () => {
 
     const result = useCase.execute({ projectPath: '/project', mrId: 'mr-1' });
 
-    expect(result!.state).toBe('pending-approval');
+    expect(result?.state).toBe('pending-approval');
   });
 });

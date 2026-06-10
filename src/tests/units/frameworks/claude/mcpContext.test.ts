@@ -1,8 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { writeMcpContext, cleanupMcpContext } from '../../../../frameworks/claude/claudeInvoker.js';
-import { ReviewJobFactory } from '../../../factories/reviewJob.factory.js';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { writeMcpContext, cleanupMcpContext } from '../../../../frameworks/claude/claudeInvoker.js';
+import { ReviewJobFactory } from '../../../factories/reviewJob.factory.js';
 
 vi.mock('node:fs');
 vi.mock('node:os', () => ({
@@ -22,10 +24,9 @@ describe('MCP Context file management', () => {
 
       writeMcpContext(job);
 
-      expect(fs.mkdirSync).toHaveBeenCalledWith(
-        '/home/testuser/.claude-review/jobs',
-        { recursive: true },
-      );
+      expect(fs.mkdirSync).toHaveBeenCalledWith('/home/testuser/.claude-review/jobs', {
+        recursive: true,
+      });
       expect(fs.writeFileSync).toHaveBeenCalledWith(
         '/home/testuser/.claude-review/jobs/job-123.json',
         expect.stringContaining('"jobId": "job-123"'),
@@ -93,9 +94,7 @@ describe('MCP Context file management', () => {
 
       cleanupMcpContext('job-123');
 
-      expect(fs.unlinkSync).toHaveBeenCalledWith(
-        '/home/testuser/.claude-review/jobs/job-123.json',
-      );
+      expect(fs.unlinkSync).toHaveBeenCalledWith('/home/testuser/.claude-review/jobs/job-123.json');
     });
 
     it('should not attempt deletion if file does not exist', () => {
@@ -112,9 +111,7 @@ describe('MCP Context file management', () => {
       cleanupMcpContext('job-a');
 
       expect(fs.unlinkSync).toHaveBeenCalledTimes(1);
-      expect(fs.unlinkSync).toHaveBeenCalledWith(
-        '/home/testuser/.claude-review/jobs/job-a.json',
-      );
+      expect(fs.unlinkSync).toHaveBeenCalledWith('/home/testuser/.claude-review/jobs/job-a.json');
     });
 
     it('should not throw on cleanup failure', () => {

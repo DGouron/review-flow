@@ -45,7 +45,8 @@ const OVERVIEW_TAB_LABEL = 'Overview';
 export function buildTabBarModel(input) {
   const repositories = Array.isArray(input.repositories) ? input.repositories : [];
   const projectTabIds = new Set(repositories.map((repository) => repository.localPath));
-  const activeTabIdMatchesProject = input.activeTabId !== null && projectTabIds.has(input.activeTabId);
+  const activeTabIdMatchesProject =
+    input.activeTabId !== null && projectTabIds.has(input.activeTabId);
   const effectiveActiveId = activeTabIdMatchesProject ? input.activeTabId : OVERVIEW_TAB_ID;
 
   const overviewTab = {

@@ -1,12 +1,13 @@
-import { describe, it, expect } from 'vitest'
-import { executeActionsFromContext } from '@/modules/review-execution/services/contextActionsExecutor.js'
-import type { ReviewContext } from '@/modules/review-execution/entities/reviewContext/reviewContext.js'
+import { describe, it, expect } from 'vitest';
+
+import type { ReviewContext } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
+import { executeActionsFromContext } from '@/modules/review-execution/services/contextActionsExecutor.js';
 
 class RecordingCommandExecutor {
-  public readonly calls: Array<{ command: string; args: string[]; cwd: string }> = []
+  public readonly calls: Array<{ command: string; args: string[]; cwd: string }> = [];
   run = (command: string, args: string[], cwd: string): void => {
-    this.calls.push({ command, args, cwd })
-  }
+    this.calls.push({ command, args, cwd });
+  };
 }
 
 const silentLogger = {
@@ -14,7 +15,7 @@ const silentLogger = {
   warn: () => undefined,
   error: () => undefined,
   debug: () => undefined,
-}
+};
 
 function buildContext(actions: ReviewContext['actions']): ReviewContext {
   return {
@@ -27,32 +28,32 @@ function buildContext(actions: ReviewContext['actions']): ReviewContext {
     agents: [],
     actions,
     diffMetadata: undefined,
-  } as unknown as ReviewContext
+  } as unknown as ReviewContext;
 }
 
 describe('auto path context executor blocks write verbs (AC6/AC7)', () => {
   it('AC6: never sends a THREAD_RESOLVE command to the executor', async () => {
-    const executor = new RecordingCommandExecutor()
+    const executor = new RecordingCommandExecutor();
     const context = buildContext([
       { type: 'POST_COMMENT', body: 'hello' },
       { type: 'THREAD_RESOLVE', threadId: '42' },
-    ])
+    ]);
 
-    await executeActionsFromContext(context, '/repo', silentLogger, executor.run, null)
+    await executeActionsFromContext(context, '/repo', silentLogger, executor.run, null);
 
-    const resolveCalls = executor.calls.filter(c =>
-      c.args.some(a => a.includes('discussions/42') && c.args.includes('resolved=true')),
-    )
-    expect(resolveCalls).toHaveLength(0)
-  })
+    const resolveCalls = executor.calls.filter((c) =>
+      c.args.some((a) => a.includes('discussions/42') && c.args.includes('resolved=true')),
+    );
+    expect(resolveCalls).toHaveLength(0);
+  });
 
   it('AC7: still posts the comment and does not throw on a mixed verb stream', async () => {
-    const executor = new RecordingCommandExecutor()
+    const executor = new RecordingCommandExecutor();
     const context = buildContext([
       { type: 'POST_COMMENT', body: 'one' },
       { type: 'THREAD_RESOLVE', threadId: '7' },
       { type: 'FETCH_THREADS' },
-    ])
+    ]);
 
     const result = await executeActionsFromContext(
       context,
@@ -60,10 +61,10 @@ describe('auto path context executor blocks write verbs (AC6/AC7)', () => {
       silentLogger,
       executor.run,
       null,
-    )
+    );
 
-    const postCalls = executor.calls.filter(c => c.args.some(a => a.startsWith('body=')))
-    expect(postCalls).toHaveLength(1)
-    expect(result.total).toBeGreaterThanOrEqual(1)
-  })
-})
+    const postCalls = executor.calls.filter((c) => c.args.some((a) => a.startsWith('body=')));
+    expect(postCalls).toHaveLength(1);
+    expect(result.total).toBeGreaterThanOrEqual(1);
+  });
+});

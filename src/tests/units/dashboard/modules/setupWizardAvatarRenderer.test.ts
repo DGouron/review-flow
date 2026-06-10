@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { mountSetupWizardAvatar } from '@/dashboard/modules/setupWizardAvatarRenderer.js';
 
 interface FakeCanvas {

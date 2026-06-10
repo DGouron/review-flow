@@ -1,4 +1,8 @@
-import type { DaemonServiceGateway, DaemonStatus, DaemonInstallResult } from '@/modules/setup-wizard/entities/daemonService/daemonService.gateway.js';
+import type {
+  DaemonServiceGateway,
+  DaemonStatus,
+  DaemonInstallResult,
+} from '@/modules/setup-wizard/entities/daemonService/daemonService.gateway.js';
 
 interface StubOptions {
   initialStatus?: DaemonStatus;
@@ -14,7 +18,11 @@ export class StubDaemonServiceGateway implements DaemonServiceGateway {
 
   constructor(options: StubOptions = {}) {
     this.currentStatus = options.initialStatus ?? { status: 'active' };
-    this.installResult = options.installResult ?? { success: true, requiresSudo: false, error: null };
+    this.installResult = options.installResult ?? {
+      success: true,
+      requiresSudo: false,
+      error: null,
+    };
     this.healthy = options.healthy ?? true;
   }
 

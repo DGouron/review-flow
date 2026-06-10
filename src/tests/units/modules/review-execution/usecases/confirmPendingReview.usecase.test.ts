@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
 import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
 import { ConfirmPendingReviewUseCase } from '@/modules/review-execution/usecases/confirmPendingReview.usecase.js';
-import { StubPendingReviewRequestGateway } from '@/tests/stubs/pendingReviewRequest.stub.js';
 import { PendingReviewRequestFactory } from '@/tests/factories/pendingReviewRequest.factory.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { StubPendingReviewRequestGateway } from '@/tests/stubs/pendingReviewRequest.stub.js';
 
 describe('ConfirmPendingReviewUseCase', () => {
   let gateway: StubPendingReviewRequestGateway;

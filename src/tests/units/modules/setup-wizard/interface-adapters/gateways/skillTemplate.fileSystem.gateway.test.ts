@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { SkillTemplateFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/skillTemplate.fileSystem.gateway.js';
 
 const MCP_SERVER_PATH = '/opt/reviewflow/dist/mcpServer.js';

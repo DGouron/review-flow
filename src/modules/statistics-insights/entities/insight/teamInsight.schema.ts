@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { insightCategorySchema } from '@/modules/statistics-insights/entities/insight/insightCategory.js';
 
 export const averageLevelsSchema = z.object({

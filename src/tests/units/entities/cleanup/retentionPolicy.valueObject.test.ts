@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { RetentionPolicy } from '@/modules/data-lifecycle/entities/cleanup/retentionPolicy.valueObject.js';
 
 describe('RetentionPolicy', () => {

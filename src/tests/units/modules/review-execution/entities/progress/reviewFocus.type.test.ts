@@ -1,4 +1,11 @@
 import { describe, it, expect } from 'vitest';
+
+import {
+  DEFAULT_FRONT_AGENTS,
+  DEFAULT_BACK_AGENTS,
+  DEFAULT_FULLSTACK_AGENTS,
+  DEFAULT_DOC_AGENTS,
+} from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
 import {
   isReviewFocus,
   reviewSkillForFocus,
@@ -6,12 +13,6 @@ import {
   dedupAgents,
   REVIEW_FOCUS_VALUES,
 } from '@/modules/review-execution/entities/progress/reviewFocus.type.js';
-import {
-  DEFAULT_FRONT_AGENTS,
-  DEFAULT_BACK_AGENTS,
-  DEFAULT_FULLSTACK_AGENTS,
-  DEFAULT_DOC_AGENTS,
-} from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
 
 describe('REVIEW_FOCUS_VALUES', () => {
   it('exposes the four known focus values in declaration order', () => {

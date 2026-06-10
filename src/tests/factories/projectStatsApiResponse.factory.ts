@@ -1,4 +1,7 @@
-import type { ProjectStats, ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
+import type {
+  ProjectStats,
+  ReviewStats,
+} from '@/modules/statistics-insights/entities/stats/projectStats.js';
 import type { OverviewProjectStatsEntry } from '@/modules/statistics-insights/interface-adapters/presenters/overview.presenter.js';
 
 export interface ProjectStatsApiResponseOverrides {

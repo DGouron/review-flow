@@ -20,22 +20,23 @@ vi.mock('@/frameworks/config/configLoader.js', () => ({
 }));
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { removeWorktree } from '@/modules/worktree-management/usecases/removeWorktree.usecase.js';
-import { StubGitCommandExecutor } from '@/tests/stubs/gitCommandExecutor.stub.js';
+
+import { buildMcpSystemPrompt } from '@/frameworks/claude/claudeInvoker.js';
+import { enqueueReview, initQueue, type ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
+import { startWorktreeSweepScheduler } from '@/frameworks/scheduler/worktreeSweepScheduler.js';
+import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
+import { deriveWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
 import type {
   RemoveResult,
   WorktreeEntry,
   WorktreeIdentity,
   WorktreePath,
 } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
-import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
-import { deriveWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
-import { enqueueReview, initQueue, type ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
-import { buildMcpSystemPrompt } from '@/frameworks/claude/claudeInvoker.js';
-import { startWorktreeSweepScheduler } from '@/frameworks/scheduler/worktreeSweepScheduler.js';
 import { ensureWorktree } from '@/modules/worktree-management/usecases/ensureWorktree.usecase.js';
-import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import { removeWorktree } from '@/modules/worktree-management/usecases/removeWorktree.usecase.js';
+import { StubGitCommandExecutor } from '@/tests/stubs/gitCommandExecutor.stub.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 
 const baseIdentity: WorktreeIdentity = {
   platform: 'gitlab',
@@ -60,7 +61,7 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
         {
           executor,
           worktreeExists: async () => false,
-          writeWorktreeSettings: async path => {
+          writeWorktreeSettings: async (path) => {
             writeSettingsCalls.push(path);
             return { status: 'ok' };
           },
@@ -107,7 +108,7 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
         {
           executor,
           worktreeExists: async () => true,
-          writeWorktreeSettings: async path => {
+          writeWorktreeSettings: async (path) => {
             writeSettingsCalls.push(path);
             return { status: 'ok' };
           },
@@ -145,7 +146,7 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
         { identity: { ...baseIdentity }, sourceCheckoutPath },
         {
           executor,
-          worktreeExists: async path => {
+          worktreeExists: async (path) => {
             if (!worktreeExistsByPath.has(path)) {
               worktreeExistsByPath.set(path, true);
             }
@@ -234,10 +235,10 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
       const removed: WorktreeIdentity[] = [];
       const gateway: WorktreeGateway = {
         list: async () => liveEntries,
-        remove: async request => {
+        remove: async (request) => {
           removed.push(request.identity);
           liveEntries = liveEntries.filter(
-            entry => deriveWorktreePath(entry.identity) !== deriveWorktreePath(request.identity),
+            (entry) => deriveWorktreePath(entry.identity) !== deriveWorktreePath(request.identity),
           );
           return { status: 'removed' } satisfies RemoveResult;
         },
@@ -262,7 +263,11 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
     });
 
     it('Scenario 6 — closed MR over 24h: worktree present + tracker merged 48h ago → remove worktree', async () => {
-      const identity: WorktreeIdentity = { platform: 'gitlab', projectPath: 'test-org/test-project', mrNumber: 1 };
+      const identity: WorktreeIdentity = {
+        platform: 'gitlab',
+        projectPath: 'test-org/test-project',
+        mrNumber: 1,
+      };
       const entry: WorktreeEntry = {
         identity,
         path: deriveWorktreePath(identity),
@@ -294,7 +299,11 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
     });
 
     it('Scenario 7 — orphan: worktree present + no tracked MR → remove worktree', async () => {
-      const identity: WorktreeIdentity = { platform: 'gitlab', projectPath: 'test-org/test-project', mrNumber: 2 };
+      const identity: WorktreeIdentity = {
+        platform: 'gitlab',
+        projectPath: 'test-org/test-project',
+        mrNumber: 2,
+      };
       const entry: WorktreeEntry = {
         identity,
         path: deriveWorktreePath(identity),
@@ -317,7 +326,11 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
     });
 
     it('Scenario 8 — stale active MR: worktree mtime 8 days old + tracker pending-review → remove worktree', async () => {
-      const identity: WorktreeIdentity = { platform: 'gitlab', projectPath: 'test-org/test-project', mrNumber: 3 };
+      const identity: WorktreeIdentity = {
+        platform: 'gitlab',
+        projectPath: 'test-org/test-project',
+        mrNumber: 3,
+      };
       const eightDaysAgo = new Date(sweepNow.getTime() - 8 * 24 * 60 * 60 * 1000);
       const entry: WorktreeEntry = {
         identity,
@@ -401,7 +414,7 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
       initQueue(createStubLogger());
 
       const events: string[] = [];
-      let releaseFirst: (() => void) | null = null;
+      let releaseFirst: () => void = () => {};
 
       const baseJob: ReviewJob = {
         id: 'gitlab:test-org/test-project:99',
@@ -418,7 +431,7 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
 
       const freshEnqueued = await enqueueReview(baseJob, async () => {
         events.push('fresh:start');
-        await new Promise<void>(resolve => {
+        await new Promise<void>((resolve) => {
           releaseFirst = resolve;
         });
         events.push('fresh:end');
@@ -437,11 +450,11 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
       });
       expect(followupEnqueued).toBe(true);
 
-      await new Promise<void>(resolve => setTimeout(resolve, 20));
+      await new Promise<void>((resolve) => setTimeout(resolve, 20));
       expect(events).toEqual(['fresh:start']);
 
-      releaseFirst!();
-      await new Promise<void>(resolve => setTimeout(resolve, 50));
+      releaseFirst();
+      await new Promise<void>((resolve) => setTimeout(resolve, 50));
       expect(events).toEqual(['fresh:start', 'fresh:end', 'followup:start', 'followup:end']);
     });
   });

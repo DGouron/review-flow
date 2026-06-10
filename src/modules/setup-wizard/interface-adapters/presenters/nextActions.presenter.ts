@@ -1,22 +1,15 @@
+import type {
+  NextActionsInput,
+  NextActionsPort,
+  NextActionsViewModel,
+} from '@/modules/setup-wizard/entities/nextActions/nextActions.port.js';
 import type { Platform } from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
 import { truncateSecret } from '@/shared/services/secretGenerator.js';
 
-export interface NextActionsInput {
-  platform: Platform;
-  host: string;
-  port: number;
-  webhookSecret: string;
-  projectPath: string;
-  showSecrets: boolean;
-}
-
-export interface NextActionsViewModel {
-  webhookUrl: string;
-  eventType: string;
-  maskedSecret: string;
-  fullSecret: string | null;
-  lines: string[];
-}
+export type {
+  NextActionsInput,
+  NextActionsViewModel,
+} from '@/modules/setup-wizard/entities/nextActions/nextActions.port.js';
 
 function eventTypeForPlatform(platform: Platform): string {
   if (platform === 'github') return 'pull_request, pull_request_review_comment';
@@ -24,7 +17,7 @@ function eventTypeForPlatform(platform: Platform): string {
   return 'platform-specific events';
 }
 
-export class NextActionsPresenter {
+export class NextActionsPresenter implements NextActionsPort {
   present(input: NextActionsInput): NextActionsViewModel {
     const webhookUrl = `http://${input.host}:${input.port}/webhooks/${input.platform}`;
     const eventType = eventTypeForPlatform(input.platform);

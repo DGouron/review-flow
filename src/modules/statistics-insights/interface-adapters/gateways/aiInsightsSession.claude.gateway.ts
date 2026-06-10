@@ -1,5 +1,6 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+
 import type { ClaudeSessionGateway } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
 import type { SessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
 import {
@@ -69,9 +70,7 @@ export class AiInsightsSessionClaudeGateway implements AiInsightsSessionGateway 
 
     try {
       const answer = await this.readAnswer(projectDir, sessionId);
-      return answer === null
-        ? { status: 'timed-out' }
-        : { status: 'completed', answer };
+      return answer === null ? { status: 'timed-out' } : { status: 'completed', answer };
     } finally {
       await this.cleanup(sessionId);
     }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { getQualityProgress, getQualityTrend } from '@/dashboard/modules/quality.js';
 
 describe('getQualityProgress', () => {

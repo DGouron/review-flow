@@ -1,5 +1,5 @@
-import type { Presenter } from '@/shared/foundation/presenter.base.js';
 import type { BudgetStatus } from '@/modules/token-accounting/entities/budget/budgetStatus.js';
+import type { Presenter } from '@/shared/foundation/presenter.base.js';
 
 export interface BudgetStatusViewModel {
   limitUsdFormatted: string;
@@ -19,9 +19,7 @@ function formatPercent(percent: number): string {
   return `${percent.toFixed(2)}%`;
 }
 
-export class BudgetStatusPresenter
-  implements Presenter<BudgetStatus, BudgetStatusViewModel>
-{
+export class BudgetStatusPresenter implements Presenter<BudgetStatus, BudgetStatusViewModel> {
   present(status: BudgetStatus): BudgetStatusViewModel {
     return {
       limitUsdFormatted: formatUsd(status.limitUsd),

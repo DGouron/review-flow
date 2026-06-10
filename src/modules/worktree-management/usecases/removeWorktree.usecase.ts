@@ -1,10 +1,10 @@
+import type { GitCommandExecutor } from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
 import { deriveWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
 import type {
   RemoveResult,
   WorktreeIdentity,
   WorktreePath,
 } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
-import type { GitCommandExecutor } from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
 
 export interface RemoveWorktreeInput {
   identity: WorktreeIdentity;

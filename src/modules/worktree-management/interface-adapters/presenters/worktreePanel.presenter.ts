@@ -1,5 +1,4 @@
 import type { LastSweepSummary } from '@/modules/worktree-management/entities/sweep/lastSweepSummary.schema.js';
-import type { WorktreeSizeProbeGateway } from '@/modules/worktree-management/entities/worktree/worktreeSizeProbe.gateway.js';
 import type {
   WorktreeEntry,
   WorktreePlatform,
@@ -8,6 +7,7 @@ import type {
   DegradedReason,
   WorktreeHealthReport,
 } from '@/modules/worktree-management/entities/worktree/worktreeHealth.schema.js';
+import type { WorktreeSizeProbeGateway } from '@/modules/worktree-management/entities/worktree/worktreeSizeProbe.gateway.js';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * ONE_DAY_MS;
@@ -192,13 +192,13 @@ export class WorktreePanelPresenter {
     }
 
     const groups = Array.from(groupsMap.values())
-      .map(group => ({
+      .map((group) => ({
         ...group,
-        worktrees: [...group.worktrees].sort(
+        worktrees: [...group.worktrees].toSorted(
           (a, b) => new Date(b.mtime).getTime() - new Date(a.mtime).getTime(),
         ),
       }))
-      .sort((a, b) =>
+      .toSorted((a, b) =>
         groupKey(a.platform, a.projectPath).localeCompare(groupKey(b.platform, b.projectPath)),
       );
 

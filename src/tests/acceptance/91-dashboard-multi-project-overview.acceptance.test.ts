@@ -9,16 +9,19 @@
 
 import Fastify, { type FastifyInstance } from 'fastify';
 import { describe, expect, it } from 'vitest';
+
 import { repositoriesRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/repositories.routes.js';
 import { OverviewPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/overview.presenter.js';
-import { RepositoryConfigFactory } from '@/tests/factories/repositoryConfig.factory.js';
+import { ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 import { ProjectStatsApiResponseFactory } from '@/tests/factories/projectStatsApiResponse.factory.js';
 import { RecentReviewFileFactory } from '@/tests/factories/recentReviewFile.factory.js';
-import { ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+import { RepositoryConfigFactory } from '@/tests/factories/repositoryConfig.factory.js';
 
 const NOW = new Date('2026-05-25T12:00:00.000Z');
 
-async function buildAcceptanceApp(repositories: ReturnType<typeof RepositoryConfigFactory.create>[]): Promise<FastifyInstance> {
+async function buildAcceptanceApp(
+  repositories: ReturnType<typeof RepositoryConfigFactory.create>[],
+): Promise<FastifyInstance> {
   const app = Fastify();
   await app.register(repositoriesRoutes, {
     getRepositories: () => repositories,
@@ -52,7 +55,13 @@ describe('Acceptance — SPEC-91: Dashboard Multi-Project Overview', () => {
 
       expect(response.statusCode).toBe(200);
       const body = response.json() as {
-        repositories: Array<{ name: string; localPath: string; platform: string; enabled: boolean; remoteUrl: string }>;
+        repositories: Array<{
+          name: string;
+          localPath: string;
+          platform: string;
+          enabled: boolean;
+          remoteUrl: string;
+        }>;
       };
       expect(body.repositories).toHaveLength(2);
       expect(body.repositories[0]).toEqual({
@@ -94,8 +103,16 @@ describe('Acceptance — SPEC-91: Dashboard Multi-Project Overview', () => {
 
       const viewModel = presenter.present({
         repositories: [
-          RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend', platform: 'gitlab' }),
-          RepositoryConfigFactory.create({ name: 'api', localPath: '/repos/api', platform: 'github' }),
+          RepositoryConfigFactory.create({
+            name: 'frontend',
+            localPath: '/repos/frontend',
+            platform: 'gitlab',
+          }),
+          RepositoryConfigFactory.create({
+            name: 'api',
+            localPath: '/repos/api',
+            platform: 'github',
+          }),
         ],
         activeJobs: [
           {
@@ -181,7 +198,9 @@ describe('Acceptance — SPEC-91: Dashboard Multi-Project Overview', () => {
       });
 
       expect(viewModel.projectCards.items).toHaveLength(2);
-      const frontendCard = viewModel.projectCards.items.find((card) => card.projectName === 'frontend');
+      const frontendCard = viewModel.projectCards.items.find(
+        (card) => card.projectName === 'frontend',
+      );
       const apiCard = viewModel.projectCards.items.find((card) => card.projectName === 'api');
       expect(frontendCard?.totalReviews).toBe(12);
       expect(frontendCard?.averageScoreLabel).toBe('7.2');
@@ -244,7 +263,9 @@ describe('Acceptance — SPEC-91: Dashboard Multi-Project Overview', () => {
       const presenter = new OverviewPresenter({ now: () => NOW });
 
       const viewModel = presenter.present({
-        repositories: [RepositoryConfigFactory.create({ name: 'new-project', localPath: '/repos/new' })],
+        repositories: [
+          RepositoryConfigFactory.create({ name: 'new-project', localPath: '/repos/new' }),
+        ],
         activeJobs: [],
         projectStats: [
           ProjectStatsApiResponseFactory.create({
@@ -271,7 +292,9 @@ describe('Acceptance — SPEC-91: Dashboard Multi-Project Overview', () => {
       const startedAt = new Date(NOW.getTime() - 5 * 60_000).toISOString();
 
       const beforeCompletion = presenter.present({
-        repositories: [RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' })],
+        repositories: [
+          RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' }),
+        ],
         activeJobs: [
           {
             id: 'gitlab:frontend:142',
@@ -289,7 +312,9 @@ describe('Acceptance — SPEC-91: Dashboard Multi-Project Overview', () => {
       });
 
       const afterCompletion = presenter.present({
-        repositories: [RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' })],
+        repositories: [
+          RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' }),
+        ],
         activeJobs: [],
         projectStats: [],
         recentReviews: [

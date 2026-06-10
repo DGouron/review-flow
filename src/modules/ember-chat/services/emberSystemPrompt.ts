@@ -1,8 +1,8 @@
-import type { ProjectStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
+import type { EmberMemory } from '@/modules/ember-chat/entities/emberMemory/emberMemory.schema.js';
 import type { PersistedInsightsData } from '@/modules/statistics-insights/entities/insight/persistedInsightsData.js';
+import type { ProjectStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
 import type { MrTrackingData } from '@/modules/tracking/entities/tracking/mrTrackingData.js';
 import type { WorktreeEntry } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
-import type { EmberMemory } from '@/modules/ember-chat/entities/emberMemory/emberMemory.schema.js';
 
 export interface EmberGrounding {
   reviewScores: ProjectStats | null;
@@ -95,7 +95,7 @@ export function buildEmberSystemPrompt(grounding: EmberGrounding): string {
     'Ces données de review du projet, fournies ci-dessous, sont ton point de départ :',
     'un instantané des éléments les plus récents, fourni pour te faire gagner du temps.',
     "Ce n'est PAS une limite. Tu peux lire à la demande les données de review du projet",
-    'sur disque pour répondre au sujet de n\'importe quel élément, récent ou ancien,',
+    "sur disque pour répondre au sujet de n'importe quel élément, récent ou ancien,",
     'même au-delà de cet instantané. Ne refuse jamais une question au seul motif',
     "qu'un élément se trouve hors de cet instantané récent.",
     '',
@@ -116,7 +116,7 @@ export function buildEmberSystemPrompt(grounding: EmberGrounding): string {
     '',
     'GROUNDING : réponds uniquement à partir des données de review du projet,',
     "qu'elles soient dans cet instantané ou lues à la demande sur disque.",
-    "Si la réponse ne se trouve dans aucune de ces données, dis que tu ne sais répondre",
+    'Si la réponse ne se trouve dans aucune de ces données, dis que tu ne sais répondre',
     "qu'à propos des reviews plutôt que d'inventer une réponse. N'invente jamais.",
     '',
     'LECTURE SEULE : tu ne modifies, ne crées et ne supprimes rien. Si on te demande',

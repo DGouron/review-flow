@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   DiscoverRepositoriesUseCase,
   type DiscoverRepositoriesDependencies,
@@ -46,9 +47,7 @@ describe('DiscoverRepositoriesUseCase', () => {
       }),
       readdirSync: vi.fn((path: string) => {
         if (path === '/home/user/projects') {
-          return [
-            { name: 'my-app', isDirectory: () => true },
-          ];
+          return [{ name: 'my-app', isDirectory: () => true }];
         }
         return [];
       }),
@@ -201,9 +200,7 @@ describe('DiscoverRepositoriesUseCase', () => {
     });
     const usecase = new DiscoverRepositoriesUseCase(deps);
 
-    const result = usecase.execute(
-      createFakeInput({ scanPaths: ['/path-a', '/path-b'] }),
-    );
+    const result = usecase.execute(createFakeInput({ scanPaths: ['/path-a', '/path-b'] }));
 
     expect(result.repositories).toHaveLength(2);
     expect(result.scannedPaths).toEqual(['/path-a', '/path-b']);

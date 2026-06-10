@@ -1,4 +1,5 @@
 import type { Logger } from 'pino';
+
 import type { PendingReviewRequestGateway } from '@/modules/review-execution/entities/pendingReviewRequest/pendingReviewRequest.gateway.js';
 
 export interface DismissQueuePort {
@@ -30,7 +31,10 @@ export class DismissPendingReviewUseCase {
     }
 
     if (queuePort.hasActiveJob(pending.job.id)) {
-      logger.info({ pendingId: input.pendingId, jobId: pending.job.id }, 'Pending review dismiss rejected: already running');
+      logger.info(
+        { pendingId: input.pendingId, jobId: pending.job.id },
+        'Pending review dismiss rejected: already running',
+      );
       return { status: 'already-running', message: ALREADY_RUNNING_DISMISS_MESSAGE };
     }
 

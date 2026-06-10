@@ -1,16 +1,18 @@
-import { vi, beforeAll, afterAll } from 'vitest'
-import { createHmac } from 'node:crypto'
-import { createFastifyRequestStub } from '../../stubs/fastifyRequest.stub.js'
+import { createHmac } from 'node:crypto';
 
-const TEST_GITLAB_TOKEN = 'gitlab-secret-token-123'
-const TEST_GITHUB_SECRET = 'github-webhook-secret-456'
+import { vi, beforeAll, afterAll } from 'vitest';
+
+import { createFastifyRequestStub } from '../../stubs/fastifyRequest.stub.js';
+
+const TEST_GITLAB_TOKEN = 'gitlab-secret-token-123';
+const TEST_GITHUB_SECRET = 'github-webhook-secret-456';
 
 vi.mock('../../../config/loader.js', () => ({
   loadEnvSecrets: vi.fn(() => ({
     gitlabWebhookToken: TEST_GITLAB_TOKEN,
     githubWebhookSecret: TEST_GITHUB_SECRET,
   })),
-}))
+}));
 
 import {
   verifyGitLabSignature,
@@ -18,23 +20,23 @@ import {
   getGitLabEventType,
   getGitLabEventUuid,
   getGitHubEventType,
-} from '../../../security/verifier.js'
+} from '../../../security/verifier.js';
 
 describe('verifyGitLabSignature', () => {
-  let originalToken: string | undefined
+  let originalToken: string | undefined;
 
   beforeAll(() => {
-    originalToken = process.env.GITLAB_WEBHOOK_TOKEN
-    process.env.GITLAB_WEBHOOK_TOKEN = TEST_GITLAB_TOKEN
-  })
+    originalToken = process.env.GITLAB_WEBHOOK_TOKEN;
+    process.env.GITLAB_WEBHOOK_TOKEN = TEST_GITLAB_TOKEN;
+  });
 
   afterAll(() => {
     if (originalToken === undefined) {
-      Reflect.deleteProperty(process.env, 'GITLAB_WEBHOOK_TOKEN')
+      Reflect.deleteProperty(process.env, 'GITLAB_WEBHOOK_TOKEN');
     } else {
-      process.env.GITLAB_WEBHOOK_TOKEN = originalToken
+      process.env.GITLAB_WEBHOOK_TOKEN = originalToken;
     }
-  })
+  });
 
   describe('when token is valid', () => {
     it('should return valid: true', () => {
@@ -42,14 +44,14 @@ describe('verifyGitLabSignature', () => {
         headers: {
           'x-gitlab-token': TEST_GITLAB_TOKEN,
         },
-      })
+      });
 
-      const result = verifyGitLabSignature(request)
+      const result = verifyGitLabSignature(request);
 
-      expect(result.valid).toBe(true)
-      expect(result.error).toBeUndefined()
-    })
-  })
+      expect(result.valid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+  });
 
   describe('when token is invalid', () => {
     it('should return valid: false with error', () => {
@@ -57,27 +59,27 @@ describe('verifyGitLabSignature', () => {
         headers: {
           'x-gitlab-token': 'wrong-token',
         },
-      })
+      });
 
-      const result = verifyGitLabSignature(request)
+      const result = verifyGitLabSignature(request);
 
-      expect(result.valid).toBe(false)
-      expect(result.error).toContain('invalide')
-    })
-  })
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('invalide');
+    });
+  });
 
   describe('when token header is missing', () => {
     it('should return valid: false with missing error', () => {
       const request = createFastifyRequestStub({
         headers: {},
-      })
+      });
 
-      const result = verifyGitLabSignature(request)
+      const result = verifyGitLabSignature(request);
 
-      expect(result.valid).toBe(false)
-      expect(result.error).toContain('manquant')
-    })
-  })
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('manquant');
+    });
+  });
 
   describe('when token is empty string', () => {
     it('should return valid: false', () => {
@@ -85,13 +87,13 @@ describe('verifyGitLabSignature', () => {
         headers: {
           'x-gitlab-token': '',
         },
-      })
+      });
 
-      const result = verifyGitLabSignature(request)
+      const result = verifyGitLabSignature(request);
 
-      expect(result.valid).toBe(false)
-    })
-  })
+      expect(result.valid).toBe(false);
+    });
+  });
 
   describe('when token has different length', () => {
     it('should return valid: false without timing leak', () => {
@@ -99,131 +101,131 @@ describe('verifyGitLabSignature', () => {
         headers: {
           'x-gitlab-token': 'short',
         },
-      })
+      });
 
-      const result = verifyGitLabSignature(request)
+      const result = verifyGitLabSignature(request);
 
-      expect(result.valid).toBe(false)
-      expect(result.error).toContain('invalide')
-    })
-  })
-})
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('invalide');
+    });
+  });
+});
 
 describe('verifyGitHubSignature', () => {
   function computeHmac(body: string, secret: string): string {
-    const hmac = createHmac('sha256', secret)
-    hmac.update(Buffer.from(body))
-    return `sha256=${hmac.digest('hex')}`
+    const hmac = createHmac('sha256', secret);
+    hmac.update(Buffer.from(body));
+    return `sha256=${hmac.digest('hex')}`;
   }
 
   describe('when signature is valid', () => {
     it('should return valid: true', () => {
-      const body = '{"test": true}'
-      const signature = computeHmac(body, TEST_GITHUB_SECRET)
+      const body = '{"test": true}';
+      const signature = computeHmac(body, TEST_GITHUB_SECRET);
 
       const request = createFastifyRequestStub({
         headers: {
           'x-hub-signature-256': signature,
         },
         rawBody: body,
-      })
+      });
 
-      const result = verifyGitHubSignature(request)
+      const result = verifyGitHubSignature(request);
 
-      expect(result.valid).toBe(true)
-      expect(result.error).toBeUndefined()
-    })
-  })
+      expect(result.valid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+  });
 
   describe('when signature is invalid', () => {
     it('should return valid: false with error', () => {
-      const body = '{"test": true}'
-      const wrongSignature = computeHmac(body, 'wrong-secret')
+      const body = '{"test": true}';
+      const wrongSignature = computeHmac(body, 'wrong-secret');
 
       const request = createFastifyRequestStub({
         headers: {
           'x-hub-signature-256': wrongSignature,
         },
         rawBody: body,
-      })
+      });
 
-      const result = verifyGitHubSignature(request)
+      const result = verifyGitHubSignature(request);
 
-      expect(result.valid).toBe(false)
-      expect(result.error).toContain('invalide')
-    })
-  })
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('invalide');
+    });
+  });
 
   describe('when signature header is missing', () => {
     it('should return valid: false with missing error', () => {
       const request = createFastifyRequestStub({
         headers: {},
         rawBody: '{"test": true}',
-      })
+      });
 
-      const result = verifyGitHubSignature(request)
+      const result = verifyGitHubSignature(request);
 
-      expect(result.valid).toBe(false)
-      expect(result.error).toContain('manquant')
-    })
-  })
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('manquant');
+    });
+  });
 
   describe('when rawBody is missing', () => {
     it('should return valid: false with body error', () => {
-      const signature = computeHmac('{}', TEST_GITHUB_SECRET)
+      const signature = computeHmac('{}', TEST_GITHUB_SECRET);
 
       const request = createFastifyRequestStub({
         headers: {
           'x-hub-signature-256': signature,
         },
-      })
+      });
 
-      const result = verifyGitHubSignature(request)
+      const result = verifyGitHubSignature(request);
 
-      expect(result.valid).toBe(false)
-      expect(result.error).toContain('Corps')
-    })
-  })
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('Corps');
+    });
+  });
 
   describe('when body content differs', () => {
     it('should return valid: false', () => {
-      const originalBody = '{"original": true}'
-      const tamperedBody = '{"tampered": true}'
-      const signature = computeHmac(originalBody, TEST_GITHUB_SECRET)
+      const originalBody = '{"original": true}';
+      const tamperedBody = '{"tampered": true}';
+      const signature = computeHmac(originalBody, TEST_GITHUB_SECRET);
 
       const request = createFastifyRequestStub({
         headers: {
           'x-hub-signature-256': signature,
         },
         rawBody: tamperedBody,
-      })
+      });
 
-      const result = verifyGitHubSignature(request)
+      const result = verifyGitHubSignature(request);
 
-      expect(result.valid).toBe(false)
-    })
-  })
+      expect(result.valid).toBe(false);
+    });
+  });
 
   describe('when signature has wrong format', () => {
     it('should return valid: false for missing prefix', () => {
-      const body = '{"test": true}'
-      const hmac = createHmac('sha256', TEST_GITHUB_SECRET)
-      hmac.update(Buffer.from(body))
-      const signatureWithoutPrefix = hmac.digest('hex')
+      const body = '{"test": true}';
+      const hmac = createHmac('sha256', TEST_GITHUB_SECRET);
+      hmac.update(Buffer.from(body));
+      const signatureWithoutPrefix = hmac.digest('hex');
 
       const request = createFastifyRequestStub({
         headers: {
           'x-hub-signature-256': signatureWithoutPrefix,
         },
         rawBody: body,
-      })
+      });
 
-      const result = verifyGitHubSignature(request)
+      const result = verifyGitHubSignature(request);
 
-      expect(result.valid).toBe(false)
-    })
-  })
-})
+      expect(result.valid).toBe(false);
+    });
+  });
+});
 
 describe('getGitLabEventType', () => {
   it('should extract event type from header', () => {
@@ -231,23 +233,23 @@ describe('getGitLabEventType', () => {
       headers: {
         'x-gitlab-event': 'Merge Request Hook',
       },
-    })
+    });
 
-    const result = getGitLabEventType(request)
+    const result = getGitLabEventType(request);
 
-    expect(result).toBe('Merge Request Hook')
-  })
+    expect(result).toBe('Merge Request Hook');
+  });
 
   it('should return undefined when header is missing', () => {
     const request = createFastifyRequestStub({
       headers: {},
-    })
+    });
 
-    const result = getGitLabEventType(request)
+    const result = getGitLabEventType(request);
 
-    expect(result).toBeUndefined()
-  })
-})
+    expect(result).toBeUndefined();
+  });
+});
 
 describe('getGitLabEventUuid', () => {
   it('should extract the event UUID from the header', () => {
@@ -255,23 +257,23 @@ describe('getGitLabEventUuid', () => {
       headers: {
         'x-gitlab-event-uuid': '13be3e1e-1d3f-4c2a-9b1a-0f0e0d0c0b0a',
       },
-    })
+    });
 
-    const result = getGitLabEventUuid(request)
+    const result = getGitLabEventUuid(request);
 
-    expect(result).toBe('13be3e1e-1d3f-4c2a-9b1a-0f0e0d0c0b0a')
-  })
+    expect(result).toBe('13be3e1e-1d3f-4c2a-9b1a-0f0e0d0c0b0a');
+  });
 
   it('should return undefined when the header is missing', () => {
     const request = createFastifyRequestStub({
       headers: {},
-    })
+    });
 
-    const result = getGitLabEventUuid(request)
+    const result = getGitLabEventUuid(request);
 
-    expect(result).toBeUndefined()
-  })
-})
+    expect(result).toBeUndefined();
+  });
+});
 
 describe('getGitHubEventType', () => {
   it('should extract event type from header', () => {
@@ -279,20 +281,20 @@ describe('getGitHubEventType', () => {
       headers: {
         'x-github-event': 'pull_request',
       },
-    })
+    });
 
-    const result = getGitHubEventType(request)
+    const result = getGitHubEventType(request);
 
-    expect(result).toBe('pull_request')
-  })
+    expect(result).toBe('pull_request');
+  });
 
   it('should return undefined when header is missing', () => {
     const request = createFastifyRequestStub({
       headers: {},
-    })
+    });
 
-    const result = getGitHubEventType(request)
+    const result = getGitHubEventType(request);
 
-    expect(result).toBeUndefined()
-  })
-})
+    expect(result).toBeUndefined();
+  });
+});

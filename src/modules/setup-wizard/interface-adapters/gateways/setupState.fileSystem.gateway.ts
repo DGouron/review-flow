@@ -1,8 +1,19 @@
-import { readFileSync, writeFileSync, renameSync, unlinkSync, existsSync, mkdirSync } from 'node:fs';
+import {
+  readFileSync,
+  writeFileSync,
+  renameSync,
+  unlinkSync,
+  existsSync,
+  mkdirSync,
+} from 'node:fs';
 import { dirname } from 'node:path';
-import type { SetupStateGateway, SetupStateLoadResult } from '@/modules/setup-wizard/entities/setupState/setupState.gateway.js';
-import type { SetupState } from '@/modules/setup-wizard/entities/setupState/setupState.schema.js';
+
+import type {
+  SetupStateGateway,
+  SetupStateLoadResult,
+} from '@/modules/setup-wizard/entities/setupState/setupState.gateway.js';
 import { setupStateGuard } from '@/modules/setup-wizard/entities/setupState/setupState.guard.js';
+import type { SetupState } from '@/modules/setup-wizard/entities/setupState/setupState.schema.js';
 
 interface SetupStateFileSystemGatewayDependencies {
   filePath: string;

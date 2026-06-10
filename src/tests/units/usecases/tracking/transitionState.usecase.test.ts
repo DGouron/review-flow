@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
+
 import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
-import { InMemoryReviewRequestTrackingGateway } from '../../../stubs/reviewRequestTracking.stub.js';
+
 import { TrackedMrFactory } from '../../../factories/trackedMr.factory.js';
+import { InMemoryReviewRequestTrackingGateway } from '../../../stubs/reviewRequestTracking.stub.js';
 
 describe('TransitionStateUseCase', () => {
   it('should transition MR to approved state', () => {
@@ -106,7 +108,11 @@ describe('TransitionStateUseCase', () => {
     const mr = TrackedMrFactory.create({
       id: 'mr-1',
       state: 'pending-approval',
-      bypass: { author: 'alice', reason: 'hotfix critique', recordedAt: '2026-05-26T12:00:00.000Z' },
+      bypass: {
+        author: 'alice',
+        reason: 'hotfix critique',
+        recordedAt: '2026-05-26T12:00:00.000Z',
+      },
     });
     gateway.create('/project', mr);
     const useCase = new TransitionStateUseCase(gateway);

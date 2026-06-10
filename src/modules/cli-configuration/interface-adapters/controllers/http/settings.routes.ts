@@ -1,5 +1,6 @@
-import { z } from 'zod';
 import type { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
+
 import {
   claudeModelSchema,
   getModel,
@@ -13,6 +14,8 @@ import {
 import { languageSchema } from '@/modules/shared-kernel/entities/language/language.schema.js';
 import { triggerModeSchema } from '@/modules/shared-kernel/entities/triggerMode/triggerMode.schema.js';
 
+const modelRequestSchema = z.object({ model: claudeModelSchema });
+const languageRequestSchema = z.object({ language: languageSchema });
 const triggerModeRequestSchema = z.object({ triggerMode: triggerModeSchema });
 
 export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
@@ -25,28 +28,30 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/api/settings/model', async (request, reply) => {
-    const { model } = request.body as { model?: unknown };
-
-    const parsed = claudeModelSchema.safeParse(model);
+    const parsed = modelRequestSchema.safeParse(request.body);
     if (!parsed.success) {
       reply.code(400);
-      return { success: false, error: `Invalid model. Use: ${claudeModelSchema.options.join(', ')}` };
+      return {
+        success: false,
+        error: `Invalid model. Use: ${claudeModelSchema.options.join(', ')}`,
+      };
     }
 
-    await setModel(parsed.data);
+    await setModel(parsed.data.model);
     return { success: true, model: getModel() };
   });
 
   fastify.post('/api/settings/language', async (request, reply) => {
-    const { language } = request.body as { language?: unknown };
-
-    const parsed = languageSchema.safeParse(language);
+    const parsed = languageRequestSchema.safeParse(request.body);
     if (!parsed.success) {
       reply.code(400);
-      return { success: false, error: `Invalid language. Use: ${languageSchema.options.join(', ')}` };
+      return {
+        success: false,
+        error: `Invalid language. Use: ${languageSchema.options.join(', ')}`,
+      };
     }
 
-    await setDefaultLanguage(parsed.data);
+    await setDefaultLanguage(parsed.data.language);
     return { success: true, language: getDefaultLanguage() };
   });
 

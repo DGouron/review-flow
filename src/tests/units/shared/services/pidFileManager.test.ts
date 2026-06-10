@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   readPidFile,
   writePidFile,
@@ -67,14 +68,10 @@ describe('pidFileManager', () => {
 
       writePidFile(pidPath, content, deps);
 
-      expect(deps.mkdirSync).toHaveBeenCalledWith(
-        expect.stringContaining('.config/reviewflow'),
-        { recursive: true },
-      );
-      expect(deps.writeFileSync).toHaveBeenCalledWith(
-        pidPath,
-        JSON.stringify(content, null, 2),
-      );
+      expect(deps.mkdirSync).toHaveBeenCalledWith(expect.stringContaining('.config/reviewflow'), {
+        recursive: true,
+      });
+      expect(deps.writeFileSync).toHaveBeenCalledWith(pidPath, JSON.stringify(content, null, 2));
     });
   });
 

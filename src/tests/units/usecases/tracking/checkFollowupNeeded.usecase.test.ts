@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
+
 import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
-import { InMemoryReviewRequestTrackingGateway } from '../../../stubs/reviewRequestTracking.stub.js';
+
 import { TrackedMrFactory } from '../../../factories/trackedMr.factory.js';
+import { InMemoryReviewRequestTrackingGateway } from '../../../stubs/reviewRequestTracking.stub.js';
 
 describe('CheckFollowupNeededUseCase', () => {
   it('should return true when a push happened after the last review (pending-fix)', () => {

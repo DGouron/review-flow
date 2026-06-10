@@ -19,7 +19,7 @@ const listeners: Array<(log: LogEntry) => void> = [];
 export function addLog(
   level: LogEntry['level'],
   message: string,
-  data?: Record<string, unknown>
+  data?: Record<string, unknown>,
 ): void {
   const entry: LogEntry = {
     timestamp: new Date().toISOString(),
@@ -54,14 +54,14 @@ export function getLogs(): LogEntry[] {
  * Get logs filtered by level
  */
 export function getLogsByLevel(level: LogEntry['level']): LogEntry[] {
-  return logBuffer.filter(log => log.level === level);
+  return logBuffer.filter((log) => log.level === level);
 }
 
 /**
  * Get error logs only
  */
 export function getErrorLogs(): LogEntry[] {
-  return logBuffer.filter(log => log.level === 'error' || log.level === 'warn');
+  return logBuffer.filter((log) => log.level === 'error' || log.level === 'warn');
 }
 
 /**

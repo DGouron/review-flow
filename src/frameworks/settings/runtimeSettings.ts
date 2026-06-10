@@ -2,8 +2,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+
 import { z } from 'zod';
-import { languageSchema, type Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
+
+import {
+  languageSchema,
+  type Language,
+} from '@/modules/shared-kernel/entities/language/language.schema.js';
 import {
   triggerModeSchema,
   type TriggerMode,
@@ -65,7 +70,9 @@ export async function loadSettingsFromDisk(): Promise<void> {
     raw = readFileSync(settingsPath, 'utf-8');
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    logger.warn(`[runtimeSettings] failed to read settings file at ${settingsPath}: ${reason}; using defaults`);
+    logger.warn(
+      `[runtimeSettings] failed to read settings file at ${settingsPath}: ${reason}; using defaults`,
+    );
     settings = { ...DEFAULT_SETTINGS };
     return;
   }
@@ -99,10 +106,11 @@ async function writeAtomically(path: string, payload: string): Promise<void> {
 function persistAsync(): Promise<void> {
   if (!settingsPath) return Promise.resolve();
   const path = settingsPath;
-  const enqueue = writeQueue.then(
-    () => writeAtomically(path, JSON.stringify(settings, null, 2)),
-    () => writeAtomically(path, JSON.stringify(settings, null, 2)),
-  );
+  const previousWrite = writeQueue;
+  const enqueue = (async () => {
+    await Promise.allSettled([previousWrite]);
+    await writeAtomically(path, JSON.stringify(settings, null, 2));
+  })();
   writeQueue = enqueue;
   return enqueue;
 }

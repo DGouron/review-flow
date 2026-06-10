@@ -21,8 +21,8 @@ function renderDeveloperCard(developer, translate, aiDeveloper) {
   const tierClass = getTierClass(developer.overallLevel);
   const encodedName = encodeURIComponent(developer.developerName);
 
-  const statBarsHtml = CATEGORY_KEYS.map(
-    (key) => renderStatBar(developer.categoryLevels[key], key, translate)
+  const statBarsHtml = CATEGORY_KEYS.map((key) =>
+    renderStatBar(developer.categoryLevels[key], key, translate),
   ).join('');
 
   const titleHtml = aiDeveloper
@@ -61,12 +61,12 @@ function renderDeveloperCard(developer, translate, aiDeveloper) {
  * @returns {string}
  */
 function renderTeamHealthStrip(team, translate) {
-  const avgLevel = (
-    team.averageLevels.quality +
-    team.averageLevels.responsiveness +
-    team.averageLevels.codeVolume +
-    team.averageLevels.iteration
-  ) / 4;
+  const avgLevel =
+    (team.averageLevels.quality +
+      team.averageLevels.responsiveness +
+      team.averageLevels.codeVolume +
+      team.averageLevels.iteration) /
+    4;
   const tierClass = getTierClass(Math.round(avgLevel));
 
   return `
@@ -95,17 +95,26 @@ function renderTeamHealthStrip(team, translate) {
  * @returns {string}
  */
 function renderTeamInsights(team, translate) {
-  const strengthTags = team.strengths.map(
-    (category) => `<span class="insight-tag insight-strength">${icon('thumbs-up', 'insight-icon')} ${translate('category.' + category)}</span>`
-  ).join('');
+  const strengthTags = team.strengths
+    .map(
+      (category) =>
+        `<span class="insight-tag insight-strength">${icon('thumbs-up', 'insight-icon')} ${translate('category.' + category)}</span>`,
+    )
+    .join('');
 
-  const weaknessTags = team.weaknesses.map(
-    (category) => `<span class="insight-tag insight-weakness">${icon('alert-triangle', 'insight-icon')} ${translate('category.' + category)}</span>`
-  ).join('');
+  const weaknessTags = team.weaknesses
+    .map(
+      (category) =>
+        `<span class="insight-tag insight-weakness">${icon('alert-triangle', 'insight-icon')} ${translate('category.' + category)}</span>`,
+    )
+    .join('');
 
-  const tipsList = team.tips.map(
-    (tip) => `<li class="insight-tip-item">${icon('lightbulb', 'insight-icon')} ${escapeHtml(tip)}</li>`
-  ).join('');
+  const tipsList = team.tips
+    .map(
+      (tip) =>
+        `<li class="insight-tip-item">${icon('lightbulb', 'insight-icon')} ${escapeHtml(tip)}</li>`,
+    )
+    .join('');
 
   return `
     <div class="team-insights">
@@ -119,12 +128,16 @@ function renderTeamInsights(team, translate) {
           <div class="team-insight-tags">${weaknessTags || '<span class="team-insight-empty">-</span>'}</div>
         </div>
       </div>
-      ${team.tips.length > 0 ? `
+      ${
+        team.tips.length > 0
+          ? `
         <div class="team-insight-tips">
           <div class="team-insight-label">${icon('lightbulb')} ${translate('team.tips')}</div>
           <ul class="insight-tips-list">${tipsList}</ul>
         </div>
-      ` : ''}
+      `
+          : ''
+      }
     </div>
   `;
 }
@@ -172,17 +185,26 @@ function renderAiGenerateButton(aiInsights, hasNewReviewsSinceAiGeneration, tran
  * @returns {string}
  */
 function renderAiTeamCard(aiTeam, translate) {
-  const strengthsList = aiTeam.strengths.map(
-    (strength) => `<li class="ai-list-item">${icon('check-circle', 'ai-list-icon')} ${escapeHtml(strength)}</li>`
-  ).join('');
+  const strengthsList = aiTeam.strengths
+    .map(
+      (strength) =>
+        `<li class="ai-list-item">${icon('check-circle', 'ai-list-icon')} ${escapeHtml(strength)}</li>`,
+    )
+    .join('');
 
-  const weaknessesList = aiTeam.weaknesses.map(
-    (weakness) => `<li class="ai-list-item">${icon('alert-circle', 'ai-list-icon')} ${escapeHtml(weakness)}</li>`
-  ).join('');
+  const weaknessesList = aiTeam.weaknesses
+    .map(
+      (weakness) =>
+        `<li class="ai-list-item">${icon('alert-circle', 'ai-list-icon')} ${escapeHtml(weakness)}</li>`,
+    )
+    .join('');
 
-  const recommendationsList = aiTeam.recommendations.map(
-    (recommendation) => `<li class="ai-list-item">${icon('lightbulb', 'ai-list-icon')} ${escapeHtml(recommendation)}</li>`
-  ).join('');
+  const recommendationsList = aiTeam.recommendations
+    .map(
+      (recommendation) =>
+        `<li class="ai-list-item">${icon('lightbulb', 'ai-list-icon')} ${escapeHtml(recommendation)}</li>`,
+    )
+    .join('');
 
   return `
     <div class="ai-team-card">
@@ -192,24 +214,36 @@ function renderAiTeamCard(aiTeam, translate) {
       </div>
       <div id="team-analysis-body" class="ai-team-card-body">
         <div class="ai-summary">${escapeHtml(aiTeam.summary)}</div>
-        ${aiTeam.strengths.length > 0 ? `
+        ${
+          aiTeam.strengths.length > 0
+            ? `
           <div class="ai-section-group">
             <div class="ai-section-label">${icon('check-circle')} ${translate('ai.strengths')}</div>
             <ul class="ai-list">${strengthsList}</ul>
           </div>
-        ` : ''}
-        ${aiTeam.weaknesses.length > 0 ? `
+        `
+            : ''
+        }
+        ${
+          aiTeam.weaknesses.length > 0
+            ? `
           <div class="ai-section-group">
             <div class="ai-section-label">${icon('alert-circle')} ${translate('ai.weaknesses')}</div>
             <ul class="ai-list">${weaknessesList}</ul>
           </div>
-        ` : ''}
-        ${aiTeam.recommendations.length > 0 ? `
+        `
+            : ''
+        }
+        ${
+          aiTeam.recommendations.length > 0
+            ? `
           <div class="ai-section-group">
             <div class="ai-section-label">${icon('lightbulb')} ${translate('ai.recommendations')}</div>
             <ul class="ai-list">${recommendationsList}</ul>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
         <div class="ai-section-group">
           <div class="ai-section-label">${icon('users')} ${translate('ai.dynamics')}</div>
           <div class="ai-summary">${escapeHtml(aiTeam.dynamics)}</div>
@@ -239,12 +273,13 @@ export function renderTeamTab(insightsData, translate) {
     : renderTeamInsights(insightsData.team, translate);
 
   const aiDevelopers = aiInsights?.developers ? aiInsights.developers : [];
-  const developerCardsHtml = insightsData.developers.map((developer) => {
-    const aiDeveloper = aiDevelopers.find(
-      (aiDev) => aiDev.developerName === developer.developerName
-    ) || null;
-    return renderDeveloperCard(developer, translate, aiDeveloper);
-  }).join('');
+  const developerCardsHtml = insightsData.developers
+    .map((developer) => {
+      const aiDeveloper =
+        aiDevelopers.find((aiDev) => aiDev.developerName === developer.developerName) || null;
+      return renderDeveloperCard(developer, translate, aiDeveloper);
+    })
+    .join('');
 
   const exportButtonHtml = `
     <button class="export-pdf-btn" onclick="exportInsightsPdf()">

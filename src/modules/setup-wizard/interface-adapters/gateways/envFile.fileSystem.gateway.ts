@@ -1,6 +1,10 @@
 import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { EnvFileGateway, EnvFileContents } from '@/modules/setup-wizard/entities/envFile/envFile.gateway.js';
+
+import type {
+  EnvFileGateway,
+  EnvFileContents,
+} from '@/modules/setup-wizard/entities/envFile/envFile.gateway.js';
 
 const ENV_FILENAME = '.env';
 const GITIGNORE_FILENAME = '.gitignore';
@@ -12,7 +16,10 @@ function parseEnvLine(line: string): { key: string; value: string } | null {
   if (!trimmed || trimmed.startsWith('#')) return null;
   const equalsIndex = trimmed.indexOf('=');
   if (equalsIndex < 0) return null;
-  return { key: trimmed.slice(0, equalsIndex).trim(), value: trimmed.slice(equalsIndex + 1).trim() };
+  return {
+    key: trimmed.slice(0, equalsIndex).trim(),
+    value: trimmed.slice(equalsIndex + 1).trim(),
+  };
 }
 
 export class EnvFileFileSystemGateway implements EnvFileGateway {

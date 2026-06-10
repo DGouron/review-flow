@@ -1,22 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+import { broadcastBudgetAfterUsage } from '@/frameworks/claude/broadcastBudgetAfterUsage.js';
+import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
+import type { SessionUsageSnapshot } from '@/modules/claude-invocation/entities/claudeSession/sessionUsage.schema.js';
 import {
   runClaudeReviewJob,
   type RunClaudeReviewJobInput,
 } from '@/modules/claude-invocation/usecases/runClaudeReviewJob.usecase.js';
-import { TrackTokenUsageUseCase } from '@/modules/token-accounting/usecases/trackTokenUsage/trackTokenUsage.usecase.js';
-import { broadcastBudgetAfterUsage } from '@/frameworks/claude/broadcastBudgetAfterUsage.js';
-import { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
 import { computeCostUsd } from '@/modules/token-accounting/entities/modelPricing/modelPricing.js';
-import type { SessionUsageSnapshot } from '@/modules/claude-invocation/entities/claudeSession/sessionUsage.schema.js';
 import type { TokenUsageRecord } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
+import { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
+import { TrackTokenUsageUseCase } from '@/modules/token-accounting/usecases/trackTokenUsage/trackTokenUsage.usecase.js';
+import { StubBillingStateGateway } from '@/tests/stubs/billingState.stub.js';
 import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
+import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { StubMcpCompletionBridge } from '@/tests/stubs/mcpCompletion.stub.js';
 import { StubReviewReportGateway } from '@/tests/stubs/reviewReport.stub.js';
-import { StubBillingStateGateway } from '@/tests/stubs/billingState.stub.js';
-import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
 import { StubTokenUsageGateway } from '@/tests/stubs/tokenUsage.stub.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
-import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
 
 const REVIEW_INPUT: RunClaudeReviewJobInput = {
   jobId: 'gitlab:owner/repo:42',

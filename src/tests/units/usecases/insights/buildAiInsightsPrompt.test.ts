@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { buildAiInsightsPrompt } from '@/modules/statistics-insights/usecases/insights/buildAiInsightsPrompt.js';
-import { ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+
 import type { ReviewStats } from '@/modules/statistics-insights/services/statsService.js';
+import { buildAiInsightsPrompt } from '@/modules/statistics-insights/usecases/insights/buildAiInsightsPrompt.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import { ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
 
 function createReviewContent(mrNumber: number, score: number): string {

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+
 import { OverviewPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/overview.presenter.js';
-import { RepositoryConfigFactory } from '@/tests/factories/repositoryConfig.factory.js';
+import { ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 import { ProjectStatsApiResponseFactory } from '@/tests/factories/projectStatsApiResponse.factory.js';
 import { RecentReviewFileFactory } from '@/tests/factories/recentReviewFile.factory.js';
-import { ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+import { RepositoryConfigFactory } from '@/tests/factories/repositoryConfig.factory.js';
 
 const NOW = new Date('2026-05-25T12:00:00.000Z');
 
@@ -37,7 +38,13 @@ describe('OverviewPresenter', () => {
       const startedFiveMinutesAgo = new Date(NOW.getTime() - 5 * 60_000).toISOString();
 
       const viewModel = presenter.present({
-        repositories: [RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend', platform: 'gitlab' })],
+        repositories: [
+          RepositoryConfigFactory.create({
+            name: 'frontend',
+            localPath: '/repos/frontend',
+            platform: 'gitlab',
+          }),
+        ],
         activeJobs: [
           {
             id: 'gitlab:frontend:142',
@@ -95,14 +102,23 @@ describe('OverviewPresenter', () => {
         recentReviews: [],
       });
 
-      expect(viewModel.activeReviews.items.map((item) => item.jobId)).toEqual(['newer-job', 'older-job']);
+      expect(viewModel.activeReviews.items.map((item) => item.jobId)).toEqual([
+        'newer-job',
+        'older-job',
+      ]);
     });
 
     it('uses PR prefix when the job runs on a GitHub project', () => {
       const presenter = new OverviewPresenter({ now: () => NOW });
 
       const viewModel = presenter.present({
-        repositories: [RepositoryConfigFactory.create({ name: 'api', localPath: '/repos/api', platform: 'github' })],
+        repositories: [
+          RepositoryConfigFactory.create({
+            name: 'api',
+            localPath: '/repos/api',
+            platform: 'github',
+          }),
+        ],
         activeJobs: [
           {
             id: 'github:api:28',
@@ -124,7 +140,9 @@ describe('OverviewPresenter', () => {
       const presenter = new OverviewPresenter({ now: () => NOW });
 
       const viewModel = presenter.present({
-        repositories: [RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' })],
+        repositories: [
+          RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' }),
+        ],
         activeJobs: [
           {
             id: 'queued-job',
@@ -146,7 +164,9 @@ describe('OverviewPresenter', () => {
       const presenter = new OverviewPresenter({ now: () => NOW });
 
       const viewModel = presenter.present({
-        repositories: [RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' })],
+        repositories: [
+          RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' }),
+        ],
         activeJobs: [
           {
             id: 'broken-date-job',
@@ -201,7 +221,9 @@ describe('OverviewPresenter', () => {
       );
 
       const viewModel = presenter.present({
-        repositories: [RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' })],
+        repositories: [
+          RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' }),
+        ],
         activeJobs: [],
         projectStats: [
           ProjectStatsApiResponseFactory.create({
@@ -231,7 +253,9 @@ describe('OverviewPresenter', () => {
       const presenter = new OverviewPresenter({ now: () => NOW });
 
       const viewModel = presenter.present({
-        repositories: [RepositoryConfigFactory.create({ name: 'new-project', localPath: '/repos/new' })],
+        repositories: [
+          RepositoryConfigFactory.create({ name: 'new-project', localPath: '/repos/new' }),
+        ],
         activeJobs: [],
         projectStats: [
           ProjectStatsApiResponseFactory.create({
@@ -256,7 +280,9 @@ describe('OverviewPresenter', () => {
       const presenter = new OverviewPresenter({ now: () => NOW });
 
       const viewModel = presenter.present({
-        repositories: [RepositoryConfigFactory.create({ name: 'orphan', localPath: '/repos/orphan' })],
+        repositories: [
+          RepositoryConfigFactory.create({ name: 'orphan', localPath: '/repos/orphan' }),
+        ],
         activeJobs: [],
         projectStats: [],
         recentReviews: [],
@@ -271,7 +297,9 @@ describe('OverviewPresenter', () => {
       const presenter = new OverviewPresenter({ now: () => NOW });
 
       const viewModel = presenter.present({
-        repositories: [RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' })],
+        repositories: [
+          RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' }),
+        ],
         activeJobs: [],
         projectStats: [
           ProjectStatsApiResponseFactory.create({
@@ -280,9 +308,21 @@ describe('OverviewPresenter', () => {
             totalReviews: 3,
             averageScore: 7,
             reviews: [
-              ReviewStatsFactory.create({ id: 'a', timestamp: '2026-05-25T11:58:00.000Z', score: 6 }),
-              ReviewStatsFactory.create({ id: 'b', timestamp: '2026-05-25T11:59:00.000Z', score: null }),
-              ReviewStatsFactory.create({ id: 'c', timestamp: '2026-05-25T12:00:00.000Z', score: 8 }),
+              ReviewStatsFactory.create({
+                id: 'a',
+                timestamp: '2026-05-25T11:58:00.000Z',
+                score: 6,
+              }),
+              ReviewStatsFactory.create({
+                id: 'b',
+                timestamp: '2026-05-25T11:59:00.000Z',
+                score: null,
+              }),
+              ReviewStatsFactory.create({
+                id: 'c',
+                timestamp: '2026-05-25T12:00:00.000Z',
+                score: 8,
+              }),
             ],
           }),
         ],
@@ -306,7 +346,9 @@ describe('OverviewPresenter', () => {
       );
 
       const viewModel = presenter.present({
-        repositories: [RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' })],
+        repositories: [
+          RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' }),
+        ],
         activeJobs: [],
         projectStats: [],
         recentReviews: items,
@@ -426,7 +468,11 @@ describe('OverviewPresenter', () => {
 
       const viewModel = presenter.present({
         repositories: [
-          RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend', platform: 'gitlab' }),
+          RepositoryConfigFactory.create({
+            name: 'frontend',
+            localPath: '/repos/frontend',
+            platform: 'gitlab',
+          }),
         ],
         activeJobs: [],
         projectStats: [],
@@ -444,7 +490,11 @@ describe('OverviewPresenter', () => {
 
       const viewModel = presenter.present({
         repositories: [
-          RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend', platform: 'gitlab' }),
+          RepositoryConfigFactory.create({
+            name: 'frontend',
+            localPath: '/repos/frontend',
+            platform: 'gitlab',
+          }),
         ],
         activeJobs: [],
         projectStats: [],
@@ -460,7 +510,11 @@ describe('OverviewPresenter', () => {
 
       const viewModel = presenter.present({
         repositories: [
-          RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend', platform: 'gitlab' }),
+          RepositoryConfigFactory.create({
+            name: 'frontend',
+            localPath: '/repos/frontend',
+            platform: 'gitlab',
+          }),
         ],
         activeJobs: [],
         projectStats: [],
@@ -475,7 +529,11 @@ describe('OverviewPresenter', () => {
 
       const viewModel = presenter.present({
         repositories: [
-          RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend', platform: 'gitlab' }),
+          RepositoryConfigFactory.create({
+            name: 'frontend',
+            localPath: '/repos/frontend',
+            platform: 'gitlab',
+          }),
         ],
         activeJobs: [],
         projectStats: [
@@ -484,7 +542,13 @@ describe('OverviewPresenter', () => {
             path: '/repos/frontend',
             totalReviews: 1,
             averageScore: 8,
-            reviews: [ReviewStatsFactory.create({ id: 'r1', timestamp: '2026-05-25T11:59:00.000Z', score: 8 })],
+            reviews: [
+              ReviewStatsFactory.create({
+                id: 'r1',
+                timestamp: '2026-05-25T11:59:00.000Z',
+                score: 8,
+              }),
+            ],
           }),
         ],
         recentReviews: [],
@@ -504,7 +568,11 @@ describe('OverviewPresenter', () => {
 
       const viewModel = presenter.present({
         repositories: [
-          RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend', platform: 'gitlab' }),
+          RepositoryConfigFactory.create({
+            name: 'frontend',
+            localPath: '/repos/frontend',
+            platform: 'gitlab',
+          }),
         ],
         activeJobs: [],
         projectStats: [],
@@ -523,7 +591,9 @@ describe('OverviewPresenter', () => {
       const presenter = new OverviewPresenter({ now: () => NOW });
 
       const viewModel = presenter.present({
-        repositories: [RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' })],
+        repositories: [
+          RepositoryConfigFactory.create({ name: 'frontend', localPath: '/repos/frontend' }),
+        ],
         activeJobs: [],
         projectStats: [],
         recentReviews: [

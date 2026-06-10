@@ -1,8 +1,9 @@
 import type { Logger } from 'pino';
-import type { ReviewFileGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewFile.gateway.js';
+
+import { getProjectRetentionDays } from '@/config/projectConfig.js';
 import type { ReviewLogFileGateway } from '@/modules/data-lifecycle/interface-adapters/gateways/reviewLogFile.gateway.js';
 import { cleanupExpiredReviews } from '@/modules/data-lifecycle/usecases/cleanup/cleanupExpiredReviews.usecase.js';
-import { getProjectRetentionDays } from '@/config/projectConfig.js';
+import type { ReviewFileGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewFile.gateway.js';
 
 const TWENTY_FOUR_HOURS_IN_MILLISECONDS = 86_400_000;
 
@@ -13,9 +14,9 @@ export interface CleanupSchedulerDependencies {
   logger: Logger;
 }
 
-export function startCleanupScheduler(
-  dependencies: CleanupSchedulerDependencies
-): { stop: () => void } {
+export function startCleanupScheduler(dependencies: CleanupSchedulerDependencies): {
+  stop: () => void;
+} {
   const { reviewFileGateway, reviewLogFileGateway, getRepositories, logger } = dependencies;
 
   async function runCleanup(): Promise<void> {
@@ -37,14 +38,11 @@ export function startCleanupScheduler(
               projectPath: repository.localPath,
               deletedCount: result.totalDeletedCount,
             },
-            'Cleanup completed'
+            'Cleanup completed',
           );
         }
       } catch (error) {
-        logger.error(
-          { error, projectPath: repository.localPath },
-          'Cleanup failed for repository'
-        );
+        logger.error({ error, projectPath: repository.localPath }, 'Cleanup failed for repository');
       }
     }
   }

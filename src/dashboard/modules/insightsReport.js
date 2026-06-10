@@ -51,19 +51,26 @@ function renderPrintLevelBar(level, categoryName) {
  */
 function renderPrintTeamInsights(team, translate) {
   const strengthTags = team.strengths
-    .map((/** @type {string} */ category) => `<span class="print-tag print-tag-strength">${translate('category.' + category)}</span>`)
+    .map(
+      (/** @type {string} */ category) =>
+        `<span class="print-tag print-tag-strength">${translate('category.' + category)}</span>`,
+    )
     .join(' ');
 
   const weaknessTags = team.weaknesses
-    .map((/** @type {string} */ category) => `<span class="print-tag print-tag-weakness">${translate('category.' + category)}</span>`)
+    .map(
+      (/** @type {string} */ category) =>
+        `<span class="print-tag print-tag-weakness">${translate('category.' + category)}</span>`,
+    )
     .join(' ');
 
-  const tipsHtml = team.tips.length > 0
-    ? `<div class="print-subsection">
+  const tipsHtml =
+    team.tips.length > 0
+      ? `<div class="print-subsection">
         <h4>${translate('team.tips')}</h4>
         <ul>${team.tips.map((/** @type {string} */ tip) => `<li>${escapeForPrint(tip)}</li>`).join('')}</ul>
       </div>`
-    : '';
+      : '';
 
   return `
     <div class="print-subsection">
@@ -84,26 +91,29 @@ function renderPrintTeamInsights(team, translate) {
  * @returns {string}
  */
 function renderPrintAiTeam(aiTeam, translate) {
-  const strengthsList = aiTeam.strengths.length > 0
-    ? `<div class="print-subsection">
+  const strengthsList =
+    aiTeam.strengths.length > 0
+      ? `<div class="print-subsection">
         <h4>${translate('ai.strengths')}</h4>
         <ul>${aiTeam.strengths.map((/** @type {string} */ item) => `<li>${escapeForPrint(item)}</li>`).join('')}</ul>
       </div>`
-    : '';
+      : '';
 
-  const weaknessesList = aiTeam.weaknesses.length > 0
-    ? `<div class="print-subsection">
+  const weaknessesList =
+    aiTeam.weaknesses.length > 0
+      ? `<div class="print-subsection">
         <h4>${translate('ai.weaknesses')}</h4>
         <ul>${aiTeam.weaknesses.map((/** @type {string} */ item) => `<li>${escapeForPrint(item)}</li>`).join('')}</ul>
       </div>`
-    : '';
+      : '';
 
-  const recommendationsList = aiTeam.recommendations.length > 0
-    ? `<div class="print-subsection">
+  const recommendationsList =
+    aiTeam.recommendations.length > 0
+      ? `<div class="print-subsection">
         <h4>${translate('ai.recommendations')}</h4>
         <ul>${aiTeam.recommendations.map((/** @type {string} */ item) => `<li>${escapeForPrint(item)}</li>`).join('')}</ul>
       </div>`
-    : '';
+      : '';
 
   return `
     <p class="print-summary">${escapeForPrint(aiTeam.summary)}</p>
@@ -128,9 +138,9 @@ function renderPrintDeveloper(developer, translate, aiDeveloper) {
     ? escapeForPrint(aiDeveloper.title)
     : translate('title.' + developer.title);
 
-  const levelBarsHtml = CATEGORY_KEYS
-    .map((key) => renderPrintLevelBar(developer.categoryLevels[key].level, translate('category.' + key)))
-    .join('');
+  const levelBarsHtml = CATEGORY_KEYS.map((key) =>
+    renderPrintLevelBar(developer.categoryLevels[key].level, translate('category.' + key)),
+  ).join('');
 
   const metricsHtml = developer.metrics
     ? `<div class="print-metrics">
@@ -156,23 +166,23 @@ function renderPrintDeveloper(developer, translate, aiDeveloper) {
       </div>`
     : '';
 
-  const strengthsHtml = developer.strengths.length > 0
-    ? `<div class="print-subsection">
+  const strengthsHtml =
+    developer.strengths.length > 0
+      ? `<div class="print-subsection">
         <h4>${translate('team.strengths')}</h4>
         <ul>${developer.strengths.map((/** @type {string} */ category) => `<li>${translate('category.' + category)}</li>`).join('')}</ul>
       </div>`
-    : '';
+      : '';
 
-  const weaknessesHtml = developer.weaknesses.length > 0
-    ? `<div class="print-subsection">
+  const weaknessesHtml =
+    developer.weaknesses.length > 0
+      ? `<div class="print-subsection">
         <h4>${translate('team.weaknesses')}</h4>
         <ul>${developer.weaknesses.map((/** @type {string} */ category) => `<li>${translate('category.' + category)}</li>`).join('')}</ul>
       </div>`
-    : '';
+      : '';
 
-  const aiSectionHtml = aiDeveloper
-    ? renderPrintAiDeveloper(aiDeveloper, translate)
-    : '';
+  const aiSectionHtml = aiDeveloper ? renderPrintAiDeveloper(aiDeveloper, translate) : '';
 
   return `
     <div class="print-developer">
@@ -203,26 +213,29 @@ function renderPrintDeveloper(developer, translate, aiDeveloper) {
  * @returns {string}
  */
 function renderPrintAiDeveloper(aiDeveloper, translate) {
-  const strengthsList = aiDeveloper.strengths.length > 0
-    ? `<div class="print-subsection">
+  const strengthsList =
+    aiDeveloper.strengths.length > 0
+      ? `<div class="print-subsection">
         <h4>${translate('ai.strengths')}</h4>
         <ul>${aiDeveloper.strengths.map((/** @type {string} */ item) => `<li>${escapeForPrint(item)}</li>`).join('')}</ul>
       </div>`
-    : '';
+      : '';
 
-  const weaknessesList = aiDeveloper.weaknesses.length > 0
-    ? `<div class="print-subsection">
+  const weaknessesList =
+    aiDeveloper.weaknesses.length > 0
+      ? `<div class="print-subsection">
         <h4>${translate('ai.weaknesses')}</h4>
         <ul>${aiDeveloper.weaknesses.map((/** @type {string} */ item) => `<li>${escapeForPrint(item)}</li>`).join('')}</ul>
       </div>`
-    : '';
+      : '';
 
-  const recommendationsList = aiDeveloper.recommendations.length > 0
-    ? `<div class="print-subsection">
+  const recommendationsList =
+    aiDeveloper.recommendations.length > 0
+      ? `<div class="print-subsection">
         <h4>${translate('ai.recommendations')}</h4>
         <ul>${aiDeveloper.recommendations.map((/** @type {string} */ item) => `<li>${escapeForPrint(item)}</li>`).join('')}</ul>
       </div>`
-    : '';
+      : '';
 
   const summaryHtml = aiDeveloper.summary
     ? `<p class="print-summary">${escapeForPrint(aiDeveloper.summary)}</p>`
@@ -461,18 +474,22 @@ export function buildInsightsReport(insightsData, translate) {
     ? renderPrintAiTeam(aiInsights.team, translate)
     : renderPrintTeamInsights(insightsData.team, translate);
 
-  const sortedDevelopers = [...insightsData.developers].sort(
-    (/** @type {{ overallLevel: number }} */ first, /** @type {{ overallLevel: number }} */ second) =>
-      second.overallLevel - first.overallLevel
+  const sortedDevelopers = [...insightsData.developers].toSorted(
+    (
+      /** @type {{ overallLevel: number }} */ first,
+      /** @type {{ overallLevel: number }} */ second,
+    ) => second.overallLevel - first.overallLevel,
   );
 
   const aiDevelopers = aiInsights?.developers ? aiInsights.developers : [];
 
   const developerSectionsHtml = sortedDevelopers
     .map((developer) => {
-      const aiDeveloper = aiDevelopers.find(
-        (/** @type {{ developerName: string }} */ aiDev) => aiDev.developerName === developer.developerName
-      ) || null;
+      const aiDeveloper =
+        aiDevelopers.find(
+          (/** @type {{ developerName: string }} */ aiDev) =>
+            aiDev.developerName === developer.developerName,
+        ) || null;
       return renderPrintDeveloper(developer, translate, aiDeveloper);
     })
     .join('');

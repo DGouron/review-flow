@@ -1,5 +1,5 @@
-import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import type { ProjectStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
+import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 
 export class InMemoryStatsGateway implements StatsGateway {
   private storage = new Map<string, ProjectStats>();

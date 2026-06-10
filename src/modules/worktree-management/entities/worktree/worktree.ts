@@ -1,11 +1,12 @@
 import { isAbsolute, join } from 'node:path';
-import { WORKTREE_BASE_DIR } from '@/shared/services/daemonPaths.js';
+
 import type {
   FetchRef,
   MrSource,
   WorktreeIdentity,
   WorktreePath,
 } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+import { WORKTREE_BASE_DIR } from '@/shared/services/daemonPaths.js';
 
 /**
  * Single chokepoint constructor for the WorktreePath branded type. Any
@@ -13,11 +14,15 @@ import type {
  * rather than casting a raw string. Validates absoluteness so accidental
  * relative paths are caught at the boundary.
  */
+function isWorktreePath(value: string): value is WorktreePath {
+  return value.length > 0 && isAbsolute(value);
+}
+
 export function createWorktreePath(value: string): WorktreePath {
-  if (value.length === 0 || !isAbsolute(value)) {
+  if (!isWorktreePath(value)) {
     throw new Error(`Invalid worktree path (must be absolute, non-empty): ${value}`);
   }
-  return value as WorktreePath;
+  return value;
 }
 
 export function deriveWorktreeSlug(projectPath: string): string {
@@ -49,9 +54,7 @@ export function deriveFetchRef(source: MrSource, sourceBranch: string, mrNumber:
   };
 }
 
-export function parseWorktreeDirectoryName(
-  directoryName: string,
-): WorktreeIdentity | null {
+export function parseWorktreeDirectoryName(directoryName: string): WorktreeIdentity | null {
   const match = directoryName.match(/^(gitlab|github)-(.+)-(\d+)$/);
   if (!match) return null;
   const platform = match[1] === 'github' ? 'github' : 'gitlab';

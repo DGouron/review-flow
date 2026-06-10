@@ -18,10 +18,11 @@
 
 import Fastify, { type FastifyInstance } from 'fastify';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { mrTrackingRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTracking.routes.js';
-import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
-import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
+
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import { mrTrackingRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTracking.routes.js';
+import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
+import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 
 const INVALID_CURRENT_STATE_MESSAGE =
   'Seules les MR en correction peuvent être marquées comme mergées';

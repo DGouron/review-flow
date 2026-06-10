@@ -1,11 +1,12 @@
 import type { Logger } from 'pino';
+
 import type { SupervisorGateway } from '@/modules/supervisor-management/entities/supervisor/supervisor.gateway.js';
 import type { SupervisorLockGateway } from '@/modules/supervisor-management/entities/supervisor/supervisorLock.gateway.js';
-import type { SupervisorStatusStore } from '@/modules/supervisor-management/entities/supervisor/supervisorStatusStore.gateway.js';
 import {
   createSupervisorStatus,
   type SupervisorStatus,
 } from '@/modules/supervisor-management/entities/supervisor/supervisorStatus.schema.js';
+import type { SupervisorStatusStore } from '@/modules/supervisor-management/entities/supervisor/supervisorStatusStore.gateway.js';
 
 const SPAWN_FAILED_REASON = 'supervisor-spawn-failed';
 const LOCK_HELD_REASON = 'supervisor-lock-held';
@@ -59,16 +60,16 @@ export async function checkSupervisorAndRespawn(
   try {
     const spawnResult = await supervisorGateway.spawnDetached();
     if (spawnResult.state === 'failed') {
-      logger.warn(
-        { reason: spawnResult.reason },
-        'Failed to spawn Claude agents supervisor',
-      );
+      logger.warn({ reason: spawnResult.reason }, 'Failed to spawn Claude agents supervisor');
       const status = createSupervisorStatus('down', SPAWN_FAILED_REASON, now());
       statusStore.set(status);
       return status;
     }
 
-    logger.info({ pid: spawnResult.pid }, `Claude agents supervisor spawned (pid=${spawnResult.pid ?? 'unknown'})`);
+    logger.info(
+      { pid: spawnResult.pid },
+      `Claude agents supervisor spawned (pid=${spawnResult.pid ?? 'unknown'})`,
+    );
     const status = createSupervisorStatus('up', null, now());
     statusStore.set(status);
     return status;

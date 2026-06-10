@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+
+import type { ProjectConfig } from '@/config/projectConfig.js';
 import { RecomputeGlobalConcurrencyUseCase } from '@/modules/cli-configuration/usecases/projectConfig/recomputeGlobalConcurrency.usecase.js';
 import { StubProjectConfigGateway } from '@/tests/stubs/projectConfigGateway.stub.js';
-import { StubRepositoriesListGateway } from '@/tests/stubs/repositoriesListGateway.stub.js';
 import { StubQueueCapacityPort } from '@/tests/stubs/queueCapacityPort.stub.js';
-import type { ProjectConfig } from '@/config/projectConfig.js';
+import { StubRepositoriesListGateway } from '@/tests/stubs/repositoriesListGateway.stub.js';
 
 function baseProjectConfig(overrides: Partial<ProjectConfig> = {}): ProjectConfig {
   return {

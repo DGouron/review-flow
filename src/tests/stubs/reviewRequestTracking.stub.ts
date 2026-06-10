@@ -1,10 +1,10 @@
+import type { MrTrackingData } from '@/modules/tracking/entities/tracking/mrTrackingData.js';
+import type { ReviewEvent } from '@/modules/tracking/entities/tracking/reviewEvent.js';
 import type {
   ReviewRequestTrackingGateway,
   Platform,
 } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
-import type { MrTrackingData } from '@/modules/tracking/entities/tracking/mrTrackingData.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
-import type { ReviewEvent } from '@/modules/tracking/entities/tracking/reviewEvent.js';
 
 export class InMemoryReviewRequestTrackingGateway implements ReviewRequestTrackingGateway {
   private storage = new Map<string, MrTrackingData>();
@@ -27,14 +27,14 @@ export class InMemoryReviewRequestTrackingGateway implements ReviewRequestTracki
   getByNumber(
     projectPath: string,
     reviewRequestNumber: number,
-    platform: Platform
+    platform: Platform,
   ): TrackedMr | null {
     const data = this.storage.get(projectPath);
     if (!data) return null;
 
-    return data.mrs.find(
-      (mr) => mr.mrNumber === reviewRequestNumber && mr.platform === platform
-    ) ?? null;
+    return (
+      data.mrs.find((mr) => mr.mrNumber === reviewRequestNumber && mr.platform === platform) ?? null
+    );
   }
 
   create(projectPath: string, reviewRequest: TrackedMr): void {
@@ -60,11 +60,7 @@ export class InMemoryReviewRequestTrackingGateway implements ReviewRequestTracki
     this.storage.set(projectPath, data);
   }
 
-  update(
-    projectPath: string,
-    reviewRequestId: string,
-    updates: Partial<TrackedMr>
-  ): void {
+  update(projectPath: string, reviewRequestId: string, updates: Partial<TrackedMr>): void {
     const data = this.storage.get(projectPath);
     if (!data) return;
 
@@ -108,11 +104,7 @@ export class InMemoryReviewRequestTrackingGateway implements ReviewRequestTracki
     return this.remove(projectPath, reviewRequestId);
   }
 
-  recordReviewEvent(
-    projectPath: string,
-    reviewRequestId: string,
-    event: ReviewEvent
-  ): void {
+  recordReviewEvent(projectPath: string, reviewRequestId: string, event: ReviewEvent): void {
     const data = this.storage.get(projectPath);
     if (!data) return;
 
@@ -142,14 +134,12 @@ export class InMemoryReviewRequestTrackingGateway implements ReviewRequestTracki
   recordPush(
     projectPath: string,
     reviewRequestNumber: number,
-    platform: Platform
+    platform: Platform,
   ): TrackedMr | null {
     const data = this.storage.get(projectPath);
     if (!data) return null;
 
-    const mr = data.mrs.find(
-      (m) => m.mrNumber === reviewRequestNumber && m.platform === platform
-    );
+    const mr = data.mrs.find((m) => m.mrNumber === reviewRequestNumber && m.platform === platform);
     if (!mr) return null;
 
     mr.lastPushAt = new Date().toISOString();

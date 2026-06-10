@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { JsonWizardEventEmitter } from '@/modules/setup-wizard/services/jsonWizardEventEmitter.js';
+
 import { succeeded, blocked } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
+import { JsonWizardEventEmitter } from '@/modules/setup-wizard/services/jsonWizardEventEmitter.js';
 
 describe('JsonWizardEventEmitter', () => {
   it('emits one JSON line per step start', () => {
@@ -73,7 +74,9 @@ describe('JsonWizardEventEmitter', () => {
     const lines: string[] = [];
     const emitter = new JsonWizardEventEmitter((line) => lines.push(line));
     emitter.emitDone({ totalSteps: 10, blocked: 0 });
-    const event: { step: string; status: string; summary: { totalSteps: number } } = JSON.parse(lines[0]);
+    const event: { step: string; status: string; summary: { totalSteps: number } } = JSON.parse(
+      lines[0],
+    );
     expect(event.step).toBe('done');
     expect(event.status).toBe('completed');
     expect(event.summary.totalSteps).toBe(10);

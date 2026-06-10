@@ -1,5 +1,6 @@
 import { createInterface, type Interface } from 'node:readline';
 import type { Readable } from 'node:stream';
+
 import type { LineReader } from '@/modules/setup-wizard/entities/lineReader/lineReader.gateway.js';
 
 type PendingResolver = (line: string | null) => void;

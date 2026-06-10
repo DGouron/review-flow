@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+
 import type { WorktreeSizeProbeGateway } from '@/modules/worktree-management/entities/worktree/worktreeSizeProbe.gateway.js';
 
 export interface DuCommand {
@@ -15,19 +16,19 @@ export interface DuCommandResult {
 export type DuProcessRunner = (command: DuCommand) => Promise<DuCommandResult>;
 
 function defaultDuRunner(): DuProcessRunner {
-  return async command =>
+  return async (command) =>
     new Promise<DuCommandResult>((resolve, reject) => {
       const child = spawn('du', command.args, { cwd: command.cwd });
       let stdout = '';
       let stderr = '';
-      child.stdout?.on('data', chunk => {
+      child.stdout?.on('data', (chunk) => {
         stdout += chunk.toString();
       });
-      child.stderr?.on('data', chunk => {
+      child.stderr?.on('data', (chunk) => {
         stderr += chunk.toString();
       });
       child.on('error', reject);
-      child.on('close', code => {
+      child.on('close', (code) => {
         resolve({ stdout, stderr, exitCode: code ?? -1 });
       });
     });

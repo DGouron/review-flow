@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { parseCliArgs, type CliArgs } from '../../../cli/parseCliArgs.js';
 
 describe('parseCliArgs', () => {
@@ -205,9 +206,7 @@ describe('parseCliArgs', () => {
     });
 
     it('should collect multiple --scan-path values', () => {
-      const result = parseCliArgs([
-        'init', '--scan-path', '/path/a', '--scan-path', '/path/b',
-      ]);
+      const result = parseCliArgs(['init', '--scan-path', '/path/a', '--scan-path', '/path/b']);
 
       expect(result.command).toBe('init');
       expect((result as CliArgs & { command: 'init' }).scanPaths).toEqual(['/path/a', '/path/b']);
@@ -257,47 +256,57 @@ describe('parseCliArgs', () => {
     it('should detect --project flag with value', () => {
       const result = parseCliArgs(['followup-importants', '--project', '/path/to/repo']);
 
-      expect(result).toEqual(expect.objectContaining({
-        command: 'followup-importants',
-        project: '/path/to/repo',
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          command: 'followup-importants',
+          project: '/path/to/repo',
+        }),
+      );
     });
 
     it('should detect -p short flag for project', () => {
       const result = parseCliArgs(['followup-importants', '-p', '/path/to/repo']);
 
-      expect(result).toEqual(expect.objectContaining({
-        command: 'followup-importants',
-        project: '/path/to/repo',
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          command: 'followup-importants',
+          project: '/path/to/repo',
+        }),
+      );
     });
 
     it('should detect --yes flag', () => {
       const result = parseCliArgs(['followup-importants', '--yes']);
 
-      expect(result).toEqual(expect.objectContaining({
-        command: 'followup-importants',
-        yes: true,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          command: 'followup-importants',
+          yes: true,
+        }),
+      );
     });
 
     it('should detect -y short flag for yes', () => {
       const result = parseCliArgs(['followup-importants', '-y']);
 
-      expect(result).toEqual(expect.objectContaining({
-        command: 'followup-importants',
-        yes: true,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          command: 'followup-importants',
+          yes: true,
+        }),
+      );
     });
 
     it('should default project to undefined and yes to false', () => {
       const result = parseCliArgs(['followup-importants']);
 
-      expect(result).toEqual(expect.objectContaining({
-        command: 'followup-importants',
-        project: undefined,
-        yes: false,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          command: 'followup-importants',
+          project: undefined,
+          yes: false,
+        }),
+      );
     });
   });
 

@@ -9,24 +9,25 @@
  * Covers scenarios 2, 6, 7, 8, 10 from docs/specs/175-worktree-failure-visibility.md.
  */
 
-import { describe, it, expect } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { worktreeOverviewRoutes } from '@/modules/worktree-management/interface-adapters/controllers/http/worktreeOverview.routes.js';
-import { WorktreePanelPresenter } from '@/modules/worktree-management/interface-adapters/presenters/worktreePanel.presenter.js';
-import { StubWorktreeSizeProbeGateway } from '@/tests/stubs/worktreeSizeProbe.stub.js';
-import { StubWorktreeHealthProbeGateway } from '@/tests/stubs/worktreeHealthProbe.stub.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { describe, it, expect } from 'vitest';
+
+import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
 import { createWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
-import { detectDegradedWorktrees } from '@/modules/worktree-management/usecases/detectDegradedWorktrees.usecase.js';
-import { InMemoryForceCleanupLockService } from '@/modules/worktree-management/services/forceCleanupLock.js';
 import type {
   EnsureResult,
   RemoveResult,
   WorktreeEntry,
   WorktreeIdentity,
 } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
-import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
 import type { HealthSignals } from '@/modules/worktree-management/entities/worktree/worktreeHealthProbe.gateway.js';
+import { worktreeOverviewRoutes } from '@/modules/worktree-management/interface-adapters/controllers/http/worktreeOverview.routes.js';
+import { WorktreePanelPresenter } from '@/modules/worktree-management/interface-adapters/presenters/worktreePanel.presenter.js';
+import { InMemoryForceCleanupLockService } from '@/modules/worktree-management/services/forceCleanupLock.js';
+import { detectDegradedWorktrees } from '@/modules/worktree-management/usecases/detectDegradedWorktrees.usecase.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { StubWorktreeHealthProbeGateway } from '@/tests/stubs/worktreeHealthProbe.stub.js';
+import { StubWorktreeSizeProbeGateway } from '@/tests/stubs/worktreeSizeProbe.stub.js';
 
 const NOW = new Date('2026-05-23T12:00:00.000Z');
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -68,10 +69,10 @@ class ConfigurableWorktreeGateway implements WorktreeGateway {
       return { status: 'failed', warning: this.failureReason };
     }
     this.entries = this.entries.filter(
-      entry =>
-        entry.identity.platform !== request.identity.platform
-        || entry.identity.projectPath !== request.identity.projectPath
-        || entry.identity.mrNumber !== request.identity.mrNumber,
+      (entry) =>
+        entry.identity.platform !== request.identity.platform ||
+        entry.identity.projectPath !== request.identity.projectPath ||
+        entry.identity.mrNumber !== request.identity.mrNumber,
     );
     return { status: 'removed' };
   }
@@ -136,7 +137,7 @@ async function buildAcceptanceApp(options: BuildAppOptions): Promise<AcceptanceA
       }),
     },
     logger: createStubLogger(),
-    detectDegradedWorktrees: entries =>
+    detectDegradedWorktrees: (entries) =>
       detectDegradedWorktrees(
         {
           entries,
@@ -146,7 +147,7 @@ async function buildAcceptanceApp(options: BuildAppOptions): Promise<AcceptanceA
         { healthProbe },
       ),
     forceCleanupLock: lock,
-    removeWorktreeForCleanup: identity =>
+    removeWorktreeForCleanup: (identity) =>
       gateway.remove({ identity, sourceCheckoutPath: '/repo', force: true }),
   });
 
@@ -364,11 +365,11 @@ describe('Acceptance — SPEC-175: Worktree Failure Visibility & Force-Cleanup',
         }>;
       };
       expect(body.degradedCount).toBe(3);
-      const mrNumbers = body.degraded.map(d => d.mrNumber).sort((a, b) => a - b);
+      const mrNumbers = body.degraded.map((d) => d.mrNumber).toSorted((a, b) => a - b);
       expect(mrNumbers).toEqual([1, 2, 3]);
       const payloadProjects = body.degraded
-        .map(d => d.cleanupEndpointPayload.projectPath)
-        .sort();
+        .map((d) => d.cleanupEndpointPayload.projectPath)
+        .toSorted();
       expect(payloadProjects).toEqual(['group/a', 'group/b', 'group/c']);
 
       await app.close();

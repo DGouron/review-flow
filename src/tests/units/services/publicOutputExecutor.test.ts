@@ -1,10 +1,10 @@
-import { executePublicOutput } from '@/modules/review-execution/services/publicOutputExecutor.js';
-import type { PublicOutputAction } from '@/modules/review-execution/services/publicOutputExecutor.js';
-import { EgressScannedNoteCommentPostGateway } from '@/modules/platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.js';
 import { createEgressScanner } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
 import type { EgressScanConfig } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
-import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
+import { EgressScannedNoteCommentPostGateway } from '@/modules/platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.js';
+import { executePublicOutput } from '@/modules/review-execution/services/publicOutputExecutor.js';
+import type { PublicOutputAction } from '@/modules/review-execution/services/publicOutputExecutor.js';
 import { StubEgressTraceGateway } from '@/tests/stubs/egressScan.stub.js';
+import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
 
 const SECRET = 'glpat-abcdefghij1234567890';
 
@@ -45,7 +45,10 @@ describe('executePublicOutput', () => {
 
   describe('AC9 — channel exhaustiveness', () => {
     const verbCases: { label: string; action: PublicOutputAction }[] = [
-      { label: 'THREAD_REPLY', action: { type: 'THREAD_REPLY', threadId: 'abc', message: `m ${SECRET}` } },
+      {
+        label: 'THREAD_REPLY',
+        action: { type: 'THREAD_REPLY', threadId: 'abc', message: `m ${SECRET}` },
+      },
       { label: 'POST_COMMENT', action: { type: 'POST_COMMENT', body: `c ${SECRET}` } },
     ];
 

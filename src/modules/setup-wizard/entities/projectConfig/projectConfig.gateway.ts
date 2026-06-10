@@ -1,4 +1,7 @@
-import type { Preset, Language } from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
+import type {
+  Preset,
+  Language,
+} from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
 
 export interface ProjectConfigContents {
   preset: Preset;

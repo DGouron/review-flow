@@ -1,4 +1,4 @@
-import type { AgentInstructions } from '@/modules/review-execution/entities/reviewContext/reviewContext.js'
+import type { AgentInstructions } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
 
 export function buildAgentInstructions(contextFilePath: string): AgentInstructions {
   return {
@@ -43,7 +43,7 @@ export function buildAgentInstructions(contextFilePath: string): AgentInstructio
         body: 'string - comment body',
       },
     },
-  }
+  };
 }
 
 export function formatInstructionsForPrompt(instructions: AgentInstructions): string {
@@ -62,7 +62,7 @@ export function formatInstructionsForPrompt(instructions: AgentInstructions): st
     '```',
     '',
     '═══════════════════════════════════════════════════════════════════════════════',
-  ]
+  ];
 
-  return lines.join('\n')
+  return lines.join('\n');
 }

@@ -10,9 +10,11 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { beforeEach, describe, expect, it } from 'vitest';
+
 import { computeCardCounters } from '@/dashboard/modules/cardCounters.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -39,13 +41,17 @@ describe('SPEC-178 — Reposition Project Tabs Above Cards + Project-Contextual 
     });
 
     it('dashboard-tabs is inside project-bar', () => {
-      const projectBarMatch = indexHtml.match(/<div class="project-bar"[\s\S]*?<\/div>\s*(?=<div|<section|<main|<aside)/);
+      const projectBarMatch = indexHtml.match(
+        /<div class="project-bar"[\s\S]*?<\/div>\s*(?=<div|<section|<main|<aside)/,
+      );
       expect(projectBarMatch).not.toBeNull();
       expect(projectBarMatch?.[0]).toMatch(/id="dashboard-tabs"/);
     });
 
     it('manage-projects-toggle and manage-panel are co-located inside project-bar', () => {
-      const projectBarMatch = indexHtml.match(/<div class="project-bar"[\s\S]*?<\/div>\s*(?=<div|<section|<main|<aside)/);
+      const projectBarMatch = indexHtml.match(
+        /<div class="project-bar"[\s\S]*?<\/div>\s*(?=<div|<section|<main|<aside)/,
+      );
       const projectBarBlock = projectBarMatch?.[0] ?? '';
       expect(projectBarBlock).toMatch(/id="manage-projects-toggle"/);
       expect(projectBarBlock).toMatch(/id="manage-panel"/);
@@ -99,13 +105,15 @@ describe('SPEC-178 — Reposition Project Tabs Above Cards + Project-Contextual 
     });
 
     it('declares a responsive wrap rule at max-width 900px touching project-bar', () => {
-      const responsiveBlocks = stylesCss.match(/@media[^{]*max-width:\s*900px[^{]*\{[\s\S]*?\n\}/g) ?? [];
+      const responsiveBlocks =
+        stylesCss.match(/@media[^{]*max-width:\s*900px[^{]*\{[\s\S]*?\n\}/g) ?? [];
       const concatenated = responsiveBlocks.join('\n');
       expect(concatenated).toMatch(/\.project-bar/);
     });
 
     it('honors prefers-reduced-motion for project-bar or cards-scope-marker', () => {
-      const reducedMotionBlocks = stylesCss.match(/@media[^{]*prefers-reduced-motion:\s*reduce[^{]*\{[\s\S]*?\n\}/g) ?? [];
+      const reducedMotionBlocks =
+        stylesCss.match(/@media[^{]*prefers-reduced-motion:\s*reduce[^{]*\{[\s\S]*?\n\}/g) ?? [];
       const concatenated = reducedMotionBlocks.join('\n');
       expect(concatenated).toMatch(/\.project-bar|\.cards-scope-marker/);
     });

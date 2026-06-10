@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { backfillDiffStats } from '@/modules/statistics-insights/usecases/stats/backfillDiffStats.usecase.js';
-import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
-import { StubDiffStatsFetchGateway } from '@/tests/stubs/diffStatsFetch.stub.js';
-import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+
 import type { BackfillProgress } from '@/modules/statistics-insights/entities/backfill/backfillProgress.js';
+import { backfillDiffStats } from '@/modules/statistics-insights/usecases/stats/backfillDiffStats.usecase.js';
+import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+import { StubDiffStatsFetchGateway } from '@/tests/stubs/diffStatsFetch.stub.js';
+import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 
 describe('backfillDiffStats', () => {
   beforeEach(() => {
@@ -18,9 +19,7 @@ describe('backfillDiffStats', () => {
     const statsGateway = new InMemoryStatsGateway();
     const diffStatsFetchGateway = new StubDiffStatsFetchGateway();
 
-    const reviews = [
-      ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 }),
-    ];
+    const reviews = [ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 })];
     const projectStats = ProjectStatsFactory.create({ reviews });
     statsGateway.saveProjectStats('/test/project', projectStats);
 
@@ -73,9 +72,7 @@ describe('backfillDiffStats', () => {
     const statsGateway = new InMemoryStatsGateway();
     const diffStatsFetchGateway = new StubDiffStatsFetchGateway();
 
-    const reviews = [
-      ReviewStatsFactory.create({ id: 'r1', mrNumber: 10, diffStats: null }),
-    ];
+    const reviews = [ReviewStatsFactory.create({ id: 'r1', mrNumber: 10, diffStats: null })];
     const projectStats = ProjectStatsFactory.create({ reviews });
     statsGateway.saveProjectStats('/test/project', projectStats);
 
@@ -131,9 +128,7 @@ describe('backfillDiffStats', () => {
     const diffStatsFetchGateway = new StubDiffStatsFetchGateway();
     const logger = { warn: vi.fn() };
 
-    const reviews = [
-      ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 }),
-    ];
+    const reviews = [ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 })];
     const projectStats = ProjectStatsFactory.create({ reviews });
     statsGateway.saveProjectStats('/test/project', projectStats);
 
@@ -190,9 +185,7 @@ describe('backfillDiffStats', () => {
     const statsGateway = new InMemoryStatsGateway();
     const diffStatsFetchGateway = new StubDiffStatsFetchGateway();
 
-    const reviews = [
-      ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 }),
-    ];
+    const reviews = [ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 })];
     const projectStats = ProjectStatsFactory.create({ reviews });
     statsGateway.saveProjectStats('/test/project', projectStats);
 

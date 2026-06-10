@@ -217,8 +217,7 @@ export function renderWorktreeEmptyState() {
 function renderRow(row, groupLabel) {
   const escapedPath = escapeHtml(row.path);
   const truncatedPath = escapeHtml(truncatePathMiddle(row.path));
-  const truncatedLabel =
-    groupLabel.length > 28 ? `${groupLabel.slice(0, 24)}…` : groupLabel;
+  const truncatedLabel = groupLabel.length > 28 ? `${groupLabel.slice(0, 24)}…` : groupLabel;
   return `
     <tr class="worktree-row" data-status="${escapeHtml(row.status)}">
       <td class="worktree-cell worktree-cell-status">${renderWorktreeStatusBadge(row.status)}</td>
@@ -239,7 +238,9 @@ function renderRow(row, groupLabel) {
  * @returns {string}
  */
 function renderGroupRows(group) {
-  return group.worktrees.map((row) => renderRow(row, `${group.platform} · ${group.projectPath}`)).join('');
+  return group.worktrees
+    .map((row) => renderRow(row, `${group.platform} · ${group.projectPath}`))
+    .join('');
 }
 
 /**

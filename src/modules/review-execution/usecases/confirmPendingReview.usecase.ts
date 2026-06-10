@@ -1,5 +1,6 @@
 import type { Logger } from 'pino';
-import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
+
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import type { PendingReviewRequestGateway } from '@/modules/review-execution/entities/pendingReviewRequest/pendingReviewRequest.gateway.js';
 import type { PendingReviewRequest } from '@/modules/review-execution/entities/pendingReviewRequest/pendingReviewRequest.schema.js';
 import type {
@@ -41,8 +42,14 @@ export class ConfirmPendingReviewUseCase {
   constructor(private readonly deps: ConfirmPendingReviewDependencies) {}
 
   async execute(input: { pendingId: string }): Promise<ConfirmPendingReviewResult> {
-    const { pendingReviewRequestGateway, queuePort, enqueue, resolveProcessor, isProjectRunnable, logger } =
-      this.deps;
+    const {
+      pendingReviewRequestGateway,
+      queuePort,
+      enqueue,
+      resolveProcessor,
+      isProjectRunnable,
+      logger,
+    } = this.deps;
 
     const pending = await pendingReviewRequestGateway.load(input.pendingId);
     if (!pending) {
@@ -50,7 +57,10 @@ export class ConfirmPendingReviewUseCase {
     }
 
     if (queuePort.hasActiveJob(pending.job.id)) {
-      logger.info({ pendingId: input.pendingId, jobId: pending.job.id }, 'Pending review confirm rejected: already running');
+      logger.info(
+        { pendingId: input.pendingId, jobId: pending.job.id },
+        'Pending review confirm rejected: already running',
+      );
       return { status: 'already-running', message: ALREADY_RUNNING_MESSAGE };
     }
 
@@ -66,12 +76,18 @@ export class ConfirmPendingReviewUseCase {
     const job: ReviewJob = pending.job;
     const enqueued = await enqueue(job, processor);
     if (!enqueued) {
-      logger.warn({ pendingId: input.pendingId, jobId: job.id }, 'Pending review confirm refused by queue');
+      logger.warn(
+        { pendingId: input.pendingId, jobId: job.id },
+        'Pending review confirm refused by queue',
+      );
       return { status: 'already-running', message: ALREADY_RUNNING_MESSAGE };
     }
 
     await pendingReviewRequestGateway.delete(input.pendingId);
-    logger.info({ pendingId: input.pendingId, jobId: job.id }, 'Pending review confirmed and enqueued');
+    logger.info(
+      { pendingId: input.pendingId, jobId: job.id },
+      'Pending review confirmed and enqueued',
+    );
     return { status: 'confirmed', jobId: job.id };
   }
 }

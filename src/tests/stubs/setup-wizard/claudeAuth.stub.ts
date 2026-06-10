@@ -1,4 +1,7 @@
-import type { ClaudeAuthGateway, ClaudeLoginResult } from '@/modules/setup-wizard/entities/claudeAuth/claudeAuth.gateway.js';
+import type {
+  ClaudeAuthGateway,
+  ClaudeLoginResult,
+} from '@/modules/setup-wizard/entities/claudeAuth/claudeAuth.gateway.js';
 
 interface StubOptions {
   loggedIn?: boolean;

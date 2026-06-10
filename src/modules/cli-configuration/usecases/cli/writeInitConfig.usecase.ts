@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+
 import type { RepositoryEntry } from '@/modules/cli-configuration/entities/repositoryEntry/repositoryEntry.js';
 
 export interface WriteInitConfigDependencies {
@@ -40,7 +41,7 @@ export class WriteInitConfigUseCase {
         maxConcurrent: 2,
         deduplicationWindowMs: 300000,
       },
-      repositories: input.repositories.map(repo => ({
+      repositories: input.repositories.map((repo) => ({
         name: repo.name,
         localPath: repo.localPath,
         enabled: repo.enabled,

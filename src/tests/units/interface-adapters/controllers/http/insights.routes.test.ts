@@ -1,16 +1,17 @@
-import { describe, it, expect, beforeEach } from 'vitest';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
+import { describe, it, expect, beforeEach } from 'vitest';
+
+import type { AiInsightsResult } from '@/modules/statistics-insights/entities/insight/aiInsight.js';
 import { insightsRoutes } from '@/modules/statistics-insights/interface-adapters/controllers/http/insights.routes.js';
-import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
-import { InMemoryInsightsGateway } from '@/tests/stubs/insights.stub.js';
-import { InMemoryReviewFileGateway } from '@/tests/stubs/reviewFile.stub.js';
-import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 import { StubAiInsightsSessionGateway } from '@/tests/stubs/aiInsightsSession.stub.js';
 import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
-import type { AiInsightsResult } from '@/modules/statistics-insights/entities/insight/aiInsight.js';
+import { InMemoryInsightsGateway } from '@/tests/stubs/insights.stub.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { InMemoryReviewFileGateway } from '@/tests/stubs/reviewFile.stub.js';
+import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
+import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 
 const validAiResult: AiInsightsResult = {
   developers: [
@@ -86,10 +87,7 @@ describe('insights routes', () => {
   });
 
   it('should return empty insights when project has no reviews', async () => {
-    statsGateway.saveProjectStats(
-      '/test/project',
-      ProjectStatsFactory.create({ reviews: [] }),
-    );
+    statsGateway.saveProjectStats('/test/project', ProjectStatsFactory.create({ reviews: [] }));
 
     const response = await app.inject({
       method: 'GET',
@@ -113,10 +111,7 @@ describe('insights routes', () => {
         duration: 60000,
       }),
     );
-    statsGateway.saveProjectStats(
-      '/test/project',
-      ProjectStatsFactory.withReviews(reviews),
-    );
+    statsGateway.saveProjectStats('/test/project', ProjectStatsFactory.withReviews(reviews));
 
     const response = await app.inject({
       method: 'GET',
@@ -195,10 +190,7 @@ describe('insights routes', () => {
           duration: 60000,
         }),
       );
-      statsGateway.saveProjectStats(
-        '/test/project',
-        ProjectStatsFactory.withReviews(reviews),
-      );
+      statsGateway.saveProjectStats('/test/project', ProjectStatsFactory.withReviews(reviews));
 
       await app.inject({
         method: 'GET',
@@ -220,10 +212,7 @@ describe('insights routes', () => {
           score: 8,
         }),
       );
-      statsGateway.saveProjectStats(
-        '/test/project',
-        ProjectStatsFactory.withReviews(reviews),
-      );
+      statsGateway.saveProjectStats('/test/project', ProjectStatsFactory.withReviews(reviews));
 
       await app.inject({
         method: 'GET',

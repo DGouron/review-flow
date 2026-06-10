@@ -1,5 +1,10 @@
 import type { Logger } from 'pino';
-import type { ReviewRequestTrackingGateway, Platform } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
+
+import type {
+  ReviewRequestTrackingGateway,
+  Platform,
+} from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
+
 import type { ReviewQueuePort, TriggerReviewParams } from './triggerReview.usecase.js';
 import { triggerReview } from './triggerReview.usecase.js';
 
@@ -30,20 +35,20 @@ export interface HandleReviewRequestPushDependencies {
 
 export function handleReviewRequestPush(
   params: HandleReviewRequestPushParams,
-  deps: HandleReviewRequestPushDependencies
+  deps: HandleReviewRequestPushDependencies,
 ): HandleReviewRequestPushResult {
   const { reviewRequestTrackingGateway, queuePort, logger } = deps;
 
   const reviewRequest = reviewRequestTrackingGateway.getByNumber(
     params.localPath,
     params.reviewRequestNumber,
-    params.platform
+    params.platform,
   );
 
   if (!reviewRequest) {
     logger.debug(
       { mrNumber: params.reviewRequestNumber },
-      'Review request not tracked, skipping followup'
+      'Review request not tracked, skipping followup',
     );
     return { action: 'skipped', reason: 'review-request-not-tracked' };
   }
@@ -51,23 +56,20 @@ export function handleReviewRequestPush(
   if (reviewRequest.state !== 'pending-fix') {
     logger.debug(
       { mrNumber: params.reviewRequestNumber, state: reviewRequest.state },
-      'Review request not in pending-fix state'
+      'Review request not in pending-fix state',
     );
     return { action: 'skipped', reason: 'not-pending-fix' };
   }
 
   if (reviewRequest.openThreads === 0) {
-    logger.debug(
-      { mrNumber: params.reviewRequestNumber },
-      'No open threads, skipping followup'
-    );
+    logger.debug({ mrNumber: params.reviewRequestNumber }, 'No open threads, skipping followup');
     return { action: 'skipped', reason: 'no-open-threads' };
   }
 
   const jobId = queuePort.createJobId(
     `${params.platform}-followup`,
     params.projectPath,
-    params.reviewRequestNumber
+    params.reviewRequestNumber,
   );
 
   if (queuePort.hasActiveJob(jobId)) {
@@ -97,7 +99,7 @@ export function handleReviewRequestPush(
   if (result.status === 'success') {
     logger.info(
       { jobId: result.jobId, mrNumber: params.reviewRequestNumber },
-      'Followup review triggered'
+      'Followup review triggered',
     );
     return { action: 'followup-triggered', jobId: result.jobId };
   }

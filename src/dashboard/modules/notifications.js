@@ -28,18 +28,20 @@ function getReviewIdentifier(review) {
  */
 function getRecentReviewKey(review) {
   const identifier = getReviewIdentifier(review);
-  const timeMarker = typeof review.completedAt === 'string'
-    ? review.completedAt
-    : typeof review.date === 'string'
-      ? review.date
-      : typeof review.timestamp === 'string'
-        ? review.timestamp
+  const timeMarker =
+    typeof review.completedAt === 'string'
+      ? review.completedAt
+      : typeof review.date === 'string'
+        ? review.date
+        : typeof review.timestamp === 'string'
+          ? review.timestamp
+          : '';
+  const typeMarker =
+    typeof review.type === 'string'
+      ? review.type
+      : typeof review.jobType === 'string'
+        ? review.jobType
         : '';
-  const typeMarker = typeof review.type === 'string'
-    ? review.type
-    : typeof review.jobType === 'string'
-      ? review.jobType
-      : '';
   return `${identifier}::${timeMarker}::${typeMarker}`;
 }
 
@@ -109,11 +111,12 @@ export function collectReviewNotifications(state, activeReviews, recentReviews) 
       return;
     }
 
-    const reviewType = typeof review.type === 'string'
-      ? review.type
-      : typeof review.jobType === 'string'
-        ? review.jobType
-        : '';
+    const reviewType =
+      typeof review.type === 'string'
+        ? review.type
+        : typeof review.jobType === 'string'
+          ? review.jobType
+          : '';
     notifications.push({
       kind: reviewType === 'followup' ? 'followupCompleted' : 'reviewCompleted',
       review,

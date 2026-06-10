@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
 import {
   handleReviewRequestPush,
   type HandleReviewRequestPushParams,
 } from '@/modules/review-execution/usecases/handleReviewRequestPush.usecase.js';
+
+import { TrackedMrFactory } from '../../factories/trackedMr.factory.js';
+import { createStubLogger } from '../../stubs/logger.stub.js';
 import { StubReviewQueuePort } from '../../stubs/reviewQueue.stub.js';
 import { InMemoryReviewRequestTrackingGateway } from '../../stubs/reviewRequestTracking.stub.js';
-import { createStubLogger } from '../../stubs/logger.stub.js';
-import { TrackedMrFactory } from '../../factories/trackedMr.factory.js';
 
 describe('handleReviewRequestPush usecase', () => {
   let queuePort: StubReviewQueuePort;

@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
+import { MEMBER_ACCESS_LEVELS } from '@/modules/platform-integration/entities/memberAccess/memberAccess.js';
 import { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
 import { StubMemberAccessGateway } from '@/tests/stubs/memberAccess.stub.js';
-import { MEMBER_ACCESS_LEVELS } from '@/modules/platform-integration/entities/memberAccess/memberAccess.js';
 
 describe('IsTrustedActorUseCase', () => {
   let gateway: StubMemberAccessGateway;

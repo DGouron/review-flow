@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+
 import type {
   GitCommand,
   GitCommandExecutor,
@@ -8,19 +9,19 @@ import type {
 export type GitProcessRunner = (command: GitCommand) => Promise<GitCommandResult>;
 
 function defaultGitRunner(): GitProcessRunner {
-  return async command =>
+  return async (command) =>
     new Promise<GitCommandResult>((resolve, reject) => {
       const child = spawn('git', command.args, { cwd: command.cwd });
       let stdout = '';
       let stderr = '';
-      child.stdout?.on('data', chunk => {
+      child.stdout?.on('data', (chunk) => {
         stdout += chunk.toString();
       });
-      child.stderr?.on('data', chunk => {
+      child.stderr?.on('data', (chunk) => {
         stderr += chunk.toString();
       });
       child.on('error', reject);
-      child.on('close', code => {
+      child.on('close', (code) => {
         resolve({ stdout, stderr, exitCode: code ?? -1 });
       });
     });

@@ -1,6 +1,9 @@
-import { StopDaemonUseCase, type StopDaemonDependencies } from '@/modules/cli-configuration/usecases/cli/stopDaemon.usecase.js';
-import type { PidFileDeps } from '@/shared/services/pidFileManager.js';
+import {
+  StopDaemonUseCase,
+  type StopDaemonDependencies,
+} from '@/modules/cli-configuration/usecases/cli/stopDaemon.usecase.js';
 import { green, red, yellow } from '@/shared/services/ansiColors.js';
+import type { PidFileDeps } from '@/shared/services/pidFileManager.js';
 
 export interface StopDeps {
   stopDaemonDeps: StopDaemonDependencies;
@@ -31,7 +34,7 @@ export function createStopDependencies(pidDeps: PidFileDeps): StopDeps {
   return {
     stopDaemonDeps: {
       ...pidDeps,
-      killProcess: (pid, signal) => process.kill(pid, signal as NodeJS.Signals),
+      killProcess: (pid, signal) => process.kill(pid, signal),
     },
     log: console.log,
     error: console.error,

@@ -1,14 +1,16 @@
-import { describe, it, expect } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { describe, it, expect } from 'vitest';
+
+import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
 import {
   ClaudeSessionCliGateway,
   type ClaudeProcessRunner,
   type ClaudeProcessRunResult,
 } from '@/modules/claude-invocation/interface-adapters/gateways/claudeSession.cli.gateway.js';
-import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
 import { computeCostUsd } from '@/modules/token-accounting/entities/modelPricing/modelPricing.js';
 
 const FIXTURE_ROOT = fileURLToPath(new URL('../../../../../fixtures/claudeCli/', import.meta.url));
@@ -51,7 +53,8 @@ describe('ClaudeSessionCliGateway.dispatch', () => {
   it('extracts the session id from claude --bg stdout (new "backgrounded · <id>" format)', async () => {
     const { runner, calls } = createRunner([
       {
-        stdout: 'backgrounded · 7c5dcf5d\n  claude agents             list sessions\n  claude attach 7c5dcf5d    open in this terminal',
+        stdout:
+          'backgrounded · 7c5dcf5d\n  claude agents             list sessions\n  claude attach 7c5dcf5d    open in this terminal',
         stderr: '',
         exitCode: 0,
       },
@@ -96,9 +99,7 @@ describe('ClaudeSessionCliGateway.dispatch', () => {
   });
 
   it('returns "failed" when the process exits non-zero without a rate-limit hint', async () => {
-    const { runner } = createRunner([
-      { stdout: '', stderr: 'boom', exitCode: 2 },
-    ]);
+    const { runner } = createRunner([{ stdout: '', stderr: 'boom', exitCode: 2 }]);
     const gateway = new ClaudeSessionCliGateway(runner);
 
     const result = await gateway.dispatch(baseDispatchInput);
@@ -110,9 +111,7 @@ describe('ClaudeSessionCliGateway.dispatch', () => {
   });
 
   it('returns "failed" when stdout has no parseable session id', async () => {
-    const { runner } = createRunner([
-      { stdout: 'no session here', stderr: '', exitCode: 0 },
-    ]);
+    const { runner } = createRunner([{ stdout: 'no session here', stderr: '', exitCode: 0 }]);
     const gateway = new ClaudeSessionCliGateway(runner);
 
     const result = await gateway.dispatch(baseDispatchInput);
@@ -122,7 +121,11 @@ describe('ClaudeSessionCliGateway.dispatch', () => {
 
   it('does not capture a hex sequence appearing outside the "backgrounded · <id>" prefix', async () => {
     const { runner } = createRunner([
-      { stdout: 'Error: failed to start (code abc12345)\nLogs at /tmp/deadbeef.log', stderr: '', exitCode: 0 },
+      {
+        stdout: 'Error: failed to start (code abc12345)\nLogs at /tmp/deadbeef.log',
+        stderr: '',
+        exitCode: 0,
+      },
     ]);
     const gateway = new ClaudeSessionCliGateway(runner);
 
@@ -134,7 +137,8 @@ describe('ClaudeSessionCliGateway.dispatch', () => {
   it('captures session id only from the dedicated "backgrounded · <id>" line', async () => {
     const { runner } = createRunner([
       {
-        stdout: 'Spawning daemon abc123\nbackgrounded · 7c5dcf5d\n  claude attach 7c5dcf5d    open in this terminal',
+        stdout:
+          'Spawning daemon abc123\nbackgrounded · 7c5dcf5d\n  claude attach 7c5dcf5d    open in this terminal',
         stderr: '',
         exitCode: 0,
       },
@@ -152,9 +156,7 @@ describe('ClaudeSessionCliGateway.dispatch', () => {
 
 describe('ClaudeSessionCliGateway.stop and remove', () => {
   it('returns success when stop exits zero', async () => {
-    const { runner, calls } = createRunner([
-      { stdout: 'stopped', stderr: '', exitCode: 0 },
-    ]);
+    const { runner, calls } = createRunner([{ stdout: 'stopped', stderr: '', exitCode: 0 }]);
     const gateway = new ClaudeSessionCliGateway(runner);
 
     const result = await gateway.stop('abc123' as never);
@@ -164,9 +166,7 @@ describe('ClaudeSessionCliGateway.stop and remove', () => {
   });
 
   it('returns success false with warning when stop exits non-zero', async () => {
-    const { runner } = createRunner([
-      { stdout: '', stderr: 'unknown session', exitCode: 1 },
-    ]);
+    const { runner } = createRunner([{ stdout: '', stderr: 'unknown session', exitCode: 1 }]);
     const gateway = new ClaudeSessionCliGateway(runner);
 
     const result = await gateway.stop('abc123' as never);
@@ -176,9 +176,7 @@ describe('ClaudeSessionCliGateway.stop and remove', () => {
   });
 
   it('runs claude rm for remove', async () => {
-    const { runner, calls } = createRunner([
-      { stdout: 'removed', stderr: '', exitCode: 0 },
-    ]);
+    const { runner, calls } = createRunner([{ stdout: 'removed', stderr: '', exitCode: 0 }]);
     const gateway = new ClaudeSessionCliGateway(runner);
 
     await gateway.remove('abc123' as never);
@@ -214,9 +212,7 @@ describe('ClaudeSessionCliGateway.listAgents', () => {
 
 describe('ClaudeSessionCliGateway.daemonStatus and usage', () => {
   it('reports unreachable when daemon status exits non-zero', async () => {
-    const { runner } = createRunner([
-      { stdout: '', stderr: 'connection refused', exitCode: 1 },
-    ]);
+    const { runner } = createRunner([{ stdout: '', stderr: 'connection refused', exitCode: 1 }]);
     const gateway = new ClaudeSessionCliGateway(runner);
 
     const status = await gateway.daemonStatus();
@@ -316,10 +312,7 @@ describe('ClaudeSessionCliGateway.getSessionUsage', () => {
 
     try {
       const gateway = new ClaudeSessionCliGateway(noopRunner(), { homeDir: tempHome });
-      const snapshot = await gateway.getSessionUsage(
-        parseSessionId('empty001'),
-        '/tmp/empty',
-      );
+      const snapshot = await gateway.getSessionUsage(parseSessionId('empty001'), '/tmp/empty');
       expect(snapshot).toBeNull();
     } finally {
       rmSync(tempHome, { recursive: true, force: true });
@@ -337,10 +330,7 @@ describe('ClaudeSessionCliGateway.getSessionUsage', () => {
 
     try {
       const gateway = new ClaudeSessionCliGateway(noopRunner(), { homeDir: tempHome });
-      const snapshot = await gateway.getSessionUsage(
-        parseSessionId('bad00001'),
-        '/tmp/bad',
-      );
+      const snapshot = await gateway.getSessionUsage(parseSessionId('bad00001'), '/tmp/bad');
       expect(snapshot).toBeNull();
     } finally {
       rmSync(tempHome, { recursive: true, force: true });
@@ -372,10 +362,7 @@ describe('ClaudeSessionCliGateway.getSessionUsage', () => {
 
     try {
       const gateway = new ClaudeSessionCliGateway(noopRunner(), { homeDir: tempHome });
-      const snapshot = await gateway.getSessionUsage(
-        parseSessionId('mix00001'),
-        '/tmp/mixed',
-      );
+      const snapshot = await gateway.getSessionUsage(parseSessionId('mix00001'), '/tmp/mixed');
       expect(snapshot).not.toBeNull();
       if (snapshot === null) return;
       expect(snapshot.model).toBe('claude-sonnet-4-5');
@@ -398,10 +385,7 @@ describe('ClaudeSessionCliGateway.getSessionUsage', () => {
 
     try {
       const gateway = new ClaudeSessionCliGateway(noopRunner(), { homeDir: tempHome });
-      const snapshot = await gateway.getSessionUsage(
-        parseSessionId('nou00001'),
-        '/tmp/no-usage',
-      );
+      const snapshot = await gateway.getSessionUsage(parseSessionId('nou00001'), '/tmp/no-usage');
       expect(snapshot).toBeNull();
     } finally {
       rmSync(tempHome, { recursive: true, force: true });

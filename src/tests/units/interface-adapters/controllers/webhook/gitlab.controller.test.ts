@@ -1,5 +1,6 @@
-import { vi } from 'vitest';
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import { vi } from 'vitest';
+
 import type { RepositoryConfig } from '@/config/loader.js';
 
 const mockConfig = {
@@ -57,57 +58,67 @@ vi.mock('@/config/projectConfig.js', () => ({
   getProjectLanguage: vi.fn(() => 'en'),
 }));
 
-vi.mock('@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js', () => ({
-  ReviewContextFileSystemGateway: vi.fn().mockImplementation(() => ({
-    create: vi.fn(),
-    read: vi.fn(() => null),
-    delete: vi.fn(() => ({ deleted: true })),
-    updateProgress: vi.fn(),
-  })),
-}));
+vi.mock(
+  '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js',
+  () => ({
+    ReviewContextFileSystemGateway: vi.fn().mockImplementation(() => ({
+      create: vi.fn(),
+      read: vi.fn(() => null),
+      delete: vi.fn(() => ({ deleted: true })),
+      updateProgress: vi.fn(),
+    })),
+  }),
+);
 
-vi.mock('@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js', () => ({
-  GitLabThreadFetchGateway: vi.fn().mockImplementation(() => ({
-    fetchThreads: vi.fn(() => []),
-  })),
-  defaultGitLabExecutor: vi.fn(),
-}));
+vi.mock(
+  '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js',
+  () => ({
+    GitLabThreadFetchGateway: vi.fn().mockImplementation(() => ({
+      fetchThreads: vi.fn(() => []),
+    })),
+    defaultGitLabExecutor: vi.fn(),
+  }),
+);
 
-vi.mock('@/modules/platform-integration/interface-adapters/gateways/diffMetadataFetch.gitlab.gateway.js', () => ({
-  GitLabDiffMetadataFetchGateway: vi.fn().mockImplementation(() => ({
-    fetchDiffMetadata: vi.fn(() => undefined),
-  })),
-}));
+vi.mock(
+  '@/modules/platform-integration/interface-adapters/gateways/diffMetadataFetch.gitlab.gateway.js',
+  () => ({
+    GitLabDiffMetadataFetchGateway: vi.fn().mockImplementation(() => ({
+      fetchDiffMetadata: vi.fn(() => undefined),
+    })),
+  }),
+);
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+import { invokeClaudeReview } from '@/claude/invoker.js';
+import { findRepositoryByProjectPath } from '@/config/loader.js';
+import { enqueueReview } from '@/frameworks/queue/pQueueAdapter.js';
+import { MEMBER_ACCESS_LEVELS } from '@/modules/platform-integration/entities/memberAccess/memberAccess.js';
 import {
   handleGitLabWebhook,
   extractBaseUrl,
   buildGitLabReviewProcessor,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
-import { enqueueReview } from '@/frameworks/queue/pQueueAdapter.js';
-import { invokeClaudeReview } from '@/claude/invoker.js';
-import { verifyGitLabSignature, getGitLabEventType } from '@/security/verifier.js';
-import { findRepositoryByProjectPath } from '@/config/loader.js';
-import { GitLabEventFactory } from '@/tests/factories/gitLabEvent.factory.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
-import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
-import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
-import { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
-import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
-import { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
-import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
-import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
-import { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
-import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
-import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
-import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
-import { StubApprovalRevocationGateway } from '@/tests/stubs/approvalRevocation.stub.js';
-import { StubMemberAccessGateway } from '@/tests/stubs/memberAccess.stub.js';
-import { StubPendingReviewRequestGateway } from '@/tests/stubs/pendingReviewRequest.stub.js';
 import { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
 import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
-import { MEMBER_ACCESS_LEVELS } from '@/modules/platform-integration/entities/memberAccess/memberAccess.js';
+import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
+import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
+import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
+import { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
+import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
+import { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
+import { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
+import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
+import { verifyGitLabSignature, getGitLabEventType } from '@/security/verifier.js';
+import { GitLabEventFactory } from '@/tests/factories/gitLabEvent.factory.js';
+import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
+import { StubApprovalRevocationGateway } from '@/tests/stubs/approvalRevocation.stub.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { StubMemberAccessGateway } from '@/tests/stubs/memberAccess.stub.js';
+import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
+import { StubPendingReviewRequestGateway } from '@/tests/stubs/pendingReviewRequest.stub.js';
 
 function createMockTrackingGateway() {
   const basicMr = TrackedMrFactory.create({
@@ -168,7 +179,9 @@ function createDefaultDeps(trackingGateway: ReturnType<typeof createMockTracking
   return {
     reviewContextGateway: createStubContextGateway(),
     threadFetchGateway,
-    diffMetadataFetchGateway: { fetchDiffMetadata: vi.fn(() => ({ baseSha: 'abc', headSha: 'def', startSha: 'ghi' })) },
+    diffMetadataFetchGateway: {
+      fetchDiffMetadata: vi.fn(() => ({ baseSha: 'abc', headSha: 'def', startSha: 'ghi' })),
+    },
     diffStatsFetchGateway: { fetchDiffStats: vi.fn(() => null) },
     trackAssignment: new TrackAssignmentUseCase(trackingGateway),
     recordCompletion: new RecordReviewCompletionUseCase(trackingGateway),
@@ -223,12 +236,10 @@ describe('handleGitLabWebhook', () => {
       expect(mockGateway.update).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
         'gitlab-test-org/test-project-42',
-        expect.objectContaining({ state: 'merged' })
+        expect.objectContaining({ state: 'merged' }),
       );
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'merged' })
-      );
+      expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'merged' }));
     });
   });
 
@@ -245,12 +256,10 @@ describe('handleGitLabWebhook', () => {
       expect(mockGateway.update).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
         'gitlab-test-org/test-project-42',
-        expect.objectContaining({ state: 'approved' })
+        expect.objectContaining({ state: 'approved' }),
       );
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'approved' })
-      );
+      expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'approved' }));
     });
   });
 
@@ -275,7 +284,7 @@ describe('handleGitLabWebhook', () => {
             username: 'mr-owner',
             displayName: 'MR Owner',
           }),
-        })
+        }),
       );
     });
 
@@ -299,7 +308,7 @@ describe('handleGitLabWebhook', () => {
             username: 'webhook-trigger',
             displayName: 'Webhook Trigger',
           }),
-        })
+        }),
       );
     });
 
@@ -326,7 +335,7 @@ describe('handleGitLabWebhook', () => {
             username: 'primary-owner',
             displayName: 'Primary Owner',
           }),
-        })
+        }),
       );
     });
 
@@ -350,7 +359,7 @@ describe('handleGitLabWebhook', () => {
             username: 'fallback-user',
             displayName: 'Fallback User',
           }),
-        })
+        }),
       );
     });
   });
@@ -367,7 +376,7 @@ describe('handleGitLabWebhook', () => {
 
       expect(contextGateway.delete).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
-        'gitlab-test-org/test-project-42'
+        'gitlab-test-org/test-project-42',
       );
     });
 
@@ -398,13 +407,15 @@ describe('handleGitLabWebhook', () => {
           platform: 'gitlab',
           projectPath: 'test-org/test-project',
           mergeRequestNumber: 42,
-        })
+        }),
       );
     });
 
     it('should use injected threadFetchGateway to fetch threads when review is enqueued', async () => {
       const stubThreadFetch = { fetchThreads: vi.fn(() => []) };
-      const stubDiffMetadataFetch = { fetchDiffMetadata: vi.fn(() => ({ baseSha: 'a', headSha: 'b', startSha: 'c' })) };
+      const stubDiffMetadataFetch = {
+        fetchDiffMetadata: vi.fn(() => ({ baseSha: 'a', headSha: 'b', startSha: 'c' })),
+      };
 
       vi.mocked(invokeClaudeReview).mockResolvedValue({
         success: false,
@@ -430,10 +441,7 @@ describe('handleGitLabWebhook', () => {
 
       await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
 
-      expect(stubThreadFetch.fetchThreads).toHaveBeenCalledWith(
-        'test-org/test-project',
-        42
-      );
+      expect(stubThreadFetch.fetchThreads).toHaveBeenCalledWith('test-org/test-project', 42);
     });
   });
 
@@ -488,9 +496,7 @@ describe('handleGitLabWebhook', () => {
 
       expect(removeWorktree).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'cleaned' }),
-      );
+      expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'cleaned' }));
     });
   });
 
@@ -731,7 +737,10 @@ describe('handleGitLabWebhook', () => {
     });
 
     it('returns 400 when the merge request payload is not parseable', async () => {
-      const request = { body: { object_kind: 'merge_request' }, headers: {} } as unknown as FastifyRequest;
+      const request = {
+        body: { object_kind: 'merge_request' },
+        headers: {},
+      } as unknown as FastifyRequest;
 
       await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
 
@@ -793,9 +802,7 @@ describe('handleGitLabWebhook', () => {
       await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'ignored' }),
-      );
+      expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'ignored' }));
     });
 
     it('ignores a note when the repository is not configured', async () => {
@@ -1065,7 +1072,10 @@ describe('handleGitLabWebhook', () => {
   describe('review processor build', () => {
     it('throws when no repository is configured for the job projectPath', async () => {
       vi.mocked(findRepositoryByProjectPath).mockReturnValueOnce(undefined);
-      const processor = buildGitLabReviewProcessor(defaultDeps, logger)({
+      const processor = buildGitLabReviewProcessor(
+        defaultDeps,
+        logger,
+      )({
         id: 'gitlab-test-org/test-project-42',
         platform: 'gitlab',
         projectPath: 'test-org/test-project',
@@ -1078,21 +1088,23 @@ describe('handleGitLabWebhook', () => {
         jobType: 'review',
       });
 
-      await expect(processor(
-        {
-          id: 'gitlab-test-org/test-project-42',
-          platform: 'gitlab',
-          projectPath: 'test-org/test-project',
-          localPath: '/home/user/projects/test-project',
-          mrNumber: 42,
-          skill: 'review-front',
-          mrUrl: 'https://gitlab.com/test-org/test-project/-/merge_requests/42',
-          sourceBranch: 'feature/test',
-          targetBranch: 'main',
-          jobType: 'review',
-        },
-        new AbortController().signal,
-      )).rejects.toThrow(/No GitLab repository configured/);
+      await expect(
+        processor(
+          {
+            id: 'gitlab-test-org/test-project-42',
+            platform: 'gitlab',
+            projectPath: 'test-org/test-project',
+            localPath: '/home/user/projects/test-project',
+            mrNumber: 42,
+            skill: 'review-front',
+            mrUrl: 'https://gitlab.com/test-org/test-project/-/merge_requests/42',
+            sourceBranch: 'feature/test',
+            targetBranch: 'main',
+            jobType: 'review',
+          },
+          new AbortController().signal,
+        ),
+      ).rejects.toThrow(/No GitLab repository configured/);
     });
 
     it('records completion stats on a successful review run', async () => {

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
+
 import { PlatformAdapter } from '@/modules/platform-integration/interface-adapters/adapters/platformAdapter.js';
+
 import { GitLabEventFactory, GitHubEventFactory } from '../../../factories/webhookEvent.factory.js';
 
 describe('PlatformAdapter', () => {

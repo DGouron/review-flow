@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+
 import type { WorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 import type { WorktreeSettingsWriteResult } from '@/modules/worktree-management/usecases/ensureWorktree.usecase.js';
 

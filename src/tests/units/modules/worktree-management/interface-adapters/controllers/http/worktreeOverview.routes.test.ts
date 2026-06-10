@@ -1,22 +1,23 @@
-import { describe, it, expect } from 'vitest';
 import Fastify from 'fastify';
-import { worktreeOverviewRoutes } from '@/modules/worktree-management/interface-adapters/controllers/http/worktreeOverview.routes.js';
-import { WorktreePanelPresenter } from '@/modules/worktree-management/interface-adapters/presenters/worktreePanel.presenter.js';
-import { StubWorktreeSizeProbeGateway } from '@/tests/stubs/worktreeSizeProbe.stub.js';
-import { LastSweepSummaryFactory } from '@/tests/factories/lastSweepSummary.factory.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { describe, it, expect } from 'vitest';
+
+import type { LastSweepSummary } from '@/modules/worktree-management/entities/sweep/lastSweepSummary.schema.js';
+import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
 import { createWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
-import { InMemoryForceCleanupLockService } from '@/modules/worktree-management/services/forceCleanupLock.js';
-import { WorktreeHealthFactory } from '@/tests/factories/worktreeHealth.factory.js';
 import type {
   EnsureResult,
   RemoveResult,
   WorktreeEntry,
   WorktreeIdentity,
 } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
-import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
-import type { LastSweepSummary } from '@/modules/worktree-management/entities/sweep/lastSweepSummary.schema.js';
 import type { WorktreeHealthReport } from '@/modules/worktree-management/entities/worktree/worktreeHealth.schema.js';
+import { worktreeOverviewRoutes } from '@/modules/worktree-management/interface-adapters/controllers/http/worktreeOverview.routes.js';
+import { WorktreePanelPresenter } from '@/modules/worktree-management/interface-adapters/presenters/worktreePanel.presenter.js';
+import { InMemoryForceCleanupLockService } from '@/modules/worktree-management/services/forceCleanupLock.js';
+import { LastSweepSummaryFactory } from '@/tests/factories/lastSweepSummary.factory.js';
+import { WorktreeHealthFactory } from '@/tests/factories/worktreeHealth.factory.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { StubWorktreeSizeProbeGateway } from '@/tests/stubs/worktreeSizeProbe.stub.js';
 
 const NOW = new Date('2026-05-23T12:00:00.000Z');
 
@@ -82,7 +83,8 @@ async function buildApp(options: BuildAppOptions = {}) {
     options.runSweepNow ??
     (async () => ({ status: 'ok' as const, summary: LastSweepSummaryFactory.create() }));
   const forceCleanupLock = options.forceCleanupLock ?? new InMemoryForceCleanupLockService();
-  const removeForCleanup = options.removeForCleanup ?? (async () => ({ status: 'removed' as const }));
+  const removeForCleanup =
+    options.removeForCleanup ?? (async () => ({ status: 'removed' as const }));
   const healthReports = options.healthReports;
 
   await app.register(worktreeOverviewRoutes, {
@@ -128,7 +130,11 @@ describe('worktreeOverviewRoutes', () => {
     });
 
     it('returns the populated pool with one group + one row', async () => {
-      const identity: WorktreeIdentity = { platform: 'gitlab', projectPath: 'group/project', mrNumber: 1 };
+      const identity: WorktreeIdentity = {
+        platform: 'gitlab',
+        projectPath: 'group/project',
+        mrNumber: 1,
+      };
       const path = '/tmp/worktrees/gitlab-group-project-1';
       const entry = buildEntry(identity, new Date(NOW.getTime() - 60 * 60 * 1000), path);
       const app = await buildApp({
@@ -182,7 +188,12 @@ describe('worktreeOverviewRoutes', () => {
       const response = await app.inject({ method: 'POST', url: '/api/worktrees/sweep' });
 
       expect(response.statusCode).toBe(200);
-      const body = response.json() as { ranAt: string; removed: number; failures: number; scanned: number };
+      const body = response.json() as {
+        ranAt: string;
+        removed: number;
+        failures: number;
+        scanned: number;
+      };
       expect(body.ranAt).toBe('2026-05-23T11:55:00.000Z');
       expect(body.removed).toBe(2);
       expect(body.failures).toBe(0);
@@ -234,13 +245,21 @@ describe('worktreeOverviewRoutes', () => {
 
   describe('GET /api/worktrees with degraded reports', () => {
     it('includes degradedCount and degraded[] in the payload when reports are present', async () => {
-      const identity: WorktreeIdentity = { platform: 'gitlab', projectPath: 'group/project', mrNumber: 99 };
+      const identity: WorktreeIdentity = {
+        platform: 'gitlab',
+        projectPath: 'group/project',
+        mrNumber: 99,
+      };
       const path = '/tmp/worktrees/gitlab-group-project-99';
       const entry = buildEntry(identity, new Date(NOW.getTime() - 30 * 60 * 60 * 1000), path);
       const reports: WorktreeHealthReport[] = [
         {
           entry,
-          health: WorktreeHealthFactory.stale({ ageMs: 30 * 60 * 60 * 1000, thresholdMs: 24 * 60 * 60 * 1000, detectedAt: NOW }),
+          health: WorktreeHealthFactory.stale({
+            ageMs: 30 * 60 * 60 * 1000,
+            thresholdMs: 24 * 60 * 60 * 1000,
+            detectedAt: NOW,
+          }),
         },
       ];
 
@@ -266,7 +285,7 @@ describe('worktreeOverviewRoutes', () => {
     it('returns 200 status: removed when the underlying remove succeeds', async () => {
       const removeCalls: WorktreeIdentity[] = [];
       const app = await buildApp({
-        removeForCleanup: async identity => {
+        removeForCleanup: async (identity) => {
           removeCalls.push(identity);
           return { status: 'removed' };
         },
@@ -282,7 +301,11 @@ describe('worktreeOverviewRoutes', () => {
       const body = response.json() as { status: string };
       expect(body.status).toBe('removed');
       expect(removeCalls).toHaveLength(1);
-      expect(removeCalls[0]).toEqual({ platform: 'gitlab', projectPath: 'group/project', mrNumber: 42 });
+      expect(removeCalls[0]).toEqual({
+        platform: 'gitlab',
+        projectPath: 'group/project',
+        mrNumber: 42,
+      });
 
       await app.close();
     });

@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
+import { InMemorySupervisorStatusStore } from '@/modules/supervisor-management/interface-adapters/gateways/supervisorStatusStore.memory.gateway.js';
 import { checkSupervisorAndRespawn } from '@/modules/supervisor-management/usecases/checkSupervisorAndRespawn.usecase.js';
+import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
 import { StubSupervisorGateway } from '@/tests/stubs/supervisor.stub.js';
 import { StubSupervisorLockGateway } from '@/tests/stubs/supervisorLock.stub.js';
-import { InMemorySupervisorStatusStore } from '@/modules/supervisor-management/interface-adapters/gateways/supervisorStatusStore.memory.gateway.js';
-import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
 
 const fixedNow = new Date('2026-05-23T08:00:00Z');
 
@@ -129,7 +130,7 @@ describe('checkSupervisorAndRespawn use case', () => {
       now: () => fixedNow,
     });
 
-    expect(capturing.warnMessages.some(message => message.includes('down'))).toBe(true);
+    expect(capturing.warnMessages.some((message) => message.includes('down'))).toBe(true);
   });
 
   it('releases the lock even when spawn throws', async () => {

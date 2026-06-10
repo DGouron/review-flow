@@ -1,17 +1,17 @@
 export interface PinnedThreadFetchTarget {
-  projectPath: string
-  mrNumber: number
+  projectPath: string;
+  mrNumber: number;
 }
 
 interface ResolvedRepository {
-  projectPath: string
+  projectPath: string;
 }
 
 export interface ResolvePinnedThreadFetchTargetInput {
-  payloadProjectPath: string
-  payloadMrNumber: number
-  findRepository: (projectPath: string) => ResolvedRepository | null | undefined
-  gatedMrNumber: number | null
+  payloadProjectPath: string;
+  payloadMrNumber: number;
+  findRepository: (projectPath: string) => ResolvedRepository | null | undefined;
+  gatedMrNumber: number | null;
 }
 
 /**
@@ -24,17 +24,17 @@ export interface ResolvePinnedThreadFetchTargetInput {
 export function resolvePinnedThreadFetchTarget(
   input: ResolvePinnedThreadFetchTargetInput,
 ): PinnedThreadFetchTarget | null {
-  const repository = input.findRepository(input.payloadProjectPath)
+  const repository = input.findRepository(input.payloadProjectPath);
   if (!repository) {
-    return null
+    return null;
   }
 
   if (input.gatedMrNumber === null || input.payloadMrNumber !== input.gatedMrNumber) {
-    return null
+    return null;
   }
 
   return {
     projectPath: repository.projectPath,
     mrNumber: input.gatedMrNumber,
-  }
+  };
 }

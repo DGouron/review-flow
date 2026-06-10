@@ -31,7 +31,13 @@ export interface DiscoverRepositoriesResult {
 }
 
 const IGNORED_DIRS = new Set([
-  'node_modules', '.git', '.vscode', '.idea', 'dist', 'build', '.cache',
+  'node_modules',
+  '.git',
+  '.vscode',
+  '.idea',
+  'dist',
+  'build',
+  '.cache',
 ]);
 
 function detectPlatform(remoteUrl: string | null): 'gitlab' | 'github' | null {
@@ -42,9 +48,10 @@ function detectPlatform(remoteUrl: string | null): 'gitlab' | 'github' | null {
   return null;
 }
 
-export class DiscoverRepositoriesUseCase
-  implements UseCase<DiscoverRepositoriesInput, DiscoverRepositoriesResult>
-{
+export class DiscoverRepositoriesUseCase implements UseCase<
+  DiscoverRepositoriesInput,
+  DiscoverRepositoriesResult
+> {
   constructor(private readonly deps: DiscoverRepositoriesDependencies) {}
 
   execute(input: DiscoverRepositoriesInput): DiscoverRepositoriesResult {

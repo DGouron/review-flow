@@ -1,5 +1,5 @@
-import type { ReviewAction } from '@/modules/review-execution/entities/reviewAction/reviewAction.js';
 import type { NoteCommentPostGateway } from '@/modules/platform-integration/entities/noteComment/noteCommentPost.gateway.js';
+import type { ReviewAction } from '@/modules/review-execution/entities/reviewAction/reviewAction.js';
 
 export type PublicOutputAction = ReviewAction;
 

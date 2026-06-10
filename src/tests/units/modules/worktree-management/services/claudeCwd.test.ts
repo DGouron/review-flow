@@ -1,14 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import {
-  computeClaudeCwd,
-  resolveClaudeCwd,
-} from '@/modules/worktree-management/services/claudeCwd.js';
+
 import type {
   GitCommand,
   GitCommandExecutor,
   GitCommandResult,
 } from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
 import { createWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
+import {
+  computeClaudeCwd,
+  resolveClaudeCwd,
+} from '@/modules/worktree-management/services/claudeCwd.js';
 
 function stubExecutor(commands: { stdout: string; exitCode?: number }[]): {
   executor: GitCommandExecutor;
@@ -86,9 +87,7 @@ describe('computeClaudeCwd', () => {
 
 describe('resolveClaudeCwd', () => {
   it('queries git rev-parse --show-toplevel and applies the relative sub-path', async () => {
-    const { executor, calls } = stubExecutor([
-      { stdout: '/home/user/repos/acme\n' },
-    ]);
+    const { executor, calls } = stubExecutor([{ stdout: '/home/user/repos/acme\n' }]);
     const worktreePath = createWorktreePath('/wt/gitlab-acme-42');
 
     const result = await resolveClaudeCwd({
@@ -107,9 +106,7 @@ describe('resolveClaudeCwd', () => {
   });
 
   it('returns the worktree path unchanged when the source checkout is already the git root', async () => {
-    const { executor } = stubExecutor([
-      { stdout: '/home/user/repos/acme\n' },
-    ]);
+    const { executor } = stubExecutor([{ stdout: '/home/user/repos/acme\n' }]);
     const worktreePath = createWorktreePath('/wt/gitlab-acme-42');
 
     const result = await resolveClaudeCwd({
@@ -122,9 +119,7 @@ describe('resolveClaudeCwd', () => {
   });
 
   it('falls back to the worktree path when rev-parse fails', async () => {
-    const { executor } = stubExecutor([
-      { stdout: '', exitCode: 128 },
-    ]);
+    const { executor } = stubExecutor([{ stdout: '', exitCode: 128 }]);
     const worktreePath = createWorktreePath('/wt/gitlab-acme-42');
 
     const result = await resolveClaudeCwd({

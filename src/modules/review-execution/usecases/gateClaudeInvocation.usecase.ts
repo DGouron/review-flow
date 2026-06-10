@@ -1,19 +1,17 @@
 import type { Logger } from 'pino';
-import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
-import { sanitizeJobId } from '@/shared/services/mcpJobContext.js';
+
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import type { PendingReviewRequestGateway } from '@/modules/review-execution/entities/pendingReviewRequest/pendingReviewRequest.gateway.js';
 import type {
   PendingReviewRequest,
   TriggerSource,
 } from '@/modules/review-execution/entities/pendingReviewRequest/pendingReviewRequest.schema.js';
 import type { TriggerMode } from '@/modules/shared-kernel/entities/triggerMode/triggerMode.schema.js';
+import { sanitizeJobId } from '@/shared/services/mcpJobContext.js';
 
 export type { TriggerMode };
 
-export type GateClaudeInvocationProcessor = (
-  job: ReviewJob,
-  signal: AbortSignal,
-) => Promise<void>;
+export type GateClaudeInvocationProcessor = (job: ReviewJob, signal: AbortSignal) => Promise<void>;
 
 export type EnqueueReviewFunction = (
   job: ReviewJob,
@@ -54,7 +52,13 @@ export class GateClaudeInvocationUseCase {
   constructor(private readonly deps: GateClaudeInvocationDependencies) {}
 
   async execute(input: GateClaudeInvocationInput): Promise<GateClaudeInvocationResult> {
-    const { getTriggerMode, pendingReviewRequestGateway, enqueue, broadcastPendingChanged, logger } = this.deps;
+    const {
+      getTriggerMode,
+      pendingReviewRequestGateway,
+      enqueue,
+      broadcastPendingChanged,
+      logger,
+    } = this.deps;
 
     const triggerMode = getTriggerMode();
     const actorParks = input.actorTrusted === false;
@@ -62,8 +66,14 @@ export class GateClaudeInvocationUseCase {
     if (triggerMode === 'full-auto' && !actorParks) {
       const enqueued = await enqueue(input.job, input.processor);
       if (!enqueued) {
-        logger.info({ jobId: input.job.id }, 'Job rejected by queue (deduplicated or already active)');
-        return { status: 'rejected', reason: 'Queue refused the job (deduplicated or already active)' };
+        logger.info(
+          { jobId: input.job.id },
+          'Job rejected by queue (deduplicated or already active)',
+        );
+        return {
+          status: 'rejected',
+          reason: 'Queue refused the job (deduplicated or already active)',
+        };
       }
       return { status: 'enqueued', jobId: input.job.id };
     }

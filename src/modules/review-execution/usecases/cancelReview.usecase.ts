@@ -15,10 +15,7 @@ export interface CancelReviewDependencies {
   logger: Logger;
 }
 
-export function cancelReview(
-  jobId: string,
-  deps: CancelReviewDependencies
-): CancelReviewResult {
+export function cancelReview(jobId: string, deps: CancelReviewDependencies): CancelReviewResult {
   const { queuePort, logger } = deps;
 
   const status = queuePort.getJobStatus(jobId);

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { planRetry } from '@/modules/claude-invocation/entities/retrySchedule/retrySchedule.valueObject.js';
 
 describe('RetrySchedule value object', () => {

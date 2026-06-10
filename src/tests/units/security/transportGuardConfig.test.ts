@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
+
 import {
   DEFAULT_LOOPBACK_HOP,
   resolveTrustedHopAddress,

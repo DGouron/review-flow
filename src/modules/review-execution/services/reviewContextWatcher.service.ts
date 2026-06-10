@@ -1,13 +1,13 @@
-import type { ReviewContextGateway } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js'
-import type { ReviewContextProgress } from '@/modules/review-execution/entities/reviewContext/reviewContext.js'
+import type { ReviewContextGateway } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js';
+import type { ReviewContextProgress } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
 
-export type ProgressCallback = (progress: ReviewContextProgress) => void
+export type ProgressCallback = (progress: ReviewContextProgress) => void;
 
-const DEFAULT_POLLING_INTERVAL_MS = 500
+const DEFAULT_POLLING_INTERVAL_MS = 500;
 
 export class ReviewContextWatcherService {
-  private watchers = new Map<string, NodeJS.Timeout>()
-  private lastProgress = new Map<string, string>()
+  private watchers = new Map<string, NodeJS.Timeout>();
+  private lastProgress = new Map<string, string>();
 
   constructor(
     private gateway: ReviewContextGateway,
@@ -16,38 +16,38 @@ export class ReviewContextWatcherService {
 
   start(localPath: string, mergeRequestId: string, callback: ProgressCallback): void {
     const interval = setInterval(() => {
-      const context = this.gateway.read(localPath, mergeRequestId)
+      const context = this.gateway.read(localPath, mergeRequestId);
       if (context) {
-        const progressKey = JSON.stringify(context.progress)
+        const progressKey = JSON.stringify(context.progress);
         if (progressKey !== this.lastProgress.get(mergeRequestId)) {
-          this.lastProgress.set(mergeRequestId, progressKey)
-          callback(context.progress)
+          this.lastProgress.set(mergeRequestId, progressKey);
+          callback(context.progress);
 
           if (context.progress.phase === 'completed') {
-            this.stop(mergeRequestId)
+            this.stop(mergeRequestId);
           }
         }
       }
-    }, this.pollingIntervalMs)
-    this.watchers.set(mergeRequestId, interval)
+    }, this.pollingIntervalMs);
+    this.watchers.set(mergeRequestId, interval);
   }
 
   isWatching(mergeRequestId: string): boolean {
-    return this.watchers.has(mergeRequestId)
+    return this.watchers.has(mergeRequestId);
   }
 
   stop(mergeRequestId: string): void {
-    const interval = this.watchers.get(mergeRequestId)
+    const interval = this.watchers.get(mergeRequestId);
     if (interval) {
-      clearInterval(interval)
-      this.watchers.delete(mergeRequestId)
-      this.lastProgress.delete(mergeRequestId)
+      clearInterval(interval);
+      this.watchers.delete(mergeRequestId);
+      this.lastProgress.delete(mergeRequestId);
     }
   }
 
   stopAll(): void {
     for (const [mergeRequestId] of this.watchers) {
-      this.stop(mergeRequestId)
+      this.stop(mergeRequestId);
     }
   }
 }

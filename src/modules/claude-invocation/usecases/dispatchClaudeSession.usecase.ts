@@ -4,9 +4,7 @@ import type {
   ClaudeDispatchFlags,
   ClaudeSessionGateway,
 } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
-import {
-  createClaudeSession,
-} from '@/modules/claude-invocation/entities/claudeSession/claudeSession.js';
+import { createClaudeSession } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.js';
 import type {
   ClaudeSession,
   ClaudeSessionJobType,

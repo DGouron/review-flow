@@ -1,7 +1,7 @@
-import type { UseCase } from '@/shared/foundation/usecase.base.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
-import type { BypassRecord } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import { parseBypassMarker } from '@/modules/tracking/entities/bypassMarker/bypassMarker.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
+import type { BypassRecord } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
 interface RecordBypassInput {
   projectPath: string;

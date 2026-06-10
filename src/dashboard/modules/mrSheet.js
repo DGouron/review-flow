@@ -1,5 +1,5 @@
-import { escapeHtml, sanitizeHttpUrl } from './html.js';
 import { formatTime, formatDuration } from './formatting.js';
+import { escapeHtml, sanitizeHttpUrl } from './html.js';
 
 const COLORS = {
   base: '#0b1220',
@@ -27,38 +27,42 @@ export function renderMrSheetContent(mr, translate, mrType) {
   const assigneeDisplay = mr.assignment?.displayName || mr.assignment?.username || '';
   const assigneeInitial = assigneeDisplay ? assigneeDisplay.charAt(0).toUpperCase() : '?';
 
-  const scoreDisplay = typeof mr.latestScore === 'number'
-    ? `${mr.latestScore.toFixed(1)}<span class="sheet-stat-unit">${translate('sheet.outOf10')}</span>`
-    : '-';
+  const scoreDisplay =
+    typeof mr.latestScore === 'number'
+      ? `${mr.latestScore.toFixed(1)}<span class="sheet-stat-unit">${translate('sheet.outOf10')}</span>`
+      : '-';
 
   const threadsDisplay = typeof mr.openThreads === 'number' ? mr.openThreads : 0;
 
-  const durationDisplay = mr.totalDurationMs
-    ? formatDuration(null, null, mr.totalDurationMs)
-    : '-';
+  const durationDisplay = mr.totalDurationMs ? formatDuration(null, null, mr.totalDurationMs) : '-';
 
   const totalIssues = (mr.totalBlocking || 0) + (mr.totalWarnings || 0);
 
   const encodedMrId = encodeURIComponent(String(mr.id ?? ''));
 
-  const reviewHistoryRows = (mr.reviews ?? []).slice().reverse().map(r => {
-    const typeClass = r.type === 'review' ? 'review' : 'followup';
-    const typeLabel = r.type === 'review'
-      ? `<i data-lucide="file-search"></i> Review`
-      : `<i data-lucide="refresh-cw"></i> Follow-up`;
-    const scoreCell = r.score !== null && r.score !== undefined
-      ? `<span class="sheet-event-score">${r.score}${translate('sheet.outOf10')}</span>`
-      : '-';
-    const blockingCell = r.blocking > 0
-      ? `<span class="sheet-event-blocking">${r.blocking}</span>`
-      : '0';
-    return `<tr>
+  const reviewHistoryRows = (mr.reviews ?? [])
+    .slice()
+    .toReversed()
+    .map((r) => {
+      const typeClass = r.type === 'review' ? 'review' : 'followup';
+      const typeLabel =
+        r.type === 'review'
+          ? `<i data-lucide="file-search"></i> Review`
+          : `<i data-lucide="refresh-cw"></i> Follow-up`;
+      const scoreCell =
+        r.score !== null && r.score !== undefined
+          ? `<span class="sheet-event-score">${r.score}${translate('sheet.outOf10')}</span>`
+          : '-';
+      const blockingCell =
+        r.blocking > 0 ? `<span class="sheet-event-blocking">${r.blocking}</span>` : '0';
+      return `<tr>
       <td><span class="sheet-event-type ${typeClass}">${typeLabel}</span></td>
       <td>${formatTime(r.timestamp)}</td>
       <td>${scoreCell}</td>
       <td>${blockingCell}</td>
     </tr>`;
-  }).join('');
+    })
+    .join('');
 
   const hasReviews = (mr.reviews ?? []).length > 0;
   const reviewHistoryContent = hasReviews
@@ -82,11 +86,15 @@ export function renderMrSheetContent(mr, translate, mrType) {
       <div>
         <div class="sheet-mr-number">${mrPrefix}${escapeHtml(String(mr.mrNumber ?? ''))}</div>
         <div class="sheet-mr-title">${escapeHtml(String(mr.title ?? ''))}</div>
-        ${assigneeDisplay ? `
+        ${
+          assigneeDisplay
+            ? `
         <div class="sheet-mr-assignee">
           <div class="mr-avatar" style="width:22px;height:22px;font-size:0.65rem;" title="${escapeHtml(assigneeDisplay)}">${escapeHtml(assigneeInitial)}</div>
           ${escapeHtml(assigneeDisplay)}
-        </div>` : ''}
+        </div>`
+            : ''
+        }
       </div>
     </div>
 
@@ -111,7 +119,7 @@ export function renderMrSheetContent(mr, translate, mrType) {
       </div>
     </div>
     ${(() => {
-      const latestDiff = [...(mr.reviews ?? [])].reverse().find(r => r.diffStats)?.diffStats;
+      const latestDiff = [...(mr.reviews ?? [])].toReversed().find((r) => r.diffStats)?.diffStats;
       const commitsDisplay = latestDiff ? latestDiff.commitsCount : '-';
       const additionsDisplay = latestDiff ? '+' + latestDiff.additions : '-';
       const deletionsDisplay = latestDiff ? '-' + latestDiff.deletions : '-';
@@ -166,11 +174,15 @@ export function renderMrSheetContent(mr, translate, mrType) {
           <span class="sheet-detail-label"><i data-lucide="calendar"></i> ${translate('sheet.date')}</span>
           <span class="sheet-detail-value">${formatTime(mr.createdAt)}</span>
         </div>
-        ${mr.lastReviewAt ? `
+        ${
+          mr.lastReviewAt
+            ? `
         <div class="sheet-detail-row">
           <span class="sheet-detail-label"><i data-lucide="file-search"></i> Last review</span>
           <span class="sheet-detail-value">${formatTime(mr.lastReviewAt)}</span>
-        </div>` : ''}
+        </div>`
+            : ''
+        }
       </div>
     </div>
 
@@ -211,15 +223,13 @@ export function drawScoreTimeline(canvasId, reviews) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const cssWidth = canvas.parentElement?.clientWidth
-    ? canvas.parentElement.clientWidth - 24
-    : 460;
+  const cssWidth = canvas.parentElement?.clientWidth ? canvas.parentElement.clientWidth - 24 : 460;
   const cssHeight = 180;
   setupHiDpiCanvas(ctx, cssWidth, cssHeight);
 
   const scoredReviews = reviews
-    .filter(r => r.score !== null && r.score !== undefined)
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    .filter((r) => r.score !== null && r.score !== undefined)
+    .toSorted((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
   const padding = { top: 20, right: 20, bottom: 35, left: 35 };
   const chartWidth = cssWidth - padding.left - padding.right;
@@ -292,7 +302,7 @@ export function drawScoreTimeline(canvasId, reviews) {
 
   ctx.beginPath();
   ctx.moveTo(points[0].x, cssHeight - padding.bottom);
-  points.forEach(p => ctx.lineTo(p.x, p.y));
+  points.forEach((p) => ctx.lineTo(p.x, p.y));
   ctx.lineTo(points[points.length - 1].x, cssHeight - padding.bottom);
   ctx.closePath();
   ctx.fillStyle = gradient;
@@ -308,7 +318,7 @@ export function drawScoreTimeline(canvasId, reviews) {
   ctx.lineJoin = 'round';
   ctx.stroke();
 
-  points.forEach(p => {
+  points.forEach((p) => {
     const color = p.review.type === 'followup' ? COLORS.followupPoint : COLORS.reviewPoint;
     ctx.beginPath();
     ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
@@ -347,9 +357,7 @@ export function drawIssuesBreakdown(canvasId, blocking, warnings, resolved) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const cssWidth = canvas.parentElement?.clientWidth
-    ? canvas.parentElement.clientWidth - 24
-    : 460;
+  const cssWidth = canvas.parentElement?.clientWidth ? canvas.parentElement.clientWidth - 24 : 460;
   const cssHeight = 120;
   setupHiDpiCanvas(ctx, cssWidth, cssHeight);
 
@@ -373,7 +381,7 @@ export function drawIssuesBreakdown(canvasId, blocking, warnings, resolved) {
     { value: blocking, color: COLORS.danger, label: 'Blocking' },
     { value: warnings, color: COLORS.warning, label: 'Warnings' },
     { value: resolved, color: COLORS.success, label: 'Resolved' },
-  ].filter(segment => segment.value > 0);
+  ].filter((segment) => segment.value > 0);
 
   ctx.save();
   ctx.beginPath();
@@ -381,7 +389,7 @@ export function drawIssuesBreakdown(canvasId, blocking, warnings, resolved) {
   ctx.clip();
 
   let currentX = barPadding;
-  segments.forEach(segment => {
+  segments.forEach((segment) => {
     const segmentWidth = (segment.value / total) * barWidth;
     ctx.fillStyle = segment.color;
     ctx.fillRect(currentX, barY, segmentWidth, barHeight);

@@ -1,5 +1,5 @@
-import type { UseCase } from '@/shared/foundation/usecase.base.js';
 import type { RepositoryEntry } from '@/modules/cli-configuration/entities/repositoryEntry/repositoryEntry.js';
+import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
 export interface ToggleRepositoryEnabledDependencies {
   readFileSync: (path: string, encoding: BufferEncoding) => string;
@@ -18,9 +18,10 @@ export interface ToggleRepositoryEnabledResult {
   configPath: string;
 }
 
-export class ToggleRepositoryEnabledUseCase
-  implements UseCase<ToggleRepositoryEnabledInput, ToggleRepositoryEnabledResult>
-{
+export class ToggleRepositoryEnabledUseCase implements UseCase<
+  ToggleRepositoryEnabledInput,
+  ToggleRepositoryEnabledResult
+> {
   constructor(private readonly deps: ToggleRepositoryEnabledDependencies) {}
 
   execute(input: ToggleRepositoryEnabledInput): ToggleRepositoryEnabledResult {

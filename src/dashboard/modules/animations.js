@@ -69,7 +69,10 @@ export function animateCounter(element, from, to, options) {
     },
   });
   animeApi.animate(element, {
-    scale: [{ from: 1, to: 1.06 }, { from: 1.06, to: 1 }],
+    scale: [
+      { from: 1, to: 1.06 },
+      { from: 1.06, to: 1 },
+    ],
     duration: durationMs,
     easing: 'easeOutBack',
   });
@@ -113,7 +116,8 @@ export function slideTabUnderline(underline, targetTab, options) {
  */
 export function heartbeat(container, options) {
   if (reducedMotion()) {
-    container.style.background = 'linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)';
+    container.style.background =
+      'linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)';
     container.style.height = '1px';
     container.style.opacity = '0.4';
     return { stop: () => {} };
@@ -167,8 +171,14 @@ export function pulseLive(element, options) {
   const { animeApi } = options;
   const animation = animeApi.animate(element, {
     boxShadow: [
-      { from: 'inset 0 0 0 0 rgba(244, 169, 61, 0)', to: 'inset 0 0 20px 4px rgba(244, 169, 61, 0.15)' },
-      { from: 'inset 0 0 20px 4px rgba(244, 169, 61, 0.15)', to: 'inset 0 0 0 0 rgba(244, 169, 61, 0)' },
+      {
+        from: 'inset 0 0 0 0 rgba(244, 169, 61, 0)',
+        to: 'inset 0 0 20px 4px rgba(244, 169, 61, 0.15)',
+      },
+      {
+        from: 'inset 0 0 20px 4px rgba(244, 169, 61, 0.15)',
+        to: 'inset 0 0 0 0 rgba(244, 169, 61, 0)',
+      },
     ],
     duration: 2400,
     easing: 'easeInOutSine',
@@ -241,7 +251,10 @@ export function pulseStatusDot(dot, options) {
   if (reducedMotion()) return { stop: () => {} };
   const { animeApi } = options;
   const animation = animeApi.animate(dot, {
-    opacity: [{ from: 0.7, to: 1 }, { from: 1, to: 0.7 }],
+    opacity: [
+      { from: 0.7, to: 1 },
+      { from: 1, to: 0.7 },
+    ],
     duration: 2000,
     easing: 'easeInOutSine',
     loop: true,
@@ -259,7 +272,10 @@ export function breatheLogo(logo, options) {
   if (reducedMotion()) return { stop: () => {} };
   const { animeApi } = options;
   const animation = animeApi.animate(logo, {
-    scale: [{ from: 1, to: 1.015 }, { from: 1.015, to: 1 }],
+    scale: [
+      { from: 1, to: 1.015 },
+      { from: 1.015, to: 1 },
+    ],
     duration: 6000,
     easing: 'easeInOutSine',
     loop: true,
@@ -395,11 +411,15 @@ export function reviewCompleted(element, options) {
   const timeline = animeApi.createTimeline({ easing: 'easeOutCubic' });
   timeline
     .add(element, {
-      boxShadow: [{ from: '0 0 0 0 rgba(123, 196, 127, 0)', to: '0 0 16px 4px rgba(123, 196, 127, 0.4)' }],
+      boxShadow: [
+        { from: '0 0 0 0 rgba(123, 196, 127, 0)', to: '0 0 16px 4px rgba(123, 196, 127, 0.4)' },
+      ],
       duration: 300,
     })
     .add(element, {
-      boxShadow: [{ from: '0 0 16px 4px rgba(123, 196, 127, 0.4)', to: '0 0 0 0 rgba(123, 196, 127, 0)' }],
+      boxShadow: [
+        { from: '0 0 16px 4px rgba(123, 196, 127, 0.4)', to: '0 0 0 0 rgba(123, 196, 127, 0)' },
+      ],
       duration: 300,
     });
 }

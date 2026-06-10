@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { renderCollapsibleList } from '@/dashboard/modules/collapsibleList.js';
 
 const translate = (key: string) => key;

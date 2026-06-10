@@ -76,15 +76,16 @@ export function buildSettingsViewModel(input) {
     reviewSkill: config.reviewSkill,
     reviewFollowupSkill: config.reviewFollowupSkill,
     externalLink: typeof config.externalLink === 'string' ? config.externalLink : '',
-    qualityThreshold: typeof config.qualityThreshold === 'number'
-      ? String(config.qualityThreshold)
-      : '',
-    maxConcurrentReviews: typeof config.maxConcurrentReviews === 'number'
-      ? String(config.maxConcurrentReviews)
-      : String(DEFAULT_MAX_CONCURRENT_REVIEWS),
-    projectName: typeof input.projectName === 'string' && input.projectName.length > 0
-      ? input.projectName
-      : '—',
+    qualityThreshold:
+      typeof config.qualityThreshold === 'number' ? String(config.qualityThreshold) : '',
+    maxConcurrentReviews:
+      typeof config.maxConcurrentReviews === 'number'
+        ? String(config.maxConcurrentReviews)
+        : String(DEFAULT_MAX_CONCURRENT_REVIEWS),
+    projectName:
+      typeof input.projectName === 'string' && input.projectName.length > 0
+        ? input.projectName
+        : '—',
   };
 }
 
@@ -93,18 +94,16 @@ export function buildSettingsViewModel(input) {
  * @returns {string}
  */
 function renderLanguageRadios(viewModel) {
-  return SUPPORTED_LANGUAGES
-    .map((value) => {
-      const checked = viewModel.language === value ? ' checked' : '';
-      const label = value === 'fr' ? 'Français' : 'English';
-      return `
+  return SUPPORTED_LANGUAGES.map((value) => {
+    const checked = viewModel.language === value ? ' checked' : '';
+    const label = value === 'fr' ? 'Français' : 'English';
+    return `
         <label class="settings-modal__radio">
           <input type="radio" name="language" value="${escapeHtml(value)}"${checked} />
           <span>${escapeHtml(label)}</span>
         </label>
       `.trim();
-    })
-    .join('');
+  }).join('');
 }
 
 /**
@@ -112,12 +111,10 @@ function renderLanguageRadios(viewModel) {
  * @returns {string}
  */
 function renderModelOptions(viewModel) {
-  return SUPPORTED_MODELS
-    .map((value) => {
-      const selected = viewModel.defaultModel === value ? ' selected' : '';
-      return `<option value="${escapeHtml(value)}"${selected}>${escapeHtml(value)}</option>`;
-    })
-    .join('');
+  return SUPPORTED_MODELS.map((value) => {
+    const selected = viewModel.defaultModel === value ? ' selected' : '';
+    return `<option value="${escapeHtml(value)}"${selected}>${escapeHtml(value)}</option>`;
+  }).join('');
 }
 
 /**

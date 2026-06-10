@@ -1,7 +1,6 @@
 import { isAbsolute, relative } from 'node:path';
-import type {
-  GitCommandExecutor,
-} from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
+
+import type { GitCommandExecutor } from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
 import type { WorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 
 export interface ComputeClaudeCwdInput {
@@ -29,9 +28,7 @@ export function computeClaudeCwd(input: ComputeClaudeCwdInput): string {
   }
 
   if (subPath.startsWith('..') || isAbsolute(subPath)) {
-    throw new Error(
-      `localPath ${input.localPath} is not inside gitRoot ${input.gitRoot}`,
-    );
+    throw new Error(`localPath ${input.localPath} is not inside gitRoot ${input.gitRoot}`);
   }
 
   return `${worktreePath}/${subPath}`;

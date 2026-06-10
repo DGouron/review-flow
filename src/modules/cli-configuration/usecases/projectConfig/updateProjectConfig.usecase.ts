@@ -1,7 +1,7 @@
 import type { ProjectConfig } from '@/config/projectConfig.js';
-import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
-import type { ProjectConfigGateway } from '@/modules/cli-configuration/entities/projectConfig/projectConfig.gateway.js';
 import { validateProjectConcurrencyCap } from '@/modules/cli-configuration/entities/projectConcurrencyCap/projectConcurrencyCap.valueObject.js';
+import type { ProjectConfigGateway } from '@/modules/cli-configuration/entities/projectConfig/projectConfig.gateway.js';
+import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
 import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
 export const EDITABLE_PROJECT_CONFIG_KEYS = [
@@ -16,14 +16,16 @@ export const EDITABLE_PROJECT_CONFIG_KEYS = [
 
 export const EXTERNAL_LINK_PATTERN = /^https:\/\/.+/;
 const FORBIDDEN_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
-const QUALITY_THRESHOLD_INVALID_MESSAGE =
-  'qualityThreshold must be an integer between 0 and 10';
+const QUALITY_THRESHOLD_INVALID_MESSAGE = 'qualityThreshold must be an integer between 0 and 10';
 
 const SUPPORTED_LANGUAGES: readonly Language[] = ['en', 'fr'];
 const SUPPORTED_MODELS: readonly ProjectConfig['defaultModel'][] = ['haiku', 'sonnet', 'opus'];
 
 export type ProjectConfigPatch = Partial<
-  Pick<ProjectConfig, 'language' | 'defaultModel' | 'reviewSkill' | 'reviewFollowupSkill' | 'externalLink'>
+  Pick<
+    ProjectConfig,
+    'language' | 'defaultModel' | 'reviewSkill' | 'reviewFollowupSkill' | 'externalLink'
+  >
 > & {
   qualityThreshold?: number | null;
   maxConcurrentReviews?: number | null;
@@ -55,9 +57,7 @@ function validateExternalLink(value: string): { ok: true } | { ok: false; reason
   return { ok: true };
 }
 
-function validateQualityThreshold(
-  value: number,
-): { ok: true } | { ok: false; reason: string } {
+function validateQualityThreshold(value: number): { ok: true } | { ok: false; reason: string } {
   if (!Number.isInteger(value) || value < 0 || value > 10) {
     return { ok: false, reason: QUALITY_THRESHOLD_INVALID_MESSAGE };
   }
@@ -129,9 +129,10 @@ function mergeConfig(current: ProjectConfig, patch: ProjectConfigPatch): Project
   return merged;
 }
 
-export class UpdateProjectConfigUseCase
-  implements UseCase<UpdateProjectConfigInput, UpdateProjectConfigResult>
-{
+export class UpdateProjectConfigUseCase implements UseCase<
+  UpdateProjectConfigInput,
+  UpdateProjectConfigResult
+> {
   constructor(
     private readonly gateway: ProjectConfigGateway,
     private readonly onUpdated?: (config: ProjectConfig) => void,

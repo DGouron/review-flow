@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { GitLabMemberAccessCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/memberAccess.gitlab.cli.gateway.js';
+
 import { MEMBER_ACCESS_LEVELS } from '@/modules/platform-integration/entities/memberAccess/memberAccess.js';
+import { GitLabMemberAccessCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/memberAccess.gitlab.cli.gateway.js';
 
 interface RecordedCommand {
   command: string;

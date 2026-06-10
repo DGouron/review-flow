@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 interface FollowupImportantsDependencies {
   serverPort: number;
   log: (...args: unknown[]) => void;
@@ -9,18 +11,17 @@ interface FollowupImportantsInput {
   project?: string;
 }
 
-interface FollowupImportantsCandidate {
-  mrId: string;
-  mrNumber: number;
-  title: string;
-}
-
-interface FollowupImportantsResponse {
-  success: boolean;
-  triggered: number;
-  candidates: FollowupImportantsCandidate[];
-  failed: Array<{ mrId: string; error: string }>;
-}
+const followupImportantsResponseSchema = z.object({
+  triggered: z.number(),
+  candidates: z.array(
+    z.object({
+      mrId: z.string(),
+      mrNumber: z.number(),
+      title: z.string(),
+    }),
+  ),
+  failed: z.array(z.object({ mrId: z.string(), error: z.string() })),
+});
 
 export class FollowupImportantsUseCase {
   constructor(private readonly deps: FollowupImportantsDependencies) {}
@@ -34,19 +35,20 @@ export class FollowupImportantsUseCase {
       body: JSON.stringify({ projectPath: input.project }),
     });
 
-    const data = (await response.json()) as FollowupImportantsResponse;
+    const parsed = followupImportantsResponseSchema.safeParse(await response.json());
 
-    if (!data.candidates || data.candidates.length === 0) {
+    if (!parsed.success || parsed.data.candidates.length === 0) {
       this.deps.log('No pending-approval MRs with Important issues found.');
       return;
     }
 
+    const data = parsed.data;
     this.deps.log(`Triggered ${data.triggered} followup(s):`);
     for (const candidate of data.candidates) {
       this.deps.log(`  - !${candidate.mrNumber}: ${candidate.title}`);
     }
 
-    if (data.failed && data.failed.length > 0) {
+    if (data.failed.length > 0) {
       this.deps.error(`${data.failed.length} failed.`);
     }
   }

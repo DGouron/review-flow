@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
+import { BUDGET_DEFAULT_USD } from '@/modules/token-accounting/entities/budget/budgetConfig.schema.js';
 import { GetBudgetStatusUseCase } from '@/modules/token-accounting/usecases/getBudgetStatus/getBudgetStatus.usecase.js';
+import { TokenUsageRecordFactory } from '@/tests/factories/tokenUsage.factory.js';
 import { StubBudgetGateway } from '@/tests/stubs/budget.stub.js';
 import { StubTokenUsageGateway } from '@/tests/stubs/tokenUsage.stub.js';
-import { TokenUsageRecordFactory } from '@/tests/factories/tokenUsage.factory.js';
-import { BUDGET_DEFAULT_USD } from '@/modules/token-accounting/entities/budget/budgetConfig.schema.js';
 
 describe('GetBudgetStatusUseCase', () => {
   let budgetGateway: StubBudgetGateway;
@@ -30,15 +31,33 @@ describe('GetBudgetStatusUseCase', () => {
     tokenUsageGateway.setRecords([
       TokenUsageRecordFactory.create({
         recordedAt: '2026-04-29T00:00:00Z',
-        usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 999 },
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+          costUsd: 999,
+        },
       }),
       TokenUsageRecordFactory.create({
         recordedAt: '2026-05-01T00:00:00Z',
-        usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 20 },
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+          costUsd: 20,
+        },
       }),
       TokenUsageRecordFactory.create({
         recordedAt: '2026-05-15T00:00:00Z',
-        usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 28.5 },
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+          costUsd: 28.5,
+        },
       }),
     ]);
 
@@ -55,7 +74,13 @@ describe('GetBudgetStatusUseCase', () => {
     tokenUsageGateway.setRecords([
       TokenUsageRecordFactory.create({
         recordedAt: '2026-05-10T00:00:00Z',
-        usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 48.5 },
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+          costUsd: 48.5,
+        },
       }),
     ]);
 
@@ -74,7 +99,13 @@ describe('GetBudgetStatusUseCase', () => {
     tokenUsageGateway.setRecords([
       TokenUsageRecordFactory.create({
         recordedAt: '2026-05-10T00:00:00Z',
-        usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 250 },
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+          costUsd: 250,
+        },
       }),
     ]);
 
@@ -92,7 +123,13 @@ describe('GetBudgetStatusUseCase', () => {
     tokenUsageGateway.setRecords([
       TokenUsageRecordFactory.create({
         recordedAt: '2026-05-31T23:00:00Z',
-        usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 200.5 },
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+          costUsd: 200.5,
+        },
       }),
     ]);
 
@@ -111,14 +148,26 @@ describe('GetBudgetStatusUseCase', () => {
       TokenUsageRecordFactory.create({
         localPath: '/repo-a',
         recordedAt: '2026-05-10T00:00:00Z',
-        usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 30 },
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+          costUsd: 30,
+        },
       }),
     ]);
     tokenUsageGateway.setRecordsForPath('/repo-b', [
       TokenUsageRecordFactory.create({
         localPath: '/repo-b',
         recordedAt: '2026-05-12T00:00:00Z',
-        usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, costUsd: 18.5 },
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+          costUsd: 18.5,
+        },
       }),
     ]);
 

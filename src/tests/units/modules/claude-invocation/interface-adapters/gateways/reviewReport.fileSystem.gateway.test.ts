@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import { ReviewReportFileSystemGateway } from '@/modules/claude-invocation/interface-adapters/gateways/reviewReport.fileSystem.gateway.js';
 
 describe('ReviewReportFileSystemGateway.buildPath', () => {
@@ -103,10 +104,7 @@ describe('ReviewReportFileSystemGateway.read', () => {
     const gateway = new ReviewReportFileSystemGateway({
       existsSync: (path: string) => path.endsWith('/.claude/reviews'),
       readFileSync: () => 'unused',
-      readdirSync: () => [
-        '2026-05-26-MR-205-review.md',
-        '2026-05-26-MR-207-followup.md',
-      ],
+      readdirSync: () => ['2026-05-26-MR-205-review.md', '2026-05-26-MR-207-followup.md'],
     });
 
     const result = gateway.read({

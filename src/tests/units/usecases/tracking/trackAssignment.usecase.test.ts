@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
+
 import { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
-import { InMemoryReviewRequestTrackingGateway } from '../../../stubs/reviewRequestTracking.stub.js';
+
 import { TrackedMrFactory } from '../../../factories/trackedMr.factory.js';
+import { InMemoryReviewRequestTrackingGateway } from '../../../stubs/reviewRequestTracking.stub.js';
 
 describe('TrackAssignmentUseCase', () => {
   const mrInfo = {

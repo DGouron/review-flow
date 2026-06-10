@@ -1,4 +1,7 @@
-import type { ClaudeModelName, RoutingPolicy } from '@/modules/review-execution/entities/modelRouting/modelRouting.schema.js';
+import type {
+  ClaudeModelName,
+  RoutingPolicy,
+} from '@/modules/review-execution/entities/modelRouting/modelRouting.schema.js';
 
 type DiffStatsInput = { additions: number; deletions: number };
 

@@ -1,11 +1,15 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Logger } from 'pino';
-import { verifyGitLabSignature, getGitLabEventType, getGitLabEventUuid } from '@/security/verifier.js';
-import { gitLabMergeRequestEventGuard } from '@/modules/platform-integration/entities/gitlab/gitlabMergeRequestEvent.guard.js';
-import { gitLabNoteEventGuard } from '@/modules/platform-integration/entities/gitlab/gitlabNoteEvent.guard.js';
-import { filterGitLabEvent, filterGitLabMrUpdate, filterGitLabMrClose, filterGitLabMrMerge, filterGitLabMrApprove, filterGitLabNoteEvent } from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
+
+import { invokeClaudeReview, sendNotification } from '@/claude/invoker.js';
 import { findRepositoryByProjectPath, type RepositoryConfig } from '@/config/loader.js';
-import { resolvePinnedThreadFetchTarget } from '@/modules/platform-integration/services/pinnedThreadFetchTarget.js';
+import {
+  loadProjectConfig,
+  getProjectAgentsOrFocusDefaults,
+  getFollowupAgents,
+  getProjectLanguage,
+} from '@/config/projectConfig.js';
+import type { ClaudeInvokerDependencies } from '@/frameworks/claude/claudeInvoker.js';
 import {
   enqueueReview,
   createJobId,
@@ -13,43 +17,63 @@ import {
   cancelJob,
   type ReviewJob,
 } from '@/frameworks/queue/pQueueAdapter.js';
-import { invokeClaudeReview, sendNotification } from '@/claude/invoker.js';
-import type { ClaudeInvokerDependencies } from '@/frameworks/claude/claudeInvoker.js';
-import type { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
-import type { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
-import type { ProcessorBuilder } from '@/modules/review-execution/services/processorRegistry.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
-import type { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
-import type { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
-import type { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
-import type { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
-import type { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
-import type { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
-import type { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
-import type { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
+import { startWatchingReviewContext, stopWatchingReviewContext } from '@/main/websocket.js';
+import type { BudgetExceededPayload } from '@/main/websocket.js';
+import type { ApprovalRevocationGateway } from '@/modules/platform-integration/entities/approvalRevocation/approvalRevocation.gateway.js';
+import type { DiffMetadataFetchGateway } from '@/modules/platform-integration/entities/diffMetadata/diffMetadata.gateway.js';
+import { gitLabMergeRequestEventGuard } from '@/modules/platform-integration/entities/gitlab/gitlabMergeRequestEvent.guard.js';
+import { gitLabNoteEventGuard } from '@/modules/platform-integration/entities/gitlab/gitlabNoteEvent.guard.js';
 import type { IdempotencyStore } from '@/modules/platform-integration/entities/idempotency/idempotencyStore.gateway.js';
 import type { NoteCommentPostGateway } from '@/modules/platform-integration/entities/noteComment/noteCommentPost.gateway.js';
-import type { ApprovalRevocationGateway } from '@/modules/platform-integration/entities/approvalRevocation/approvalRevocation.gateway.js';
-import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
-import { loadProjectConfig, getProjectAgentsOrFocusDefaults, getFollowupAgents, getProjectLanguage } from '@/config/projectConfig.js';
-import { DEFAULT_AGENTS, DEFAULT_FOLLOWUP_AGENTS } from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
-import { parseReviewOutput } from '@/modules/statistics-insights/services/statsService.js';
-import { ReviewContextResultFactory } from '@/modules/review-execution/entities/reviewContext/reviewContextResult.factory.js';
-import { parseThreadActions } from '@/modules/review-execution/services/threadActionsParser.js';
-import { defaultCommandExecutor } from '@/modules/review-execution/services/threadActionsExecutor.js';
-import { dispatchConstrainedActions } from '@/modules/review-execution/services/dispatchConstrainedActions.js';
-import { resolveProvenance } from '@/modules/review-execution/entities/actionProvenance/actionProvenance.js';
-import { GitLabThreadInventoryGateway } from '@/modules/review-execution/interface-adapters/gateways/threadInventory.gitlab.gateway.js';
-import { defaultGitLabExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
-import { executeActionsFromContext } from '@/modules/review-execution/services/contextActionsExecutor.js';
-import { startWatchingReviewContext, stopWatchingReviewContext } from '@/main/websocket.js';
-import type { ReviewContextGateway } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js';
 import type { ThreadFetchGateway } from '@/modules/platform-integration/entities/threadFetch/threadFetch.gateway.js';
-import type { DiffMetadataFetchGateway } from '@/modules/platform-integration/entities/diffMetadata/diffMetadata.gateway.js';
+import {
+  filterGitLabEvent,
+  filterGitLabMrUpdate,
+  filterGitLabMrClose,
+  filterGitLabMrMerge,
+  filterGitLabMrApprove,
+  filterGitLabNoteEvent,
+} from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
+import { defaultGitLabExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
+import { resolvePinnedThreadFetchTarget } from '@/modules/platform-integration/services/pinnedThreadFetchTarget.js';
+import type { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
+import { resolveProvenance } from '@/modules/review-execution/entities/actionProvenance/actionProvenance.js';
+import {
+  DEFAULT_AGENTS,
+  DEFAULT_FOLLOWUP_AGENTS,
+} from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
+import type { ReviewContextGateway } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js';
+import type { DiffMetadata } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
+import { ReviewContextResultFactory } from '@/modules/review-execution/entities/reviewContext/reviewContextResult.factory.js';
+import { GitLabThreadInventoryGateway } from '@/modules/review-execution/interface-adapters/gateways/threadInventory.gitlab.gateway.js';
+import { executeActionsFromContext } from '@/modules/review-execution/services/contextActionsExecutor.js';
+import { dispatchConstrainedActions } from '@/modules/review-execution/services/dispatchConstrainedActions.js';
+import type { ProcessorBuilder } from '@/modules/review-execution/services/processorRegistry.js';
+import { defaultCommandExecutor } from '@/modules/review-execution/services/threadActionsExecutor.js';
+import { parseThreadActions } from '@/modules/review-execution/services/threadActionsParser.js';
+import type { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
+import { parseReviewOutput } from '@/modules/statistics-insights/services/statsService.js';
 import type { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
-import type { BudgetExceededPayload } from '@/main/websocket.js';
-import type { RemoveResult, WorktreeIdentity } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
+import type { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
+import type { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
+import type { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
+import type { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
+import type { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
+import type { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
+import type { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
+import type { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
+import type {
+  RemoveResult,
+  WorktreeIdentity,
+} from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+import {
+  verifyGitLabSignature,
+  getGitLabEventType,
+  getGitLabEventUuid,
+} from '@/security/verifier.js';
 
 export type RemoveWorktreeAction = (input: {
   identity: WorktreeIdentity;
@@ -60,18 +84,18 @@ export function extractBaseUrl(remoteUrl: string): string | null {
   try {
     // Handle HTTPS URLs: https://gitlab.example.com/group/project.git
     if (remoteUrl.startsWith('http')) {
-      const url = new URL(remoteUrl)
-      return `${url.protocol}//${url.host}`
+      const url = new URL(remoteUrl);
+      return `${url.protocol}//${url.host}`;
     }
     // Handle SSH URLs: git@gitlab.example.com:group/project.git
-    const sshMatch = remoteUrl.match(/@([^:]+):/)
+    const sshMatch = remoteUrl.match(/@([^:]+):/);
     if (sshMatch) {
-      return `https://${sshMatch[1]}`
+      return `https://${sshMatch[1]}`;
     }
   } catch {
     // Invalid URL — return null
   }
-  return null
+  return null;
 }
 
 export interface GitLabWebhookDependencies {
@@ -161,7 +185,10 @@ async function handleGitLabNoteHook(
 
   const repoConfig = findRepositoryByProjectPath(filterResult.projectPath);
   if (!repoConfig) {
-    logger.debug({ projectPath: filterResult.projectPath }, 'Note for unconfigured project (ignored)');
+    logger.debug(
+      { projectPath: filterResult.projectPath },
+      'Note for unconfigured project (ignored)',
+    );
     reply.status(200).send({ status: 'ignored', reason: 'Repository not configured' });
     return;
   }
@@ -181,7 +208,10 @@ async function handleGitLabNoteHook(
       mrNumber: filterResult.mergeRequestNumber,
       body: result.message,
     });
-    logger.info({ mrId, author: filterResult.authorUsername }, 'Bypass marker without reason rejected');
+    logger.info(
+      { mrId, author: filterResult.authorUsername },
+      'Bypass marker without reason rejected',
+    );
     reply.status(200).send({ status: 'bypass-rejected', reason: 'missing-reason' });
     return;
   }
@@ -208,9 +238,16 @@ export async function handleGitLabWebhook(
   reply: FastifyReply,
   logger: Logger,
   trackingGateway: ReviewRequestTrackingGateway,
-  deps: GitLabWebhookDependencies
+  deps: GitLabWebhookDependencies,
 ): Promise<void> {
-  const { trackAssignment, recordCompletion, recordPush, transitionState, checkFollowupNeeded, syncThreads } = deps;
+  const {
+    trackAssignment,
+    recordCompletion,
+    recordPush,
+    transitionState,
+    checkFollowupNeeded,
+    syncThreads,
+  } = deps;
   // 1. Verify signature
   const verification = verifyGitLabSignature(request);
   if (!verification.valid) {
@@ -288,13 +325,17 @@ export async function handleGitLabWebhook(
         if (worktreeRemoval.status === 'failed') {
           logger.warn(
             { mrNumber, project: projectPath, warning: worktreeRemoval.warning },
-            'removeWorktree failed on close'
+            'removeWorktree failed on close',
           );
         }
       } catch (error) {
         logger.warn(
-          { mrNumber, project: projectPath, error: error instanceof Error ? error.message : String(error) },
-          'removeWorktree threw on close'
+          {
+            mrNumber,
+            project: projectPath,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'removeWorktree threw on close',
         );
       }
 
@@ -306,7 +347,7 @@ export async function handleGitLabWebhook(
           trackingArchived: archived,
           contextDeleted: contextDeleted.deleted,
         },
-        'MR closed - cleaned up tracking and cancelled job'
+        'MR closed - cleaned up tracking and cancelled job',
       );
 
       reply.status(200).send({
@@ -344,7 +385,7 @@ export async function handleGitLabWebhook(
         if (worktreeRemoval.status === 'failed') {
           logger.warn(
             { mrNumber: mergeResult.mergeRequestNumber, warning: worktreeRemoval.warning },
-            'removeWorktree failed on merge'
+            'removeWorktree failed on merge',
           );
         }
       } catch (error) {
@@ -353,7 +394,7 @@ export async function handleGitLabWebhook(
             mrNumber: mergeResult.mergeRequestNumber,
             error: error instanceof Error ? error.message : String(error),
           },
-          'removeWorktree threw on merge'
+          'removeWorktree threw on merge',
         );
       }
 
@@ -469,12 +510,12 @@ export async function handleGitLabWebhook(
       project: event.project?.path_with_namespace,
       mrIid: event.object_attributes?.iid,
       action: event.object_attributes?.action,
-      reviewers: event.reviewers?.map(r => r.username) || 'NONE',
+      reviewers: event.reviewers?.map((r) => r.username) || 'NONE',
       changesReviewers: event.changes?.reviewers ? 'YES' : 'NO',
       shouldProcess: filterResult.shouldProcess,
       reason: filterResult.reason,
     },
-    'GitLab MR event received'
+    'GitLab MR event received',
   );
 
   if (!filterResult.shouldProcess) {
@@ -482,7 +523,7 @@ export async function handleGitLabWebhook(
     const updateResult = filterGitLabMrUpdate(event);
     logger.debug(
       { updateResult, action: event.object_attributes?.action },
-      'Checking for followup review'
+      'Checking for followup review',
     );
 
     if (updateResult.shouldProcess && updateResult.isFollowup) {
@@ -490,7 +531,11 @@ export async function handleGitLabWebhook(
       const updateRepoConfig = findRepositoryByProjectPath(updateResult.projectPath);
       if (updateRepoConfig) {
         // Record the push event
-        const mr = recordPush.execute({ projectPath: updateRepoConfig.localPath, mrNumber: updateResult.mergeRequestNumber, platform: 'gitlab' });
+        const mr = recordPush.execute({
+          projectPath: updateRepoConfig.localPath,
+          mrNumber: updateResult.mergeRequestNumber,
+          platform: 'gitlab',
+        });
         logger.info(
           {
             mrNumber: updateResult.mergeRequestNumber,
@@ -499,18 +544,24 @@ export async function handleGitLabWebhook(
             lastPushAt: mr?.lastPushAt,
             lastReviewAt: mr?.lastReviewAt,
           },
-          'Push event recorded'
+          'Push event recorded',
         );
 
         // Check if this MR needs a followup (has open threads and was pushed since last review)
-        const needsFollowup = mr && checkFollowupNeeded.execute({ projectPath: updateRepoConfig.localPath, mrNumber: updateResult.mergeRequestNumber, platform: 'gitlab' });
+        const needsFollowup =
+          mr &&
+          checkFollowupNeeded.execute({
+            projectPath: updateRepoConfig.localPath,
+            mrNumber: updateResult.mergeRequestNumber,
+            platform: 'gitlab',
+          });
         logger.info({ needsFollowup, mrState: mr?.state }, 'Followup check result');
 
         if (needsFollowup) {
           if (mr.autoFollowup === false) {
             logger.info(
               { mrNumber: updateResult.mergeRequestNumber, project: updateResult.projectPath },
-              'Auto-followup disabled for this MR, skipping'
+              'Auto-followup disabled for this MR, skipping',
             );
             reply.status(200).send({ status: 'ignored', reason: 'Auto-followup disabled' });
             return;
@@ -518,13 +569,17 @@ export async function handleGitLabWebhook(
 
           logger.info(
             { mrNumber: updateResult.mergeRequestNumber, project: updateResult.projectPath },
-            'Auto-triggering followup review after push'
+            'Auto-triggering followup review after push',
           );
 
           const projectConfig = loadProjectConfig(updateRepoConfig.localPath);
           const skill = projectConfig?.reviewFollowupSkill || 'review-followup';
 
-          const followupJobId = createJobId('gitlab-followup', updateResult.projectPath, updateResult.mergeRequestNumber);
+          const followupJobId = createJobId(
+            'gitlab-followup',
+            updateResult.projectPath,
+            updateResult.mergeRequestNumber,
+          );
           const followupJob: ReviewJob = {
             id: followupJobId,
             platform: 'gitlab',
@@ -548,7 +603,7 @@ export async function handleGitLabWebhook(
                 limitUsd: followupBudgetDecision.status.limitUsd,
                 consumedUsd: followupBudgetDecision.status.consumedUsd,
               },
-              'Budget exceeded, followup not enqueued'
+              'Budget exceeded, followup not enqueued',
             );
             deps.broadcastBudgetExceeded({
               mrNumber: followupJob.mrNumber,
@@ -562,7 +617,11 @@ export async function handleGitLabWebhook(
           }
 
           const followupProcessor = async (j: ReviewJob, signal: AbortSignal): Promise<void> => {
-            sendNotification('Review followup démarrée', `MR !${j.mrNumber} - ${j.projectPath}`, logger);
+            sendNotification(
+              'Review followup démarrée',
+              `MR !${j.mrNumber} - ${j.projectPath}`,
+              logger,
+            );
 
             // Create review context file with pre-fetched threads and diff metadata
             const mergeRequestId = `gitlab-${j.projectPath}-${j.mrNumber}`;
@@ -572,13 +631,16 @@ export async function handleGitLabWebhook(
 
             try {
               const threads = threadFetchGw.fetchThreads(j.projectPath, j.mrNumber);
-              let diffMetadata: import('@/modules/review-execution/entities/reviewContext/reviewContext.js').DiffMetadata | undefined;
+              let diffMetadata: DiffMetadata | undefined;
               try {
                 diffMetadata = diffMetadataFetchGw.fetchDiffMetadata(j.projectPath, j.mrNumber);
               } catch (error) {
                 logger.warn(
-                  { mrNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },
-                  'Failed to fetch diff metadata for followup, inline comments will be skipped'
+                  {
+                    mrNumber: j.mrNumber,
+                    error: error instanceof Error ? error.message : String(error),
+                  },
+                  'Failed to fetch diff metadata for followup, inline comments will be skipped',
                 );
               }
               const followupAgentsList = getFollowupAgents(j.localPath) ?? DEFAULT_FOLLOWUP_AGENTS;
@@ -593,34 +655,50 @@ export async function handleGitLabWebhook(
                 diffMetadata,
               });
               logger.info(
-                { mrNumber: j.mrNumber, threadsCount: threads.length, hasDiffMetadata: !!diffMetadata },
-                'Review context file created with threads for followup'
+                {
+                  mrNumber: j.mrNumber,
+                  threadsCount: threads.length,
+                  hasDiffMetadata: !!diffMetadata,
+                },
+                'Review context file created with threads for followup',
               );
 
               startWatchingReviewContext(j.id, j.localPath, mergeRequestId);
-              logger.info({ mrNumber: j.mrNumber }, 'Started watching review context for live progress');
+              logger.info(
+                { mrNumber: j.mrNumber },
+                'Started watching review context for live progress',
+              );
             } catch (error) {
               logger.warn(
-                { mrNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },
-                'Failed to create review context file for followup, continuing without it'
+                {
+                  mrNumber: j.mrNumber,
+                  error: error instanceof Error ? error.message : String(error),
+                },
+                'Failed to create review context file for followup, continuing without it',
               );
             }
 
-            const result = await invokeClaudeReview(j, logger, (progress, progressEvent) => {
-              updateJobProgress(j.id, progress, progressEvent);
+            const result = await invokeClaudeReview(
+              j,
+              logger,
+              (progress, progressEvent) => {
+                updateJobProgress(j.id, progress, progressEvent);
 
-              // Also update the review context file for file-based progress tracking
-              const runningAgent = progress.agents.find(a => a.status === 'running');
-              const completedAgents = progress.agents
-                .filter(a => a.status === 'completed')
-                .map(a => a.name);
+                // Also update the review context file for file-based progress tracking
+                const runningAgent = progress.agents.find((a) => a.status === 'running');
+                const completedAgents = progress.agents
+                  .filter((a) => a.status === 'completed')
+                  .map((a) => a.name);
 
-              contextGateway.updateProgress(j.localPath, mergeRequestId, {
-                phase: progress.currentPhase,
-                currentStep: runningAgent?.name ?? null,
-                stepsCompleted: completedAgents,
-              });
-            }, signal, deps.claudeInvokerDeps);
+                contextGateway.updateProgress(j.localPath, mergeRequestId, {
+                  phase: progress.currentPhase,
+                  currentStep: runningAgent?.name ?? null,
+                  stepsCompleted: completedAgents,
+                });
+              },
+              signal,
+              deps.claudeInvokerDeps,
+            );
 
             stopWatchingReviewContext(mergeRequestId);
 
@@ -633,7 +711,9 @@ export async function handleGitLabWebhook(
               // PRIMARY: Execute actions from context file (agent writes actions here)
               const reviewContext = contextGateway.read(j.localPath, mergeRequestId);
               if (reviewContext && reviewContext.actions.length > 0) {
-                threadResolveCount = reviewContext.actions.filter(a => a.type === 'THREAD_RESOLVE').length;
+                threadResolveCount = reviewContext.actions.filter(
+                  (a) => a.type === 'THREAD_RESOLVE',
+                ).length;
                 const followupBaseUrl = extractBaseUrl(updateRepoConfig.remoteUrl);
                 const contextActionResult = await executeActionsFromContext(
                   reviewContext,
@@ -645,7 +725,7 @@ export async function handleGitLabWebhook(
                 );
                 logger.info(
                   { ...contextActionResult, threadResolveCount, mrNumber: j.mrNumber },
-                  'Actions executed from context file for followup'
+                  'Actions executed from context file for followup',
                 );
                 contextGateway.setResult(
                   j.localPath,
@@ -656,26 +736,25 @@ export async function handleGitLabWebhook(
                 // FALLBACK: Execute thread actions from stdout markers (backward compatibility)
                 const threadActions = parseThreadActions(result.stdout);
                 if (threadActions.length > 0) {
-                  threadResolveCount = threadActions.filter(a => a.type === 'THREAD_RESOLVE').length;
-                  const actionResult = await dispatchConstrainedActions(
-                    threadActions,
-                    {
-                      context: {
-                        platform: 'gitlab',
-                        projectPath: j.projectPath,
-                        mrNumber: j.mrNumber,
-                        localPath: j.localPath,
-                      },
-                      provenance: resolveProvenance(null),
-                      inventoryGateway: new GitLabThreadInventoryGateway(defaultGitLabExecutor),
-                      logger,
-                      executor: defaultCommandExecutor,
-                      postGateway: deps.noteCommentPostGateway,
-                    }
-                  );
+                  threadResolveCount = threadActions.filter(
+                    (a) => a.type === 'THREAD_RESOLVE',
+                  ).length;
+                  const actionResult = await dispatchConstrainedActions(threadActions, {
+                    context: {
+                      platform: 'gitlab',
+                      projectPath: j.projectPath,
+                      mrNumber: j.mrNumber,
+                      localPath: j.localPath,
+                    },
+                    provenance: resolveProvenance(null),
+                    inventoryGateway: new GitLabThreadInventoryGateway(defaultGitLabExecutor),
+                    logger,
+                    executor: defaultCommandExecutor,
+                    postGateway: deps.noteCommentPostGateway,
+                  });
                   logger.info(
                     { ...actionResult, threadResolveCount, mrNumber: j.mrNumber },
-                    'Thread actions executed from stdout markers for followup (fallback)'
+                    'Thread actions executed from stdout markers for followup (fallback)',
                   );
                 }
               }
@@ -686,7 +765,10 @@ export async function handleGitLabWebhook(
 
               let followupDiffStats = null;
               try {
-                followupDiffStats = deps.diffStatsFetchGateway.fetchDiffStats(j.projectPath, j.mrNumber);
+                followupDiffStats = deps.diffStatsFetchGateway.fetchDiffStats(
+                  j.projectPath,
+                  j.mrNumber,
+                );
               } catch {
                 logger.warn({ mrNumber: j.mrNumber }, 'Failed to fetch diff stats for followup');
               }
@@ -718,14 +800,22 @@ export async function handleGitLabWebhook(
                   openThreads: updatedMr?.openThreads,
                   state: updatedMr?.state,
                 },
-                'Followup stats recorded and threads synced'
+                'Followup stats recorded and threads synced',
               );
 
-              sendNotification('Review followup terminée', `MR !${j.mrNumber} - ${j.projectPath}`, logger);
+              sendNotification(
+                'Review followup terminée',
+                `MR !${j.mrNumber} - ${j.projectPath}`,
+                logger,
+              );
             } else if (!result.cancelled) {
-              sendNotification('Review followup échouée', `MR !${j.mrNumber} - Code ${result.exitCode}`, logger);
+              sendNotification(
+                'Review followup échouée',
+                `MR !${j.mrNumber} - Code ${result.exitCode}`,
+                logger,
+              );
               throw new Error(
-                result.stderr?.trim() || `Followup review failed with exit code ${result.exitCode}`
+                result.stderr?.trim() || `Followup review failed with exit code ${result.exitCode}`,
               );
             }
           };
@@ -784,10 +874,7 @@ export async function handleGitLabWebhook(
   // 4. Find repository configuration
   const repoConfig = findRepositoryByProjectPath(filterResult.projectPath);
   if (!repoConfig) {
-    logger.warn(
-      { projectPath: filterResult.projectPath },
-      'Projet non configuré'
-    );
+    logger.warn({ projectPath: filterResult.projectPath }, 'Projet non configuré');
     reply.status(200).send({
       status: 'ignored',
       reason: 'Repository not configured',
@@ -825,7 +912,7 @@ export async function handleGitLabWebhook(
 
   logger.info(
     { mrNumber: filterResult.mergeRequestNumber, assignedBy: assignedBy.username },
-    'MR tracked for review'
+    'MR tracked for review',
   );
 
   // 6. Create and enqueue job
@@ -859,7 +946,7 @@ export async function handleGitLabWebhook(
         limitUsd: budgetDecision.status.limitUsd,
         consumedUsd: budgetDecision.status.consumedUsd,
       },
-      'Budget exceeded, review not enqueued'
+      'Budget exceeded, review not enqueued',
     );
     deps.broadcastBudgetExceeded({
       mrNumber: job.mrNumber,
@@ -942,7 +1029,8 @@ export async function handleGitLabWebhook(
   }
 }
 
-type GitLabReviewProcessorDeps = Pick<GitLabWebhookDependencies,
+type GitLabReviewProcessorDeps = Pick<
+  GitLabWebhookDependencies,
   | 'reviewContextGateway'
   | 'threadFetchGateway'
   | 'diffMetadataFetchGateway'
@@ -956,17 +1044,14 @@ export function buildGitLabReviewProcessor(
   deps: GitLabReviewProcessorDeps,
   logger: Logger,
 ): ProcessorBuilder {
-  return (_job: ReviewJob) => async (j: ReviewJob, signal: AbortSignal): Promise<void> => {
-    const repoConfig = findRepositoryByProjectPath(j.projectPath);
-    if (!repoConfig) {
-      throw new Error(`No GitLab repository configured for projectPath "${j.projectPath}"`);
-    }
+  return (_job: ReviewJob) =>
+    async (j: ReviewJob, signal: AbortSignal): Promise<void> => {
+      const repoConfig = findRepositoryByProjectPath(j.projectPath);
+      if (!repoConfig) {
+        throw new Error(`No GitLab repository configured for projectPath "${j.projectPath}"`);
+      }
       // Send start notification
-      sendNotification(
-        'Review démarrée',
-        `MR !${j.mrNumber} - ${j.projectPath}`,
-        logger
-      );
+      sendNotification('Review démarrée', `MR !${j.mrNumber} - ${j.projectPath}`, logger);
 
       // Create review context file with pre-fetched threads and diff metadata
       const mergeRequestId = `gitlab-${j.projectPath}-${j.mrNumber}`;
@@ -991,16 +1076,16 @@ export function buildGitLabReviewProcessor(
         if (!pinnedTarget) {
           logger.warn(
             { projectPath: j.projectPath, mrNumber: j.mrNumber },
-            'Thread-fetch target failed provenance pin; action surface is empty'
+            'Thread-fetch target failed provenance pin; action surface is empty',
           );
         }
-        let diffMetadata: import('@/modules/review-execution/entities/reviewContext/reviewContext.js').DiffMetadata | undefined;
+        let diffMetadata: DiffMetadata | undefined;
         try {
           diffMetadata = diffMetadataFetchGw.fetchDiffMetadata(j.projectPath, j.mrNumber);
         } catch (error) {
           logger.warn(
             { mrNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },
-            'Failed to fetch diff metadata, inline comments will be skipped'
+            'Failed to fetch diff metadata, inline comments will be skipped',
           );
         }
         const reviewAgentsList = getProjectAgentsOrFocusDefaults(j.localPath) ?? DEFAULT_AGENTS;
@@ -1016,7 +1101,7 @@ export function buildGitLabReviewProcessor(
         });
         logger.info(
           { mrNumber: j.mrNumber, threadsCount: threads.length, hasDiffMetadata: !!diffMetadata },
-          'Review context file created with threads'
+          'Review context file created with threads',
         );
 
         startWatchingReviewContext(j.id, j.localPath, mergeRequestId);
@@ -1024,37 +1109,39 @@ export function buildGitLabReviewProcessor(
       } catch (error) {
         logger.warn(
           { mrNumber: j.mrNumber, error: error instanceof Error ? error.message : String(error) },
-          'Failed to create review context file, continuing without it'
+          'Failed to create review context file, continuing without it',
         );
       }
 
       // Invoke Claude with progress tracking and cancellation support
-      const result = await invokeClaudeReview(j, logger, (progress, progressEvent) => {
-        updateJobProgress(j.id, progress, progressEvent);
+      const result = await invokeClaudeReview(
+        j,
+        logger,
+        (progress, progressEvent) => {
+          updateJobProgress(j.id, progress, progressEvent);
 
-        // Also update the review context file for file-based progress tracking
-        const runningAgent = progress.agents.find(a => a.status === 'running');
-        const completedAgents = progress.agents
-          .filter(a => a.status === 'completed')
-          .map(a => a.name);
+          // Also update the review context file for file-based progress tracking
+          const runningAgent = progress.agents.find((a) => a.status === 'running');
+          const completedAgents = progress.agents
+            .filter((a) => a.status === 'completed')
+            .map((a) => a.name);
 
-        contextGateway.updateProgress(j.localPath, mergeRequestId, {
-          phase: progress.currentPhase,
-          currentStep: runningAgent?.name ?? null,
-          stepsCompleted: completedAgents,
-        });
-      }, signal, deps.claudeInvokerDeps);
+          contextGateway.updateProgress(j.localPath, mergeRequestId, {
+            phase: progress.currentPhase,
+            currentStep: runningAgent?.name ?? null,
+            stepsCompleted: completedAgents,
+          });
+        },
+        signal,
+        deps.claudeInvokerDeps,
+      );
 
       // Stop watching context file (auto-stops on completion, but explicit stop for error cases)
       stopWatchingReviewContext(mergeRequestId);
 
       // Send completion notification and record stats
       if (result.cancelled) {
-        sendNotification(
-          'Review annulée',
-          `MR !${j.mrNumber} - ${j.projectPath}`,
-          logger
-        );
+        sendNotification('Review annulée', `MR !${j.mrNumber} - ${j.projectPath}`, logger);
       } else if (result.success) {
         // Parse review output for stats
         const parsed = parseReviewOutput(result.stdout);
@@ -1073,7 +1160,7 @@ export function buildGitLabReviewProcessor(
           );
           logger.info(
             { ...contextActionResult, mrNumber: j.mrNumber },
-            'Actions executed from context file'
+            'Actions executed from context file',
           );
           contextGateway.setResult(
             j.localPath,
@@ -1084,25 +1171,22 @@ export function buildGitLabReviewProcessor(
           // FALLBACK: Execute thread actions from stdout markers (backward compatibility)
           const threadActions = parseThreadActions(result.stdout);
           if (threadActions.length > 0) {
-            const actionResult = await dispatchConstrainedActions(
-              threadActions,
-              {
-                context: {
-                  platform: 'gitlab',
-                  projectPath: j.projectPath,
-                  mrNumber: j.mrNumber,
-                  localPath: j.localPath,
-                },
-                provenance: resolveProvenance(null),
-                inventoryGateway: new GitLabThreadInventoryGateway(defaultGitLabExecutor),
-                logger,
-                executor: defaultCommandExecutor,
-                postGateway: deps.noteCommentPostGateway,
-              }
-            );
+            const actionResult = await dispatchConstrainedActions(threadActions, {
+              context: {
+                platform: 'gitlab',
+                projectPath: j.projectPath,
+                mrNumber: j.mrNumber,
+                localPath: j.localPath,
+              },
+              provenance: resolveProvenance(null),
+              inventoryGateway: new GitLabThreadInventoryGateway(defaultGitLabExecutor),
+              logger,
+              executor: defaultCommandExecutor,
+              postGateway: deps.noteCommentPostGateway,
+            });
             logger.info(
               { ...actionResult, mrNumber: j.mrNumber },
-              'Thread actions executed from stdout markers (fallback)'
+              'Thread actions executed from stdout markers (fallback)',
             );
           }
         }
@@ -1139,23 +1223,13 @@ export function buildGitLabReviewProcessor(
             suggestions: parsed.suggestions,
             durationMs: result.durationMs,
           },
-          'Review stats recorded'
+          'Review stats recorded',
         );
 
-        sendNotification(
-          'Review terminée',
-          `MR !${j.mrNumber} - ${j.projectPath}`,
-          logger
-        );
+        sendNotification('Review terminée', `MR !${j.mrNumber} - ${j.projectPath}`, logger);
       } else {
-        sendNotification(
-          'Review échouée',
-          `MR !${j.mrNumber} - Code ${result.exitCode}`,
-          logger
-        );
-        throw new Error(
-          result.stderr?.trim() || `Review failed with exit code ${result.exitCode}`
-        );
+        sendNotification('Review échouée', `MR !${j.mrNumber} - Code ${result.exitCode}`, logger);
+        throw new Error(result.stderr?.trim() || `Review failed with exit code ${result.exitCode}`);
       }
-  };
+    };
 }

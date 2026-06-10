@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   WorktreeSizeProbeCliGateway,
   type DuProcessRunner,
@@ -57,7 +58,7 @@ describe('WorktreeSizeProbeCliGateway', () => {
 
   it('invokes the runner with du -sb <path>', async () => {
     const calls: { args: string[]; cwd: string | undefined }[] = [];
-    const runner: DuProcessRunner = async command => {
+    const runner: DuProcessRunner = async (command) => {
       calls.push({ args: command.args, cwd: command.cwd });
       return { stdout: '42\t/p\n', stderr: '', exitCode: 0 };
     };

@@ -1,8 +1,16 @@
-import type { Presenter } from '@/shared/foundation/presenter.base.js';
-import type { DeveloperInsight, CategoryLevels, DeveloperMetrics, InsightDescription } from '@/modules/statistics-insights/entities/insight/developerInsight.js';
-import type { TeamInsight, AverageLevels } from '@/modules/statistics-insights/entities/insight/teamInsight.js';
+import type {
+  DeveloperInsight,
+  CategoryLevels,
+  DeveloperMetrics,
+  InsightDescription,
+} from '@/modules/statistics-insights/entities/insight/developerInsight.js';
 import type { DeveloperTitle } from '@/modules/statistics-insights/entities/insight/developerTitle.js';
 import type { InsightCategory } from '@/modules/statistics-insights/entities/insight/insightCategory.js';
+import type {
+  TeamInsight,
+  AverageLevels,
+} from '@/modules/statistics-insights/entities/insight/teamInsight.js';
+import type { Presenter } from '@/shared/foundation/presenter.base.js';
 
 export interface DeveloperInsightViewModel {
   developerName: string;
@@ -41,7 +49,7 @@ export class InsightsPresenter implements Presenter<InsightsPresenterInput, Insi
   present(data: InsightsPresenterInput): InsightsViewModel {
     const { developerInsights, teamInsight } = data;
 
-    const sortedDevelopers = [...developerInsights].sort(
+    const sortedDevelopers = [...developerInsights].toSorted(
       (a, b) => b.overallLevel - a.overallLevel,
     );
 

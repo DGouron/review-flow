@@ -1,8 +1,11 @@
-import type { GitLabMergeRequestEvent, GitHubPullRequestEvent } from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
+import type {
+  GitLabMergeRequestEvent,
+  GitHubPullRequestEvent,
+} from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
 
 export class GitLabEventFactory {
   static createMergeRequestEvent(
-    overrides: Partial<GitLabMergeRequestEvent> = {}
+    overrides: Partial<GitLabMergeRequestEvent> = {},
   ): GitLabMergeRequestEvent {
     return {
       object_kind: 'merge_request',
@@ -40,7 +43,7 @@ export class GitLabEventFactory {
 
 export class GitHubEventFactory {
   static createPullRequestEvent(
-    overrides: Partial<GitHubPullRequestEvent> = {}
+    overrides: Partial<GitHubPullRequestEvent> = {},
   ): GitHubPullRequestEvent {
     return {
       action: 'review_requested',

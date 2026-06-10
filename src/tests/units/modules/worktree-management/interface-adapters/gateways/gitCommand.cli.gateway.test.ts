@@ -1,12 +1,16 @@
 import { describe, it, expect } from 'vitest';
+
+import type {
+  GitCommand,
+  GitCommandResult,
+} from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
 import { GitCommandCliGateway } from '@/modules/worktree-management/interface-adapters/gateways/gitCommand.cli.gateway.js';
-import type { GitCommand, GitCommandResult } from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
 
 describe('GitCommandCliGateway', () => {
   it('delegates execution to the injected runner with full command', async () => {
     const receivedCommands: GitCommand[] = [];
     const stubResult: GitCommandResult = { exitCode: 0, stdout: 'ok', stderr: '' };
-    const gateway = new GitCommandCliGateway(async command => {
+    const gateway = new GitCommandCliGateway(async (command) => {
       receivedCommands.push(command);
       return stubResult;
     });

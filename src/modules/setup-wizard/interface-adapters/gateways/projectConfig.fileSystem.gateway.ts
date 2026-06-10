@@ -1,7 +1,19 @@
-import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync, copyFileSync } from 'node:fs';
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  renameSync,
+  mkdirSync,
+  copyFileSync,
+} from 'node:fs';
 import { join, dirname } from 'node:path';
+
 import { z } from 'zod';
-import type { ProjectConfigGateway, ProjectConfigContents } from '@/modules/setup-wizard/entities/projectConfig/projectConfig.gateway.js';
+
+import type {
+  ProjectConfigGateway,
+  ProjectConfigContents,
+} from '@/modules/setup-wizard/entities/projectConfig/projectConfig.gateway.js';
 
 const projectConfigSchema = z.object({
   preset: z.enum(['backend', 'frontend', 'fullstack', 'basic', 'custom']),

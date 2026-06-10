@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import { broadcastBudgetAfterUsage } from '@/frameworks/claude/broadcastBudgetAfterUsage.js';
 import { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';

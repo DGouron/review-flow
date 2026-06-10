@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { buildQueueLanesModel } from '@/dashboard/modules/queueLanes.js';
 
 describe('buildQueueLanesModel', () => {
@@ -13,8 +14,13 @@ describe('buildQueueLanesModel', () => {
     const result = buildQueueLanesModel(pendingFix, pendingApproval);
 
     expect(result.nowLaneItem?.id).toBe('mr-high');
-    expect(result.needsFixItems.map((mergeRequest) => mergeRequest.id)).toEqual(['mr-mid', 'mr-low']);
-    expect(result.readyToApproveItems.map((mergeRequest) => mergeRequest.id)).toEqual(['mr-approve-1']);
+    expect(result.needsFixItems.map((mergeRequest) => mergeRequest.id)).toEqual([
+      'mr-mid',
+      'mr-low',
+    ]);
+    expect(result.readyToApproveItems.map((mergeRequest) => mergeRequest.id)).toEqual([
+      'mr-approve-1',
+    ]);
   });
 
   it('should keep stable counters when lists are empty', () => {

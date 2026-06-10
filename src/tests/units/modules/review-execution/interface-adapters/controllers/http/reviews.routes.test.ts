@@ -1,11 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { reviewRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/reviews.routes.js';
-import { InMemoryReviewFileGateway } from '@/tests/stubs/reviewFile.stub.js';
-import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
-import { StubReviewQueuePort } from '@/tests/stubs/reviewQueue.stub.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { InMemoryReviewFileGateway } from '@/tests/stubs/reviewFile.stub.js';
+import { StubReviewQueuePort } from '@/tests/stubs/reviewQueue.stub.js';
+import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 
 type Repository = { localPath: string; enabled: boolean };
 
@@ -39,7 +40,11 @@ describe('reviewRoutes', () => {
 
   describe('GET /api/reviews', () => {
     it('returns reviews for an explicit valid path', async () => {
-      reviewFileGateway.addReview('/repo/a', '2026-05-01-MR-12-front.md', '# Code Review - MR #12 (login)');
+      reviewFileGateway.addReview(
+        '/repo/a',
+        '2026-05-01-MR-12-front.md',
+        '# Code Review - MR #12 (login)',
+      );
 
       const response = await app.inject({
         method: 'GET',
@@ -77,8 +82,16 @@ describe('reviewRoutes', () => {
     });
 
     it('aggregates enabled repositories and skips disabled ones when no path is given', async () => {
-      reviewFileGateway.addReview('/repo/a', '2026-05-01-MR-1-front.md', '# Code Review - MR #1 (a)');
-      reviewFileGateway.addReview('/repo/b', '2026-05-02-MR-2-front.md', '# Code Review - MR #2 (b)');
+      reviewFileGateway.addReview(
+        '/repo/a',
+        '2026-05-01-MR-1-front.md',
+        '# Code Review - MR #1 (a)',
+      );
+      reviewFileGateway.addReview(
+        '/repo/b',
+        '2026-05-02-MR-2-front.md',
+        '# Code Review - MR #2 (b)',
+      );
       repositories = [
         { localPath: '/repo/a', enabled: true },
         { localPath: '/repo/b', enabled: false },
@@ -172,7 +185,9 @@ describe('reviewRoutes', () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json().success).toBe(true);
-      expect(await reviewFileGateway.reviewExists('/repo/a', '2026-05-01-MR-12-front.md')).toBe(false);
+      expect(await reviewFileGateway.reviewExists('/repo/a', '2026-05-01-MR-12-front.md')).toBe(
+        false,
+      );
     });
 
     it('skips disabled repositories and returns 404 when nothing is deleted', async () => {

@@ -1,10 +1,10 @@
-import type { WizardEventEmitter } from '@/modules/setup-wizard/services/wizardEventEmitter.js';
-import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
-import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
 import type {
   PromptKind,
   PromptOption,
 } from '@/modules/setup-wizard/entities/promptOption/promptOption.schema.js';
+import type { StepId } from '@/modules/setup-wizard/entities/stepId/stepId.schema.js';
+import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.schema.js';
+import type { WizardEventEmitter } from '@/modules/setup-wizard/services/wizardEventEmitter.js';
 
 type LineWriter = (line: string) => void;
 

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { projectContextGuard } from '@/modules/setup-wizard/entities/projectContext/projectContext.guard.js';
 import { ProjectContextFactory } from '@/tests/factories/projectContext.factory.js';
 

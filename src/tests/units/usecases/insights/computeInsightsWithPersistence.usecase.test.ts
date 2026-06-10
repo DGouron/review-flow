@@ -1,11 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { computeInsightsWithPersistence } from '@/modules/statistics-insights/usecases/insights/computeInsightsWithPersistence.usecase.js';
-import { computeDeveloperInsights } from '@/modules/statistics-insights/usecases/insights/computeDeveloperInsights.usecase.js';
-import { computeTeamInsights } from '@/modules/statistics-insights/usecases/insights/computeTeamInsights.usecase.js';
-import { ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
-import { PersistedInsightsDataFactory, PersistedDeveloperMetricsFactory } from '@/tests/factories/persistedInsightsData.factory.js';
-import { DiffStatsFactory } from '@/tests/factories/diffStats.factory.js';
+
 import type { ReviewStats } from '@/modules/statistics-insights/services/statsService.js';
+import { computeDeveloperInsights } from '@/modules/statistics-insights/usecases/insights/computeDeveloperInsights.usecase.js';
+import { computeInsightsWithPersistence } from '@/modules/statistics-insights/usecases/insights/computeInsightsWithPersistence.usecase.js';
+import { computeTeamInsights } from '@/modules/statistics-insights/usecases/insights/computeTeamInsights.usecase.js';
+import { DiffStatsFactory } from '@/tests/factories/diffStats.factory.js';
+import {
+  PersistedInsightsDataFactory,
+  PersistedDeveloperMetricsFactory,
+} from '@/tests/factories/persistedInsightsData.factory.js';
+import { ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 
 function createReviewsForDeveloper(
   developerName: string,
@@ -73,20 +77,22 @@ describe('computeInsightsWithPersistence', () => {
       const existingIds = reviews.slice(0, 3).map((review) => review.id);
 
       const persistedData = PersistedInsightsDataFactory.create({
-        developers: [PersistedDeveloperMetricsFactory.create({
-          developerName: 'alice',
-          totalReviews: 3,
-          totalScore: 24,
-          scoredReviewCount: 3,
-          totalBlocking: 3,
-          totalWarnings: 6,
-          totalSuggestions: 9,
-          totalDuration: 180000,
-          totalAdditions: 0,
-          totalDeletions: 0,
-          diffStatsReviewCount: 0,
-          recentReviews: reviews.slice(0, 3),
-        })],
+        developers: [
+          PersistedDeveloperMetricsFactory.create({
+            developerName: 'alice',
+            totalReviews: 3,
+            totalScore: 24,
+            scoredReviewCount: 3,
+            totalBlocking: 3,
+            totalWarnings: 6,
+            totalSuggestions: 9,
+            totalDuration: 180000,
+            totalAdditions: 0,
+            totalDeletions: 0,
+            diffStatsReviewCount: 0,
+            recentReviews: reviews.slice(0, 3),
+          }),
+        ],
         processedReviewIds: existingIds,
       });
 
@@ -118,20 +124,22 @@ describe('computeInsightsWithPersistence', () => {
       });
 
       const persistedData = PersistedInsightsDataFactory.create({
-        developers: [PersistedDeveloperMetricsFactory.create({
-          developerName: 'alice',
-          totalReviews: 5,
-          totalScore: 35,
-          scoredReviewCount: 5,
-          totalBlocking: 5,
-          totalWarnings: 10,
-          totalSuggestions: 15,
-          totalDuration: 300000,
-          totalAdditions: 0,
-          totalDeletions: 0,
-          diffStatsReviewCount: 0,
-          recentReviews: existingReviews,
-        })],
+        developers: [
+          PersistedDeveloperMetricsFactory.create({
+            developerName: 'alice',
+            totalReviews: 5,
+            totalScore: 35,
+            scoredReviewCount: 5,
+            totalBlocking: 5,
+            totalWarnings: 10,
+            totalSuggestions: 15,
+            totalDuration: 300000,
+            totalAdditions: 0,
+            totalDeletions: 0,
+            diffStatsReviewCount: 0,
+            recentReviews: existingReviews,
+          }),
+        ],
         processedReviewIds: existingReviews.map((review) => review.id),
       });
 
@@ -161,13 +169,15 @@ describe('computeInsightsWithPersistence', () => {
       });
 
       const persistedData = PersistedInsightsDataFactory.create({
-        developers: [PersistedDeveloperMetricsFactory.create({
-          developerName: 'alice',
-          totalReviews: 5,
-          totalScore: 35,
-          scoredReviewCount: 5,
-          recentReviews: existingReviews,
-        })],
+        developers: [
+          PersistedDeveloperMetricsFactory.create({
+            developerName: 'alice',
+            totalReviews: 5,
+            totalScore: 35,
+            scoredReviewCount: 5,
+            recentReviews: existingReviews,
+          }),
+        ],
         processedReviewIds: existingReviews.map((review) => review.id),
       });
 
@@ -205,13 +215,15 @@ describe('computeInsightsWithPersistence', () => {
       );
 
       const persistedData = PersistedInsightsDataFactory.create({
-        developers: [PersistedDeveloperMetricsFactory.create({
-          developerName: 'alice',
-          totalReviews: 19,
-          totalScore: 133,
-          scoredReviewCount: 19,
-          recentReviews: existingReviews,
-        })],
+        developers: [
+          PersistedDeveloperMetricsFactory.create({
+            developerName: 'alice',
+            totalReviews: 19,
+            totalScore: 133,
+            scoredReviewCount: 19,
+            recentReviews: existingReviews,
+          }),
+        ],
         processedReviewIds: existingReviews.map((review) => review.id),
       });
 
@@ -222,9 +234,7 @@ describe('computeInsightsWithPersistence', () => {
         (developer) => developer.developerName === 'alice',
       );
       expect(aliceMetrics?.recentReviews).toHaveLength(20);
-      expect(aliceMetrics?.recentReviews.some(
-        (review) => review.id === 'alice-new-2',
-      )).toBe(true);
+      expect(aliceMetrics?.recentReviews.some((review) => review.id === 'alice-new-2')).toBe(true);
     });
   });
 
@@ -239,20 +249,22 @@ describe('computeInsightsWithPersistence', () => {
       });
 
       const persistedData = PersistedInsightsDataFactory.create({
-        developers: [PersistedDeveloperMetricsFactory.create({
-          developerName: 'alice',
-          totalReviews: 4,
-          totalScore: 28,
-          scoredReviewCount: 4,
-          totalBlocking: 4,
-          totalWarnings: 8,
-          totalSuggestions: 12,
-          totalDuration: 240000,
-          totalAdditions: 0,
-          totalDeletions: 0,
-          diffStatsReviewCount: 0,
-          recentReviews: existingReviews,
-        })],
+        developers: [
+          PersistedDeveloperMetricsFactory.create({
+            developerName: 'alice',
+            totalReviews: 4,
+            totalScore: 28,
+            scoredReviewCount: 4,
+            totalBlocking: 4,
+            totalWarnings: 8,
+            totalSuggestions: 12,
+            totalDuration: 240000,
+            totalAdditions: 0,
+            totalDeletions: 0,
+            diffStatsReviewCount: 0,
+            recentReviews: existingReviews,
+          }),
+        ],
         processedReviewIds: existingReviews.map((review) => review.id),
       });
 
@@ -268,20 +280,22 @@ describe('computeInsightsWithPersistence', () => {
   describe('preserving historical data', () => {
     it('should preserve cumulative data even when current reviews are empty', () => {
       const persistedData = PersistedInsightsDataFactory.create({
-        developers: [PersistedDeveloperMetricsFactory.create({
-          developerName: 'alice',
-          totalReviews: 20,
-          totalScore: 160,
-          scoredReviewCount: 20,
-          totalBlocking: 10,
-          totalWarnings: 20,
-          totalSuggestions: 30,
-          totalDuration: 1200000,
-          totalAdditions: 5000,
-          totalDeletions: 1000,
-          diffStatsReviewCount: 15,
-          recentReviews: createReviewsForDeveloper('alice', 15, { score: 8 }),
-        })],
+        developers: [
+          PersistedDeveloperMetricsFactory.create({
+            developerName: 'alice',
+            totalReviews: 20,
+            totalScore: 160,
+            scoredReviewCount: 20,
+            totalBlocking: 10,
+            totalWarnings: 20,
+            totalSuggestions: 30,
+            totalDuration: 1200000,
+            totalAdditions: 5000,
+            totalDeletions: 1000,
+            diffStatsReviewCount: 15,
+            recentReviews: createReviewsForDeveloper('alice', 15, { score: 8 }),
+          }),
+        ],
         processedReviewIds: Array.from({ length: 20 }, (_, index) => `old-${index}`),
       });
 
@@ -302,20 +316,22 @@ describe('computeInsightsWithPersistence', () => {
       const recentReviews = createReviewsForDeveloper('alice', 10, { score: 8 });
 
       const persistedData = PersistedInsightsDataFactory.create({
-        developers: [PersistedDeveloperMetricsFactory.create({
-          developerName: 'alice',
-          totalReviews: 50,
-          totalScore: 400,
-          scoredReviewCount: 50,
-          totalBlocking: 25,
-          totalWarnings: 50,
-          totalSuggestions: 75,
-          totalDuration: 3000000,
-          totalAdditions: 10000,
-          totalDeletions: 2000,
-          diffStatsReviewCount: 40,
-          recentReviews,
-        })],
+        developers: [
+          PersistedDeveloperMetricsFactory.create({
+            developerName: 'alice',
+            totalReviews: 50,
+            totalScore: 400,
+            scoredReviewCount: 50,
+            totalBlocking: 25,
+            totalWarnings: 50,
+            totalSuggestions: 75,
+            totalDuration: 3000000,
+            totalAdditions: 10000,
+            totalDeletions: 2000,
+            diffStatsReviewCount: 40,
+            recentReviews,
+          }),
+        ],
         processedReviewIds: Array.from({ length: 50 }, (_, index) => `old-${index}`),
       });
 
@@ -331,11 +347,13 @@ describe('computeInsightsWithPersistence', () => {
   describe('new developer appearing', () => {
     it('should add new developer to persisted data', () => {
       const persistedData = PersistedInsightsDataFactory.create({
-        developers: [PersistedDeveloperMetricsFactory.create({
-          developerName: 'alice',
-          totalReviews: 10,
-          recentReviews: createReviewsForDeveloper('alice', 10, { score: 7 }),
-        })],
+        developers: [
+          PersistedDeveloperMetricsFactory.create({
+            developerName: 'alice',
+            totalReviews: 10,
+            recentReviews: createReviewsForDeveloper('alice', 10, { score: 7 }),
+          }),
+        ],
         processedReviewIds: Array.from({ length: 10 }, (_, index) => `alice-${index}`),
       });
 
@@ -460,11 +478,13 @@ describe('computeInsightsWithPersistence', () => {
       };
 
       const persistedData = PersistedInsightsDataFactory.create({
-        developers: [PersistedDeveloperMetricsFactory.create({
-          developerName: 'alice',
-          totalReviews: 6,
-          recentReviews,
-        })],
+        developers: [
+          PersistedDeveloperMetricsFactory.create({
+            developerName: 'alice',
+            totalReviews: 6,
+            recentReviews,
+          }),
+        ],
         processedReviewIds: recentReviews.map((review) => review.id),
         aiInsights,
         reviewCountAtAiGeneration: 6,
@@ -636,10 +656,7 @@ describe('computeInsightsWithPersistence', () => {
         diffStats: { commitsCount: 1, additions: 20, deletions: 10 },
       });
 
-      const result = computeInsightsWithPersistence(
-        [...aliceReviews, ...bobReviews],
-        null,
-      );
+      const result = computeInsightsWithPersistence([...aliceReviews, ...bobReviews], null);
 
       expect(result.developerInsights).toHaveLength(2);
       const names = result.developerInsights.map((insight) => insight.developerName);

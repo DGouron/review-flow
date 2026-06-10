@@ -1,22 +1,10 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+
 import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
-
-export type AddRepositoryRouteResult =
-  | { status: 'ok'; repositories: RepositoryConfig[] }
-  | { status: 'not-a-directory' }
-  | { status: 'duplicate' }
-  | { status: 'write-failed' };
-
-export type RemoveRepositoryRouteResult =
-  | { status: 'ok'; repositories: RepositoryConfig[] }
-  | { status: 'not-found' }
-  | { status: 'write-failed' };
-
-export type PatchRepositoryRouteResult =
-  | { status: 'ok'; repositories: RepositoryConfig[] }
-  | { status: 'not-found' }
-  | { status: 'write-failed' };
+import type { AddRepositoryRouteResult } from '@/modules/cli-configuration/usecases/dashboardRepositories/addRepositoryFromDashboard.usecase.js';
+import type { RemoveRepositoryRouteResult } from '@/modules/cli-configuration/usecases/dashboardRepositories/removeRepositoryFromDashboard.usecase.js';
+import type { PatchRepositoryRouteResult } from '@/modules/cli-configuration/usecases/dashboardRepositories/updateRepositoryEnabledFromDashboard.usecase.js';
 
 export interface RepositoriesRoutesOptions {
   getRepositories: () => RepositoryConfig[];

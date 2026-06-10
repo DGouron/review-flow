@@ -1,4 +1,5 @@
-import type { z } from 'zod'
+import type { z } from 'zod';
+
 import type {
   reviewActionSchema,
   threadResolveActionSchema,
@@ -7,19 +8,19 @@ import type {
   addLabelActionSchema,
   postInlineCommentActionSchema,
   fetchThreadsActionSchema,
-} from './reviewAction.schema.js'
+} from './reviewAction.schema.js';
 
 // Individual action types
-export type ThreadResolveAction = z.infer<typeof threadResolveActionSchema>
-export type PostCommentAction = z.infer<typeof postCommentActionSchema>
-export type ThreadReplyAction = z.infer<typeof threadReplyActionSchema>
-export type AddLabelAction = z.infer<typeof addLabelActionSchema>
-export type PostInlineCommentAction = z.infer<typeof postInlineCommentActionSchema>
-export type FetchThreadsAction = z.infer<typeof fetchThreadsActionSchema>
+export type ThreadResolveAction = z.infer<typeof threadResolveActionSchema>;
+export type PostCommentAction = z.infer<typeof postCommentActionSchema>;
+export type ThreadReplyAction = z.infer<typeof threadReplyActionSchema>;
+export type AddLabelAction = z.infer<typeof addLabelActionSchema>;
+export type PostInlineCommentAction = z.infer<typeof postInlineCommentActionSchema>;
+export type FetchThreadsAction = z.infer<typeof fetchThreadsActionSchema>;
 
 // Unified ReviewAction type
-export type ReviewAction = z.infer<typeof reviewActionSchema>
+export type ReviewAction = z.infer<typeof reviewActionSchema>;
 
 // Backward compatibility aliases
-export type ThreadAction = ReviewAction
-export type ReviewContextAction = ReviewAction
+export type ThreadAction = ReviewAction;
+export type ReviewContextAction = ReviewAction;

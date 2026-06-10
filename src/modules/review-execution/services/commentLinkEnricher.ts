@@ -18,7 +18,7 @@
 // File path must start with a word char, contain at least one dot (extension), then :lineNumber.
 // The path must NOT start with // (to exclude URLs).
 const FILE_LINE_PATTERN =
-  /(?<prefix>[`(]?)(?<filePath>[\w][\w./-]*\.[\w]+):(?<line>\d+)(?<suffix>[`)]?)/g
+  /(?<prefix>[`(]?)(?<filePath>[\w][\w./-]*\.[\w]+):(?<line>\d+)(?<suffix>[`)]?)/g;
 
 export function enrichCommentWithLinks(
   body: string,
@@ -29,22 +29,22 @@ export function enrichCommentWithLinks(
 ): string {
   return body.replace(FILE_LINE_PATTERN, (match, prefix, filePath, line, suffix, offset) => {
     // Skip if preceded by :// (URL pattern like https://example.com:443)
-    const beforeMatch = body.slice(Math.max(0, offset - 10), offset)
+    const beforeMatch = body.slice(Math.max(0, offset - 10), offset);
     if (/:\/{1,2}$/.test(beforeMatch) || /:\/{1,2}[\w.-]*$/.test(beforeMatch)) {
-      return match
+      return match;
     }
 
     // Skip if the filePath portion doesn't look like a real file (must contain a dot for extension)
     // Already handled by regex, but double check for edge cases
     if (!filePath.includes('.')) {
-      return match
+      return match;
     }
 
-    const blobPrefix = platform === 'github' ? 'blob' : '-/blob'
-    const blobUrl = `${baseUrl}/${projectPath}/${blobPrefix}/${headSha}/${filePath}#L${line}`
+    const blobPrefix = platform === 'github' ? 'blob' : '-/blob';
+    const blobUrl = `${baseUrl}/${projectPath}/${blobPrefix}/${headSha}/${filePath}#L${line}`;
     // When wrapped in backticks, the link markdown already includes backticks — don't double them
-    const outerPrefix = prefix === '`' ? '' : prefix
-    const outerSuffix = suffix === '`' ? '' : suffix
-    return `${outerPrefix}[\`${filePath}:${line}\`](${blobUrl})${outerSuffix}`
-  })
+    const outerPrefix = prefix === '`' ? '' : prefix;
+    const outerSuffix = suffix === '`' ? '' : suffix;
+    return `${outerPrefix}[\`${filePath}:${line}\`](${blobUrl})${outerSuffix}`;
+  });
 }

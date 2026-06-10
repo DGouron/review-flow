@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { auditBilling } from '@/modules/claude-invocation/usecases/auditBilling.usecase.js';
 import { StubBillingStateGateway } from '@/tests/stubs/billingState.stub.js';
 

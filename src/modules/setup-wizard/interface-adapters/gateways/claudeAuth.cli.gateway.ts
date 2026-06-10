@@ -1,14 +1,24 @@
 import { execSync, spawnSync } from 'node:child_process';
-import type { ClaudeAuthGateway, ClaudeLoginResult } from '@/modules/setup-wizard/entities/claudeAuth/claudeAuth.gateway.js';
+
+import type {
+  ClaudeAuthGateway,
+  ClaudeLoginResult,
+} from '@/modules/setup-wizard/entities/claudeAuth/claudeAuth.gateway.js';
 
 interface ClaudeAuthCliGatewayDependencies {
   executeCommand?: (command: string, options?: object) => Buffer | string;
-  spawnInteractive?: (command: string, args: string[]) => { status: number | null; signal: NodeJS.Signals | null };
+  spawnInteractive?: (
+    command: string,
+    args: string[],
+  ) => { status: number | null; signal: NodeJS.Signals | null };
 }
 
 export class ClaudeAuthCliGateway implements ClaudeAuthGateway {
   private readonly executor: (command: string, options?: object) => Buffer | string;
-  private readonly spawnInteractive: (command: string, args: string[]) => { status: number | null; signal: NodeJS.Signals | null };
+  private readonly spawnInteractive: (
+    command: string,
+    args: string[],
+  ) => { status: number | null; signal: NodeJS.Signals | null };
 
   constructor(deps: ClaudeAuthCliGatewayDependencies = {}) {
     this.executor = deps.executeCommand ?? execSync;
@@ -43,7 +53,10 @@ export class ClaudeAuthCliGateway implements ClaudeAuthGateway {
   async triggerLogin(): Promise<ClaudeLoginResult> {
     const result = this.spawnInteractive('claude', ['/login']);
     if (result.status !== 0) {
-      return { success: false, error: `claude /login exited with status ${result.status ?? 'null'}` };
+      return {
+        success: false,
+        error: `claude /login exited with status ${result.status ?? 'null'}`,
+      };
     }
     return { success: true, error: null };
   }

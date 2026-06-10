@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { renderTeamTab } from '@/dashboard/modules/teamTab.js';
 
 function createTranslate() {
@@ -171,14 +172,16 @@ describe('renderTeamTab', () => {
 
   it('should render trend indicators on stat bars', () => {
     const data = createInsightsData({
-      developers: [createDeveloperViewModel({
-        categoryLevels: {
-          quality: { level: 8, trend: 'improving' },
-          responsiveness: { level: 6, trend: 'declining' },
-          codeVolume: { level: 7, trend: 'stable' },
-          iteration: { level: 5, trend: 'improving' },
-        },
-      })],
+      developers: [
+        createDeveloperViewModel({
+          categoryLevels: {
+            quality: { level: 8, trend: 'improving' },
+            responsiveness: { level: 6, trend: 'declining' },
+            codeVolume: { level: 7, trend: 'stable' },
+            iteration: { level: 5, trend: 'improving' },
+          },
+        }),
+      ],
     });
 
     const html = renderTeamTab(data, translate);
@@ -202,7 +205,13 @@ describe('renderTeamTab', () => {
     const data = createInsightsData({
       aiInsights: {
         developers: [],
-        team: { summary: 'Team summary', strengths: [], weaknesses: [], recommendations: [], dynamics: 'Balanced' },
+        team: {
+          summary: 'Team summary',
+          strengths: [],
+          weaknesses: [],
+          recommendations: [],
+          dynamics: 'Balanced',
+        },
         generatedAt: '2026-03-15T10:00:00Z',
       },
       hasNewReviewsSinceAiGeneration: true,
@@ -220,7 +229,13 @@ describe('renderTeamTab', () => {
     const data = createInsightsData({
       aiInsights: {
         developers: [],
-        team: { summary: 'Team summary', strengths: [], weaknesses: [], recommendations: [], dynamics: 'Balanced' },
+        team: {
+          summary: 'Team summary',
+          strengths: [],
+          weaknesses: [],
+          recommendations: [],
+          dynamics: 'Balanced',
+        },
         generatedAt: '2026-03-15T10:00:00Z',
       },
       hasNewReviewsSinceAiGeneration: false,
@@ -274,7 +289,13 @@ describe('renderTeamTab', () => {
             summary: 'Alice is great',
           },
         ],
-        team: { summary: 'Team', strengths: [], weaknesses: [], recommendations: [], dynamics: 'Good' },
+        team: {
+          summary: 'Team',
+          strengths: [],
+          weaknesses: [],
+          recommendations: [],
+          dynamics: 'Good',
+        },
         generatedAt: '2026-03-15T10:00:00Z',
       },
     });
@@ -300,7 +321,13 @@ describe('renderTeamTab', () => {
             summary: 'Alice profile',
           },
         ],
-        team: { summary: 'Team', strengths: [], weaknesses: [], recommendations: [], dynamics: 'Good' },
+        team: {
+          summary: 'Team',
+          strengths: [],
+          weaknesses: [],
+          recommendations: [],
+          dynamics: 'Good',
+        },
         generatedAt: '2026-03-15T10:00:00Z',
       },
     });
@@ -363,18 +390,20 @@ describe('renderTeamTab', () => {
 
   it('should render metric chips with avg score and quality rate', () => {
     const data = createInsightsData({
-      developers: [createDeveloperViewModel({
-        metrics: {
-          averageScore: 8.3,
-          averageBlocking: 0.1,
-          averageWarnings: 1.4,
-          averageDuration: 300,
-          totalFollowups: 2,
-          averageAdditions: 40,
-          averageDeletions: 15,
-          firstReviewQualityRate: 0.9,
-        },
-      })],
+      developers: [
+        createDeveloperViewModel({
+          metrics: {
+            averageScore: 8.3,
+            averageBlocking: 0.1,
+            averageWarnings: 1.4,
+            averageDuration: 300,
+            totalFollowups: 2,
+            averageAdditions: 40,
+            averageDeletions: 15,
+            firstReviewQualityRate: 0.9,
+          },
+        }),
+      ],
     });
 
     const html = renderTeamTab(data, translate);

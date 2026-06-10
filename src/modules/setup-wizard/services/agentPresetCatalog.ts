@@ -1,9 +1,24 @@
 import type { Preset } from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
 
 const PRESET_AGENTS: Record<Preset, string[]> = {
-  backend: ['architecture', 'solid', 'testing', 'code-quality', 'security', 'ddd', 'clean-architecture'],
+  backend: [
+    'architecture',
+    'solid',
+    'testing',
+    'code-quality',
+    'security',
+    'ddd',
+    'clean-architecture',
+  ],
   frontend: ['architecture', 'testing', 'code-quality', 'react-best-practices'],
-  fullstack: ['architecture', 'solid', 'testing', 'code-quality', 'security', 'react-best-practices'],
+  fullstack: [
+    'architecture',
+    'solid',
+    'testing',
+    'code-quality',
+    'security',
+    'react-best-practices',
+  ],
   basic: [],
   custom: [],
 };

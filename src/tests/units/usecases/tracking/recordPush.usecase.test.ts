@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
+
 import { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
-import { InMemoryReviewRequestTrackingGateway } from '../../../stubs/reviewRequestTracking.stub.js';
+
 import { TrackedMrFactory } from '../../../factories/trackedMr.factory.js';
+import { InMemoryReviewRequestTrackingGateway } from '../../../stubs/reviewRequestTracking.stub.js';
 
 describe('RecordPushUseCase', () => {
   it('should record push timestamp on matching MR', () => {

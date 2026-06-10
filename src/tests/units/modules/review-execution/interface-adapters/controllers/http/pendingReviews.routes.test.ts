@@ -1,14 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
 import { pendingReviewsRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/pendingReviews.routes.js';
-import { ListPendingReviewsUseCase } from '@/modules/review-execution/usecases/listPendingReviews.usecase.js';
+import { PendingReviewPresenter } from '@/modules/review-execution/interface-adapters/presenters/pendingReview.presenter.js';
 import { ConfirmPendingReviewUseCase } from '@/modules/review-execution/usecases/confirmPendingReview.usecase.js';
 import { DismissPendingReviewUseCase } from '@/modules/review-execution/usecases/dismissPendingReview.usecase.js';
-import { PendingReviewPresenter } from '@/modules/review-execution/interface-adapters/presenters/pendingReview.presenter.js';
-import { StubPendingReviewRequestGateway } from '@/tests/stubs/pendingReviewRequest.stub.js';
+import { ListPendingReviewsUseCase } from '@/modules/review-execution/usecases/listPendingReviews.usecase.js';
 import { PendingReviewRequestFactory } from '@/tests/factories/pendingReviewRequest.factory.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { StubPendingReviewRequestGateway } from '@/tests/stubs/pendingReviewRequest.stub.js';
 
 async function buildApp(
   gateway: StubPendingReviewRequestGateway,
@@ -65,7 +66,7 @@ describe('pendingReviewsRoutes', () => {
     expect(response.statusCode).toBe(200);
     const body = response.json() as { pendingReviews: Array<{ identifier: string }> };
     expect(body.pendingReviews).toHaveLength(2);
-    expect(body.pendingReviews.map((entry) => entry.identifier).sort()).toEqual(['p1', 'p2']);
+    expect(body.pendingReviews.map((entry) => entry.identifier).toSorted()).toEqual(['p1', 'p2']);
   });
 
   it('POST /api/pending-reviews/:id/confirm returns confirmed status', async () => {

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { gitHubIssueCommentEventGuard } from '@/modules/platform-integration/entities/github/githubIssueCommentEvent.guard.js';
 
 function validPayload(): unknown {

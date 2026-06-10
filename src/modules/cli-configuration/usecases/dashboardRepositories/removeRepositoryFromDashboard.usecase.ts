@@ -1,6 +1,10 @@
-import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
-import type { RemoveRepositoryRouteResult } from '@/modules/cli-configuration/interface-adapters/controllers/http/repositories.routes.js';
 import type { RemoveRepositoryFromConfigUseCase } from '@/modules/cli-configuration/usecases/cli/removeRepositoryFromConfig.usecase.js';
+import type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
+
+export type RemoveRepositoryRouteResult =
+  | { status: 'ok'; repositories: RepositoryConfig[] }
+  | { status: 'not-found' }
+  | { status: 'write-failed' };
 
 export interface RemoveRepositoryFromDashboardDependencies {
   removeRepositoryFromConfig: RemoveRepositoryFromConfigUseCase;

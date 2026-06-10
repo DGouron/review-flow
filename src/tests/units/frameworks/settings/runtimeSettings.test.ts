@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import {
   configureSettingsPath,
   configureSettingsLogger,
@@ -213,7 +215,9 @@ describe('runtimeSettings', () => {
       it('throws when setTriggerMode receives an unknown trigger mode', async () => {
         await loadSettingsFromDisk();
 
-        await expect(setTriggerMode('manual' as TriggerMode)).rejects.toThrow(/Invalid trigger mode/);
+        await expect(setTriggerMode('manual' as TriggerMode)).rejects.toThrow(
+          /Invalid trigger mode/,
+        );
       });
     });
 
@@ -227,9 +231,8 @@ describe('runtimeSettings', () => {
       it('defaults to 24 when no settings file exists', async () => {
         await loadSettingsFromDisk();
 
-        const { getWorktreeStaleThresholdHours } = await import(
-          '@/frameworks/settings/runtimeSettings.js'
-        );
+        const { getWorktreeStaleThresholdHours } =
+          await import('@/frameworks/settings/runtimeSettings.js');
         expect(getWorktreeStaleThresholdHours()).toBe(24);
       });
 
@@ -240,9 +243,8 @@ describe('runtimeSettings', () => {
         );
 
         await loadSettingsFromDisk();
-        const { getWorktreeStaleThresholdHours } = await import(
-          '@/frameworks/settings/runtimeSettings.js'
-        );
+        const { getWorktreeStaleThresholdHours } =
+          await import('@/frameworks/settings/runtimeSettings.js');
 
         expect(getWorktreeStaleThresholdHours()).toBe(48);
       });
@@ -254,18 +256,16 @@ describe('runtimeSettings', () => {
         );
 
         await loadSettingsFromDisk();
-        const { getWorktreeStaleThresholdHours } = await import(
-          '@/frameworks/settings/runtimeSettings.js'
-        );
+        const { getWorktreeStaleThresholdHours } =
+          await import('@/frameworks/settings/runtimeSettings.js');
 
         expect(getWorktreeStaleThresholdHours()).toBe(24);
       });
 
       it('persists worktreeStaleThresholdHours after setWorktreeStaleThresholdHours', async () => {
         await loadSettingsFromDisk();
-        const { setWorktreeStaleThresholdHours } = await import(
-          '@/frameworks/settings/runtimeSettings.js'
-        );
+        const { setWorktreeStaleThresholdHours } =
+          await import('@/frameworks/settings/runtimeSettings.js');
 
         await setWorktreeStaleThresholdHours(72);
 
@@ -275,12 +275,13 @@ describe('runtimeSettings', () => {
 
       it('throws when setWorktreeStaleThresholdHours receives a value outside [1, 720]', async () => {
         await loadSettingsFromDisk();
-        const { setWorktreeStaleThresholdHours } = await import(
-          '@/frameworks/settings/runtimeSettings.js'
-        );
+        const { setWorktreeStaleThresholdHours } =
+          await import('@/frameworks/settings/runtimeSettings.js');
 
         await expect(setWorktreeStaleThresholdHours(0)).rejects.toThrow(/Invalid stale threshold/);
-        await expect(setWorktreeStaleThresholdHours(721)).rejects.toThrow(/Invalid stale threshold/);
+        await expect(setWorktreeStaleThresholdHours(721)).rejects.toThrow(
+          /Invalid stale threshold/,
+        );
       });
     });
 

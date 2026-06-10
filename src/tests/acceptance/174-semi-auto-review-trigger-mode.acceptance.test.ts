@@ -1,14 +1,16 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
-import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
+import type { PendingReviewRequest } from '@/modules/review-execution/entities/pendingReviewRequest/pendingReviewRequest.schema.js';
+import { PendingReviewRequestFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/pendingReviewRequest.fileSystem.gateway.js';
 import { ConfirmPendingReviewUseCase } from '@/modules/review-execution/usecases/confirmPendingReview.usecase.js';
 import { DismissPendingReviewUseCase } from '@/modules/review-execution/usecases/dismissPendingReview.usecase.js';
+import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
 import { ListPendingReviewsUseCase } from '@/modules/review-execution/usecases/listPendingReviews.usecase.js';
-import { PendingReviewRequestFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/pendingReviewRequest.fileSystem.gateway.js';
-import type { PendingReviewRequest } from '@/modules/review-execution/entities/pendingReviewRequest/pendingReviewRequest.schema.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 
 function createReviewJob(overrides: Partial<ReviewJob> = {}): ReviewJob {
@@ -178,7 +180,9 @@ describe('Acceptance — SPEC-174: Semi-automatic review trigger mode', () => {
       );
 
       const freshGateway = new PendingReviewRequestFileSystemGateway({ rootDir: pendingDir });
-      const listUseCase = new ListPendingReviewsUseCase({ pendingReviewRequestGateway: freshGateway });
+      const listUseCase = new ListPendingReviewsUseCase({
+        pendingReviewRequestGateway: freshGateway,
+      });
 
       const restored = await listUseCase.execute();
 

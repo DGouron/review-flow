@@ -1,6 +1,11 @@
 import { execSync } from 'node:child_process';
-import type { DaemonServiceGateway, DaemonStatus, DaemonInstallResult } from '@/modules/setup-wizard/entities/daemonService/daemonService.gateway.js';
+
 import type { DaemonHealthProbeGateway } from '@/modules/setup-wizard/entities/daemonHealthProbe/daemonHealthProbe.gateway.js';
+import type {
+  DaemonServiceGateway,
+  DaemonStatus,
+  DaemonInstallResult,
+} from '@/modules/setup-wizard/entities/daemonService/daemonService.gateway.js';
 
 const SERVICE_NAME = 'reviewflow-app';
 const POLL_INTERVAL_MS = 500;
@@ -48,14 +53,19 @@ export class DaemonServiceSystemdGateway implements DaemonServiceGateway {
 
   async install(): Promise<DaemonInstallResult> {
     if (this.platform !== 'linux') {
-      return { success: false, requiresSudo: false, error: `Plateforme ${this.platform} non supportée par systemd` };
+      return {
+        success: false,
+        requiresSudo: false,
+        error: `Plateforme ${this.platform} non supportée par systemd`,
+      };
     }
     try {
       this.executor(`systemctl --user enable --now ${SERVICE_NAME}`, { stdio: 'pipe' });
       return { success: true, requiresSudo: false, error: null };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      const requiresSudo = message.toLowerCase().includes('permission') || message.toLowerCase().includes('sudo');
+      const requiresSudo =
+        message.toLowerCase().includes('permission') || message.toLowerCase().includes('sudo');
       return { success: false, requiresSudo, error: message };
     }
   }

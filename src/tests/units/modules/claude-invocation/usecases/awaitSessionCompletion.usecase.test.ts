@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { awaitSessionCompletion } from '@/modules/claude-invocation/usecases/awaitSessionCompletion.usecase.js';
-import { StubMcpCompletionBridge } from '@/tests/stubs/mcpCompletion.stub.js';
-import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
-import { ClaudeSessionFactory } from '@/tests/factories/claudeSession.factory.js';
-import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
+
 import type {
   AgentStatusEntry,
   AgentStatusValue,
 } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
+import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
+import { awaitSessionCompletion } from '@/modules/claude-invocation/usecases/awaitSessionCompletion.usecase.js';
+import { ClaudeSessionFactory } from '@/tests/factories/claudeSession.factory.js';
+import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
+import { StubMcpCompletionBridge } from '@/tests/stubs/mcpCompletion.stub.js';
 
 describe('awaitSessionCompletion use case', () => {
   beforeEach(() => {

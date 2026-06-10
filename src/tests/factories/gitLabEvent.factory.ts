@@ -1,15 +1,15 @@
-import type { GitLabMergeRequestEvent } from '@/modules/platform-integration/entities/gitlab/gitlabMergeRequestEvent.guard.js'
-import type { GitLabPushEvent } from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js'
+import type { GitLabMergeRequestEvent } from '@/modules/platform-integration/entities/gitlab/gitlabMergeRequestEvent.guard.js';
+import type { GitLabPushEvent } from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
 
 type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P]
-}
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
 
 function deepMerge<T extends object>(target: T, source: DeepPartial<T>): T {
-  const result = { ...target }
+  const result = { ...target };
   for (const key in source) {
-    const sourceValue = source[key]
-    const targetValue = target[key]
+    const sourceValue = source[key];
+    const targetValue = target[key];
     if (
       sourceValue !== undefined &&
       typeof sourceValue === 'object' &&
@@ -19,17 +19,17 @@ function deepMerge<T extends object>(target: T, source: DeepPartial<T>): T {
       targetValue !== null &&
       !Array.isArray(targetValue)
     ) {
-      result[key] = deepMerge(targetValue, sourceValue as DeepPartial<typeof targetValue>)
+      result[key] = deepMerge(targetValue, sourceValue as DeepPartial<typeof targetValue>);
     } else if (sourceValue !== undefined) {
-      result[key] = sourceValue as T[typeof key]
+      result[key] = sourceValue as T[typeof key];
     }
   }
-  return result
+  return result;
 }
 
 export class GitLabEventFactory {
   static createMergeRequestEvent(
-    overrides?: DeepPartial<GitLabMergeRequestEvent>
+    overrides?: DeepPartial<GitLabMergeRequestEvent>,
   ): GitLabMergeRequestEvent {
     const base: GitLabMergeRequestEvent = {
       object_kind: 'merge_request',
@@ -58,18 +58,18 @@ export class GitLabEventFactory {
       },
       reviewers: [],
       assignees: [],
-    }
+    };
 
-    return overrides ? deepMerge(base, overrides) : base
+    return overrides ? deepMerge(base, overrides) : base;
   }
 
   static createWithAssignee(
     assigneeUsername: string,
-    assigneeName = 'MR Assignee'
+    assigneeName = 'MR Assignee',
   ): GitLabMergeRequestEvent {
     return this.createMergeRequestEvent({
       assignees: [{ username: assigneeUsername, name: assigneeName }],
-    })
+    });
   }
 
   static createWithReviewerAdded(reviewerUsername: string): GitLabMergeRequestEvent {
@@ -84,7 +84,7 @@ export class GitLabEventFactory {
           current: [{ username: reviewerUsername }],
         },
       },
-    })
+    });
   }
 
   static createDraftMr(): GitLabMergeRequestEvent {
@@ -92,7 +92,7 @@ export class GitLabEventFactory {
       object_attributes: {
         draft: true,
       },
-    })
+    });
   }
 
   static createClosedMr(): GitLabMergeRequestEvent {
@@ -101,7 +101,7 @@ export class GitLabEventFactory {
         state: 'closed',
         action: 'close',
       },
-    })
+    });
   }
 
   static createMergedMr(): GitLabMergeRequestEvent {
@@ -110,7 +110,7 @@ export class GitLabEventFactory {
         state: 'merged',
         action: 'merge',
       },
-    })
+    });
   }
 
   static createApprovedMr(): GitLabMergeRequestEvent {
@@ -119,7 +119,7 @@ export class GitLabEventFactory {
         state: 'opened',
         action: 'approved',
       },
-    })
+    });
   }
 
   static createMrUpdate(): GitLabMergeRequestEvent {
@@ -127,7 +127,7 @@ export class GitLabEventFactory {
       object_attributes: {
         action: 'update',
       },
-    })
+    });
   }
 
   static createPushEvent(overrides?: DeepPartial<GitLabPushEvent>): GitLabPushEvent {
@@ -145,8 +145,8 @@ export class GitLabEventFactory {
           message: 'Test commit',
         },
       ],
-    }
+    };
 
-    return overrides ? deepMerge(base, overrides) : base
+    return overrides ? deepMerge(base, overrides) : base;
   }
 }

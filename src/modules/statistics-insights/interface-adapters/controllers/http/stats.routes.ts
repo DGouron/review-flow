@@ -1,10 +1,11 @@
 import type { FastifyPluginAsync } from 'fastify';
-import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
+
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
 import type { BackfillProgress } from '@/modules/statistics-insights/entities/backfill/backfillProgress.js';
+import { safeParseRecalculateBody } from '@/modules/statistics-insights/entities/stats/recalculateBody.guard.js';
+import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import { getStatsSummary } from '@/modules/statistics-insights/services/statsService.js';
 import { recalculateWithBackfill } from '@/modules/statistics-insights/usecases/stats/recalculateWithBackfill.usecase.js';
-import { safeParseRecalculateBody } from '@/modules/statistics-insights/entities/stats/recalculateBody.guard.js';
 
 interface RepositoryInfo {
   localPath: string;
@@ -18,18 +19,18 @@ interface StatsRoutesOptions {
   getRepositories: () => RepositoryInfo[];
   diffStatsFetchGateways?: { gitlab: DiffStatsFetchGateway; github: DiffStatsFetchGateway };
   broadcastBackfillProgress?: (progress: BackfillProgress) => void;
-  logger?: { warn: (message: string, data?: unknown) => void; info: (message: string, data?: unknown) => void; error: (message: string, data?: unknown) => void };
+  logger?: {
+    warn: (message: string, data?: unknown) => void;
+    info: (message: string, data?: unknown) => void;
+    error: (message: string, data?: unknown) => void;
+  };
 }
 
-export const statsRoutes: FastifyPluginAsync<StatsRoutesOptions> = async (
-  fastify,
-  options,
-) => {
+export const statsRoutes: FastifyPluginAsync<StatsRoutesOptions> = async (fastify, options) => {
   const { statsGateway, getRepositories } = options;
 
-  fastify.get('/api/stats', async (request) => {
-    const query = request.query as { path?: string };
-    const projectPath = query.path?.trim();
+  fastify.get<{ Querystring: { path?: string } }>('/api/stats', async (request) => {
+    const projectPath = request.query.path?.trim();
 
     if (projectPath) {
       if (!projectPath.startsWith('/') || projectPath.includes('..')) {
@@ -76,9 +77,7 @@ export const statsRoutes: FastifyPluginAsync<StatsRoutesOptions> = async (
     }
 
     const repositories = getRepositories();
-    const repository = repositories.find(
-      (repo) => repo.enabled && repo.localPath === projectPath,
-    );
+    const repository = repositories.find((repo) => repo.enabled && repo.localPath === projectPath);
 
     if (!repository) {
       reply.status(404).send({ error: 'Projet non trouvé dans la configuration' });

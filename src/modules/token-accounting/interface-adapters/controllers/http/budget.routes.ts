@@ -1,10 +1,11 @@
 import type { FastifyPluginAsync } from 'fastify';
+
 import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
 import type { BudgetGateway } from '@/modules/token-accounting/entities/budget/budget.gateway.js';
+import { BUDGET_DEFAULT_USD } from '@/modules/token-accounting/entities/budget/budgetConfig.schema.js';
+import type { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
 import type { GetBudgetStatusUseCase } from '@/modules/token-accounting/usecases/getBudgetStatus/getBudgetStatus.usecase.js';
 import type { UpdateBudgetUseCase } from '@/modules/token-accounting/usecases/updateBudget/updateBudget.usecase.js';
-import type { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
-import { BUDGET_DEFAULT_USD } from '@/modules/token-accounting/entities/budget/budgetConfig.schema.js';
 
 export interface BudgetRoutesOptions {
   getBudgetStatus: GetBudgetStatusUseCase;
@@ -19,10 +20,7 @@ interface UpdateBudgetBody {
   limitUsd?: unknown;
 }
 
-export const budgetRoutes: FastifyPluginAsync<BudgetRoutesOptions> = async (
-  fastify,
-  opts,
-) => {
+export const budgetRoutes: FastifyPluginAsync<BudgetRoutesOptions> = async (fastify, opts) => {
   const { getBudgetStatus, updateBudget, budgetGateway, presenter, getRepositories, now } = opts;
 
   fastify.get('/api/budget', async () => {

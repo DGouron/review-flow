@@ -15,23 +15,25 @@
  *   7. Zero-diff merge request
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdirSync, rmSync, existsSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { pino, type Logger } from 'pino';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
+import { fetchDiffStatsSafely } from '@/modules/statistics-insights/services/fetchDiffStatsSafely.js';
 import {
   addReviewStats,
   loadProjectStats,
   getStatsSummary,
 } from '@/modules/statistics-insights/services/statsService.js';
-import { fetchDiffStatsSafely } from '@/modules/statistics-insights/services/fetchDiffStatsSafely.js';
 import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
-import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
-import { StubDiffStatsFetchGateway } from '@/tests/stubs/diffStatsFetch.stub.js';
 import { DiffStatsFactory } from '@/tests/factories/diffStats.factory.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
-import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
+import { StubDiffStatsFetchGateway } from '@/tests/stubs/diffStatsFetch.stub.js';
+import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 
 const REVIEW_OUTPUT = '[REVIEW_STATS:blocking=1:warnings=2:suggestions=3:score=7.5]';
 
@@ -60,7 +62,14 @@ describe('Acceptance — SPEC-47: Capture git diff stats', () => {
       diffStatsGateway.setResponse(42, { commitsCount: 3, additions: 150, deletions: 30 });
 
       const fetched = fetchDiffStatsSafely(diffStatsGateway, projectPath, 42, logger);
-      const reviewStats = addReviewStats(projectPath, 42, 60_000, REVIEW_OUTPUT, 'reviewer', fetched);
+      const reviewStats = addReviewStats(
+        projectPath,
+        42,
+        60_000,
+        REVIEW_OUTPUT,
+        'reviewer',
+        fetched,
+      );
 
       expect(reviewStats.diffStats).toEqual({
         commitsCount: 3,
@@ -69,7 +78,10 @@ describe('Acceptance — SPEC-47: Capture git diff stats', () => {
       });
 
       const tracking = new InMemoryReviewRequestTrackingGateway();
-      tracking.create(projectPath, TrackedMrFactory.create({ id: 'gh-42', mrNumber: 42, platform: 'github' }));
+      tracking.create(
+        projectPath,
+        TrackedMrFactory.create({ id: 'gh-42', mrNumber: 42, platform: 'github' }),
+      );
       const recordCompletion = new RecordReviewCompletionUseCase(tracking);
 
       const result = recordCompletion.execute({
@@ -99,7 +111,14 @@ describe('Acceptance — SPEC-47: Capture git diff stats', () => {
       diffStatsGateway.setResponse(42, { commitsCount: 5, additions: 200, deletions: 45 });
 
       const fetched = fetchDiffStatsSafely(diffStatsGateway, projectPath, 42, logger);
-      const reviewStats = addReviewStats(projectPath, 42, 90_000, REVIEW_OUTPUT, 'reviewer', fetched);
+      const reviewStats = addReviewStats(
+        projectPath,
+        42,
+        90_000,
+        REVIEW_OUTPUT,
+        'reviewer',
+        fetched,
+      );
 
       expect(reviewStats.diffStats).toEqual({
         commitsCount: 5,
@@ -119,7 +138,14 @@ describe('Acceptance — SPEC-47: Capture git diff stats', () => {
       expect(fetched).toBeNull();
       expect(warnSpy).toHaveBeenCalledOnce();
 
-      const reviewStats = addReviewStats(projectPath, 42, 60_000, REVIEW_OUTPUT, 'reviewer', fetched);
+      const reviewStats = addReviewStats(
+        projectPath,
+        42,
+        60_000,
+        REVIEW_OUTPUT,
+        'reviewer',
+        fetched,
+      );
 
       expect(reviewStats.diffStats).toBeNull();
       expect(reviewStats.mrNumber).toBe(42);
@@ -263,7 +289,14 @@ describe('Acceptance — SPEC-47: Capture git diff stats', () => {
   describe('Scenario 7: Zero-diff merge request', () => {
     it('persists zero values as-is (not coerced to null)', () => {
       const zeroDiff: DiffStats = { commitsCount: 1, additions: 0, deletions: 0 };
-      const reviewStats = addReviewStats(projectPath, 42, 60_000, REVIEW_OUTPUT, 'reviewer', zeroDiff);
+      const reviewStats = addReviewStats(
+        projectPath,
+        42,
+        60_000,
+        REVIEW_OUTPUT,
+        'reviewer',
+        zeroDiff,
+      );
 
       expect(reviewStats.diffStats).toEqual({ commitsCount: 1, additions: 0, deletions: 0 });
 

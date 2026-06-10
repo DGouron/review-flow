@@ -1,53 +1,22 @@
-import type { FastifyInstance } from 'fastify';
-import fastifyStatic from '@fastify/static';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
-import type { Dependencies } from '@/main/dependencies.js';
-import { healthRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/health.routes.js';
-import { settingsRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/settings.routes.js';
-import { reviewRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/reviews.routes.js';
-import { statsRoutes } from '@/modules/statistics-insights/interface-adapters/controllers/http/stats.routes.js';
-import { overviewRoutes } from '@/modules/statistics-insights/interface-adapters/controllers/http/overview.routes.js';
-import { mrTrackingRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTracking.routes.js';
-import { loadProjectConfig } from '@/config/projectConfig.js';
-import { mrTrackingAdvancedRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTrackingAdvanced.routes.js';
-import { logsRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/logs.routes.js';
-import { cliStatusRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/cliStatus.routes.js';
-import { projectConfigRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/projectConfig.routes.js';
-import { ProjectConfigFileSystemGateway } from '@/modules/cli-configuration/interface-adapters/gateways/projectConfig.fileSystem.gateway.js';
-import { UpdateProjectConfigUseCase } from '@/modules/cli-configuration/usecases/projectConfig/updateProjectConfig.usecase.js';
-import { repositoriesRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/repositories.routes.js';
-import { AddRepositoriesToConfigUseCase } from '@/modules/cli-configuration/usecases/cli/addRepositoriesToConfig.usecase.js';
-import { RemoveRepositoryFromConfigUseCase } from '@/modules/cli-configuration/usecases/cli/removeRepositoryFromConfig.usecase.js';
-import { ToggleRepositoryEnabledUseCase } from '@/modules/cli-configuration/usecases/cli/toggleRepositoryEnabled.usecase.js';
-import { AddRepositoryFromDashboardUseCase } from '@/modules/cli-configuration/usecases/dashboardRepositories/addRepositoryFromDashboard.usecase.js';
-import { RemoveRepositoryFromDashboardUseCase } from '@/modules/cli-configuration/usecases/dashboardRepositories/removeRepositoryFromDashboard.usecase.js';
-import { UpdateRepositoryEnabledFromDashboardUseCase } from '@/modules/cli-configuration/usecases/dashboardRepositories/updateRepositoryEnabledFromDashboard.usecase.js';
-import { enrichSingleRepository, resolveActiveConfigPath } from '@/frameworks/config/configLoader.js';
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { cleanupRoutes } from '@/modules/data-lifecycle/interface-adapters/controllers/http/cleanup.routes.js';
-import { versionRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/version.routes.js';
-import { insightsRoutes } from '@/modules/statistics-insights/interface-adapters/controllers/http/insights.routes.js';
-import { registerWebSocketRoutes } from '@/main/websocket.js';
-import { setupWizardRoutes } from '@/modules/setup-wizard/interface-adapters/controllers/http/setupWizard.routes.js';
-import { SetupRunRegistry } from '@/modules/setup-wizard/usecases/streamSetupRun.usecase.js';
-import { SetupProcessChildProcessGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupProcess.childProcess.gateway.js';
-import { SetupStateFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupState.fileSystem.gateway.js';
-import { emberChatRoutes } from '@/modules/ember-chat/interface-adapters/controllers/http/emberChat.routes.js';
-import { EmberAnswerTransportClaudeGateway } from '@/modules/ember-chat/interface-adapters/gateways/emberAnswerTransport.claude.gateway.js';
-import { EmberReadDataCompositeGateway } from '@/modules/ember-chat/interface-adapters/gateways/emberReadData.composite.gateway.js';
-import { EmberMemoryFileSystemGateway } from '@/modules/ember-chat/interface-adapters/gateways/emberMemory.fileSystem.gateway.js';
-import { ClaudeSessionCliGateway } from '@/modules/claude-invocation/interface-adapters/gateways/claudeSession.cli.gateway.js';
-import { defaultProcessRunner } from '@/frameworks/claude/claudeInvoker.js';
-import { ProcessEnvironmentGateway } from '@/modules/claude-invocation/interface-adapters/gateways/environment.process.gateway.js';
-import { getConfigDir } from '@/shared/services/configDir.js';
 import { homedir } from 'node:os';
-import { handleGitLabWebhook, buildGitLabReviewProcessor } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
-import { handleGitHubWebhook, buildGitHubReviewProcessor } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
-import { InMemoryIdempotencyStore } from '@/modules/platform-integration/interface-adapters/gateways/inMemoryIdempotencyStore.gateway.js';
-import { transportGuardMiddleware } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
-import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
-import { resolveTransportGuardConfig } from '@/security/transportGuardConfig.js';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import fastifyStatic from '@fastify/static';
+import type { FastifyInstance } from 'fastify';
+
+import { findRepositoryByProjectPath } from '@/config/loader.js';
+import { loadProjectConfig } from '@/config/projectConfig.js';
+import { defaultProcessRunner } from '@/frameworks/claude/claudeInvoker.js';
+import {
+  createDefaultClaudeInvokerDependencies,
+  type ClaudeInvokerDependencies,
+} from '@/frameworks/claude/claudeInvoker.js';
+import {
+  enrichSingleRepository,
+  resolveActiveConfigPath,
+} from '@/frameworks/config/configLoader.js';
 import {
   cancelJob,
   getJobStatus,
@@ -58,67 +27,6 @@ import {
   getRunningCount,
   getTotalCapacity,
 } from '@/frameworks/queue/pQueueAdapter.js';
-import { RecomputeGlobalConcurrencyUseCase } from '@/modules/cli-configuration/usecases/projectConfig/recomputeGlobalConcurrency.usecase.js';
-import { RepositoriesListRuntimeConfigGateway } from '@/modules/cli-configuration/interface-adapters/gateways/repositoriesList.runtimeConfig.gateway.js';
-import { GitLabThreadFetchGateway, defaultGitLabExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
-import { GitLabMemberAccessCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/memberAccess.gitlab.cli.gateway.js';
-import { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
-import { GitLabDiffMetadataFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/diffMetadataFetch.gitlab.gateway.js';
-import { GitHubThreadFetchGateway, defaultGitHubExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.github.gateway.js';
-import { GitHubDiffMetadataFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/diffMetadataFetch.github.gateway.js';
-import { GitLabDiffStatsFetchGateway } from '@/modules/statistics-insights/interface-adapters/gateways/diffStatsFetch.gitlab.gateway.js';
-import { GitHubDiffStatsFetchGateway } from '@/modules/statistics-insights/interface-adapters/gateways/diffStatsFetch.github.gateway.js';
-import { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
-import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
-import { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
-import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
-import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
-import { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
-import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
-import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
-import { GitLabNoteCommentPostCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/noteCommentPost.gitlab.cli.gateway.js';
-import { GitHubNoteCommentPostCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/noteCommentPost.github.cli.gateway.js';
-import { EgressScannedNoteCommentPostGateway } from '@/modules/platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.js';
-import { LoggerEgressTraceGateway } from '@/modules/platform-integration/interface-adapters/gateways/loggerEgressTrace.gateway.js';
-import { createEgressScanner } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
-import { defaultEgressScanConfig } from '@/modules/platform-integration/entities/egressScan/egressScan.defaults.js';
-import { GitLabApprovalRevocationCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/approvalRevocation.gitlab.cli.gateway.js';
-import { GitHubApprovalRevocationCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/approvalRevocation.github.cli.gateway.js';
-import { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
-import { tokenUsageRoutes } from '@/modules/token-accounting/interface-adapters/controllers/http/tokenUsage.routes.js';
-import { worktreeOverviewRoutes } from '@/modules/worktree-management/interface-adapters/controllers/http/worktreeOverview.routes.js';
-import { SummarizeTokenUsageUseCase } from '@/modules/token-accounting/usecases/summarizeTokenUsage/summarizeTokenUsage.usecase.js';
-import { TokenUsageSummaryPresenter } from '@/modules/token-accounting/interface-adapters/presenters/tokenUsageSummary.presenter.js';
-import { FilesystemTokenUsageGateway } from '@/modules/token-accounting/interface-adapters/gateways/tokenUsage/tokenUsage.filesystem.gateway.js';
-import { budgetRoutes } from '@/modules/token-accounting/interface-adapters/controllers/http/budget.routes.js';
-import { FilesystemBudgetGateway } from '@/modules/token-accounting/interface-adapters/gateways/budget/budget.filesystem.gateway.js';
-import { GetBudgetStatusUseCase } from '@/modules/token-accounting/usecases/getBudgetStatus/getBudgetStatus.usecase.js';
-import { UpdateBudgetUseCase } from '@/modules/token-accounting/usecases/updateBudget/updateBudget.usecase.js';
-import { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
-import { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
-import { BUDGET_DEFAULT_USD } from '@/modules/token-accounting/entities/budget/budgetConfig.schema.js';
-import { broadcastBudgetExceeded, broadcastBudgetStatus, broadcastPendingChanged } from '@/main/websocket.js';
-import { PendingReviewRequestFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/pendingReviewRequest.fileSystem.gateway.js';
-import { ListPendingReviewsUseCase } from '@/modules/review-execution/usecases/listPendingReviews.usecase.js';
-import { ConfirmPendingReviewUseCase } from '@/modules/review-execution/usecases/confirmPendingReview.usecase.js';
-import { DismissPendingReviewUseCase } from '@/modules/review-execution/usecases/dismissPendingReview.usecase.js';
-import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
-import { ProcessorRegistry } from '@/modules/review-execution/services/processorRegistry.js';
-import { findRepositoryByProjectPath } from '@/config/loader.js';
-import { PendingReviewPresenter } from '@/modules/review-execution/interface-adapters/presenters/pendingReview.presenter.js';
-import { pendingReviewsRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/pendingReviews.routes.js';
-import {
-  createDefaultClaudeInvokerDependencies,
-  type ClaudeInvokerDependencies,
-} from '@/frameworks/claude/claudeInvoker.js';
-import { checkVersion } from '@/modules/cli-configuration/usecases/version/checkVersion.usecase.js';
-import { triggerSelfUpdate } from '@/modules/cli-configuration/usecases/version/triggerSelfUpdate.usecase.js';
-import { NpmPackageVersionGateway } from '@/modules/cli-configuration/interface-adapters/gateways/packageVersion.npm.gateway.js';
-import { VersionCacheMemoryGateway } from '@/modules/cli-configuration/interface-adapters/gateways/versionCache.memory.gateway.js';
-import { SelfUpdateCliGateway } from '@/modules/cli-configuration/interface-adapters/gateways/selfUpdate.cli.gateway.js';
-import { InstallTypeDetectorFsGateway } from '@/modules/cli-configuration/interface-adapters/gateways/installTypeDetector.fs.gateway.js';
-import { broadcastBackfillProgress } from '@/main/websocket.js';
-import { AiInsightsSessionClaudeGateway } from '@/modules/statistics-insights/interface-adapters/gateways/aiInsightsSession.claude.gateway.js';
 import {
   getDefaultLanguage,
   getModel,
@@ -126,11 +34,124 @@ import {
   getWorktreeStaleThresholdHours,
   setTriggerMode,
 } from '@/frameworks/settings/runtimeSettings.js';
-import { detectDegradedWorktrees } from '@/modules/worktree-management/usecases/detectDegradedWorktrees.usecase.js';
+import type { Dependencies } from '@/main/dependencies.js';
+import { registerWebSocketRoutes } from '@/main/websocket.js';
+import {
+  broadcastBudgetExceeded,
+  broadcastBudgetStatus,
+  broadcastPendingChanged,
+} from '@/main/websocket.js';
+import { broadcastBackfillProgress } from '@/main/websocket.js';
+import { ClaudeSessionCliGateway } from '@/modules/claude-invocation/interface-adapters/gateways/claudeSession.cli.gateway.js';
+import { ProcessEnvironmentGateway } from '@/modules/claude-invocation/interface-adapters/gateways/environment.process.gateway.js';
+import { cliStatusRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/cliStatus.routes.js';
+import { healthRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/health.routes.js';
+import { logsRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/logs.routes.js';
+import { projectConfigRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/projectConfig.routes.js';
+import { repositoriesRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/repositories.routes.js';
+import { settingsRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/settings.routes.js';
+import { versionRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/version.routes.js';
+import { InstallTypeDetectorFsGateway } from '@/modules/cli-configuration/interface-adapters/gateways/installTypeDetector.fs.gateway.js';
+import { NpmPackageVersionGateway } from '@/modules/cli-configuration/interface-adapters/gateways/packageVersion.npm.gateway.js';
+import { ProjectConfigFileSystemGateway } from '@/modules/cli-configuration/interface-adapters/gateways/projectConfig.fileSystem.gateway.js';
+import { RepositoriesListRuntimeConfigGateway } from '@/modules/cli-configuration/interface-adapters/gateways/repositoriesList.runtimeConfig.gateway.js';
+import { SelfUpdateCliGateway } from '@/modules/cli-configuration/interface-adapters/gateways/selfUpdate.cli.gateway.js';
+import { VersionCacheMemoryGateway } from '@/modules/cli-configuration/interface-adapters/gateways/versionCache.memory.gateway.js';
+import { AddRepositoriesToConfigUseCase } from '@/modules/cli-configuration/usecases/cli/addRepositoriesToConfig.usecase.js';
+import { RemoveRepositoryFromConfigUseCase } from '@/modules/cli-configuration/usecases/cli/removeRepositoryFromConfig.usecase.js';
+import { ToggleRepositoryEnabledUseCase } from '@/modules/cli-configuration/usecases/cli/toggleRepositoryEnabled.usecase.js';
+import { AddRepositoryFromDashboardUseCase } from '@/modules/cli-configuration/usecases/dashboardRepositories/addRepositoryFromDashboard.usecase.js';
+import { RemoveRepositoryFromDashboardUseCase } from '@/modules/cli-configuration/usecases/dashboardRepositories/removeRepositoryFromDashboard.usecase.js';
+import { UpdateRepositoryEnabledFromDashboardUseCase } from '@/modules/cli-configuration/usecases/dashboardRepositories/updateRepositoryEnabledFromDashboard.usecase.js';
+import { RecomputeGlobalConcurrencyUseCase } from '@/modules/cli-configuration/usecases/projectConfig/recomputeGlobalConcurrency.usecase.js';
+import { UpdateProjectConfigUseCase } from '@/modules/cli-configuration/usecases/projectConfig/updateProjectConfig.usecase.js';
+import { checkVersion } from '@/modules/cli-configuration/usecases/version/checkVersion.usecase.js';
+import { triggerSelfUpdate } from '@/modules/cli-configuration/usecases/version/triggerSelfUpdate.usecase.js';
+import { cleanupRoutes } from '@/modules/data-lifecycle/interface-adapters/controllers/http/cleanup.routes.js';
+import { emberChatRoutes } from '@/modules/ember-chat/interface-adapters/controllers/http/emberChat.routes.js';
+import { EmberAnswerTransportClaudeGateway } from '@/modules/ember-chat/interface-adapters/gateways/emberAnswerTransport.claude.gateway.js';
+import { EmberMemoryFileSystemGateway } from '@/modules/ember-chat/interface-adapters/gateways/emberMemory.fileSystem.gateway.js';
+import { EmberReadDataCompositeGateway } from '@/modules/ember-chat/interface-adapters/gateways/emberReadData.composite.gateway.js';
+import { defaultEgressScanConfig } from '@/modules/platform-integration/entities/egressScan/egressScan.defaults.js';
+import { createEgressScanner } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
+import {
+  handleGitHubWebhook,
+  buildGitHubReviewProcessor,
+} from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
+import {
+  handleGitLabWebhook,
+  buildGitLabReviewProcessor,
+} from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
+import { transportGuardMiddleware } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
+import { GitHubApprovalRevocationCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/approvalRevocation.github.cli.gateway.js';
+import { GitLabApprovalRevocationCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/approvalRevocation.gitlab.cli.gateway.js';
+import { GitHubNoteCommentPostCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/noteCommentPost.github.cli.gateway.js';
+import { GitLabNoteCommentPostCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/noteCommentPost.gitlab.cli.gateway.js';
+import { GitHubDiffMetadataFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/diffMetadataFetch.github.gateway.js';
+import { GitLabDiffMetadataFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/diffMetadataFetch.gitlab.gateway.js';
+import { EgressScannedNoteCommentPostGateway } from '@/modules/platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.js';
+import { InMemoryIdempotencyStore } from '@/modules/platform-integration/interface-adapters/gateways/inMemoryIdempotencyStore.gateway.js';
+import { LoggerEgressTraceGateway } from '@/modules/platform-integration/interface-adapters/gateways/loggerEgressTrace.gateway.js';
+import { GitLabMemberAccessCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/memberAccess.gitlab.cli.gateway.js';
+import {
+  GitHubThreadFetchGateway,
+  defaultGitHubExecutor,
+} from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.github.gateway.js';
+import {
+  GitLabThreadFetchGateway,
+  defaultGitLabExecutor,
+} from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
+import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
+import { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
+import { pendingReviewsRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/pendingReviews.routes.js';
+import { reviewRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/reviews.routes.js';
+import { PendingReviewRequestFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/pendingReviewRequest.fileSystem.gateway.js';
+import { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
+import { PendingReviewPresenter } from '@/modules/review-execution/interface-adapters/presenters/pendingReview.presenter.js';
+import { ProcessorRegistry } from '@/modules/review-execution/services/processorRegistry.js';
+import { ConfirmPendingReviewUseCase } from '@/modules/review-execution/usecases/confirmPendingReview.usecase.js';
+import { DismissPendingReviewUseCase } from '@/modules/review-execution/usecases/dismissPendingReview.usecase.js';
+import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
+import { ListPendingReviewsUseCase } from '@/modules/review-execution/usecases/listPendingReviews.usecase.js';
+import { setupWizardRoutes } from '@/modules/setup-wizard/interface-adapters/controllers/http/setupWizard.routes.js';
+import { SetupProcessChildProcessGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupProcess.childProcess.gateway.js';
+import { SetupStateFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupState.fileSystem.gateway.js';
+import { SetupRunRegistry } from '@/modules/setup-wizard/usecases/streamSetupRun.usecase.js';
+import { insightsRoutes } from '@/modules/statistics-insights/interface-adapters/controllers/http/insights.routes.js';
+import { overviewRoutes } from '@/modules/statistics-insights/interface-adapters/controllers/http/overview.routes.js';
+import { statsRoutes } from '@/modules/statistics-insights/interface-adapters/controllers/http/stats.routes.js';
+import { AiInsightsSessionClaudeGateway } from '@/modules/statistics-insights/interface-adapters/gateways/aiInsightsSession.claude.gateway.js';
+import { GitHubDiffStatsFetchGateway } from '@/modules/statistics-insights/interface-adapters/gateways/diffStatsFetch.github.gateway.js';
+import { GitLabDiffStatsFetchGateway } from '@/modules/statistics-insights/interface-adapters/gateways/diffStatsFetch.gitlab.gateway.js';
+import { BUDGET_DEFAULT_USD } from '@/modules/token-accounting/entities/budget/budgetConfig.schema.js';
+import { budgetRoutes } from '@/modules/token-accounting/interface-adapters/controllers/http/budget.routes.js';
+import { tokenUsageRoutes } from '@/modules/token-accounting/interface-adapters/controllers/http/tokenUsage.routes.js';
+import { FilesystemBudgetGateway } from '@/modules/token-accounting/interface-adapters/gateways/budget/budget.filesystem.gateway.js';
+import { FilesystemTokenUsageGateway } from '@/modules/token-accounting/interface-adapters/gateways/tokenUsage/tokenUsage.filesystem.gateway.js';
+import { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
+import { TokenUsageSummaryPresenter } from '@/modules/token-accounting/interface-adapters/presenters/tokenUsageSummary.presenter.js';
+import { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
+import { GetBudgetStatusUseCase } from '@/modules/token-accounting/usecases/getBudgetStatus/getBudgetStatus.usecase.js';
+import { SummarizeTokenUsageUseCase } from '@/modules/token-accounting/usecases/summarizeTokenUsage/summarizeTokenUsage.usecase.js';
+import { UpdateBudgetUseCase } from '@/modules/token-accounting/usecases/updateBudget/updateBudget.usecase.js';
+import { mrTrackingRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTracking.routes.js';
+import { mrTrackingAdvancedRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTrackingAdvanced.routes.js';
+import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
+import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
+import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
+import { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
+import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
+import { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
+import { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
+import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
 import type {
   RemoveResult,
   WorktreeIdentity,
 } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+import { worktreeOverviewRoutes } from '@/modules/worktree-management/interface-adapters/controllers/http/worktreeOverview.routes.js';
+import { detectDegradedWorktrees } from '@/modules/worktree-management/usecases/detectDegradedWorktrees.usecase.js';
+import { resolveTransportGuardConfig } from '@/security/transportGuardConfig.js';
+import { getConfigDir } from '@/shared/services/configDir.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -147,10 +168,7 @@ const versionCache = new VersionCacheMemoryGateway();
 const selfUpdateCommand = new SelfUpdateCliGateway();
 const installTypeDetector = new InstallTypeDetectorFsGateway();
 
-export async function registerRoutes(
-  app: FastifyInstance,
-  deps: Dependencies
-): Promise<void> {
+export async function registerRoutes(app: FastifyInstance, deps: Dependencies): Promise<void> {
   await app.register(fastifyStatic, {
     root: join(__dirname, '..', 'dashboard'),
     prefix: '/dashboard/',
@@ -187,7 +205,9 @@ export async function registerRoutes(
   const updateProjectConfig = new UpdateProjectConfigUseCase(projectConfigGateway);
 
   const recomputeGlobalConcurrency = new RecomputeGlobalConcurrencyUseCase({
-    repositoriesListGateway: new RepositoriesListRuntimeConfigGateway(() => deps.config.repositories),
+    repositoriesListGateway: new RepositoriesListRuntimeConfigGateway(
+      () => deps.config.repositories,
+    ),
     projectConfigGateway,
     queueCapacityPort: {
       setGlobalConcurrency,
@@ -198,16 +218,17 @@ export async function registerRoutes(
 
   await app.register(overviewRoutes, {
     getRepositories: () => deps.config.repositories,
-    getActiveJobs: () => getJobsStatus().active.map((job) => ({
-      id: job.id,
-      mrNumber: job.mrNumber,
-      project: job.project,
-      mrUrl: job.mrUrl,
-      status: job.status,
-      startedAt: job.startedAt ?? null,
-      title: job.title,
-      jobType: job.jobType,
-    })),
+    getActiveJobs: () =>
+      getJobsStatus().active.map((job) => ({
+        id: job.id,
+        mrNumber: job.mrNumber,
+        project: job.project,
+        mrUrl: job.mrUrl,
+        status: job.status,
+        startedAt: job.startedAt ?? null,
+        title: job.title,
+        jobType: job.jobType,
+      })),
     statsGateway: deps.statsGateway,
     reviewFileGateway: deps.reviewFileGateway,
     projectConfigGateway,
@@ -301,7 +322,9 @@ export async function registerRoutes(
     budgetStatusPresenter,
     broadcastBudgetStatus,
     getEnabledLocalPaths: () =>
-      deps.config.repositories.filter((repository) => repository.enabled).map((repository) => repository.localPath),
+      deps.config.repositories
+        .filter((repository) => repository.enabled)
+        .map((repository) => repository.localPath),
     // Reuse the shared invocation deps so timers (server.ts) and review jobs
     // see the same BillingState / SupervisorHealth / completion bridge.
     invocation: deps.claudeInvocationDeps,
@@ -325,7 +348,10 @@ export async function registerRoutes(
         ? new GitHubDiffStatsFetchGateway(defaultGitHubExecutor)
         : new GitLabDiffStatsFetchGateway(defaultGitLabExecutor),
     createSyncThreadsUseCase: (platform) =>
-      new SyncThreadsUseCase(deps.reviewRequestTrackingGateway, threadFetchGatewayFactory(platform)),
+      new SyncThreadsUseCase(
+        deps.reviewRequestTrackingGateway,
+        threadFetchGatewayFactory(platform),
+      ),
     recordReviewCompletion: new RecordReviewCompletionUseCase(deps.reviewRequestTrackingGateway),
     enforceBudget,
     broadcastBudgetExceeded,
@@ -415,12 +441,28 @@ export async function registerRoutes(
       egressTraceGateway,
     ),
   };
-  const gitLabReviewProcessorBuilder = buildGitLabReviewProcessor(gitLabReviewProcessorDeps, deps.logger);
-  const gitHubReviewProcessorBuilder = buildGitHubReviewProcessor(gitHubReviewProcessorDeps, deps.logger);
-  for (const triggerSource of ['webhook-initial', 'webhook-followup', 'dashboard-manual'] as const) {
+  const gitLabReviewProcessorBuilder = buildGitLabReviewProcessor(
+    gitLabReviewProcessorDeps,
+    deps.logger,
+  );
+  const gitHubReviewProcessorBuilder = buildGitHubReviewProcessor(
+    gitHubReviewProcessorDeps,
+    deps.logger,
+  );
+  for (const triggerSource of [
+    'webhook-initial',
+    'webhook-followup',
+    'dashboard-manual',
+  ] as const) {
     for (const jobType of ['review', 'followup'] as const) {
-      processorRegistry.register({ triggerSource, platform: 'gitlab', jobType }, gitLabReviewProcessorBuilder);
-      processorRegistry.register({ triggerSource, platform: 'github', jobType }, gitHubReviewProcessorBuilder);
+      processorRegistry.register(
+        { triggerSource, platform: 'gitlab', jobType },
+        gitLabReviewProcessorBuilder,
+      );
+      processorRegistry.register(
+        { triggerSource, platform: 'github', jobType },
+        gitHubReviewProcessorBuilder,
+      );
     }
   }
 
@@ -470,7 +512,10 @@ export async function registerRoutes(
     let proceed = false;
     transportGuardMiddleware(
       {
-        request: { socket: { remoteAddress: request.socket.remoteAddress }, headers: request.headers },
+        request: {
+          socket: { remoteAddress: request.socket.remoteAddress },
+          headers: request.headers,
+        },
         reply: { code: (status) => reply.code(status), send: () => reply.send() },
         next: () => {
           proceed = true;
@@ -521,7 +566,10 @@ export async function registerRoutes(
     let proceedGitHub = false;
     transportGuardMiddleware(
       {
-        request: { socket: { remoteAddress: request.socket.remoteAddress }, headers: request.headers },
+        request: {
+          socket: { remoteAddress: request.socket.remoteAddress },
+          headers: request.headers,
+        },
         reply: { code: (status) => reply.code(status), send: () => reply.send() },
         next: () => {
           proceedGitHub = true;
@@ -582,7 +630,8 @@ export async function registerRoutes(
     reply.redirect('/dashboard/setup.html');
   });
 
-  const emberGroundingProjectPath = deps.config.repositories.find((repository) => repository.enabled)?.localPath ?? '';
+  const emberGroundingProjectPath =
+    deps.config.repositories.find((repository) => repository.enabled)?.localPath ?? '';
   const emberReadData = new EmberReadDataCompositeGateway({
     statsGateway: deps.statsGateway,
     insightsGateway: deps.insightsGateway,
@@ -657,8 +706,14 @@ export async function registerRoutes(
     };
   });
 
-  checkVersion(
-    { currentVersion, forceRefresh: false },
-    { packageVersionGateway, cache: versionCache, installTypeDetector },
-  ).catch(() => {});
+  void (async () => {
+    try {
+      await checkVersion(
+        { currentVersion, forceRefresh: false },
+        { packageVersionGateway, cache: versionCache, installTypeDetector },
+      );
+    } catch {
+      return;
+    }
+  })();
 }

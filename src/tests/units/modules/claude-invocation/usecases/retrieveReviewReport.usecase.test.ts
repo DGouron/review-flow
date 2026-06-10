@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
+
 import { retrieveReviewReport } from '@/modules/claude-invocation/usecases/retrieveReviewReport.usecase.js';
-import { StubReviewReportGateway } from '@/tests/stubs/reviewReport.stub.js';
 import { ClaudeSessionFactory } from '@/tests/factories/claudeSession.factory.js';
+import { StubReviewReportGateway } from '@/tests/stubs/reviewReport.stub.js';
 
 describe('retrieveReviewReport use case', () => {
   it('returns the report content when the file exists', () => {

@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
 import Fastify from 'fastify';
+import { describe, it, expect, vi } from 'vitest';
+
 import { statsRoutes } from '@/modules/statistics-insights/interface-adapters/controllers/http/stats.routes.js';
-import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
-import { StubDiffStatsFetchGateway } from '@/tests/stubs/diffStatsFetch.stub.js';
 import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+import { StubDiffStatsFetchGateway } from '@/tests/stubs/diffStatsFetch.stub.js';
+import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 
 function createTestOptions(overrides: Record<string, unknown> = {}) {
   const statsGateway = new InMemoryStatsGateway();
@@ -11,7 +12,9 @@ function createTestOptions(overrides: Record<string, unknown> = {}) {
 
   return {
     statsGateway,
-    getRepositories: () => [{ localPath: '/test/project', name: 'test', enabled: true, platform: 'gitlab' }],
+    getRepositories: () => [
+      { localPath: '/test/project', name: 'test', enabled: true, platform: 'gitlab' },
+    ],
     diffStatsFetchGateways: { gitlab: diffStatsFetchGateway, github: diffStatsFetchGateway },
     broadcastBackfillProgress: vi.fn(),
     logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
@@ -41,7 +44,9 @@ describe('POST /api/stats/recalculate', () => {
 
   it('should return 404 when path is not found in repositories', async () => {
     const options = createTestOptions({
-      getRepositories: () => [{ localPath: '/other/project', name: 'other', enabled: true, platform: 'gitlab' }],
+      getRepositories: () => [
+        { localPath: '/other/project', name: 'other', enabled: true, platform: 'gitlab' },
+      ],
     });
 
     const fastify = Fastify();
@@ -77,10 +82,13 @@ describe('POST /api/stats/recalculate', () => {
       ReviewStatsFactory.create({ id: 'r1', mrNumber: 1, score: 6 }),
       ReviewStatsFactory.create({ id: 'r2', mrNumber: 2, score: 8 }),
     ];
-    options.statsGateway.saveProjectStats('/test/project', ProjectStatsFactory.create({
-      reviews,
-      averageScore: 0,
-    }));
+    options.statsGateway.saveProjectStats(
+      '/test/project',
+      ProjectStatsFactory.create({
+        reviews,
+        averageScore: 0,
+      }),
+    );
 
     const fastify = Fastify();
     await fastify.register(statsRoutes, options);

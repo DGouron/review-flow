@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   parseReviewRequest,
   safeParseReviewRequest,
@@ -32,7 +33,9 @@ describe('reviewRequest.guard', () => {
 
   it('safeParse succeeds on a valid request and fails on a bad url', () => {
     expect(safeParseReviewRequest(validReviewRequest).success).toBe(true);
-    expect(safeParseReviewRequest({ ...validReviewRequest, webUrl: 'not-a-url' }).success).toBe(false);
+    expect(safeParseReviewRequest({ ...validReviewRequest, webUrl: 'not-a-url' }).success).toBe(
+      false,
+    );
   });
 
   it('isValid reflects validity', () => {

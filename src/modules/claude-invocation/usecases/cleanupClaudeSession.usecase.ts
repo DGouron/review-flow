@@ -21,7 +21,7 @@ export async function cleanupClaudeSession(
 ): Promise<CleanupClaudeSessionResult> {
   const warnings: string[] = [];
 
-  const stopResult = await deps.sessionGateway.stop(input.sessionId).catch(error => {
+  const stopResult = await deps.sessionGateway.stop(input.sessionId).catch((error) => {
     const message = error instanceof Error ? error.message : String(error);
     warnings.push(`stop failed: ${message}`);
     return { success: false, warning: message };
@@ -30,7 +30,7 @@ export async function cleanupClaudeSession(
     warnings.push(`stop: ${stopResult.warning}`);
   }
 
-  const removeResult = await deps.sessionGateway.remove(input.sessionId).catch(error => {
+  const removeResult = await deps.sessionGateway.remove(input.sessionId).catch((error) => {
     const message = error instanceof Error ? error.message : String(error);
     warnings.push(`remove failed: ${message}`);
     return { success: false, warning: message };

@@ -1,4 +1,9 @@
-import type { ProjectContext, Platform, Preset, Language } from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
+import type {
+  ProjectContext,
+  Platform,
+  Preset,
+  Language,
+} from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
 
 interface ProjectContextOverrides {
   localPath?: string | null;

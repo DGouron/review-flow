@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
+import type { AiInsightsResult } from '@/modules/statistics-insights/entities/insight/aiInsight.js';
 import { generateAiInsightsViaSession } from '@/modules/statistics-insights/usecases/insights/generateAiInsightsViaSession.usecase.js';
-import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
+import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+import { StubAiInsightsSessionGateway } from '@/tests/stubs/aiInsightsSession.stub.js';
+import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { InMemoryReviewFileGateway } from '@/tests/stubs/reviewFile.stub.js';
 import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
-import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
-import { StubAiInsightsSessionGateway } from '@/tests/stubs/aiInsightsSession.stub.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
-import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
-import type { AiInsightsResult } from '@/modules/statistics-insights/entities/insight/aiInsight.js';
+import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 
 const validAiResult: AiInsightsResult = {
   developers: [
@@ -136,7 +137,7 @@ describe('generateAiInsightsViaSession', () => {
     session.setResult({ status: 'unavailable', reason: 'dispatch-failed' });
 
     await expect(generateAiInsightsViaSession(input())).rejects.toThrow(
-      'Impossible de générer les insights — connexion à l\'abonnement Claude requise',
+      "Impossible de générer les insights — connexion à l'abonnement Claude requise",
     );
   });
 

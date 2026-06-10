@@ -1,16 +1,17 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { Logger } from 'pino';
-import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
-import type { InsightsGateway } from '@/modules/statistics-insights/entities/insight/insights.gateway.js';
-import type { ReviewFileGateway } from '@/modules/review-execution/entities/review/reviewFile.gateway.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
-import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
+
 import type { EnvironmentGateway } from '@/modules/claude-invocation/entities/billingState/environment.gateway.js';
+import type { ReviewFileGateway } from '@/modules/review-execution/entities/review/reviewFile.gateway.js';
+import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
 import type { AiInsightsSessionGateway } from '@/modules/statistics-insights/entities/insight/aiInsightsSession.gateway.js';
-import { generateAiInsightsViaSession } from '@/modules/statistics-insights/usecases/insights/generateAiInsightsViaSession.usecase.js';
-import { persistAiInsightsResult } from '@/modules/statistics-insights/usecases/insights/persistAiInsights.usecase.js';
-import { getInsightsWithAiStatus } from '@/modules/statistics-insights/usecases/insights/getInsightsWithAiStatus.usecase.js';
+import type { InsightsGateway } from '@/modules/statistics-insights/entities/insight/insights.gateway.js';
+import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import { InsightsPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/insights.presenter.js';
+import { generateAiInsightsViaSession } from '@/modules/statistics-insights/usecases/insights/generateAiInsightsViaSession.usecase.js';
+import { getInsightsWithAiStatus } from '@/modules/statistics-insights/usecases/insights/getInsightsWithAiStatus.usecase.js';
+import { persistAiInsightsResult } from '@/modules/statistics-insights/usecases/insights/persistAiInsights.usecase.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 
 interface InsightsRoutesOptions {
   statsGateway: StatsGateway;
@@ -71,47 +72,52 @@ export const insightsRoutes: FastifyPluginAsync<InsightsRoutesOptions> = async (
     };
   });
 
-  fastify.post<{ Body: { path?: string; language?: string } }>('/api/insights/generate', async (request, reply) => {
-    const body = request.body;
-    const projectPath = typeof body === 'object' && body !== null && 'path' in body
-      ? (body).path
-      : null;
+  fastify.post<{ Body: { path?: string; language?: string } }>(
+    '/api/insights/generate',
+    async (request, reply) => {
+      const body = request.body;
+      const projectPath =
+        typeof body === 'object' && body !== null && 'path' in body ? body.path : null;
 
-    if (typeof projectPath !== 'string' || !isValidProjectPath(projectPath)) {
-      reply.status(400).send({ error: 'Chemin du projet requis' });
-      return;
-    }
+      if (typeof projectPath !== 'string' || !isValidProjectPath(projectPath)) {
+        reply.status(400).send({ error: 'Chemin du projet requis' });
+        return;
+      }
 
-    const requestLanguage = typeof body === 'object' && body !== null && 'language' in body
-      && (body.language === 'fr' || body.language === 'en')
-      ? body.language
-      : language;
+      const requestLanguage =
+        typeof body === 'object' &&
+        body !== null &&
+        'language' in body &&
+        (body.language === 'fr' || body.language === 'en')
+          ? body.language
+          : language;
 
-    try {
-      const aiInsights = await generateAiInsightsViaSession({
-        projectPath,
-        statsGateway,
-        reviewFileGateway,
-        reviewRequestTrackingGateway,
-        logger,
-        session,
-        environment,
-        language: requestLanguage,
-      });
+      try {
+        const aiInsights = await generateAiInsightsViaSession({
+          projectPath,
+          statsGateway,
+          reviewFileGateway,
+          reviewRequestTrackingGateway,
+          logger,
+          session,
+          environment,
+          language: requestLanguage,
+        });
 
-      persistAiInsightsResult({
-        projectPath,
-        aiInsights,
-        statsGateway,
-        insightsGateway,
-      });
+        persistAiInsightsResult({
+          projectPath,
+          aiInsights,
+          statsGateway,
+          insightsGateway,
+        });
 
-      return aiInsights;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erreur inconnue';
-      logger.error({ error: message }, 'AI insights generation failed');
-      reply.status(500).send({ error: message });
-      return;
-    }
-  });
+        return aiInsights;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Erreur inconnue';
+        logger.error({ error: message }, 'AI insights generation failed');
+        reply.status(500).send({ error: message });
+        return;
+      }
+    },
+  );
 };

@@ -2,7 +2,7 @@ import type {
   ReviewContext,
   ReviewContextProgress,
   ReviewContextThread,
-} from '@/modules/review-execution/entities/reviewContext/reviewContext.js'
+} from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
 
 export class ReviewContextFactory {
   static create(overrides?: Partial<ReviewContext>): ReviewContext {
@@ -20,7 +20,7 @@ export class ReviewContextFactory {
         currentStep: null,
       },
       ...overrides,
-    }
+    };
   }
 
   static createWithProgress(progress: Partial<ReviewContextProgress>): ReviewContext {
@@ -30,7 +30,7 @@ export class ReviewContextFactory {
         currentStep: null,
         ...progress,
       },
-    })
+    });
   }
 
   static createInProgress(currentStep: string, stepsCompleted: string[] = []): ReviewContext {
@@ -41,7 +41,7 @@ export class ReviewContextFactory {
         stepsCompleted,
         updatedAt: new Date().toISOString(),
       },
-    })
+    });
   }
 
   static createCompleted(): ReviewContext {
@@ -52,7 +52,7 @@ export class ReviewContextFactory {
         stepsCompleted: ['context', 'verify', 'scan', 'threads', 'report'],
         updatedAt: new Date().toISOString(),
       },
-    })
+    });
   }
 
   static createThread(overrides?: Partial<ReviewContextThread>): ReviewContextThread {
@@ -63,6 +63,6 @@ export class ReviewContextFactory {
       status: 'open',
       body: 'Review comment',
       ...overrides,
-    }
+    };
   }
 }

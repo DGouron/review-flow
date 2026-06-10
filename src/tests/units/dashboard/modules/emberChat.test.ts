@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   parseEmberEvent,
   foldAnswer,
@@ -47,7 +48,9 @@ describe('avatarStateFromEvent', () => {
   });
 
   it('maps an error event to the error avatar state', () => {
-    expect(avatarStateFromEvent({ type: 'error', message: '// EMBER INDISPONIBLE — réessayer' })).toBe('error');
+    expect(
+      avatarStateFromEvent({ type: 'error', message: '// EMBER INDISPONIBLE — réessayer' }),
+    ).toBe('error');
   });
 
   it('returns null for an event that does not change the avatar', () => {
@@ -61,7 +64,12 @@ describe('shouldShowRetry', () => {
   });
 
   it('hides the retry control while answering normally', () => {
-    expect(shouldShowRetry([{ type: 'status', state: 'working' }, { type: 'chunk', text: 'x' }])).toBe(false);
+    expect(
+      shouldShowRetry([
+        { type: 'status', state: 'working' },
+        { type: 'chunk', text: 'x' },
+      ]),
+    ).toBe(false);
   });
 });
 

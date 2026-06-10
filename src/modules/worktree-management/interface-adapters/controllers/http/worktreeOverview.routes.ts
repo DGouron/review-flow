@@ -1,16 +1,17 @@
-import { z } from 'zod';
 import type { FastifyPluginAsync } from 'fastify';
 import type { Logger } from 'pino';
-import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
-import type { WorktreePanelPresenter } from '@/modules/worktree-management/interface-adapters/presenters/worktreePanel.presenter.js';
+import { z } from 'zod';
+
 import type { LastSweepSummary } from '@/modules/worktree-management/entities/sweep/lastSweepSummary.schema.js';
 import type { RunSweepNowResult } from '@/modules/worktree-management/entities/sweep/runSweepResult.js';
+import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
 import type {
   RemoveResult,
   WorktreeEntry,
   WorktreeIdentity,
 } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 import type { WorktreeHealthReport } from '@/modules/worktree-management/entities/worktree/worktreeHealth.schema.js';
+import type { WorktreePanelPresenter } from '@/modules/worktree-management/interface-adapters/presenters/worktreePanel.presenter.js';
 import type { ForceCleanupLockService } from '@/modules/worktree-management/services/forceCleanupLock.js';
 
 export interface WorktreeSchedulerControls {

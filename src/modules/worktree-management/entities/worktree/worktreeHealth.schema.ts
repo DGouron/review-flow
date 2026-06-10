@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import type { WorktreeEntry } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 
 export const degradedReasonSchema = z.discriminatedUnion('kind', [

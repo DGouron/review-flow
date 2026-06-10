@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { NextActionsPresenter } from '@/modules/setup-wizard/interface-adapters/presenters/nextActions.presenter.js';
 
 describe('NextActionsPresenter', () => {

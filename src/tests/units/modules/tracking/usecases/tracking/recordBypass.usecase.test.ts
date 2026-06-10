@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
+
 import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
-import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
+import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 
 const PROJECT_PATH = '/project';
 const MR_ID = 'mr-1';
@@ -41,7 +42,8 @@ describe('RecordBypassUseCase', () => {
 
     expect(result).toEqual({
       kind: 'rejected-missing-reason',
-      message: 'Le bypass nécessite une raison explicite. Format attendu : /bypass-quality "raison"',
+      message:
+        'Le bypass nécessite une raison explicite. Format attendu : /bypass-quality "raison"',
     });
     expect(gateway.getById(PROJECT_PATH, MR_ID)?.bypass).toBeNull();
   });

@@ -1,11 +1,15 @@
 import { readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-export interface PidFileContent {
-  pid: number;
-  startedAt: string;
-  port: number;
-}
+import { z } from 'zod';
+
+const pidFileContentSchema = z.object({
+  pid: z.number(),
+  startedAt: z.string(),
+  port: z.number(),
+});
+
+export type PidFileContent = z.infer<typeof pidFileContentSchema>;
 
 export interface PidFileDeps {
   readPidFile: () => PidFileContent | null;
@@ -15,7 +19,7 @@ export interface PidFileDeps {
 }
 
 export interface PidFileManagerDependencies {
-  readFileSync: (path: string, encoding: string) => string;
+  readFileSync: (path: string, encoding: BufferEncoding) => string;
   writeFileSync: (path: string, data: string) => void;
   unlinkSync: (path: string) => void;
   existsSync: (path: string) => boolean;
@@ -23,7 +27,7 @@ export interface PidFileManagerDependencies {
 }
 
 const defaultDeps: PidFileManagerDependencies = {
-  readFileSync: (path, encoding) => readFileSync(path, encoding as BufferEncoding),
+  readFileSync: (path, encoding) => readFileSync(path, encoding),
   writeFileSync,
   unlinkSync,
   existsSync,
@@ -39,7 +43,8 @@ export function readPidFile(
   }
   try {
     const raw = deps.readFileSync(pidPath, 'utf-8');
-    return JSON.parse(raw) as PidFileContent;
+    const parsed = pidFileContentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
   } catch {
     return null;
   }

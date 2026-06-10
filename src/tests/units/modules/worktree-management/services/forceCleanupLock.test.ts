@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { InMemoryForceCleanupLockService } from '@/modules/worktree-management/services/forceCleanupLock.js';
 
 describe('InMemoryForceCleanupLockService', () => {

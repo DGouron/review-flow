@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+
+import { describe, it, expect } from 'vitest';
 
 const SRC_ROOT = join(process.cwd(), 'src');
 

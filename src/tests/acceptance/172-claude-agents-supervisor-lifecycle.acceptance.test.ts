@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
+import { InMemorySupervisorStatusStore } from '@/modules/supervisor-management/interface-adapters/gateways/supervisorStatusStore.memory.gateway.js';
 import { checkSupervisorAndRespawn } from '@/modules/supervisor-management/usecases/checkSupervisorAndRespawn.usecase.js';
+import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
 import { StubSupervisorGateway } from '@/tests/stubs/supervisor.stub.js';
 import { StubSupervisorLockGateway } from '@/tests/stubs/supervisorLock.stub.js';
-import { InMemorySupervisorStatusStore } from '@/modules/supervisor-management/interface-adapters/gateways/supervisorStatusStore.memory.gateway.js';
-import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
 
 const fixedNow = new Date('2026-05-23T08:00:00Z');
 
@@ -57,8 +58,8 @@ describe('SPEC-172: Claude agents supervisor lifecycle (acceptance)', () => {
       expect(lockGateway.acquireCallCount).toBe(1);
       expect(lockGateway.releaseCallCount).toBe(1);
       expect(status.state).toBe('up');
-      expect(capturing.infoMessages.some(message => message.includes('spawned'))).toBe(true);
-      expect(capturing.infoMessages.some(message => message.includes('12345'))).toBe(true);
+      expect(capturing.infoMessages.some((message) => message.includes('spawned'))).toBe(true);
+      expect(capturing.infoMessages.some((message) => message.includes('12345'))).toBe(true);
     });
   });
 
@@ -110,7 +111,7 @@ describe('SPEC-172: Claude agents supervisor lifecycle (acceptance)', () => {
         now: () => new Date('2026-05-23T08:01:00Z'),
       });
 
-      expect(capturing.warnMessages.some(message => message.includes('down'))).toBe(true);
+      expect(capturing.warnMessages.some((message) => message.includes('down'))).toBe(true);
       expect(supervisorGateway.spawnCallCount).toBe(1);
       expect(status.state).toBe('up');
     });

@@ -1,4 +1,8 @@
-import type { AiFallbackGateway, AiFallbackAvailability, AiInterpretation } from '@/modules/setup-wizard/entities/aiFallback/aiFallback.gateway.js';
+import type {
+  AiFallbackGateway,
+  AiFallbackAvailability,
+  AiInterpretation,
+} from '@/modules/setup-wizard/entities/aiFallback/aiFallback.gateway.js';
 
 export class AiFallbackNoopGateway implements AiFallbackGateway {
   isAvailable(): AiFallbackAvailability {

@@ -1,6 +1,14 @@
-import { hasServerEntry, safeParseMcpSettings } from '@/modules/cli-configuration/entities/mcpSettings/mcpSettings.guard.js';
+import {
+  hasServerEntry,
+  safeParseMcpSettings,
+} from '@/modules/cli-configuration/entities/mcpSettings/mcpSettings.guard.js';
 
-export type ConfigureMcpResult = 'configured' | 'already-configured' | 'claude-not-found' | 'validation-failed' | 'failed';
+export type ConfigureMcpResult =
+  | 'configured'
+  | 'already-configured'
+  | 'claude-not-found'
+  | 'validation-failed'
+  | 'failed';
 
 export interface ConfigureMcpDependencies {
   isClaudeInstalled: () => boolean;
@@ -31,9 +39,7 @@ export class ConfigureMcpUseCase {
     }
 
     const parseResult = safeParseMcpSettings(settings);
-    const mcpServers = parseResult.success
-      ? parseResult.data.mcpServers
-      : {};
+    const mcpServers = parseResult.success ? parseResult.data.mcpServers : {};
     const existingArgs = mcpServers['review-progress']?.args;
 
     if (existingArgs?.[0] === mcpServerPath) {
@@ -41,10 +47,7 @@ export class ConfigureMcpUseCase {
     }
 
     if (this.deps.existsSync(this.deps.settingsPath)) {
-      this.deps.copyFileSync(
-        this.deps.settingsPath,
-        `${this.deps.settingsPath}.bak`,
-      );
+      this.deps.copyFileSync(this.deps.settingsPath, `${this.deps.settingsPath}.bak`);
     }
 
     mcpServers['review-progress'] = {
@@ -53,10 +56,7 @@ export class ConfigureMcpUseCase {
     };
     settings.mcpServers = mcpServers;
 
-    this.deps.writeFileSync(
-      this.deps.settingsPath,
-      JSON.stringify(settings, null, 2),
-    );
+    this.deps.writeFileSync(this.deps.settingsPath, JSON.stringify(settings, null, 2));
 
     try {
       const written = this.deps.readFileSync(this.deps.settingsPath, 'utf-8');

@@ -1,8 +1,8 @@
+import type { WorktreeEntry } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 import type {
   HealthSignals,
   WorktreeHealthProbeGateway,
 } from '@/modules/worktree-management/entities/worktree/worktreeHealthProbe.gateway.js';
-import type { WorktreeEntry } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 
 export class StubWorktreeHealthProbeGateway implements WorktreeHealthProbeGateway {
   private readonly signalsByPath: Map<string, HealthSignals> = new Map();

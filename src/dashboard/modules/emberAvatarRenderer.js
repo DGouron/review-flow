@@ -82,7 +82,10 @@ export function mountEmberAvatar(options) {
     const visual = emberStateToVisual(currentState);
     const rotation = (elapsed * visual.rotationSpeed) / 1000;
     const sway = emberSwayOffset(visual, elapsed);
-    const framedProjection = { ...projection, scale: projection.scale * emberRadiusFactor(visual, elapsed) };
+    const framedProjection = {
+      ...projection,
+      scale: projection.scale * emberRadiusFactor(visual, elapsed),
+    };
 
     context.clearRect(0, 0, options.canvas.width, options.canvas.height);
     const color = resolveColor(context, visual.color);

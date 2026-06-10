@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
-import type { VersionCachePort } from '@/modules/cli-configuration/entities/packageVersion/versionCache.gateway.js';
+
 import { getQueueStats, getJobsStatus } from '@/frameworks/queue/pQueueAdapter.js';
+import type { VersionCachePort } from '@/modules/cli-configuration/entities/packageVersion/versionCache.gateway.js';
 import type { SupervisorStatusStore } from '@/modules/supervisor-management/entities/supervisor/supervisorStatusStore.gateway.js';
 
 interface HealthRoutesOptions {
@@ -29,10 +30,7 @@ function buildSupervisorBlock(store: SupervisorStatusStore | undefined): Supervi
   };
 }
 
-export const healthRoutes: FastifyPluginAsync<HealthRoutesOptions> = async (
-  fastify,
-  opts
-) => {
+export const healthRoutes: FastifyPluginAsync<HealthRoutesOptions> = async (fastify, opts) => {
   const { getConfig } = opts;
 
   fastify.get('/health', async () => {

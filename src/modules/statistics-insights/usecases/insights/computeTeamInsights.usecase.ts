@@ -1,7 +1,10 @@
 import type { DeveloperInsight } from '@/modules/statistics-insights/entities/insight/developerInsight.js';
-import type { TeamInsight, AverageLevels } from '@/modules/statistics-insights/entities/insight/teamInsight.js';
 import type { InsightCategory } from '@/modules/statistics-insights/entities/insight/insightCategory.js';
 import { INSIGHT_CATEGORIES } from '@/modules/statistics-insights/entities/insight/insightCategory.js';
+import type {
+  TeamInsight,
+  AverageLevels,
+} from '@/modules/statistics-insights/entities/insight/teamInsight.js';
 
 const TEAM_STRENGTH_THRESHOLD = 7;
 const TEAM_WEAKNESS_THRESHOLD = 4;
@@ -19,10 +22,7 @@ export function computeTeamInsights(developerInsights: DeveloperInsight[]): Team
   }
 
   const developerCount = developerInsights.length;
-  const totalReviewCount = developerInsights.reduce(
-    (sum, insight) => sum + insight.reviewCount,
-    0,
-  );
+  const totalReviewCount = developerInsights.reduce((sum, insight) => sum + insight.reviewCount, 0);
 
   const averageLevels = computeAverageLevels(developerInsights);
   const strengths = identifyTeamStrengths(averageLevels);
@@ -87,10 +87,7 @@ function identifyTeamWeaknesses(averageLevels: AverageLevels): InsightCategory[]
   return weaknesses;
 }
 
-function generateTips(
-  insights: DeveloperInsight[],
-  weaknesses: InsightCategory[],
-): string[] {
+function generateTips(insights: DeveloperInsight[], weaknesses: InsightCategory[]): string[] {
   const tips: string[] = [];
 
   for (const weakness of weaknesses) {
@@ -99,9 +96,7 @@ function generateTips(
     );
 
     if (decliningDevelopers.length > 0) {
-      const names = decliningDevelopers
-        .map((developer) => developer.developerName)
-        .join(', ');
+      const names = decliningDevelopers.map((developer) => developer.developerName).join(', ');
       tips.push(
         `${categoryLabel(weakness)} is declining for ${names} — consider targeted improvement sessions`,
       );
@@ -116,8 +111,7 @@ function generateTips(
   }
 
   const lowBlockingDevelopers = insights.filter(
-    (insight) =>
-      insight.categoryLevels.quality.level <= 3,
+    (insight) => insight.categoryLevels.quality.level <= 3,
   );
   if (lowBlockingDevelopers.length >= 2) {
     tips.push(
@@ -143,10 +137,7 @@ function generateTips(
   return tips;
 }
 
-function computeLevelSpread(
-  insights: DeveloperInsight[],
-  category: InsightCategory,
-): number {
+function computeLevelSpread(insights: DeveloperInsight[], category: InsightCategory): number {
   const levels = insights.map((insight) => insight.categoryLevels[category].level);
   return Math.max(...levels) - Math.min(...levels);
 }

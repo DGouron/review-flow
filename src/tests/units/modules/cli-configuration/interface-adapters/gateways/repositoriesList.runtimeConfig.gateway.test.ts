@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { RepositoriesListRuntimeConfigGateway } from '@/modules/cli-configuration/interface-adapters/gateways/repositoriesList.runtimeConfig.gateway.js';
 import { RepositoryConfigFactory } from '@/tests/factories/repositoryConfig.factory.js';
 

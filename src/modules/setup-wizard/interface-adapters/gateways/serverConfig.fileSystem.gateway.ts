@@ -1,7 +1,12 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+
 import { z } from 'zod';
-import type { ServerConfigGateway, ServerConfigEntry } from '@/modules/setup-wizard/entities/serverConfig/serverConfig.gateway.js';
+
+import type {
+  ServerConfigGateway,
+  ServerConfigEntry,
+} from '@/modules/setup-wizard/entities/serverConfig/serverConfig.gateway.js';
 
 interface ServerConfigFileSystemGatewayDependencies {
   configPath: string;
@@ -13,10 +18,9 @@ const repositoryEntrySchema = z.object({
   enabled: z.boolean().optional(),
 });
 
-const serverConfigShapeSchema = z
-  .looseObject({
-    repositories: z.array(repositoryEntrySchema).optional(),
-  });
+const serverConfigShapeSchema = z.looseObject({
+  repositories: z.array(repositoryEntrySchema).optional(),
+});
 
 type ServerConfigShape = z.infer<typeof serverConfigShapeSchema>;
 

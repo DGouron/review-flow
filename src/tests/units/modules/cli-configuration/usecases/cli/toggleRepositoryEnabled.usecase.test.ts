@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   ToggleRepositoryEnabledUseCase,
   type ToggleRepositoryEnabledDependencies,
@@ -18,9 +19,7 @@ function createFakeDeps(
 ): ToggleRepositoryEnabledDependencies {
   return {
     readFileSync: vi.fn(() =>
-      JSON.stringify(
-        baseConfig([{ name: 'project', localPath: '/repos/project', enabled: true }]),
-      ),
+      JSON.stringify(baseConfig([{ name: 'project', localPath: '/repos/project', enabled: true }])),
     ),
     writeFileSync: vi.fn(),
     existsSync: vi.fn(() => true),

@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
+import { describe, it, expect, beforeEach } from 'vitest';
+
 import { cleanupRoutes } from '@/modules/data-lifecycle/interface-adapters/controllers/http/cleanup.routes.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { InMemoryReviewFileGateway } from '@/tests/stubs/reviewFile.stub.js';
 import { InMemoryReviewLogFileGateway } from '@/tests/stubs/reviewLogFile.stub.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 
 describe('cleanup routes', () => {
   let application: FastifyInstance;
@@ -42,7 +43,11 @@ describe('cleanup routes', () => {
 
   it('should cleanup only enabled repositories', async () => {
     reviewFileGateway.addReview('/project-a', '2020-01-01-MR-1-review.md', '# Old review');
-    reviewFileGateway.addReview('/project-b', '2020-01-01-MR-2-review.md', '# Old review disabled repo');
+    reviewFileGateway.addReview(
+      '/project-b',
+      '2020-01-01-MR-2-review.md',
+      '# Old review disabled repo',
+    );
 
     const response = await application.inject({
       method: 'POST',
@@ -58,7 +63,11 @@ describe('cleanup routes', () => {
 
   it('should cleanup single project when path query parameter is provided', async () => {
     reviewFileGateway.addReview('/project-a', '2020-01-01-MR-1-review.md', '# Old review A');
-    reviewFileGateway.addReview('/specific/project', '2020-01-01-MR-3-review.md', '# Old review specific');
+    reviewFileGateway.addReview(
+      '/specific/project',
+      '2020-01-01-MR-3-review.md',
+      '# Old review specific',
+    );
 
     const response = await application.inject({
       method: 'POST',

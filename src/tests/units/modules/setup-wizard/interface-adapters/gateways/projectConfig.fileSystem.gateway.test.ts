@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { ProjectConfigFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/projectConfig.fileSystem.gateway.js';
 
 describe('ProjectConfigFileSystemGateway', () => {
@@ -28,9 +30,17 @@ describe('ProjectConfigFileSystemGateway', () => {
 
   it('reads back what it wrote', () => {
     const gateway = new ProjectConfigFileSystemGateway();
-    gateway.write(rootDir, { preset: 'fullstack', language: 'fr', agents: ['testing', 'security'] });
+    gateway.write(rootDir, {
+      preset: 'fullstack',
+      language: 'fr',
+      agents: ['testing', 'security'],
+    });
     const reloaded = gateway.read(rootDir);
-    expect(reloaded).toEqual({ preset: 'fullstack', language: 'fr', agents: ['testing', 'security'] });
+    expect(reloaded).toEqual({
+      preset: 'fullstack',
+      language: 'fr',
+      agents: ['testing', 'security'],
+    });
   });
 
   it('creates a .bak file when backup is requested on existing config', () => {

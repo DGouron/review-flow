@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { formatInitSummary, type InitSummaryInput } from '../../../../cli/formatters/initSummary.js';
+
+import {
+  formatInitSummary,
+  type InitSummaryInput,
+} from '../../../../cli/formatters/initSummary.js';
 
 function createFakeSummary(overrides?: Partial<InitSummaryInput>): InitSummaryInput {
   return {

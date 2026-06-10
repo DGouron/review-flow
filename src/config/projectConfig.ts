@@ -1,8 +1,15 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import type { AgentDefinition } from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
-import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
+
+import { z } from 'zod';
+
+import { logWarn } from '@/frameworks/logging/logBuffer.js';
+import {
+  MAX_PROJECT_CONCURRENCY_CAP,
+  MIN_PROJECT_CONCURRENCY_CAP,
+} from '@/modules/cli-configuration/entities/projectConcurrencyCap/projectConcurrencyCap.valueObject.js';
 import type { RoutingPolicy } from '@/modules/review-execution/entities/modelRouting/modelRouting.schema.js';
+import type { AgentDefinition } from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
 import {
   type ReviewFocus,
   REVIEW_FOCUS_VALUES,
@@ -10,11 +17,7 @@ import {
   isReviewFocus,
   reviewSkillForFocus,
 } from '@/modules/review-execution/entities/progress/reviewFocus.type.js';
-import { logWarn } from '@/frameworks/logging/logBuffer.js';
-import {
-  MAX_PROJECT_CONCURRENCY_CAP,
-  MIN_PROJECT_CONCURRENCY_CAP,
-} from '@/modules/cli-configuration/entities/projectConcurrencyCap/projectConcurrencyCap.valueObject.js';
+import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
 
 export interface ProjectConfig {
   github: boolean;
@@ -32,6 +35,8 @@ export interface ProjectConfig {
   qualityThreshold?: number;
   maxConcurrentReviews?: number;
 }
+
+const projectConfigFileSchema = z.record(z.string(), z.unknown());
 
 function parseExternalLink(value: unknown): string | undefined {
   if (typeof value === 'string' && value.length > 0) {
@@ -88,9 +93,10 @@ function validateAgents(agents: unknown): agents is AgentDefinition[] {
     if (agent === null || typeof agent !== 'object') {
       return false;
     }
-    const record = agent as Record<string, unknown>;
-    const name = record.name;
-    const displayName = record.displayName;
+    if (!('name' in agent) || !('displayName' in agent)) {
+      return false;
+    }
+    const { name, displayName } = agent;
     return (
       typeof name === 'string' &&
       typeof displayName === 'string' &&
@@ -104,9 +110,10 @@ function parseRoutingPolicy(value: unknown): RoutingPolicy | undefined {
   if (value === null || value === undefined || typeof value !== 'object') {
     return undefined;
   }
-  const record = value as Record<string, unknown>;
-  const haikuMaxLines = record.haikuMaxLines;
-  const sonnetMaxLines = record.sonnetMaxLines;
+  if (!('haikuMaxLines' in value) || !('sonnetMaxLines' in value)) {
+    return undefined;
+  }
+  const { haikuMaxLines, sonnetMaxLines } = value;
   if (
     typeof haikuMaxLines === 'number' &&
     Number.isInteger(haikuMaxLines) &&
@@ -121,7 +128,7 @@ function parseRoutingPolicy(value: unknown): RoutingPolicy | undefined {
 }
 
 function formatReviewFocusValues(): string {
-  return REVIEW_FOCUS_VALUES.map(value => `'${value}'`).join(', ');
+  return REVIEW_FOCUS_VALUES.map((value) => `'${value}'`).join(', ');
 }
 
 function parseReviewFocus(value: unknown): ReviewFocus | undefined {
@@ -129,9 +136,7 @@ function parseReviewFocus(value: unknown): ReviewFocus | undefined {
     return undefined;
   }
   if (!isReviewFocus(value)) {
-    throw new Error(
-      `Invalid reviewFocus: must be ${formatReviewFocusValues()}`,
-    );
+    throw new Error(`Invalid reviewFocus: must be ${formatReviewFocusValues()}`);
   }
   return value;
 }
@@ -150,7 +155,7 @@ export function loadProjectConfig(localPath: string): ProjectConfig | undefined 
   }
 
   const rawContent = readFileSync(configPath, 'utf-8');
-  const parsed = JSON.parse(rawContent) as Record<string, unknown>;
+  const parsed = projectConfigFileSchema.parse(JSON.parse(rawContent));
   return parseProjectConfig(parsed);
 }
 
@@ -177,21 +182,22 @@ export function parseProjectConfig(parsed: Record<string, unknown>): ProjectConf
   }
 
   if (hasExplicitReviewSkill && reviewFocus !== undefined) {
-    logWarn(
-      'Both reviewFocus and reviewSkill set — reviewSkill takes precedence',
-      { reviewSkill: parsed.reviewSkill, reviewFocus },
-    );
+    logWarn('Both reviewFocus and reviewSkill set — reviewSkill takes precedence', {
+      reviewSkill: parsed.reviewSkill,
+      reviewFocus,
+    });
   }
 
-  const resolvedReviewSkill = hasExplicitReviewSkill
-    ? String(parsed.reviewSkill)
-    : reviewSkillForFocus(reviewFocus as ReviewFocus);
+  const resolvedReviewSkill =
+    hasExplicitReviewSkill || reviewFocus === undefined
+      ? String(parsed.reviewSkill)
+      : reviewSkillForFocus(reviewFocus);
 
   // Validate agents if present
   if ('agents' in parsed && parsed.agents !== undefined) {
     if (!validateAgents(parsed.agents)) {
       throw new Error(
-        'Invalid agents format: must be array of { name: string, displayName: string }'
+        'Invalid agents format: must be array of { name: string, displayName: string }',
       );
     }
   }
@@ -200,7 +206,7 @@ export function parseProjectConfig(parsed: Record<string, unknown>): ProjectConf
   if ('followupAgents' in parsed && parsed.followupAgents !== undefined) {
     if (!validateAgents(parsed.followupAgents)) {
       throw new Error(
-        'Invalid followupAgents format: must be array of { name: string, displayName: string }'
+        'Invalid followupAgents format: must be array of { name: string, displayName: string }',
       );
     }
   }
@@ -208,7 +214,12 @@ export function parseProjectConfig(parsed: Record<string, unknown>): ProjectConf
   const config: ProjectConfig = {
     github: Boolean(parsed.github),
     gitlab: Boolean(parsed.gitlab),
-    defaultModel: parsed.defaultModel === 'opus' ? 'opus' : parsed.defaultModel === 'haiku' ? 'haiku' : 'sonnet',
+    defaultModel:
+      parsed.defaultModel === 'opus'
+        ? 'opus'
+        : parsed.defaultModel === 'haiku'
+          ? 'haiku'
+          : 'sonnet',
     reviewSkill: resolvedReviewSkill,
     reviewFollowupSkill: String(parsed.reviewFollowupSkill),
     language: parsed.language === 'fr' ? 'fr' : 'en',
@@ -257,9 +268,7 @@ export function getProjectAgents(localPath: string): AgentDefinition[] | undefin
  * Returns undefined when no explicit array and no focus are configured, leaving the caller
  * free to fall back to the legacy DEFAULT_AGENTS.
  */
-export function getProjectAgentsOrFocusDefaults(
-  localPath: string,
-): AgentDefinition[] | undefined {
+export function getProjectAgentsOrFocusDefaults(localPath: string): AgentDefinition[] | undefined {
   try {
     const config = loadProjectConfig(localPath);
     if (!config) {

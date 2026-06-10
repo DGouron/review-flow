@@ -1,7 +1,11 @@
 import type { Logger } from 'pino';
-import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
-import type { ReviewRequestTrackingGateway, Platform } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
+
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
+import type {
+  ReviewRequestTrackingGateway,
+  Platform,
+} from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 
 export interface TriggerReviewParams {
   platform: Platform;
@@ -40,13 +44,12 @@ export interface TriggerReviewDependencies {
 
 export function triggerReview(
   params: TriggerReviewParams,
-  deps: TriggerReviewDependencies
+  deps: TriggerReviewDependencies,
 ): TriggerReviewResult {
   const { queuePort, reviewRequestTrackingGateway, logger } = deps;
 
-  const jobIdPrefix = params.jobType === 'followup'
-    ? `${params.platform}-followup`
-    : params.platform;
+  const jobIdPrefix =
+    params.jobType === 'followup' ? `${params.platform}-followup` : params.platform;
   const jobId = queuePort.createJobId(jobIdPrefix, params.projectPath, params.reviewRequestNumber);
 
   if (queuePort.hasActiveJob(jobId)) {
@@ -79,12 +82,12 @@ export function triggerReview(
   reviewRequestTrackingGateway.recordPush(
     params.localPath,
     params.reviewRequestNumber,
-    params.platform
+    params.platform,
   );
 
   logger.info(
     { jobId, reviewRequestNumber: params.reviewRequestNumber, jobType: params.jobType },
-    'Review triggered'
+    'Review triggered',
   );
 
   return { status: 'success', jobId };

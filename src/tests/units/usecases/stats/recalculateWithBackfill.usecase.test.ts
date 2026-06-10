@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { recalculateWithBackfill } from '@/modules/statistics-insights/usecases/stats/recalculateWithBackfill.usecase.js';
-import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
-import { StubDiffStatsFetchGateway } from '@/tests/stubs/diffStatsFetch.stub.js';
-import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+
 import type { BackfillProgress } from '@/modules/statistics-insights/entities/backfill/backfillProgress.js';
+import { recalculateWithBackfill } from '@/modules/statistics-insights/usecases/stats/recalculateWithBackfill.usecase.js';
+import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+import { StubDiffStatsFetchGateway } from '@/tests/stubs/diffStatsFetch.stub.js';
+import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 
 describe('recalculateWithBackfill', () => {
   beforeEach(() => {
@@ -20,10 +21,13 @@ describe('recalculateWithBackfill', () => {
       ReviewStatsFactory.create({ id: 'r1', mrNumber: 1, score: 6 }),
       ReviewStatsFactory.create({ id: 'r2', mrNumber: 2, score: 8 }),
     ];
-    statsGateway.saveProjectStats('/test/project', ProjectStatsFactory.create({
-      reviews,
-      averageScore: 0,
-    }));
+    statsGateway.saveProjectStats(
+      '/test/project',
+      ProjectStatsFactory.create({
+        reviews,
+        averageScore: 0,
+      }),
+    );
 
     const progressUpdates: BackfillProgress[] = [];
 
@@ -48,9 +52,7 @@ describe('recalculateWithBackfill', () => {
   it('should run backfill before recalculation when shouldBackfill is true', async () => {
     const statsGateway = new InMemoryStatsGateway();
     const diffStatsFetchGateway = new StubDiffStatsFetchGateway();
-    const reviews = [
-      ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 }),
-    ];
+    const reviews = [ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 })];
     statsGateway.saveProjectStats('/test/project', ProjectStatsFactory.create({ reviews }));
     diffStatsFetchGateway.setResponse(10, { commitsCount: 3, additions: 100, deletions: 20 });
 
@@ -77,9 +79,7 @@ describe('recalculateWithBackfill', () => {
   it('should skip backfill when platform is null', async () => {
     const statsGateway = new InMemoryStatsGateway();
     const diffStatsFetchGateway = new StubDiffStatsFetchGateway();
-    const reviews = [
-      ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 }),
-    ];
+    const reviews = [ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 })];
     statsGateway.saveProjectStats('/test/project', ProjectStatsFactory.create({ reviews }));
 
     const progressUpdates: BackfillProgress[] = [];
@@ -105,9 +105,7 @@ describe('recalculateWithBackfill', () => {
     const statsGateway = new InMemoryStatsGateway();
     const gitlabGateway = new StubDiffStatsFetchGateway();
     const githubGateway = new StubDiffStatsFetchGateway();
-    const reviews = [
-      ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 }),
-    ];
+    const reviews = [ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 })];
     statsGateway.saveProjectStats('/test/project', ProjectStatsFactory.create({ reviews }));
     githubGateway.setResponse(10, { commitsCount: 5, additions: 200, deletions: 50 });
 
@@ -135,9 +133,7 @@ describe('recalculateWithBackfill', () => {
 
     diffStatsFetchGateway.setFailure(10);
 
-    const reviews = [
-      ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 }),
-    ];
+    const reviews = [ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 })];
     statsGateway.saveProjectStats('/test/project', ProjectStatsFactory.create({ reviews }));
 
     const promise = recalculateWithBackfill(
@@ -156,9 +152,7 @@ describe('recalculateWithBackfill', () => {
 
   it('should broadcast completion progress after recalculation', async () => {
     const statsGateway = new InMemoryStatsGateway();
-    const reviews = [
-      ReviewStatsFactory.create({ id: 'r1', mrNumber: 1, score: 9 }),
-    ];
+    const reviews = [ReviewStatsFactory.create({ id: 'r1', mrNumber: 1, score: 9 })];
     statsGateway.saveProjectStats('/test/project', ProjectStatsFactory.create({ reviews }));
 
     const progressUpdates: BackfillProgress[] = [];

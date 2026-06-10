@@ -1,8 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify';
+
+import type { PendingReviewPresenter } from '@/modules/review-execution/interface-adapters/presenters/pendingReview.presenter.js';
 import type { ConfirmPendingReviewUseCase } from '@/modules/review-execution/usecases/confirmPendingReview.usecase.js';
 import type { DismissPendingReviewUseCase } from '@/modules/review-execution/usecases/dismissPendingReview.usecase.js';
 import type { ListPendingReviewsUseCase } from '@/modules/review-execution/usecases/listPendingReviews.usecase.js';
-import type { PendingReviewPresenter } from '@/modules/review-execution/interface-adapters/presenters/pendingReview.presenter.js';
 
 export interface PendingReviewsRoutesOptions {
   listPendingReviews: ListPendingReviewsUseCase;

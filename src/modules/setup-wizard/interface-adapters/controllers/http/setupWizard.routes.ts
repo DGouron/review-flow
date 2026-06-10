@@ -1,11 +1,12 @@
-import { z } from 'zod';
 import type { FastifyPluginAsync } from 'fastify';
 import type { Logger } from 'pino';
-import type { SetupRunRegistry } from '@/modules/setup-wizard/usecases/streamSetupRun.usecase.js';
-import type { SetupStateGateway } from '@/modules/setup-wizard/entities/setupState/setupState.gateway.js';
-import { wizardStreamEventGuard } from '@/modules/setup-wizard/entities/wizardStreamEvent/wizardStreamEvent.guard.js';
+import { z } from 'zod';
+
 import { setupInputGuard } from '@/modules/setup-wizard/entities/setupInput/setupInput.guard.js';
 import { serializeSetupInput } from '@/modules/setup-wizard/entities/setupInput/setupInput.schema.js';
+import type { SetupStateGateway } from '@/modules/setup-wizard/entities/setupState/setupState.gateway.js';
+import { wizardStreamEventGuard } from '@/modules/setup-wizard/entities/wizardStreamEvent/wizardStreamEvent.guard.js';
+import type { SetupRunRegistry } from '@/modules/setup-wizard/usecases/streamSetupRun.usecase.js';
 
 export interface SetupWizardRoutesOptions {
   registry: SetupRunRegistry;

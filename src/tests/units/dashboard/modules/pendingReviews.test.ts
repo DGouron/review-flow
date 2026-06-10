@@ -1,21 +1,24 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   buildPendingReviewsModel,
   renderPendingReviewsHtml,
 } from '@/dashboard/modules/pendingReviews.js';
 
-function makeViewModel(overrides: Partial<{
-  identifier: string;
-  mrNumber: number;
-  displayTitle: string;
-  projectPath: string;
-  mrUrl: string;
-  jobTypeLabel: string;
-  triggerSourceLabel: string;
-  createdAtRelative: string;
-  confirmActionUrl: string;
-  dismissActionUrl: string;
-}> = {}) {
+function makeViewModel(
+  overrides: Partial<{
+    identifier: string;
+    mrNumber: number;
+    displayTitle: string;
+    projectPath: string;
+    mrUrl: string;
+    jobTypeLabel: string;
+    triggerSourceLabel: string;
+    createdAtRelative: string;
+    confirmActionUrl: string;
+    dismissActionUrl: string;
+  }> = {},
+) {
   return {
     identifier: 'pending-1',
     mrNumber: 42,

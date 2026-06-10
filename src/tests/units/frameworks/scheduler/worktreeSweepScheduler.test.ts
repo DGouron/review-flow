@@ -1,15 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { startWorktreeSweepScheduler } from '@/frameworks/scheduler/worktreeSweepScheduler.js';
-import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
+import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
 import { deriveWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
 import type {
   WorktreeEntry,
   WorktreeIdentity,
   RemoveResult,
 } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
-import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
-import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
@@ -36,10 +37,11 @@ function createStubWorktreeGateway(initialEntries: WorktreeEntry[]): WorktreeGat
       listCalls += 1;
       return entries;
     },
-    remove: async request => {
+    remove: async (request) => {
       removed.push(request.identity);
       entries = entries.filter(
-        existing => deriveWorktreePath(existing.identity) !== deriveWorktreePath(request.identity),
+        (existing) =>
+          deriveWorktreePath(existing.identity) !== deriveWorktreePath(request.identity),
       );
       return { status: 'removed' } satisfies RemoveResult;
     },
@@ -74,7 +76,11 @@ describe('worktreeSweepScheduler', () => {
   });
 
   it('runs the sweep immediately on start and removes orphan worktrees', async () => {
-    const identity: WorktreeIdentity = { platform: 'gitlab', projectPath: 'group-project', mrNumber: 11 };
+    const identity: WorktreeIdentity = {
+      platform: 'gitlab',
+      projectPath: 'group-project',
+      mrNumber: 11,
+    };
     const entry = buildEntry(identity, new Date('2026-05-23T11:00:00Z'));
     const stub = createStubWorktreeGateway([entry]);
 
@@ -272,9 +278,10 @@ describe('worktreeSweepScheduler', () => {
     it('runSweepNow returns a conflict result when a sweep is already running', async () => {
       let resolveList: (entries: WorktreeEntry[]) => void = () => undefined;
       const blockingGateway: WorktreeGateway = {
-        list: () => new Promise<WorktreeEntry[]>(resolve => {
-          resolveList = resolve;
-        }),
+        list: () =>
+          new Promise<WorktreeEntry[]>((resolve) => {
+            resolveList = resolve;
+          }),
         remove: async () => ({ status: 'removed' }),
         ensure: async () => ({ status: 'failed', reason: 'not-implemented-in-stub' }),
         exists: async () => false,

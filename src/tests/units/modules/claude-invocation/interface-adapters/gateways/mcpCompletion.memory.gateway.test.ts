@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import { InMemoryMcpCompletionBridge } from '@/modules/claude-invocation/interface-adapters/gateways/mcpCompletion.memory.gateway.js';
 
 describe('InMemoryMcpCompletionBridge', () => {

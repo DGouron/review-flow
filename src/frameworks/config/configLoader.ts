@@ -1,13 +1,17 @@
-import { readFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
+import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+
 import { config as loadEnv } from 'dotenv';
-import { getConfigDir } from '../../shared/services/configDir.js';
+
 import {
   type ReviewFocus,
   isReviewFocus,
   reviewSkillForFocus,
 } from '@/modules/review-execution/entities/progress/reviewFocus.type.js';
+import type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
+
+import { getConfigDir } from '../../shared/services/configDir.js';
 
 const configDir = getConfigDir();
 const xdgEnvPath = join(configDir, '.env');
@@ -25,15 +29,7 @@ interface RepositoryInput {
   enabled: boolean;
 }
 
-// Types for enriched config
-export interface RepositoryConfig {
-  name: string;
-  platform: 'gitlab' | 'github';
-  remoteUrl: string;
-  localPath: string;
-  skill: string;
-  enabled: boolean;
-}
+export type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
 
 export interface ServerConfig {
   port: number;
@@ -72,6 +68,13 @@ interface ProjectConfig {
   reviewFocus?: ReviewFocus;
 }
 
+function toRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+  return { ...value };
+}
+
 function loadProjectConfig(localPath: string): ProjectConfig | null {
   const configPath = join(localPath, '.claude', 'reviews', 'config.json');
   if (!existsSync(configPath)) {
@@ -79,7 +82,11 @@ function loadProjectConfig(localPath: string): ProjectConfig | null {
   }
   try {
     const content = readFileSync(configPath, 'utf-8');
-    const parsed = JSON.parse(content) as Record<string, unknown>;
+    const parsedJson: unknown = JSON.parse(content);
+    if (parsedJson === null) {
+      return null;
+    }
+    const parsed = toRecord(parsedJson) ?? {};
     const result: ProjectConfig = {};
     if (typeof parsed.github === 'boolean') {
       result.github = parsed.github;
@@ -170,42 +177,46 @@ export function enrichSingleRepository(input: RepositoryInput): RepositoryConfig
 }
 
 export function validateAndEnrichConfig(data: unknown): Config {
-  if (!data || typeof data !== 'object') {
+  const config = toRecord(data);
+  if (!config) {
     throw new Error('Configuration invalide : objet attendu');
   }
 
-  const config = data as Record<string, unknown>;
-
   // Validate server
-  if (!config.server || typeof config.server !== 'object') {
+  const server = toRecord(config.server);
+  if (!server) {
     throw new Error('Configuration invalide : section "server" manquante');
   }
-  const server = config.server as Record<string, unknown>;
-  if (typeof server.port !== 'number' || server.port < 1 || server.port > 65535) {
+  const port = server.port;
+  if (typeof port !== 'number' || port < 1 || port > 65535) {
     throw new Error('Configuration invalide : port invalide');
   }
 
   // Validate user
-  if (!config.user || typeof config.user !== 'object') {
+  const user = toRecord(config.user);
+  if (!user) {
     throw new Error('Configuration invalide : section "user" manquante');
   }
-  const user = config.user as Record<string, unknown>;
-  if (typeof user.gitlabUsername !== 'string') {
+  const gitlabUsername = user.gitlabUsername;
+  if (typeof gitlabUsername !== 'string') {
     throw new Error('Invalid configuration: gitlabUsername must be a string');
   }
-  if (typeof user.githubUsername !== 'string') {
+  const githubUsername = user.githubUsername;
+  if (typeof githubUsername !== 'string') {
     throw new Error('Invalid configuration: githubUsername must be a string');
   }
 
   // Validate queue
-  if (!config.queue || typeof config.queue !== 'object') {
+  const queue = toRecord(config.queue);
+  if (!queue) {
     throw new Error('Configuration invalide : section "queue" manquante');
   }
-  const queue = config.queue as Record<string, unknown>;
-  if (typeof queue.maxConcurrent !== 'number' || queue.maxConcurrent < 1) {
+  const maxConcurrent = queue.maxConcurrent;
+  if (typeof maxConcurrent !== 'number' || maxConcurrent < 1) {
     throw new Error('Configuration invalide : maxConcurrent invalide');
   }
-  if (typeof queue.deduplicationWindowMs !== 'number' || queue.deduplicationWindowMs < 0) {
+  const deduplicationWindowMs = queue.deduplicationWindowMs;
+  if (typeof deduplicationWindowMs !== 'number' || deduplicationWindowMs < 0) {
     throw new Error('Configuration invalide : deduplicationWindowMs invalide');
   }
 
@@ -241,26 +252,25 @@ export function validateAndEnrichConfig(data: unknown): Config {
   const enrichedRepositories: RepositoryConfig[] = [];
 
   for (const repo of config.repositories) {
-    if (!repo || typeof repo !== 'object') {
+    const repositoryRecord = toRecord(repo);
+    if (!repositoryRecord) {
       throw new Error('Configuration invalide : repository invalide');
     }
-    const r = repo as Record<string, unknown>;
 
-    if (typeof r.name !== 'string' || !r.name) {
+    const name = repositoryRecord.name;
+    if (typeof name !== 'string' || !name) {
       throw new Error('Configuration invalide : name manquant');
     }
-    if (typeof r.localPath !== 'string' || !r.localPath) {
+    const localPath = repositoryRecord.localPath;
+    if (typeof localPath !== 'string' || !localPath) {
       throw new Error('Configuration invalide : localPath manquant');
     }
-    if (typeof r.enabled !== 'boolean') {
+    const enabled = repositoryRecord.enabled;
+    if (typeof enabled !== 'boolean') {
       throw new Error('Configuration invalide : enabled doit être un booléen');
     }
 
-    const input: RepositoryInput = {
-      name: r.name as string,
-      localPath: r.localPath as string,
-      enabled: r.enabled as boolean,
-    };
+    const input: RepositoryInput = { name, localPath, enabled };
 
     const enriched = enrichRepository(input);
     if (enriched) {
@@ -269,14 +279,11 @@ export function validateAndEnrichConfig(data: unknown): Config {
   }
 
   return {
-    server: { port: server.port as number },
-    user: {
-      gitlabUsername: user.gitlabUsername as string,
-      githubUsername: user.githubUsername as string,
-    },
+    server: { port },
+    user: { gitlabUsername, githubUsername },
     queue: {
-      maxConcurrent: queue.maxConcurrent as number,
-      deduplicationWindowMs: queue.deduplicationWindowMs as number,
+      maxConcurrent,
+      deduplicationWindowMs,
       jobHistoryRetentionDays,
     },
     repositories: enrichedRepositories,
@@ -289,10 +296,10 @@ function loadSecrets(): EnvSecrets {
   const githubWebhookSecret = process.env.GITHUB_WEBHOOK_SECRET;
 
   if (!gitlabWebhookToken) {
-    throw new Error('Variable d\'environnement GITLAB_WEBHOOK_TOKEN manquante');
+    throw new Error("Variable d'environnement GITLAB_WEBHOOK_TOKEN manquante");
   }
   if (!githubWebhookSecret) {
-    throw new Error('Variable d\'environnement GITHUB_WEBHOOK_SECRET manquante');
+    throw new Error("Variable d'environnement GITHUB_WEBHOOK_SECRET manquante");
   }
 
   return { gitlabWebhookToken, githubWebhookSecret };
@@ -321,7 +328,9 @@ export function loadConfig(): Config {
   const configPath = resolveConfigPath();
 
   if (!existsSync(configPath)) {
-    throw new Error(`Configuration file not found: ${configPath}\nRun 'reviewflow init' to create one.`);
+    throw new Error(
+      `Configuration file not found: ${configPath}\nRun 'reviewflow init' to create one.`,
+    );
   }
 
   const rawContent = readFileSync(configPath, 'utf-8');
@@ -341,12 +350,15 @@ export function findRepositoryByRemoteUrl(remoteUrl: string): RepositoryConfig |
   const config = loadConfig();
 
   const normalizeUrl = (url: string) =>
-    url.replace(/\.git$/, '').replace(/\/$/, '').toLowerCase();
+    url
+      .replace(/\.git$/, '')
+      .replace(/\/$/, '')
+      .toLowerCase();
 
   const normalizedInput = normalizeUrl(remoteUrl);
 
   return config.repositories.find(
-    repo => repo.enabled && normalizeUrl(repo.remoteUrl) === normalizedInput
+    (repo) => repo.enabled && normalizeUrl(repo.remoteUrl) === normalizedInput,
   );
 }
 
@@ -355,7 +367,7 @@ export function findRepositoryByProjectPath(projectPath: string): RepositoryConf
 
   const normalizedPath = projectPath.toLowerCase();
 
-  return config.repositories.find(repo => {
+  return config.repositories.find((repo) => {
     if (!repo.enabled) return false;
     const urlPath = repo.remoteUrl
       .replace(/^https?:\/\/[^/]+\//, '')

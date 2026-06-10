@@ -1,4 +1,8 @@
-import type { AiFallbackGateway, AiFallbackAvailability, AiInterpretation } from '@/modules/setup-wizard/entities/aiFallback/aiFallback.gateway.js';
+import type {
+  AiFallbackGateway,
+  AiFallbackAvailability,
+  AiInterpretation,
+} from '@/modules/setup-wizard/entities/aiFallback/aiFallback.gateway.js';
 
 interface StubOptions {
   available?: boolean;
@@ -15,7 +19,10 @@ export class StubAiFallbackGateway implements AiFallbackGateway {
   }
 
   isAvailable(): AiFallbackAvailability {
-    return { available: this.available, reason: this.available ? null : 'SPEC-185 not yet implemented' };
+    return {
+      available: this.available,
+      reason: this.available ? null : 'SPEC-185 not yet implemented',
+    };
   }
 
   async interpret(_input: string, _context: Record<string, unknown>): Promise<AiInterpretation> {

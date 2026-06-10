@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
+
+import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
 import { cleanupClaudeSession } from '@/modules/claude-invocation/usecases/cleanupClaudeSession.usecase.js';
 import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
-import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
 
 describe('cleanupClaudeSession use case', () => {
   it('stops and removes the session on the happy path', async () => {

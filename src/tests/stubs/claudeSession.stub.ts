@@ -108,8 +108,8 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
   async listAgents(): Promise<AgentStatusEntry[]> {
     this.listAgentsCallCount += 1;
     return this.scheduledAgentStatuses
-      .filter(entry => entry.afterPollCount <= this.listAgentsCallCount)
-      .map(entry => ({ sessionId: entry.sessionId, status: entry.status }));
+      .filter((entry) => entry.afterPollCount <= this.listAgentsCallCount)
+      .map((entry) => ({ sessionId: entry.sessionId, status: entry.status }));
   }
 
   async daemonStatus(): Promise<DaemonStatus> {
@@ -120,10 +120,7 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
     return this.usageValue;
   }
 
-  async getSessionUsage(
-    sessionId: SessionId,
-    cwd: string,
-  ): Promise<SessionUsageSnapshot | null> {
+  async getSessionUsage(sessionId: SessionId, cwd: string): Promise<SessionUsageSnapshot | null> {
     this.getSessionUsageCalls.push({ sessionId, cwd });
     return this.sessionUsageResult;
   }

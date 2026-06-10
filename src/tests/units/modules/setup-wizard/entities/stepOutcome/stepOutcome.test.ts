@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { skipped, succeeded, blocked, warning, isFinalSuccess, isBlocking } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
+
+import {
+  skipped,
+  succeeded,
+  blocked,
+  warning,
+  isFinalSuccess,
+  isBlocking,
+} from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
 
 describe('stepOutcome constructors', () => {
   it('skipped() produces a skipped outcome with optional message', () => {

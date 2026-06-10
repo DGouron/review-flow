@@ -9,20 +9,22 @@
  * Source of truth: docs/specs/179-dashboard-project-settings-modal.md (15 scenarios).
  */
 
-import Fastify, { type FastifyInstance } from 'fastify';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import Fastify, { type FastifyInstance } from 'fastify';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { projectConfigRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/projectConfig.routes.js';
-import { UpdateProjectConfigUseCase } from '@/modules/cli-configuration/usecases/projectConfig/updateProjectConfig.usecase.js';
-import { StubProjectConfigGateway } from '@/tests/stubs/projectConfigGateway.stub.js';
+
+import type { ProjectConfig } from '@/config/projectConfig.js';
 import {
   validateExternalLink,
   buildSettingsViewModel,
   renderSettingsModalHtml,
 } from '@/dashboard/modules/settingsModal.js';
-import type { ProjectConfig } from '@/config/projectConfig.js';
+import { projectConfigRoutes } from '@/modules/cli-configuration/interface-adapters/controllers/http/projectConfig.routes.js';
+import { UpdateProjectConfigUseCase } from '@/modules/cli-configuration/usecases/projectConfig/updateProjectConfig.usecase.js';
+import { StubProjectConfigGateway } from '@/tests/stubs/projectConfigGateway.stub.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -50,10 +52,7 @@ interface BuildAppOptions {
 
 async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
   const app = Fastify();
-  const updateProjectConfig = new UpdateProjectConfigUseCase(
-    options.gateway,
-    options.onUpdated,
-  );
+  const updateProjectConfig = new UpdateProjectConfigUseCase(options.gateway, options.onUpdated);
   await app.register(projectConfigRoutes, { updateProjectConfig });
   return app;
 }
@@ -62,11 +61,14 @@ describe('Acceptance — SPEC-179: Configure Project Settings via a Modal', () =
   describe('PATCH /api/project-config — save changes', () => {
     it('language change persists and preserves agents / routingPolicy (S3)', async () => {
       const gateway = new StubProjectConfigGateway();
-      gateway.set('/repo/A', baseProjectConfig({
-        language: 'fr',
-        agents: [{ name: 'security', displayName: 'Security' }],
-        routingPolicy: { haikuMaxLines: 50, sonnetMaxLines: 500 },
-      }));
+      gateway.set(
+        '/repo/A',
+        baseProjectConfig({
+          language: 'fr',
+          agents: [{ name: 'security', displayName: 'Security' }],
+          routingPolicy: { haikuMaxLines: 50, sonnetMaxLines: 500 },
+        }),
+      );
       const app = await buildApp({ gateway });
 
       const response = await app.inject({
@@ -254,9 +256,12 @@ describe('Acceptance — SPEC-179: Configure Project Settings via a Modal', () =
 
     it('ignores out-of-scope fields like "agents" in the payload silently', async () => {
       const gateway = new StubProjectConfigGateway();
-      gateway.set('/repo/A', baseProjectConfig({
-        agents: [{ name: 'security', displayName: 'Security' }],
-      }));
+      gateway.set(
+        '/repo/A',
+        baseProjectConfig({
+          agents: [{ name: 'security', displayName: 'Security' }],
+        }),
+      );
       const app = await buildApp({ gateway });
 
       const response = await app.inject({
@@ -381,9 +386,8 @@ describe('Acceptance — SPEC-179: Configure Project Settings via a Modal', () =
     });
 
     it('styles.css honors prefers-reduced-motion with a rule touching .settings-modal', () => {
-      const reducedMotionBlocks = stylesCss.match(
-        /@media[^{]*prefers-reduced-motion:\s*reduce[^{]*\{[\s\S]*?\n\}/g,
-      ) ?? [];
+      const reducedMotionBlocks =
+        stylesCss.match(/@media[^{]*prefers-reduced-motion:\s*reduce[^{]*\{[\s\S]*?\n\}/g) ?? [];
       const concatenated = reducedMotionBlocks.join('\n');
       expect(concatenated).toMatch(/\.settings-modal/);
     });

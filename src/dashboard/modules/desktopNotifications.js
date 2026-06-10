@@ -200,12 +200,12 @@ export function getDesktopNotificationPayload(notification, translate) {
   const format = KIND_FORMATS[notification.kind];
   if (!format) return null;
 
-  const mrNumber = typeof notification.review.mrNumber === 'number'
-    ? String(notification.review.mrNumber)
-    : '?';
-  const url = typeof notification.review.mrUrl === 'string' && notification.review.mrUrl.length > 0
-    ? notification.review.mrUrl
-    : null;
+  const mrNumber =
+    typeof notification.review.mrNumber === 'number' ? String(notification.review.mrNumber) : '?';
+  const url =
+    typeof notification.review.mrUrl === 'string' && notification.review.mrUrl.length > 0
+      ? notification.review.mrUrl
+      : null;
 
   return {
     title: buildTitle(format, translate, notification.review),

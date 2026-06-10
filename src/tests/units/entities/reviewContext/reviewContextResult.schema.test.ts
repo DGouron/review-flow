@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { reviewContextResultSchema } from '@/modules/review-execution/entities/reviewContext/reviewContextResult.schema.js'
+import { describe, it, expect } from 'vitest';
+
+import { reviewContextResultSchema } from '@/modules/review-execution/entities/reviewContext/reviewContextResult.schema.js';
 
 describe('reviewContextResultSchema', () => {
   it('should validate a complete measured result', () => {
@@ -10,24 +11,24 @@ describe('reviewContextResultSchema', () => {
       suggestions: 3,
       score: 10,
       verdict: 'ready_to_merge',
-    }
+    };
 
-    const result = reviewContextResultSchema.safeParse(data)
+    const result = reviewContextResultSchema.safeParse(data);
 
-    expect(result.success).toBe(true)
-  })
+    expect(result.success).toBe(true);
+  });
 
   it('should validate a backfilled result', () => {
     const data = {
       kind: 'backfilled',
       backfilledAt: '2026-05-26T00:01:00Z',
       reason: 'stale-on-boot',
-    }
+    };
 
-    const result = reviewContextResultSchema.safeParse(data)
+    const result = reviewContextResultSchema.safeParse(data);
 
-    expect(result.success).toBe(true)
-  })
+    expect(result.success).toBe(true);
+  });
 
   it('should reject result with invalid verdict', () => {
     const data = {
@@ -37,10 +38,10 @@ describe('reviewContextResultSchema', () => {
       suggestions: 0,
       score: 10,
       verdict: 'invalid_verdict',
-    }
+    };
 
-    const result = reviewContextResultSchema.safeParse(data)
+    const result = reviewContextResultSchema.safeParse(data);
 
-    expect(result.success).toBe(false)
-  })
-})
+    expect(result.success).toBe(false);
+  });
+});

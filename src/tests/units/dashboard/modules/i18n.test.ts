@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
 import { getLanguage, setLanguage, t } from '@/dashboard/modules/i18n.js';
 
 describe('i18n', () => {
@@ -129,7 +130,9 @@ describe('i18n', () => {
     setLanguage('fr');
     expect(t('export.pdf')).toBe('Exporter PDF');
     expect(t('export.title')).toBe("Rapport d'insights \u00e9quipe");
-    expect(t('export.generatedAt', { date: '15/03/2026' })).toBe('G\u00e9n\u00e9r\u00e9 le 15/03/2026');
+    expect(t('export.generatedAt', { date: '15/03/2026' })).toBe(
+      'G\u00e9n\u00e9r\u00e9 le 15/03/2026',
+    );
     expect(t('export.generatedBy')).toBe('G\u00e9n\u00e9r\u00e9 par ReviewFlow');
     expect(t('export.teamSection')).toBe("Analyse d'\u00e9quipe");
     expect(t('export.developerSection')).toBe('Profils d\u00e9veloppeurs');

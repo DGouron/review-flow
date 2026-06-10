@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   WriteInitConfigUseCase,
   type WriteInitConfigDependencies,
@@ -15,17 +16,13 @@ function createFakeDeps(
   };
 }
 
-function createFakeInput(
-  overrides?: Partial<WriteInitConfigInput>,
-): WriteInitConfigInput {
+function createFakeInput(overrides?: Partial<WriteInitConfigInput>): WriteInitConfigInput {
   return {
     configDir: '/home/user/.config/reviewflow',
     port: 3847,
     gitlabUsername: 'damien',
     githubUsername: 'DGouron',
-    repositories: [
-      { name: 'my-app', localPath: '/home/user/projects/my-app', enabled: true },
-    ],
+    repositories: [{ name: 'my-app', localPath: '/home/user/projects/my-app', enabled: true }],
     gitlabWebhookSecret: 'abc123',
     githubWebhookSecret: 'def456',
     ...overrides,
@@ -39,10 +36,9 @@ describe('WriteInitConfigUseCase', () => {
 
     usecase.execute(createFakeInput());
 
-    expect(deps.mkdirSync).toHaveBeenCalledWith(
-      '/home/user/.config/reviewflow',
-      { recursive: true },
-    );
+    expect(deps.mkdirSync).toHaveBeenCalledWith('/home/user/.config/reviewflow', {
+      recursive: true,
+    });
   });
 
   it('should write config.json with correct structure', () => {
@@ -55,8 +51,9 @@ describe('WriteInitConfigUseCase', () => {
       (call: unknown[]) => (call[0] as string).endsWith('config.json'),
     );
     expect(writeCall).toBeDefined();
+    if (!writeCall) throw new Error('expected config.json write call');
 
-    const config = JSON.parse(writeCall![1] as string);
+    const config = JSON.parse(writeCall[1] as string);
     expect(config.server.port).toBe(3847);
     expect(config.user.gitlabUsername).toBe('damien');
     expect(config.user.githubUsername).toBe('DGouron');
@@ -75,8 +72,9 @@ describe('WriteInitConfigUseCase', () => {
       (call: unknown[]) => (call[0] as string).endsWith('.env'),
     );
     expect(writeCall).toBeDefined();
+    if (!writeCall) throw new Error('expected .env write call');
 
-    const envContent = writeCall![1] as string;
+    const envContent = writeCall[1] as string;
     expect(envContent).toContain('GITLAB_WEBHOOK_TOKEN=abc123');
     expect(envContent).toContain('GITHUB_WEBHOOK_SECRET=def456');
     expect(result.envPath).toContain('.env');
@@ -91,7 +89,8 @@ describe('WriteInitConfigUseCase', () => {
     const writeCall = (deps.writeFileSync as ReturnType<typeof vi.fn>).mock.calls.find(
       (call: unknown[]) => (call[0] as string).endsWith('config.json'),
     );
-    const config = JSON.parse(writeCall![1] as string);
+    if (!writeCall) throw new Error('expected config.json write call');
+    const config = JSON.parse(writeCall[1] as string);
     expect(config.repositories).toEqual([]);
     expect(result.configPath).toBeDefined();
   });
@@ -100,14 +99,13 @@ describe('WriteInitConfigUseCase', () => {
     const deps = createFakeDeps();
     const usecase = new WriteInitConfigUseCase(deps);
 
-    usecase.execute(
-      createFakeInput({ gitlabUsername: '', githubUsername: '' }),
-    );
+    usecase.execute(createFakeInput({ gitlabUsername: '', githubUsername: '' }));
 
     const writeCall = (deps.writeFileSync as ReturnType<typeof vi.fn>).mock.calls.find(
       (call: unknown[]) => (call[0] as string).endsWith('config.json'),
     );
-    const config = JSON.parse(writeCall![1] as string);
+    if (!writeCall) throw new Error('expected config.json write call');
+    const config = JSON.parse(writeCall[1] as string);
     expect(config.user.gitlabUsername).toBe('');
     expect(config.user.githubUsername).toBe('');
   });

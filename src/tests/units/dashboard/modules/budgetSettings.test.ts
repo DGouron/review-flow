@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import {
   renderBudgetTile,
   parseBudgetStatusMessage,
@@ -102,7 +103,10 @@ describe('fetchBudgetStatus', () => {
 
 describe('submitBudget', () => {
   it('POSTs /api/budget with limitUsd and returns the parsed body', async () => {
-    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({ success: true, limitUsd: 350 }) }));
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ success: true, limitUsd: 350 }),
+    }));
     const result = await submitBudget(350, fetchImpl as unknown as typeof fetch);
     expect(fetchImpl).toHaveBeenCalledWith(
       '/api/budget',

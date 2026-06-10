@@ -5,9 +5,7 @@ export type ProjectConfigReadResult =
   | { status: 'not-found' }
   | { status: 'malformed' };
 
-export type ProjectConfigWriteResult =
-  | { ok: true }
-  | { ok: false; reason: string };
+export type ProjectConfigWriteResult = { ok: true } | { ok: false; reason: string };
 
 export interface ProjectConfigGateway {
   read(projectPath: string): ProjectConfigReadResult;

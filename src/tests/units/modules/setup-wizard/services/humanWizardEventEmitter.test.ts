@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
+
+import {
+  succeeded,
+  skipped,
+  warning,
+  blocked,
+} from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
 import { HumanWizardEventEmitter } from '@/modules/setup-wizard/services/humanWizardEventEmitter.js';
-import { succeeded, skipped, warning, blocked } from '@/modules/setup-wizard/entities/stepOutcome/stepOutcome.js';
 
 function capture(): { lines: string[]; emitter: HumanWizardEventEmitter } {
   const lines: string[] = [];
@@ -35,7 +41,10 @@ describe('HumanWizardEventEmitter', () => {
 
   it('writes the message and the remediation on a blocked outcome', () => {
     const { lines, emitter } = capture();
-    emitter.emitStepCompleted('claude-login', blocked("L'authentification a échoué", 'Relancez claude /login'));
+    emitter.emitStepCompleted(
+      'claude-login',
+      blocked("L'authentification a échoué", 'Relancez claude /login'),
+    );
     const output = lines.join('\n');
     expect(output).toContain("L'authentification a échoué");
     expect(output).toContain('Relancez claude /login');
@@ -43,7 +52,10 @@ describe('HumanWizardEventEmitter', () => {
 
   it('writes one line per instruction', () => {
     const { lines, emitter } = capture();
-    emitter.emitInstructions(['Configurez le webhook sur github:', '  URL=http://host:3847/webhooks/github']);
+    emitter.emitInstructions([
+      'Configurez le webhook sur github:',
+      '  URL=http://host:3847/webhooks/github',
+    ]);
     expect(lines).toHaveLength(2);
     expect(lines[1]).toContain('/webhooks/github');
   });

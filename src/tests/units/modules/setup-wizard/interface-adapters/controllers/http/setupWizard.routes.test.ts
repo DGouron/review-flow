@@ -1,14 +1,19 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { get } from 'node:http';
+
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+import type {
+  SetupStateGateway,
+  SetupStateLoadResult,
+} from '@/modules/setup-wizard/entities/setupState/setupState.gateway.js';
+import type { SetupState } from '@/modules/setup-wizard/entities/setupState/setupState.schema.js';
 import { setupWizardRoutes } from '@/modules/setup-wizard/interface-adapters/controllers/http/setupWizard.routes.js';
 import { SetupRunRegistry } from '@/modules/setup-wizard/usecases/streamSetupRun.usecase.js';
-import { StubSetupProcessGateway } from '@/tests/stubs/setupProcess.stub.js';
 import { WizardStreamEventFactory } from '@/tests/factories/wizardStreamEvent.factory.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
-import type { SetupStateGateway, SetupStateLoadResult } from '@/modules/setup-wizard/entities/setupState/setupState.gateway.js';
-import type { SetupState } from '@/modules/setup-wizard/entities/setupState/setupState.schema.js';
+import { StubSetupProcessGateway } from '@/tests/stubs/setupProcess.stub.js';
 
 class StubSetupStateGateway implements SetupStateGateway {
   private result: SetupStateLoadResult = { state: null, corrupted: false };

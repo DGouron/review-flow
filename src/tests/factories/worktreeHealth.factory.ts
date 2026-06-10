@@ -14,7 +14,11 @@ export class WorktreeHealthFactory {
     return { status: 'healthy' };
   }
 
-  static stale(overrides?: { ageMs?: number; thresholdMs?: number; detectedAt?: Date }): WorktreeHealth {
+  static stale(overrides?: {
+    ageMs?: number;
+    thresholdMs?: number;
+    detectedAt?: Date;
+  }): WorktreeHealth {
     const reason: DegradedReason = {
       kind: 'stale',
       ageMs: overrides?.ageMs ?? DEFAULT_STALE_AGE_MS,

@@ -1,4 +1,7 @@
-import type { PromptGateway, PromptChoice } from '@/modules/setup-wizard/entities/prompt/prompt.gateway.js';
+import type {
+  PromptGateway,
+  PromptChoice,
+} from '@/modules/setup-wizard/entities/prompt/prompt.gateway.js';
 
 export class StubPromptGateway implements PromptGateway {
   private readonly textAnswers: string[] = [];

@@ -1,4 +1,7 @@
-import type { ServerConfigGateway, ServerConfigEntry } from '@/modules/setup-wizard/entities/serverConfig/serverConfig.gateway.js';
+import type {
+  ServerConfigGateway,
+  ServerConfigEntry,
+} from '@/modules/setup-wizard/entities/serverConfig/serverConfig.gateway.js';
 
 interface StubOptions {
   daemonReachable?: boolean;

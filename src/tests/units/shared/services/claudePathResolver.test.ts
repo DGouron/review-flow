@@ -1,11 +1,13 @@
+import * as childProcess from 'node:child_process';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import {
   resolveClaudePath,
   clearClaudePathCache,
 } from '../../../../shared/services/claudePathResolver.js';
-import * as childProcess from 'node:child_process';
-import * as fs from 'node:fs';
-import * as os from 'node:os';
 
 vi.mock('node:child_process');
 vi.mock('node:fs');

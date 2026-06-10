@@ -1,10 +1,10 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
 export const npmRegistryResponseSchema = z.object({
   version: z.string(),
-})
+});
 
-export type NpmRegistryResponse = z.infer<typeof npmRegistryResponseSchema>
+export type NpmRegistryResponse = z.infer<typeof npmRegistryResponseSchema>;
 
 export const versionCheckResultSchema = z.object({
   currentVersion: z.string(),
@@ -12,4 +12,4 @@ export const versionCheckResultSchema = z.object({
   updateAvailable: z.boolean(),
   checkedAt: z.string(),
   installType: z.enum(['global-npm', 'source-checkout']),
-})
+});

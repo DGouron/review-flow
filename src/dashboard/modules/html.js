@@ -20,7 +20,8 @@ export function sanitizeHttpUrl(url) {
   if (!url) return '#';
 
   try {
-    const fallbackOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+    const fallbackOrigin =
+      typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
     const parsedUrl = new URL(url, fallbackOrigin);
     if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
       return parsedUrl.href;
@@ -57,7 +58,11 @@ export function markdownToHtml(md) {
       const cells = content.split('|').map((/** @type {string} */ c) => c.trim());
       if (cells.every((/** @type {string} */ c) => c.match(/^-+$/))) return '';
       const cellTag = match.includes('---') ? 'th' : 'td';
-      return '<tr>' + cells.map((/** @type {string} */ c) => `<${cellTag}>${c}</${cellTag}>`).join('') + '</tr>';
+      return (
+        '<tr>' +
+        cells.map((/** @type {string} */ c) => `<${cellTag}>${c}</${cellTag}>`).join('') +
+        '</tr>'
+      );
     })
     .replace(/(<tr>[\s\S]*?<\/tr>)+/g, '<table>$&</table>')
     .replace(/(<li>[\s\S]*?<\/li>)+/g, '<ul>$&</ul>')

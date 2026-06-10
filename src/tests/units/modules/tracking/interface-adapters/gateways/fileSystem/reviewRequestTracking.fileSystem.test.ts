@@ -1,13 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { FileSystemReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/fileSystem/reviewRequestTracking.fileSystem.js';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { ProjectStatsCalculator } from '@/modules/statistics-insights/interface-adapters/presenters/projectStats.calculator.js';
-import {
-  TrackedMrFactory,
-  MrTrackingDataFactory,
-} from '@/tests/factories/trackedMr.factory.js';
+import { FileSystemReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/fileSystem/reviewRequestTracking.fileSystem.js';
+import { TrackedMrFactory, MrTrackingDataFactory } from '@/tests/factories/trackedMr.factory.js';
 
 function trackingFilePath(projectPath: string): string {
   return join(projectPath, '.claude', 'reviews', 'mr-tracking.json');
@@ -46,7 +45,7 @@ describe('FileSystemReviewRequestTrackingGateway', () => {
     it('resets mrs to an empty array when persisted mrs is not an array', () => {
       writeRaw(
         projectPath,
-        JSON.stringify({ mrs: 'corrupted', lastUpdated: '2024-01-01T00:00:00Z', stats: null })
+        JSON.stringify({ mrs: 'corrupted', lastUpdated: '2024-01-01T00:00:00Z', stats: null }),
       );
 
       const result = gateway.loadTracking(projectPath);
@@ -167,7 +166,10 @@ describe('FileSystemReviewRequestTrackingGateway', () => {
     });
 
     it('does nothing when the id is not found', () => {
-      gateway.create(projectPath, TrackedMrFactory.create({ id: 'mr-known', state: 'pending-review' }));
+      gateway.create(
+        projectPath,
+        TrackedMrFactory.create({ id: 'mr-known', state: 'pending-review' }),
+      );
 
       gateway.update(projectPath, 'mr-missing', { state: 'merged' });
 
@@ -347,7 +349,7 @@ describe('FileSystemReviewRequestTrackingGateway', () => {
     it('updates lastPushAt and returns the MR', () => {
       gateway.create(
         projectPath,
-        TrackedMrFactory.create({ mrNumber: 42, platform: 'gitlab', lastPushAt: null })
+        TrackedMrFactory.create({ mrNumber: 42, platform: 'gitlab', lastPushAt: null }),
       );
 
       const result = gateway.recordPush(projectPath, 42, 'gitlab');

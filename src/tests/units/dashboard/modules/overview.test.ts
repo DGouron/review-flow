@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  renderOverviewHtml,
-  renderSparklineSvg,
-} from '@/dashboard/modules/overview.js';
+
+import { renderOverviewHtml, renderSparklineSvg } from '@/dashboard/modules/overview.js';
 
 describe('renderOverviewHtml', () => {
   it('falls back to French empty defaults when sections are missing from server payload', () => {
@@ -44,7 +42,6 @@ describe('renderOverviewHtml', () => {
     expect(html).not.toContain('javascript:');
     expect(html).toContain('href="#"');
   });
-
 
   it('renders the three sections with their LABEL prefix headings', () => {
     const html = renderOverviewHtml({

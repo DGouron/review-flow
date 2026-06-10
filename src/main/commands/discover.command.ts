@@ -1,10 +1,14 @@
 import { existsSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { DiscoverRepositoriesUseCase, type DiscoveredRepository } from '@/modules/cli-configuration/usecases/cli/discoverRepositories.usecase.js';
-import { AddRepositoriesToConfigUseCase } from '@/modules/cli-configuration/usecases/cli/addRepositoriesToConfig.usecase.js';
-import { getConfigDir } from '@/shared/services/configDir.js';
-import { green, yellow, dim } from '@/shared/services/ansiColors.js';
+
 import { DEFAULT_SCAN_PATHS } from '@/main/shared/cliConstants.js';
+import { AddRepositoriesToConfigUseCase } from '@/modules/cli-configuration/usecases/cli/addRepositoriesToConfig.usecase.js';
+import {
+  DiscoverRepositoriesUseCase,
+  type DiscoveredRepository,
+} from '@/modules/cli-configuration/usecases/cli/discoverRepositories.usecase.js';
+import { green, yellow, dim } from '@/shared/services/ansiColors.js';
+import { getConfigDir } from '@/shared/services/configDir.js';
 
 export interface DiscoverDependencies {
   existsSync: (path: string) => boolean;
@@ -55,7 +59,7 @@ export async function executeDiscover(
 
   const result = adder.execute({
     configPath,
-    newRepositories: selected.map(repo => ({
+    newRepositories: selected.map((repo) => ({
       name: repo.name,
       localPath: repo.localPath,
       enabled: true,
@@ -82,7 +86,7 @@ export function createDiscoverDependencies(
     readFileSync,
     writeFileSync,
     readdirSync: (path: string) =>
-      readdirSync(path, { withFileTypes: true }).map(d => ({
+      readdirSync(path, { withFileTypes: true }).map((d) => ({
         name: d.name,
         isDirectory: () => d.isDirectory(),
       })),
@@ -93,7 +97,7 @@ export function createDiscoverDependencies(
       const { checkbox } = await import('@inquirer/prompts');
       return checkbox({
         message: 'Select repositories to add:',
-        choices: repositories.map(r => ({
+        choices: repositories.map((r) => ({
           name: `${r.name} ${dim(`(${r.localPath})`)}${r.hasReviewConfig ? green(' [configured]') : ''}`,
           value: r,
           checked: r.hasReviewConfig,

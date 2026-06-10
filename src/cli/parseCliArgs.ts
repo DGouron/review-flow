@@ -65,9 +65,30 @@ interface HelpArgs {
   command: 'help';
 }
 
-export type CliArgs = StartArgs | StopArgs | StatusArgs | LogsArgs | InitArgs | DiscoverArgs | ValidateArgs | FollowupImportantsArgs | SetupArgs | VersionArgs | HelpArgs;
+export type CliArgs =
+  | StartArgs
+  | StopArgs
+  | StatusArgs
+  | LogsArgs
+  | InitArgs
+  | DiscoverArgs
+  | ValidateArgs
+  | FollowupImportantsArgs
+  | SetupArgs
+  | VersionArgs
+  | HelpArgs;
 
-const KNOWN_COMMANDS = ['start', 'stop', 'status', 'logs', 'init', 'discover', 'validate', 'followup-importants', 'setup'] as const;
+const KNOWN_COMMANDS = [
+  'start',
+  'stop',
+  'status',
+  'logs',
+  'init',
+  'discover',
+  'validate',
+  'followup-importants',
+  'setup',
+] as const;
 type KnownCommand = (typeof KNOWN_COMMANDS)[number];
 
 function hasFlag(args: string[], long: string, short?: string): boolean {
@@ -83,10 +104,14 @@ function getFlagValue(args: string[], long: string, short?: string): string | un
   return undefined;
 }
 
+function isKnownCommand(value: string): value is KnownCommand {
+  return KNOWN_COMMANDS.some((command) => command === value);
+}
+
 function extractCommand(args: string[]): KnownCommand {
   const positional = args.find((arg) => !arg.startsWith('-'));
-  if (positional && (KNOWN_COMMANDS as readonly string[]).includes(positional)) {
-    return positional as KnownCommand;
+  if (positional !== undefined && isKnownCommand(positional)) {
+    return positional;
   }
   return 'start';
 }

@@ -1,8 +1,8 @@
+import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { homedir } from 'node:os';
-import { execSync } from 'node:child_process';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 

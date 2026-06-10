@@ -178,7 +178,7 @@ const translations = {
     'empty.activeFollowups': 'No follow-up in progress',
     'empty.pendingFix': 'No MR pending fix',
     'empty.pendingApproval': 'No MR pending approval',
-        'empty.reviewFiles': 'No review files',
+    'empty.reviewFiles': 'No review files',
     'settings.uiLanguage': 'UI language',
     'settings.claudePromptsLanguage': 'Claude prompts language',
     'settings.defaultModel': 'Default model',
@@ -188,9 +188,11 @@ const translations = {
     'settings.externalLinkPlaceholder': 'https://notion.so/team/project',
     'settings.qualityThreshold': 'Quality threshold (0-10)',
     'settings.qualityThresholdPlaceholder': 'e.g. 7',
-    'settings.qualityThresholdHint': 'Approval is reverted when score falls below this threshold. Leave empty to disable.',
+    'settings.qualityThresholdHint':
+      'Approval is reverted when score falls below this threshold. Leave empty to disable.',
     'settings.maxConcurrentReviews': 'Max concurrent reviews (1-10)',
-    'settings.maxConcurrentReviewsHint': 'How many reviews of this project can run at the same time. The header capacity total is the sum across all projects.',
+    'settings.maxConcurrentReviewsHint':
+      'How many reviews of this project can run at the same time. The header capacity total is the sum across all projects.',
     'settings.cancel': 'Cancel',
     'settings.save': 'Save',
     'empty.reviewsNoProject': 'Load a project to see reviews',
@@ -255,7 +257,8 @@ const translations = {
     'modal.back': 'Go back',
     'modal.confirm': 'Confirm',
     'modal.markMerged.title': 'Mark {{label}} !{{number}} as merged?',
-    'modal.markMerged.message': 'This manually marks the MR as merged. The card will leave "Corrections requises".',
+    'modal.markMerged.message':
+      'This manually marks the MR as merged. The card will leave "Corrections requises".',
     'modal.markMerged.back': 'Go back',
     'modal.markMerged.confirm': 'Mark as merged',
 
@@ -319,7 +322,8 @@ const translations = {
     'team.strengths': 'Strengths',
     'team.weaknesses': 'Areas to improve',
     'team.tips': 'Tips',
-    'team.noData': 'No review data yet. Reviews will appear here once the first review is completed.',
+    'team.noData':
+      'No review data yet. Reviews will appear here once the first review is completed.',
     'team.insufficientData': '{{current}}/{{required}} reviews — more data needed',
     'team.notEnoughDevs': 'Not enough developers for team comparison',
     'team.loading': 'Loading team insights...',
@@ -367,17 +371,21 @@ const translations = {
     'insight.quality.highScore': 'Average score {{score}}/10 — {{percent}}% above team average',
     'insight.quality.lowScore': 'Average score {{score}}/10 — {{percent}}% below team average',
     'insight.quality.lowBlocking': 'Only {{blocking}} blocking issues per review on average',
-    'insight.quality.highBlocking': '{{blocking}} blocking issues per review — {{percent}}% above team',
-    'insight.responsiveness.fast': 'Reviews completed in {{duration}} avg — {{percent}}% faster than team',
+    'insight.quality.highBlocking':
+      '{{blocking}} blocking issues per review — {{percent}}% above team',
+    'insight.responsiveness.fast':
+      'Reviews completed in {{duration}} avg — {{percent}}% faster than team',
     'insight.responsiveness.slow': 'Reviews take {{duration}} avg — {{percent}}% slower than team',
     'insight.codeVolume.high': 'Handles {{lines}} lines per review on average',
     'insight.codeVolume.low': 'Small changes with {{lines}} lines per review',
     'insight.iteration.good': '{{rate}}% of reviews need no followup — strong first-pass quality',
-    'insight.iteration.poor': '{{rate}}% of reviews have blocking issues — multiple iterations needed',
+    'insight.iteration.poor':
+      '{{rate}}% of reviews have blocking issues — multiple iterations needed',
     'insight.quality.improving': 'Quality is on an upward trend — keep it up',
     'insight.responsiveness.improving': 'Responsiveness is improving — reviews are getting faster',
     'insight.codeVolume.improving': 'Code volume is increasing — handling larger changes',
-    'insight.iteration.improving': 'Iteration efficiency is improving — fewer blocking issues recently',
+    'insight.iteration.improving':
+      'Iteration efficiency is improving — fewer blocking issues recently',
 
     // AI insights
     'ai.generate': 'Generate AI Insights',
@@ -421,13 +429,16 @@ const translations = {
     'version.permissionDenied': 'Permission denied. Run this command manually:',
     'version.copyCommand': 'Copy command',
     'version.commandCopied': 'Command copied!',
-    'version.sourceCheckoutTooltip': 'Source-checkout install. Click to see the manual update command.',
-    'version.sourceCheckoutNotice': 'This daemon runs from a source checkout. Run this command manually to update:',
+    'version.sourceCheckoutTooltip':
+      'Source-checkout install. Click to see the manual update command.',
+    'version.sourceCheckoutNotice':
+      'This daemon runs from a source checkout. Run this command manually to update:',
 
     // Worktree panel (SPEC-173)
     'worktree.section.title': 'Worktree pool',
     'worktree.empty.title': 'Pool empty',
-    'worktree.empty.subtitle': 'No worktree on disk. The next scheduled review will materialize one.',
+    'worktree.empty.subtitle':
+      'No worktree on disk. The next scheduled review will materialize one.',
     'worktree.button.sweepNow': 'Sweep now',
     'worktree.button.sweeping': 'Sweeping…',
     'worktree.status.active': 'Active',
@@ -505,7 +516,8 @@ const translations = {
     'notify.followupCompleted': 'Follow-up terminé pour !{{mrNumber}}',
     'notify.reviewFailed': 'Review en échec pour !{{mrNumber}}',
     'notify.followupRequested': 'Follow-up demandé pour !{{mrNumber}}',
-    'notify.reviewPendingConfirmation': 'Review en attente de votre confirmation pour !{{mrNumber}}',
+    'notify.reviewPendingConfirmation':
+      'Review en attente de votre confirmation pour !{{mrNumber}}',
     'notify.desktopTitle': 'Alerte Reviewflow',
     // Notifications — desktop labels (short, used in rich payload)
     'notify.label.reviewStarted': 'Review',
@@ -615,7 +627,7 @@ const translations = {
     'empty.activeFollowups': 'Aucun follow-up en cours',
     'empty.pendingFix': 'Aucune MR en attente de correctif',
     'empty.pendingApproval': "Aucune MR en attente d'approbation",
-        'empty.reviewFiles': 'Aucun fichier de review',
+    'empty.reviewFiles': 'Aucun fichier de review',
     'settings.uiLanguage': "Langue de l'interface",
     'settings.claudePromptsLanguage': 'Langue des prompts Claude',
     'settings.defaultModel': 'Modèle par défaut',
@@ -625,9 +637,11 @@ const translations = {
     'settings.externalLinkPlaceholder': 'https://notion.so/team/projet',
     'settings.qualityThreshold': 'Seuil de qualité (0-10)',
     'settings.qualityThresholdPlaceholder': 'ex. 7',
-    'settings.qualityThresholdHint': "L'approbation est annulée si le score passe sous ce seuil. Laisser vide pour désactiver.",
+    'settings.qualityThresholdHint':
+      "L'approbation est annulée si le score passe sous ce seuil. Laisser vide pour désactiver.",
     'settings.maxConcurrentReviews': 'Reviews en parallèle max (1-10)',
-    'settings.maxConcurrentReviewsHint': 'Nombre de reviews de ce projet pouvant tourner simultanément. La capacité totale affichée dans le header est la somme inter-projets.',
+    'settings.maxConcurrentReviewsHint':
+      'Nombre de reviews de ce projet pouvant tourner simultanément. La capacité totale affichée dans le header est la somme inter-projets.',
     'settings.cancel': 'Annuler',
     'settings.save': 'Enregistrer',
     'empty.reviewsNoProject': 'Charger un projet pour voir les reviews',
@@ -692,7 +706,8 @@ const translations = {
     'modal.back': 'Revenir',
     'modal.confirm': 'Confirmer',
     'modal.markMerged.title': 'Marquer la {{label}} !{{number}} comme mergée ?',
-    'modal.markMerged.message': 'Marque manuellement la MR comme mergée. La carte quittera "Corrections requises".',
+    'modal.markMerged.message':
+      'Marque manuellement la MR comme mergée. La carte quittera "Corrections requises".',
     'modal.markMerged.back': 'Revenir',
     'modal.markMerged.confirm': 'Marquer comme mergée',
 
@@ -756,7 +771,8 @@ const translations = {
     'team.strengths': 'Points forts',
     'team.weaknesses': "Axes d'amélioration",
     'team.tips': 'Conseils',
-    'team.noData': 'Pas encore de données de review. Les reviews apparaîtront ici une fois la première review terminée.',
+    'team.noData':
+      'Pas encore de données de review. Les reviews apparaîtront ici une fois la première review terminée.',
     'team.insufficientData': '{{current}}/{{required}} reviews — plus de données nécessaires',
     'team.notEnoughDevs': "Pas assez de développeurs pour une comparaison d'équipe",
     'team.loading': 'Chargement des insights équipe...',
@@ -801,20 +817,31 @@ const translations = {
     'devSheet.metrics.firstPassQuality': 'Qualité 1re passe',
 
     // Insight descriptions
-    'insight.quality.highScore': 'Score moyen {{score}}/10 — {{percent}}% au-dessus de la moyenne équipe',
-    'insight.quality.lowScore': 'Score moyen {{score}}/10 — {{percent}}% en-dessous de la moyenne équipe',
-    'insight.quality.lowBlocking': 'Seulement {{blocking}} problèmes bloquants par review en moyenne',
-    'insight.quality.highBlocking': '{{blocking}} problèmes bloquants par review — {{percent}}% au-dessus de l\'équipe',
-    'insight.responsiveness.fast': 'Reviews complétées en {{duration}} en moyenne — {{percent}}% plus rapide que l\'équipe',
-    'insight.responsiveness.slow': 'Les reviews prennent {{duration}} en moyenne — {{percent}}% plus lent que l\'équipe',
+    'insight.quality.highScore':
+      'Score moyen {{score}}/10 — {{percent}}% au-dessus de la moyenne équipe',
+    'insight.quality.lowScore':
+      'Score moyen {{score}}/10 — {{percent}}% en-dessous de la moyenne équipe',
+    'insight.quality.lowBlocking':
+      'Seulement {{blocking}} problèmes bloquants par review en moyenne',
+    'insight.quality.highBlocking':
+      "{{blocking}} problèmes bloquants par review — {{percent}}% au-dessus de l'équipe",
+    'insight.responsiveness.fast':
+      "Reviews complétées en {{duration}} en moyenne — {{percent}}% plus rapide que l'équipe",
+    'insight.responsiveness.slow':
+      "Les reviews prennent {{duration}} en moyenne — {{percent}}% plus lent que l'équipe",
     'insight.codeVolume.high': 'Gère {{lines}} lignes par review en moyenne',
     'insight.codeVolume.low': 'Petits changements avec {{lines}} lignes par review',
-    'insight.iteration.good': '{{rate}}% des reviews sans besoin de suivi — excellente qualité de première passe',
-    'insight.iteration.poor': '{{rate}}% des reviews ont des problèmes bloquants — plusieurs itérations nécessaires',
+    'insight.iteration.good':
+      '{{rate}}% des reviews sans besoin de suivi — excellente qualité de première passe',
+    'insight.iteration.poor':
+      '{{rate}}% des reviews ont des problèmes bloquants — plusieurs itérations nécessaires',
     'insight.quality.improving': 'La qualité est en hausse — continuez comme ça',
-    'insight.responsiveness.improving': 'La réactivité s\'améliore — les reviews sont de plus en plus rapides',
-    'insight.codeVolume.improving': 'Le volume de code augmente — gestion de changements plus importants',
-    'insight.iteration.improving': 'L\'efficacité d\'itération s\'améliore — moins de problèmes bloquants récemment',
+    'insight.responsiveness.improving':
+      "La réactivité s'améliore — les reviews sont de plus en plus rapides",
+    'insight.codeVolume.improving':
+      'Le volume de code augmente — gestion de changements plus importants',
+    'insight.iteration.improving':
+      "L'efficacité d'itération s'améliore — moins de problèmes bloquants récemment",
 
     // AI insights
     'ai.generate': 'Générer les insights IA',
@@ -824,11 +851,11 @@ const translations = {
     'ai.newDataAvailable': 'Nouvelles reviews disponibles',
     'ai.section': 'Analyse IA',
     'ai.noInsights': 'Générer les insights IA pour une analyse détaillée',
-    'ai.teamAnalysis': 'Analyse d\'équipe',
+    'ai.teamAnalysis': "Analyse d'équipe",
     'ai.strengths': 'Points forts',
-    'ai.weaknesses': 'Axes d\'amélioration',
+    'ai.weaknesses': "Axes d'amélioration",
     'ai.recommendations': 'Recommandations',
-    'ai.dynamics': 'Dynamique d\'équipe',
+    'ai.dynamics': "Dynamique d'équipe",
     'ai.summary': 'Profil',
     'ai.error': 'Erreur lors de la génération des insights',
     'ai.titleExplanation': 'Pourquoi ce titre',
@@ -858,8 +885,10 @@ const translations = {
     'version.permissionDenied': 'Permission refusée. Exécutez cette commande manuellement :',
     'version.copyCommand': 'Copier la commande',
     'version.commandCopied': 'Commande copiée !',
-    'version.sourceCheckoutTooltip': "Installation depuis le code source. Cliquez pour voir la commande de mise à jour manuelle.",
-    'version.sourceCheckoutNotice': 'Ce daemon tourne depuis un checkout du code source. Exécutez cette commande manuellement pour mettre à jour :',
+    'version.sourceCheckoutTooltip':
+      'Installation depuis le code source. Cliquez pour voir la commande de mise à jour manuelle.',
+    'version.sourceCheckoutNotice':
+      'Ce daemon tourne depuis un checkout du code source. Exécutez cette commande manuellement pour mettre à jour :',
 
     // Worktree panel (SPEC-173)
     'worktree.section.title': 'Pool des worktrees',

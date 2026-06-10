@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { GatewayError } from '@/shared/foundation/gatewayError.js';
 
 describe('GatewayError', () => {

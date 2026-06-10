@@ -1,13 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
 import { runClaudeReviewJob } from '@/modules/claude-invocation/usecases/runClaudeReviewJob.usecase.js';
+import { StubBillingStateGateway } from '@/tests/stubs/billingState.stub.js';
 import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
+import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
 import { StubMcpCompletionBridge } from '@/tests/stubs/mcpCompletion.stub.js';
 import { StubReviewReportGateway } from '@/tests/stubs/reviewReport.stub.js';
-import { StubBillingStateGateway } from '@/tests/stubs/billingState.stub.js';
-import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
-import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
 
-function buildInput(overrides: Partial<Parameters<typeof runClaudeReviewJob>[0]> = {}): Parameters<typeof runClaudeReviewJob>[0] {
+function buildInput(
+  overrides: Partial<Parameters<typeof runClaudeReviewJob>[0]> = {},
+): Parameters<typeof runClaudeReviewJob>[0] {
   return {
     jobId: 'gitlab:owner/repo:42',
     jobType: 'review',
@@ -219,7 +222,9 @@ describe('runClaudeReviewJob orchestrator', () => {
       const result = await runPromise;
 
       expect(ctx.sessionGateway.getSessionUsageCalls).toHaveLength(1);
-      expect(ctx.sessionGateway.getSessionUsageCalls[0]?.sessionId).toBe(parseSessionId('usg00001'));
+      expect(ctx.sessionGateway.getSessionUsageCalls[0]?.sessionId).toBe(
+        parseSessionId('usg00001'),
+      );
       expect(ctx.sessionGateway.getSessionUsageCalls[0]?.cwd).toBe('/tmp/project');
       expect(result.status).toBe('completed');
       if (result.status === 'completed') {

@@ -53,9 +53,7 @@ export class StubEmberAnswerTransportGateway implements EmberAnswerTransportGate
     try {
       const answer = await this.answerBuilder(options.question, options.systemPrompt);
       const words = answer.split(' ');
-      const emitted = this.shouldFailMidStream
-        ? Math.ceil(words.length / 2)
-        : words.length;
+      const emitted = this.shouldFailMidStream ? Math.ceil(words.length / 2) : words.length;
       for (let index = 0; index < emitted; index += 1) {
         const fragment = index === 0 ? words[index] : ` ${words[index]}`;
         subscriber.onChunk(fragment);

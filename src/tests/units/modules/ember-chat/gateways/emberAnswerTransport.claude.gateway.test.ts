@@ -1,12 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { EmberAnswerTransportClaudeGateway } from '@/modules/ember-chat/interface-adapters/gateways/emberAnswerTransport.claude.gateway.js';
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import type {
   EmberAnswerStartOptions,
   EmberAnswerSubscriber,
 } from '@/modules/ember-chat/entities/emberAnswer/emberAnswerTransport.gateway.js';
+import { EmberAnswerTransportClaudeGateway } from '@/modules/ember-chat/interface-adapters/gateways/emberAnswerTransport.claude.gateway.js';
 import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
 
 interface CollectedSubscriber extends EmberAnswerSubscriber {
@@ -83,7 +85,10 @@ describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)',
   it('dispatches --bg with read-only flags and streams transcript chunks until turn-complete', async () => {
     const dir = projectDirFor(homeDir, homeDir);
     const lines = [
-      JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'Hello ' }] } }),
+      JSON.stringify({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: 'Hello ' }] },
+      }),
       JSON.stringify({
         type: 'assistant',
         message: { content: [{ type: 'text', text: 'world' }], stop_reason: 'end_turn' },
@@ -130,7 +135,10 @@ describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)',
   it('completes on a system turn_duration marker even without assistant stop_reason', async () => {
     const dir = projectDirFor(homeDir, homeDir);
     const lines = [
-      JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'partial answer' }] } }),
+      JSON.stringify({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: 'partial answer' }] },
+      }),
       JSON.stringify({ type: 'system', subtype: 'turn_duration' }),
     ];
     writeFileSync(join(dir, 'stub-session-x.jsonl'), lines.join('\n') + '\n');
@@ -172,7 +180,10 @@ describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)',
     const dir = projectDirFor(homeDir, homeDir);
     writeFileSync(
       join(dir, 'stub-session-stuck.jsonl'),
-      JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'thinking' }] } }) + '\n',
+      JSON.stringify({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: 'thinking' }] },
+      }) + '\n',
     );
 
     const gateway = new EmberAnswerTransportClaudeGateway(sessionGateway, {

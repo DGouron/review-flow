@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { persistAiInsightsResult } from '@/modules/statistics-insights/usecases/insights/persistAiInsights.usecase.js';
-import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
-import { InMemoryInsightsGateway } from '@/tests/stubs/insights.stub.js';
-import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+
 import type { AiInsightsResult } from '@/modules/statistics-insights/entities/insight/aiInsight.js';
+import { persistAiInsightsResult } from '@/modules/statistics-insights/usecases/insights/persistAiInsights.usecase.js';
+import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+import { InMemoryInsightsGateway } from '@/tests/stubs/insights.stub.js';
+import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 
 const validAiResult: AiInsightsResult = {
   developers: [

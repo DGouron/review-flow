@@ -6,8 +6,9 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
+
 import type {
   McpCompletionBridge,
   McpCompletionListener,
@@ -54,8 +55,12 @@ interface Subscription {
 export class FileSystemMcpCompletionBridge implements McpCompletionBridge {
   private readonly directory: string;
   private readonly pollIntervalMs: number;
-  private readonly setIntervalImpl: NonNullable<FileSystemMcpCompletionBridgeOptions['setIntervalImpl']>;
-  private readonly clearIntervalImpl: NonNullable<FileSystemMcpCompletionBridgeOptions['clearIntervalImpl']>;
+  private readonly setIntervalImpl: NonNullable<
+    FileSystemMcpCompletionBridgeOptions['setIntervalImpl']
+  >;
+  private readonly clearIntervalImpl: NonNullable<
+    FileSystemMcpCompletionBridgeOptions['clearIntervalImpl']
+  >;
   private readonly subscriptions = new Map<string, Subscription>();
 
   constructor(options: FileSystemMcpCompletionBridgeOptions = {}) {

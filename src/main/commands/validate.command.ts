@@ -1,8 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+
 import { ValidateConfigUseCase } from '@/modules/cli-configuration/usecases/cli/validateConfig.usecase.js';
-import { getConfigDir } from '@/shared/services/configDir.js';
 import { green, red, yellow, dim, bold } from '@/shared/services/ansiColors.js';
+import { getConfigDir } from '@/shared/services/configDir.js';
 
 export interface ValidateDependencies {
   existsSync: (path: string) => boolean;

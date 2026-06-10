@@ -1,24 +1,30 @@
 import { describe, it, expect } from 'vitest';
+
+import type { Platform } from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
+import type { SetupStateGateway } from '@/modules/setup-wizard/entities/setupState/setupState.gateway.js';
+import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
+import { NextActionsPresenter } from '@/modules/setup-wizard/interface-adapters/presenters/nextActions.presenter.js';
+import { HumanWizardEventEmitter } from '@/modules/setup-wizard/services/humanWizardEventEmitter.js';
 import { DisplayNextActionsStep } from '@/modules/setup-wizard/usecases/steps/displayNextActions.step.js';
-import { StubDependencyProbeGateway } from '@/tests/stubs/setup-wizard/dependencyProbe.stub.js';
+import { StubAiFallbackGateway } from '@/tests/stubs/setup-wizard/aiFallback.stub.js';
 import { StubClaudeAuthGateway } from '@/tests/stubs/setup-wizard/claudeAuth.stub.js';
-import { StubDaemonServiceGateway } from '@/tests/stubs/setup-wizard/daemonService.stub.js';
 import { StubDaemonHealthProbeGateway } from '@/tests/stubs/setup-wizard/daemonHealthProbe.stub.js';
+import { StubDaemonServiceGateway } from '@/tests/stubs/setup-wizard/daemonService.stub.js';
+import { StubDependencyProbeGateway } from '@/tests/stubs/setup-wizard/dependencyProbe.stub.js';
 import { StubEnvFileGateway } from '@/tests/stubs/setup-wizard/envFile.stub.js';
 import { StubGitRemoteGateway } from '@/tests/stubs/setup-wizard/gitRemote.stub.js';
 import { StubProjectConfigGateway } from '@/tests/stubs/setup-wizard/projectConfig.stub.js';
-import { StubSkillTemplateGateway } from '@/tests/stubs/setup-wizard/skillTemplate.stub.js';
-import { StubServerConfigGateway } from '@/tests/stubs/setup-wizard/serverConfig.stub.js';
-import { StubValidationGateway } from '@/tests/stubs/setup-wizard/validation.stub.js';
-import { StubAiFallbackGateway } from '@/tests/stubs/setup-wizard/aiFallback.stub.js';
 import { StubPromptGateway } from '@/tests/stubs/setup-wizard/prompt.stub.js';
-import { HumanWizardEventEmitter } from '@/modules/setup-wizard/services/humanWizardEventEmitter.js';
-import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
-import type { SetupStateGateway } from '@/modules/setup-wizard/entities/setupState/setupState.gateway.js';
-import type { Platform } from '@/modules/setup-wizard/entities/projectContext/projectContext.schema.js';
+import { StubServerConfigGateway } from '@/tests/stubs/setup-wizard/serverConfig.stub.js';
+import { StubSkillTemplateGateway } from '@/tests/stubs/setup-wizard/skillTemplate.stub.js';
+import { StubValidationGateway } from '@/tests/stubs/setup-wizard/validation.stub.js';
 
 function noopStateGateway(): SetupStateGateway {
-  return { load: () => ({ state: null, corrupted: false }), save: () => undefined, reset: () => undefined };
+  return {
+    load: () => ({ state: null, corrupted: false }),
+    save: () => undefined,
+    reset: () => undefined,
+  };
 }
 
 interface BuildOptions {
@@ -35,7 +41,14 @@ function buildContext(options: BuildOptions = {}): WizardContext {
     state: null,
     currentStepId: null,
     project: { localPath: '/tmp/p', platform, preset: 'backend', language: 'en', remoteUrl: null },
-    flags: { path: '/tmp/p', json: false, force: false, ai: false, yes: false, showSecrets: options.showSecrets ?? false },
+    flags: {
+      path: '/tmp/p',
+      json: false,
+      force: false,
+      ai: false,
+      yes: false,
+      showSecrets: options.showSecrets ?? false,
+    },
     gateways: {
       setupState: noopStateGateway(),
       dependencyProbe: new StubDependencyProbeGateway(),
@@ -57,7 +70,7 @@ function buildContext(options: BuildOptions = {}): WizardContext {
 }
 
 describe('DisplayNextActionsStep', () => {
-  const step = new DisplayNextActionsStep();
+  const step = new DisplayNextActionsStep(new NextActionsPresenter());
 
   it('always executes (detect returns null)', async () => {
     const outcome = await step.detect(buildContext());
@@ -74,7 +87,9 @@ describe('DisplayNextActionsStep', () => {
     const written: string[] = [];
     const envFile = new StubEnvFileGateway();
     envFile.seedSecrets('/tmp/p');
-    await step.execute(buildContext({ platform: 'github', envFile, writer: (line) => written.push(line) }));
+    await step.execute(
+      buildContext({ platform: 'github', envFile, writer: (line) => written.push(line) }),
+    );
     const output = written.join('\n');
     expect(output).toContain('Configurez le webhook');
     expect(output).toContain('/webhooks/github');
@@ -84,7 +99,9 @@ describe('DisplayNextActionsStep', () => {
     const written: string[] = [];
     const envFile = new StubEnvFileGateway();
     envFile.seedSecrets('/tmp/p');
-    await step.execute(buildContext({ platform: 'gitlab', envFile, writer: (line) => written.push(line) }));
+    await step.execute(
+      buildContext({ platform: 'gitlab', envFile, writer: (line) => written.push(line) }),
+    );
     expect(written.join('\n')).toContain('/webhooks/gitlab');
   });
 
@@ -99,13 +116,27 @@ describe('DisplayNextActionsStep', () => {
     const writtenMasked: string[] = [];
     const envMasked = new StubEnvFileGateway();
     envMasked.seedSecrets('/tmp/p', 'a'.repeat(64), secret);
-    await step.execute(buildContext({ platform: 'github', envFile: envMasked, showSecrets: false, writer: (line) => writtenMasked.push(line) }));
+    await step.execute(
+      buildContext({
+        platform: 'github',
+        envFile: envMasked,
+        showSecrets: false,
+        writer: (line) => writtenMasked.push(line),
+      }),
+    );
     expect(writtenMasked.join('\n')).not.toContain(secret);
 
     const writtenShown: string[] = [];
     const envShown = new StubEnvFileGateway();
     envShown.seedSecrets('/tmp/p', 'a'.repeat(64), secret);
-    await step.execute(buildContext({ platform: 'github', envFile: envShown, showSecrets: true, writer: (line) => writtenShown.push(line) }));
+    await step.execute(
+      buildContext({
+        platform: 'github',
+        envFile: envShown,
+        showSecrets: true,
+        writer: (line) => writtenShown.push(line),
+      }),
+    );
     expect(writtenShown.join('\n')).toContain(secret);
   });
 });

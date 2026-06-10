@@ -1,6 +1,6 @@
-import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
 import type { BackfillProgress } from '@/modules/statistics-insights/entities/backfill/backfillProgress.js';
+import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 
 export interface BackfillDiffStatsDependencies {
   statsGateway: StatsGateway;

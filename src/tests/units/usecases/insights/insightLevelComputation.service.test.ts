@@ -1,4 +1,11 @@
 import { describe, it, expect } from 'vitest';
+
+import type {
+  CategoryLevel,
+  CategoryLevels,
+} from '@/modules/statistics-insights/entities/insight/developerInsight.js';
+import type { InsightTrend } from '@/modules/statistics-insights/entities/insight/insightTrend.js';
+import type { ReviewStats } from '@/modules/statistics-insights/services/statsService.js';
 import {
   normalizeHigherIsBetter,
   normalizeLowerIsBetter,
@@ -20,12 +27,6 @@ import {
   computeOverallLevel,
 } from '@/modules/statistics-insights/usecases/insights/insightLevelComputation.service.js';
 import { ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
-import type { ReviewStats } from '@/modules/statistics-insights/services/statsService.js';
-import type {
-  CategoryLevel,
-  CategoryLevels,
-} from '@/modules/statistics-insights/entities/insight/developerInsight.js';
-import type { InsightTrend } from '@/modules/statistics-insights/entities/insight/insightTrend.js';
 
 function categoryLevel(level: number, trend: InsightTrend = 'stable'): CategoryLevel {
   return { level, trend };
@@ -315,13 +316,13 @@ describe('computeTrendForMetric', () => {
   });
 
   it('should return stable when the previous window is empty', () => {
-    const reviews = reviewsWithScores(new Array(10).fill(5));
+    const reviews = reviewsWithScores(Array.from({ length: 10 }, () => 5));
 
     expect(computeTrendForMetric(reviews, extractScore)).toBe('stable');
   });
 
   it('should return stable when both windows average exactly 0', () => {
-    const reviews = reviewsWithScores(new Array(15).fill(0));
+    const reviews = reviewsWithScores(Array.from({ length: 15 }, () => 0));
 
     expect(computeTrendForMetric(reviews, extractScore)).toBe('stable');
   });
@@ -339,7 +340,7 @@ describe('computeTrendForMetric', () => {
   });
 
   it('should return stable when the change stays within the threshold', () => {
-    const reviews = reviewsWithScores(new Array(15).fill(5));
+    const reviews = reviewsWithScores(Array.from({ length: 15 }, () => 5));
 
     expect(computeTrendForMetric(reviews, extractScore)).toBe('stable');
   });
@@ -360,19 +361,21 @@ describe('computeCodeVolumeTrend', () => {
   });
 
   it('should return stable when the previous window is empty', () => {
-    expect(computeCodeVolumeTrend(volumeReviews(new Array(10).fill(100)))).toBe('stable');
+    expect(computeCodeVolumeTrend(volumeReviews(Array.from({ length: 10 }, () => 100)))).toBe(
+      'stable',
+    );
   });
 
   it('should return stable when the previous window volume is 0', () => {
     const reviews = [
-      ...new Array(5).fill(0).map((_, index) =>
+      ...Array.from({ length: 5 }, (_, index) =>
         ReviewStatsFactory.create({
           id: `z-${index}`,
           diffStats: null,
           timestamp: `2024-01-0${index + 1}T10:00:00Z`,
         }),
       ),
-      ...volumeReviews(new Array(10).fill(100)).map((review, index) => ({
+      ...volumeReviews(Array.from({ length: 10 }, () => 100)).map((review, index) => ({
         ...review,
         timestamp: `2024-01-${String(index + 6).padStart(2, '0')}T10:00:00Z`,
       })),
@@ -398,7 +401,7 @@ describe('computeCodeVolumeTrend', () => {
   });
 
   it('should return stable when the volume change stays within 15%', () => {
-    const reviews = volumeReviews(new Array(15).fill(100));
+    const reviews = volumeReviews(Array.from({ length: 15 }, () => 100));
 
     expect(computeCodeVolumeTrend(reviews)).toBe('stable');
   });
@@ -589,15 +592,21 @@ describe('computeDeveloperMetrics', () => {
 
   it('should return zero correlation with fewer than three scored reviews carrying diff stats', () => {
     const reviews = [
-      ReviewStatsFactory.withDiffStats({ commitsCount: 1, additions: 50, deletions: 10 }, { score: 8 }),
-      ReviewStatsFactory.withDiffStats({ commitsCount: 1, additions: 30, deletions: 5 }, { score: 6 }),
+      ReviewStatsFactory.withDiffStats(
+        { commitsCount: 1, additions: 50, deletions: 10 },
+        { score: 8 },
+      ),
+      ReviewStatsFactory.withDiffStats(
+        { commitsCount: 1, additions: 30, deletions: 5 },
+        { score: 6 },
+      ),
     ];
 
     expect(computeDeveloperMetrics(reviews).codeVolumeScoreCorrelation).toBe(0);
   });
 
   it('should return zero correlation when volume has no variance', () => {
-    const reviews = new Array(4).fill(0).map((_, index) =>
+    const reviews = Array.from({ length: 4 }, (_, index) =>
       ReviewStatsFactory.withDiffStats(
         { commitsCount: 1, additions: 100, deletions: 0 },
         { id: `c-${index}`, score: index + 1 },
@@ -609,9 +618,18 @@ describe('computeDeveloperMetrics', () => {
 
   it('should compute a positive correlation when score grows with volume', () => {
     const reviews = [
-      ReviewStatsFactory.withDiffStats({ commitsCount: 1, additions: 10, deletions: 0 }, { id: 'p-1', score: 2 }),
-      ReviewStatsFactory.withDiffStats({ commitsCount: 1, additions: 50, deletions: 0 }, { id: 'p-2', score: 5 }),
-      ReviewStatsFactory.withDiffStats({ commitsCount: 1, additions: 100, deletions: 0 }, { id: 'p-3', score: 9 }),
+      ReviewStatsFactory.withDiffStats(
+        { commitsCount: 1, additions: 10, deletions: 0 },
+        { id: 'p-1', score: 2 },
+      ),
+      ReviewStatsFactory.withDiffStats(
+        { commitsCount: 1, additions: 50, deletions: 0 },
+        { id: 'p-2', score: 5 },
+      ),
+      ReviewStatsFactory.withDiffStats(
+        { commitsCount: 1, additions: 100, deletions: 0 },
+        { id: 'p-3', score: 9 },
+      ),
     ];
 
     expect(computeDeveloperMetrics(reviews).codeVolumeScoreCorrelation).toBeGreaterThan(0);
@@ -681,9 +699,18 @@ describe('computeCategoryLevels code volume and iteration branches', () => {
 
   it('should reward a positive code volume correlation', () => {
     const reviews = [
-      ReviewStatsFactory.withDiffStats({ commitsCount: 1, additions: 10, deletions: 0 }, { id: 'cv-1', score: 2 }),
-      ReviewStatsFactory.withDiffStats({ commitsCount: 1, additions: 50, deletions: 0 }, { id: 'cv-2', score: 5 }),
-      ReviewStatsFactory.withDiffStats({ commitsCount: 1, additions: 100, deletions: 0 }, { id: 'cv-3', score: 9 }),
+      ReviewStatsFactory.withDiffStats(
+        { commitsCount: 1, additions: 10, deletions: 0 },
+        { id: 'cv-1', score: 2 },
+      ),
+      ReviewStatsFactory.withDiffStats(
+        { commitsCount: 1, additions: 50, deletions: 0 },
+        { id: 'cv-2', score: 5 },
+      ),
+      ReviewStatsFactory.withDiffStats(
+        { commitsCount: 1, additions: 100, deletions: 0 },
+        { id: 'cv-3', score: 9 },
+      ),
     ];
     const metrics = computeDeveloperMetrics(reviews);
     const teamMetrics = computeTeamMetrics(new Map([['solo', reviews]]));

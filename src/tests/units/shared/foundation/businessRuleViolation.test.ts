@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { BusinessRuleViolation } from '@/shared/foundation/businessRuleViolation.js';
 
 class InvalidStateTransition extends BusinessRuleViolation {

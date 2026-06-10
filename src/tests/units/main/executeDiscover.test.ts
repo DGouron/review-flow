@@ -1,21 +1,19 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  executeDiscover,
-  type DiscoverDependencies,
-} from '@/main/commands/discover.command.js';
+
+import { executeDiscover, type DiscoverDependencies } from '@/main/commands/discover.command.js';
 import type { DiscoveredRepository } from '@/modules/cli-configuration/usecases/cli/discoverRepositories.usecase.js';
 
-function createFakeDiscoverDeps(
-  overrides?: Partial<DiscoverDependencies>,
-): DiscoverDependencies {
+function createFakeDiscoverDeps(overrides?: Partial<DiscoverDependencies>): DiscoverDependencies {
   return {
     existsSync: vi.fn(() => true),
-    readFileSync: vi.fn(() => JSON.stringify({
-      server: { port: 3847 },
-      user: { gitlabUsername: '', githubUsername: '' },
-      queue: { maxConcurrent: 2, deduplicationWindowMs: 300000 },
-      repositories: [],
-    })),
+    readFileSync: vi.fn(() =>
+      JSON.stringify({
+        server: { port: 3847 },
+        user: { gitlabUsername: '', githubUsername: '' },
+        queue: { maxConcurrent: 2, deduplicationWindowMs: 300000 },
+        repositories: [],
+      }),
+    ),
     writeFileSync: vi.fn(),
     readdirSync: vi.fn(() => []),
     getGitRemoteUrl: vi.fn(() => null),

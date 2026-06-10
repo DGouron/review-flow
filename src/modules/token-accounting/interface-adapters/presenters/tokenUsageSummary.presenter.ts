@@ -1,5 +1,5 @@
-import type { Presenter } from '@/shared/foundation/presenter.base.js';
 import type { TokenUsageSummary } from '@/modules/token-accounting/usecases/summarizeTokenUsage/summarizeTokenUsage.usecase.js';
+import type { Presenter } from '@/shared/foundation/presenter.base.js';
 
 export interface ModelBreakdownItem {
   name: string;
@@ -25,9 +25,10 @@ function formatShare(part: number, total: number): string {
   return `${Math.round((part / total) * 100)}%`;
 }
 
-export class TokenUsageSummaryPresenter
-  implements Presenter<TokenUsageSummary, TokenUsageSummaryViewModel>
-{
+export class TokenUsageSummaryPresenter implements Presenter<
+  TokenUsageSummary,
+  TokenUsageSummaryViewModel
+> {
   present(summary: TokenUsageSummary): TokenUsageSummaryViewModel {
     const models: ModelBreakdownItem[] = Object.entries(summary.byModel)
       .map(([name, stats]) => ({
@@ -36,7 +37,7 @@ export class TokenUsageSummaryPresenter
         costUsd: formatUsd(stats.costUsd),
         costShare: formatShare(stats.costUsd, summary.totalCostUsd),
       }))
-      .sort((a, b) => {
+      .toSorted((a, b) => {
         const costA = summary.byModel[a.name]?.costUsd ?? 0;
         const costB = summary.byModel[b.name]?.costUsd ?? 0;
         return costB - costA;

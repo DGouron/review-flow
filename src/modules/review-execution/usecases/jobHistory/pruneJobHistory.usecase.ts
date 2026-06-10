@@ -1,4 +1,5 @@
 import type { Logger } from 'pino';
+
 import type {
   JobHistoryGateway,
   PruneJobHistoryResult,
@@ -22,10 +23,7 @@ export class PruneJobHistoryUseCase {
       input.retentionDays,
       input.now(),
     );
-    this.deps.logger.info(
-      { deletedCount: result.deletedFilenames.length },
-      'Job history pruned',
-    );
+    this.deps.logger.info({ deletedCount: result.deletedFilenames.length }, 'Job history pruned');
     return result;
   }
 }

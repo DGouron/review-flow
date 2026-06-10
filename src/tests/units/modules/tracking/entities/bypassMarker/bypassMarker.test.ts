@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { parseBypassMarker } from '@/modules/tracking/entities/bypassMarker/bypassMarker.js';
 
 describe('parseBypassMarker', () => {
@@ -30,8 +31,9 @@ describe('parseBypassMarker', () => {
   });
 
   it('returns valid when the marker is embedded mid-comment', () => {
-    expect(
-      parseBypassMarker('see notes: /bypass-quality "par précaution" please'),
-    ).toEqual({ kind: 'valid', reason: 'par précaution' });
+    expect(parseBypassMarker('see notes: /bypass-quality "par précaution" please')).toEqual({
+      kind: 'valid',
+      reason: 'par précaution',
+    });
   });
 });
