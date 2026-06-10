@@ -61,3 +61,4 @@
 | Ember — Phase D: record recurring insights (MCP record_insight) | [193-ember-record-recurring-insight](specs/193-ember-record-recurring-insight.md) | drafted | 2026-05-30 |
 | Migrate Team AI Insights -p → --bg subscription billing | [191-team-insights-bg-migration](specs/191-team-insights-bg-migration.md) — [plan](plans/191-team-insights-bg-migration.plan.md) — [report](reports/191-team-insights-bg-migration.report.md) | implemented | 2026-05-30 |
 | Run the real review when a parked request is confirmed | [202-confirm-pending-review-runs-review](specs/202-confirm-pending-review-runs-review.md) — [plan](plans/202-confirm-pending-review-runs-review.plan.md) — [report](reports/202-confirm-pending-review-runs-review.report.md) | implemented | 2026-06-01 |
+| Webhook event idempotency & replay protection | [200-webhook-event-idempotency](specs/200-webhook-event-idempotency.md) | implemented | 2026-06-10 |
