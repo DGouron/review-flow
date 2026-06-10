@@ -1,11 +1,11 @@
 import type { FastifyPluginAsync } from 'fastify';
 
-import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
 import type { ProjectConfigGateway } from '@/modules/cli-configuration/entities/projectConfig/projectConfig.gateway.js';
 import type {
   ReviewFileGateway,
   ReviewFileInfo,
 } from '@/modules/review-execution/entities/review/reviewFile.gateway.js';
+import type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
 import type { ProjectStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
 import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import {

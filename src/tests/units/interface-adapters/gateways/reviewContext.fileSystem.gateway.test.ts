@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
+import { ReviewContextFactory } from '@/tests/factories/reviewContext.factory.js';
 
 describe('ReviewContextFileSystemGateway', () => {
   const testDir = '/tmp/test-review-context';
@@ -214,6 +215,42 @@ describe('ReviewContextFileSystemGateway', () => {
     });
   });
 
+  describe('read', () => {
+    it('preserves diffMetadata and progress.agents on round-trip', () => {
+      const context = ReviewContextFactory.create({
+        mergeRequestId: 'github-owner-repo-42',
+        diffMetadata: { baseSha: 'abc123', headSha: 'def456', startSha: 'abc123' },
+        progress: {
+          phase: 'agents-running',
+          currentStep: 'clean-architecture',
+          agents: [{ name: 'clean-architecture', displayName: 'Clean Architecture' }],
+        },
+      });
+      const filePath = gateway.getFilePath(testDir, context.mergeRequestId);
+      mkdirSync(join(testDir, '.claude', 'reviews', 'logs'), { recursive: true });
+      writeFileSync(filePath, JSON.stringify(context, null, 2));
+
+      const result = gateway.read(testDir, context.mergeRequestId);
+
+      expect(result?.diffMetadata).toEqual({
+        baseSha: 'abc123',
+        headSha: 'def456',
+        startSha: 'abc123',
+      });
+      expect(result?.progress.agents).toEqual([
+        { name: 'clean-architecture', displayName: 'Clean Architecture' },
+      ]);
+    });
+
+    it('returns null when the file contains valid JSON with the wrong shape', () => {
+      const filePath = gateway.getFilePath(testDir, 'github-owner-repo-42');
+      mkdirSync(join(testDir, '.claude', 'reviews', 'logs'), { recursive: true });
+      writeFileSync(filePath, JSON.stringify({ foo: 'bar' }));
+
+      expect(gateway.read(testDir, 'github-owner-repo-42')).toBeNull();
+    });
+  });
+
   describe('listAll', () => {
     it('returns an empty array when no logs directory exists', () => {
       expect(gateway.listAll(testDir)).toEqual([]);
@@ -268,6 +305,31 @@ describe('ReviewContextFileSystemGateway', () => {
         const message = stderrSpy.mock.calls[0]?.[0] as string;
         expect(message).toContain('malformed JSON skipped');
         expect(message).toContain('broken.json');
+      } finally {
+        stderrSpy.mockRestore();
+      }
+    });
+
+    it('skips valid-JSON files with the wrong shape and writes a warning to stderr', () => {
+      const logsDir = join(testDir, '.claude', 'reviews', 'logs');
+      mkdirSync(logsDir, { recursive: true });
+      writeFileSync(join(logsDir, 'wrong-shape.json'), JSON.stringify({ foo: 'bar' }));
+      gateway.create({
+        localPath: testDir,
+        mergeRequestId: 'github-owner/repo-1',
+        platform: 'github',
+        projectPath: 'owner/repo',
+        mergeRequestNumber: 1,
+      });
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+      try {
+        const all = gateway.listAll(testDir);
+        expect(all.map((c) => c.mergeRequestId)).toEqual(['github-owner/repo-1']);
+        expect(stderrSpy).toHaveBeenCalledOnce();
+        const message = stderrSpy.mock.calls[0]?.[0] as string;
+        expect(message).toContain('wrong-shape.json');
       } finally {
         stderrSpy.mockRestore();
       }

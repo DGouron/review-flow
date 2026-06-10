@@ -59,6 +59,17 @@ describe('pidFileManager', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should return null when file contains valid JSON with the wrong shape', () => {
+      const deps = createFakeDeps({
+        existsSync: vi.fn(() => true),
+        readFileSync: vi.fn(() => JSON.stringify({ foo: 'bar' })),
+      });
+
+      const result = readPidFile(pidPath, deps);
+
+      expect(result).toBeNull();
+    });
   });
 
   describe('writePidFile', () => {

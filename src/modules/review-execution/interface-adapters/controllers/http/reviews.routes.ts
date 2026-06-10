@@ -7,7 +7,7 @@ import type { Logger } from 'pino';
 
 import { cancelReview } from '@/modules/review-execution/usecases/cancelReview.usecase.js';
 import type { CancelReviewQueuePort } from '@/modules/review-execution/usecases/cancelReview.usecase.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import { sanitizeJobId } from '@/shared/services/mcpJobContext.js';
 
 import type { ReviewFileGateway } from '../../gateways/reviewFile.gateway.js';

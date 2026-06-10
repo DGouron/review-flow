@@ -1,4 +1,4 @@
-import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 
 export class ReviewJobFactory {
   static create(overrides?: Partial<ReviewJob>): ReviewJob {

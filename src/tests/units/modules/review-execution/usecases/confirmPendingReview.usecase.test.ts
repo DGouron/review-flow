@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import { ConfirmPendingReviewUseCase } from '@/modules/review-execution/usecases/confirmPendingReview.usecase.js';
 import { PendingReviewRequestFactory } from '@/tests/factories/pendingReviewRequest.factory.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';

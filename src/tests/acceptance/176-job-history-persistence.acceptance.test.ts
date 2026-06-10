@@ -24,9 +24,9 @@ import { join } from 'node:path';
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-import type { JobStatus } from '@/frameworks/queue/pQueueAdapter.js';
 import type { JobHistoryGateway } from '@/modules/review-execution/entities/job/jobHistory.gateway.js';
 import type { JobRecord } from '@/modules/review-execution/entities/job/jobRecord.schema.js';
+import type { JobStatus } from '@/modules/review-execution/entities/job/reviewJob.js';
 import { JobHistoryFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/fileSystem/jobHistory.fileSystem.gateway.js';
 import { LoadRecentJobHistoryUseCase } from '@/modules/review-execution/usecases/jobHistory/loadRecentJobHistory.usecase.js';
 import { PersistJobRecordUseCase } from '@/modules/review-execution/usecases/jobHistory/persistJobRecord.usecase.js';

@@ -7,9 +7,9 @@ export {
   findRepositoryByProjectPath,
 } from '@/frameworks/config/configLoader.js';
 
+export type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
 export type {
   Config,
-  RepositoryConfig,
   ServerConfig,
   UserConfig,
   QueueConfig,

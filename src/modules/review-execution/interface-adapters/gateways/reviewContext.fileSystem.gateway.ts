@@ -14,6 +14,7 @@ import type {
   ReviewContextGateway,
   UpdateResult,
 } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js';
+import { reviewContextGuard } from '@/modules/review-execution/entities/reviewContext/reviewContext.guard.js';
 import type {
   CreateReviewContextInput,
   CreateReviewContextResult,
@@ -78,8 +79,8 @@ export class ReviewContextFileSystemGateway implements ReviewContextGateway {
     }
 
     const content = readFileSync(filePath, 'utf-8');
-    const parsed: ReviewContext = JSON.parse(content);
-    return parsed;
+    const validation = reviewContextGuard.safeParse(JSON.parse(content));
+    return validation.success ? validation.data : null;
   }
 
   exists(localPath: string, mergeRequestId: string): boolean {
@@ -145,8 +146,14 @@ export class ReviewContextFileSystemGateway implements ReviewContextGateway {
     }
     return collectJsonFiles(logsDir).flatMap((path) => {
       try {
-        const parsed: ReviewContext = JSON.parse(readFileSync(path, 'utf-8'));
-        return [parsed];
+        const validation = reviewContextGuard.safeParse(JSON.parse(readFileSync(path, 'utf-8')));
+        if (!validation.success) {
+          process.stderr.write(
+            `[reviewContextGateway] invalid review context skipped at ${path}: ${validation.error.message}\n`,
+          );
+          return [];
+        }
+        return [validation.data];
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         process.stderr.write(

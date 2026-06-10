@@ -1,4 +1,4 @@
-import type { JobStatus, ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
+import type { JobStatus, ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import { Duration } from '@/modules/shared-kernel/entities/shared/duration.valueObject.js';
 import type { Presenter } from '@/shared/foundation/presenter.base.js';
 

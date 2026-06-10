@@ -9,7 +9,6 @@ import { getProjectAgents, getFollowupAgents, loadProjectConfig } from '@/config
 import { broadcastBudgetAfterUsage } from '@/frameworks/claude/broadcastBudgetAfterUsage.js';
 import { buildLanguageDirective } from '@/frameworks/claude/languageDirective.js';
 import { logInfo, logWarn, logError } from '@/frameworks/logging/logBuffer.js';
-import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
 import { getModel } from '@/frameworks/settings/runtimeSettings.js';
 import type { BillingStateGateway } from '@/modules/claude-invocation/entities/billingState/billingState.gateway.js';
 import type { EnvironmentGateway } from '@/modules/claude-invocation/entities/billingState/environment.gateway.js';
@@ -27,6 +26,7 @@ import { ReviewReportFileSystemGateway } from '@/modules/claude-invocation/inter
 import { runClaudeReviewJob } from '@/modules/claude-invocation/usecases/runClaudeReviewJob.usecase.js';
 import { defaultGitHubExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.github.gateway.js';
 import { defaultGitLabExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import type { ClaudeModelName } from '@/modules/review-execution/entities/modelRouting/modelRouting.schema.js';
 import type {
   ReviewProgress,

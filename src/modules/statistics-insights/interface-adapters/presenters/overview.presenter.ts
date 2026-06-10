@@ -1,5 +1,5 @@
-import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
 import type { ReviewFileInfo } from '@/modules/review-execution/entities/review/reviewFile.gateway.js';
+import type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
 import { Duration } from '@/modules/shared-kernel/entities/shared/duration.valueObject.js';
 import type { ProjectStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
 

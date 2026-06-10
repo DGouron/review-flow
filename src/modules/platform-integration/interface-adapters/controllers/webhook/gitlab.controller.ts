@@ -15,7 +15,6 @@ import {
   createJobId,
   updateJobProgress,
   cancelJob,
-  type ReviewJob,
 } from '@/frameworks/queue/pQueueAdapter.js';
 import { startWatchingReviewContext, stopWatchingReviewContext } from '@/main/websocket.js';
 import type { BudgetExceededPayload } from '@/main/websocket.js';
@@ -38,6 +37,7 @@ import { defaultGitLabExecutor } from '@/modules/platform-integration/interface-
 import { resolvePinnedThreadFetchTarget } from '@/modules/platform-integration/services/pinnedThreadFetchTarget.js';
 import type { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
 import { resolveProvenance } from '@/modules/review-execution/entities/actionProvenance/actionProvenance.js';
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import {
   DEFAULT_AGENTS,
   DEFAULT_FOLLOWUP_AGENTS,
@@ -56,7 +56,7 @@ import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/dif
 import { parseReviewOutput } from '@/modules/statistics-insights/services/statsService.js';
 import type { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/reviewRequestTracking.gateway.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import type { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import type { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
 import type { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';

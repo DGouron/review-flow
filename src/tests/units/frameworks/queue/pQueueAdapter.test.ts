@@ -11,7 +11,8 @@ vi.mock('@/frameworks/config/configLoader.js', () => ({
 
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { enqueueReview, initQueue, type ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
+import { enqueueReview, initQueue } from '@/frameworks/queue/pQueueAdapter.js';
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 
 function createJob(overrides: Partial<ReviewJob>): ReviewJob {

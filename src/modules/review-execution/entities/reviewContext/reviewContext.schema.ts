@@ -12,6 +12,11 @@ export const reviewContextThreadSchema = z.object({
   body: z.string(),
 });
 
+export const reviewContextAgentSchema = z.object({
+  name: z.string(),
+  displayName: z.string(),
+});
+
 export const reviewContextProgressSchema = z.object({
   phase: z.enum([
     'pending',
@@ -23,7 +28,14 @@ export const reviewContextProgressSchema = z.object({
   ]),
   currentStep: z.string().nullable(),
   stepsCompleted: z.array(z.string()).optional(),
+  agents: z.array(reviewContextAgentSchema).optional(),
   updatedAt: z.string().optional(),
+});
+
+export const diffMetadataSchema = z.object({
+  baseSha: z.string(),
+  headSha: z.string(),
+  startSha: z.string(),
 });
 
 export const agentInstructionsSchema = z.object({
@@ -44,6 +56,7 @@ export const reviewContextSchema = z.object({
   progress: reviewContextProgressSchema,
   result: reviewContextResultSchema.optional(),
   agentInstructions: agentInstructionsSchema.optional(),
+  diffMetadata: diffMetadataSchema.optional(),
 });
 
 export const createReviewContextInputSchema = z.object({

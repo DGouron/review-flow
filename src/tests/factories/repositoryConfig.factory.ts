@@ -1,4 +1,4 @@
-import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
+import type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
 
 export class RepositoryConfigFactory {
   static create(overrides: Partial<RepositoryConfig> = {}): RepositoryConfig {

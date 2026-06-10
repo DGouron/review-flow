@@ -3,9 +3,9 @@ import { describe, it, expect } from 'vitest';
 import { createEgressScanner } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
 import type { EgressScanConfig } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
 import { EgressScannedNoteCommentPostGateway } from '@/modules/platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.js';
-import type { CommandExecutor } from '@/modules/review-execution/entities/reviewAction/reviewAction.gateway.js';
 import type { ReviewContext } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
 import { executeActionsFromContext } from '@/modules/review-execution/services/contextActionsExecutor.js';
+import type { CommandExecutor } from '@/shared/foundation/executionGateway.base.js';
 import { StubEgressTraceGateway } from '@/tests/stubs/egressScan.stub.js';
 import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
 

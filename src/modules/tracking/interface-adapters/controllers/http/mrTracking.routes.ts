@@ -2,9 +2,8 @@ import type { FastifyPluginAsync } from 'fastify';
 
 import { logInfo, logError } from '@/frameworks/logging/logBuffer.js';
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
-
-import type { ReviewRequestTrackingGateway } from '../../gateways/reviewRequestTracking.gateway.js';
 
 interface MrTrackingRoutesOptions {
   reviewRequestTrackingGateway: ReviewRequestTrackingGateway;

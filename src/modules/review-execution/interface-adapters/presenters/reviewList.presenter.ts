@@ -1,4 +1,4 @@
-import type { JobStatus } from '@/frameworks/queue/pQueueAdapter.js';
+import type { JobStatus } from '@/modules/review-execution/entities/job/reviewJob.js';
 
 import type { JobStatusPresenter, JobStatusViewModel } from './jobStatus.presenter.js';
 

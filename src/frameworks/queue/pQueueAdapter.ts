@@ -9,8 +9,6 @@ import type {
   ProgressEvent,
 } from '@/modules/review-execution/entities/progress/progress.type.js';
 
-export type { JobStatus, ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
-
 // Deduplication tracking
 const recentJobs = new Map<string, number>(); // jobId -> timestamp
 

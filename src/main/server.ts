@@ -11,6 +11,7 @@ import {
 } from '@/frameworks/settings/runtimeSettings.js';
 import { InMemorySupervisorHealthGateway } from '@/modules/claude-invocation/interface-adapters/gateways/supervisorHealth.memory.gateway.js';
 import type { JobRecord } from '@/modules/review-execution/entities/job/jobRecord.schema.js';
+import type { JobStatus } from '@/modules/review-execution/entities/job/reviewJob.js';
 import { JobHistoryFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/fileSystem/jobHistory.fileSystem.gateway.js';
 import { executeActionsFromContext } from '@/modules/review-execution/services/contextActionsExecutor.js';
 import { runReviewRecovery } from '@/modules/review-execution/services/reviewRecovery.service.js';
@@ -35,7 +36,6 @@ import {
   initQueue,
   replaceCompletedJobs,
   setPersistJobRecordCallback,
-  type JobStatus,
 } from '../frameworks/queue/pQueueAdapter.js';
 import { startCleanupScheduler } from '../frameworks/scheduler/cleanupScheduler.js';
 import { startWorktreeSweepScheduler } from '../frameworks/scheduler/worktreeSweepScheduler.js';

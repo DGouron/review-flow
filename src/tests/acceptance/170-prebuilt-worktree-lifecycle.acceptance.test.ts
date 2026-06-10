@@ -22,8 +22,9 @@ vi.mock('@/frameworks/config/configLoader.js', () => ({
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 import { buildMcpSystemPrompt } from '@/frameworks/claude/claudeInvoker.js';
-import { enqueueReview, initQueue, type ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
+import { enqueueReview, initQueue } from '@/frameworks/queue/pQueueAdapter.js';
 import { startWorktreeSweepScheduler } from '@/frameworks/scheduler/worktreeSweepScheduler.js';
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
 import { deriveWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';

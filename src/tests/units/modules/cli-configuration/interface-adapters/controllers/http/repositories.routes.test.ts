@@ -1,11 +1,11 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { describe, expect, it } from 'vitest';
 
-import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
 import {
   repositoriesRoutes,
   type RepositoriesRoutesOptions,
 } from '@/modules/cli-configuration/interface-adapters/controllers/http/repositories.routes.js';
+import type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
 import { RepositoryConfigFactory } from '@/tests/factories/repositoryConfig.factory.js';
 
 async function buildApp(repositories: RepositoryConfig[]): Promise<FastifyInstance> {

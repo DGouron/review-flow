@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 
-import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
+import type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
 import type { BudgetGateway } from '@/modules/token-accounting/entities/budget/budget.gateway.js';
 import { BUDGET_DEFAULT_USD } from '@/modules/token-accounting/entities/budget/budgetConfig.schema.js';
 import type { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';

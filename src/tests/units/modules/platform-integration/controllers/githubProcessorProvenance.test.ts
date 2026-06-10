@@ -34,8 +34,8 @@ vi.mock('@/config/projectConfig.js', () => ({
 
 import { describe, it, expect } from 'vitest';
 
-import type { ReviewJob } from '@/frameworks/queue/pQueueAdapter.js';
 import { buildGitHubReviewProcessor } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 
 class RecordingThreadFetch {

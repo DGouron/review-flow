@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import type { JobStatus } from '@/frameworks/queue/pQueueAdapter.js';
+import type { JobStatus } from '@/modules/review-execution/entities/job/reviewJob.js';
 import { PersistJobRecordUseCase } from '@/modules/review-execution/usecases/jobHistory/persistJobRecord.usecase.js';
 import { ReviewJobFactory } from '@/tests/factories/reviewJob.factory.js';
 import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';

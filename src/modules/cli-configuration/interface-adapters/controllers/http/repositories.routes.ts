@@ -1,10 +1,10 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 
-import type { RepositoryConfig } from '@/frameworks/config/configLoader.js';
 import type { AddRepositoryRouteResult } from '@/modules/cli-configuration/usecases/dashboardRepositories/addRepositoryFromDashboard.usecase.js';
 import type { RemoveRepositoryRouteResult } from '@/modules/cli-configuration/usecases/dashboardRepositories/removeRepositoryFromDashboard.usecase.js';
 import type { PatchRepositoryRouteResult } from '@/modules/cli-configuration/usecases/dashboardRepositories/updateRepositoryEnabledFromDashboard.usecase.js';
+import type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
 
 export interface RepositoriesRoutesOptions {
   getRepositories: () => RepositoryConfig[];

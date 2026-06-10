@@ -2,11 +2,7 @@ import { execSync } from 'node:child_process';
 
 import type { NoteCommentPostGateway } from '@/modules/platform-integration/entities/noteComment/noteCommentPost.gateway.js';
 import { filterAutoExecutorActions } from '@/modules/platform-integration/services/autoExecutorActionFilter.js';
-import type {
-  ExecutionResult,
-  CommandExecutor,
-  ExecutionContext as GatewayExecutionContext,
-} from '@/modules/review-execution/entities/reviewAction/reviewAction.gateway.js';
+import type { ExecutionContext as GatewayExecutionContext } from '@/modules/review-execution/entities/reviewAction/reviewAction.gateway.js';
 import type { ReviewAction } from '@/modules/review-execution/entities/reviewAction/reviewAction.js';
 import type { DiffMetadata } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
 import { GitHubReviewActionCliGateway } from '@/modules/review-execution/interface-adapters/gateways/cli/reviewAction.github.cli.gateway.js';
@@ -15,6 +11,10 @@ import {
   executePublicOutput,
   isPublicOutputAction,
 } from '@/modules/review-execution/services/publicOutputExecutor.js';
+import type {
+  CommandExecutor,
+  ExecutionResult,
+} from '@/shared/foundation/executionGateway.base.js';
 
 const COMMAND_TIMEOUT_MS = 30000;
 

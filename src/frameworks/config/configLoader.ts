@@ -29,8 +29,6 @@ interface RepositoryInput {
   enabled: boolean;
 }
 
-export type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
-
 export interface ServerConfig {
   port: number;
 }

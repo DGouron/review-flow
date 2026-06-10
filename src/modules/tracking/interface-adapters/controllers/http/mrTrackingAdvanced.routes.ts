@@ -6,18 +6,14 @@ import type { RepositoryConfig } from '@/config/loader.js';
 import { loadProjectConfig, getFollowupAgents } from '@/config/projectConfig.js';
 import type { ClaudeInvokerDependencies } from '@/frameworks/claude/claudeInvoker.js';
 import { logInfo, logError } from '@/frameworks/logging/logBuffer.js';
-import {
-  enqueueReview,
-  createJobId,
-  updateJobProgress,
-  type ReviewJob,
-} from '@/frameworks/queue/pQueueAdapter.js';
+import { enqueueReview, createJobId, updateJobProgress } from '@/frameworks/queue/pQueueAdapter.js';
 import { startWatchingReviewContext, stopWatchingReviewContext } from '@/main/websocket.js';
 import type { BudgetExceededPayload } from '@/main/websocket.js';
 import type { GitHubDiffMetadataFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/diffMetadataFetch.github.gateway.js';
 import type { GitLabDiffMetadataFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/diffMetadataFetch.gitlab.gateway.js';
 import type { GitHubThreadFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.github.gateway.js';
 import type { GitLabThreadFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import { DEFAULT_FOLLOWUP_AGENTS } from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
 import type { DiffMetadata } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
 import type { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
@@ -32,11 +28,10 @@ import type { GitHubDiffStatsFetchGateway } from '@/modules/statistics-insights/
 import type { GitLabDiffStatsFetchGateway } from '@/modules/statistics-insights/interface-adapters/gateways/diffStatsFetch.gitlab.gateway.js';
 import { parseReviewOutput } from '@/modules/statistics-insights/services/statsService.js';
 import type { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
+import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import type { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
 import type { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
-
-import type { ReviewRequestTrackingGateway } from '../../gateways/reviewRequestTracking.gateway.js';
 
 type Platform = 'gitlab' | 'github';
 

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type {
   ReviewLogFileGateway,
   LogFileInfo,
-} from '@/modules/data-lifecycle/interface-adapters/gateways/reviewLogFile.gateway.js';
+} from '@/modules/data-lifecycle/entities/reviewLog/reviewLogFile.gateway.js';
 
 const LOG_FILE_PATTERN = /\.(log|json)$/;
 
