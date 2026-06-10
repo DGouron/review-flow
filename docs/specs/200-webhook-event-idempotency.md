@@ -1,11 +1,35 @@
 ---
 title: "SPEC-200: Webhook event idempotency and replay protection"
-status: draft
+status: implemented
 labels: [webhook, gitlab, reliability, controller]
 visibility: PRIVATE-UNTIL-P0-SHIPPED
 ---
 
 # SPEC-200: Webhook event idempotency and replay protection
+
+## Status: implemented
+
+Inner loop delivered on master in commit `5bf5e9a` (feat: deduplicate redelivered gitlab webhook events by event uuid). Outer-loop acceptance test added on branch `worktree-spec-200-finalize` (2026-06-10): `src/tests/acceptance/200-webhook-event-idempotency.acceptance.test.ts` GREEN (4/4), covering the core spec promise — an event is acted upon at most once within the TTL window — through the real `handleGitLabWebhook` entry point with the real `InMemoryIdempotencyStore` and an injected clock. Existing unit + controller-integration tests (25) remain green.
+
+## Implementation
+
+### Artefacts
+
+| Layer | Artefact | Responsibility | AC |
+|---|---|---|---|
+| Entity (port) | `src/modules/platform-integration/entities/idempotency/idempotencyStore.gateway.ts` | `IdempotencyStore` — single-method port `recordIfAbsent(eventKey): Promise<boolean>`. TTL/clock absent from the surface. | AC2, AC3, AC8 |
+| Gateway (impl) | `src/modules/platform-integration/interface-adapters/gateways/inMemoryIdempotencyStore.gateway.ts` | `InMemoryIdempotencyStore` — `Map<string, expiry>` + injected `clock` + `ttlMs`, synchronous check-and-set, lazy purge on write. | AC3, AC7, AC8 |
+| Security | `getGitLabEventUuid` in `src/security/verifier.ts` | Pure header extraction of `X-Gitlab-Event-UUID`, symmetric to `getGitLabEventType`; `undefined` when absent. | AC1 |
+| Controller | `handleGitLabWebhook` in `src/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.ts` | Guard inserted immediately after `verifyGitLabSignature`, before `getGitLabEventType` and every downstream side effect. Duplicate → HTTP 200 no-op; missing UUID → degrade to gated. | AC4, AC5, AC6 |
+| Composition root | `src/main/routes.ts` | Instantiates `InMemoryIdempotencyStore` with a 24h TTL and injects it as `idempotencyStore` alongside the other gateways. | AC2 |
+
+### Decisions
+
+- **No use case wrapper.** The controller calls the port directly; a pass-through use case would be boilerplate (per `/anti-overengineering`). The port is the seam.
+- **Port surface frozen at one method.** `recordIfAbsent` only — no `has`/`record` pair (TOCTOU avoidance, AC3); TTL and clock are constructor concerns of the impl (AC8).
+- **TTL = 24h** (`routes.ts`), a conservative upper bound for GitLab's redelivery window, documented inline. Configurable at the impl level via the constructor `ttlMs`. Satisfies AC7's "≥ platform max retry window".
+- **Degrade-to-gated, never reject** on a missing UUID (AC6): no 4xx branch is introduced, so no existence/length oracle; the `gateClaudeInvocation` chokepoint stays the single impact boundary.
+- **In-memory, single-process v1.** The port is designed so a Redis-backed impl drops in later (distributed store out of scope).
 
 ## Context
 
