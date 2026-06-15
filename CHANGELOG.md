@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.37.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.36.1...reviewflow-v3.37.0) (2026-06-15)
+
+
+### Added
+
+* **platform-integration:** pin followup thread-fetch target (SPEC-196) ([6efdf15](https://github.com/DGouron/review-flow/commit/6efdf1540995877c2d68dba6823b6473851c8115))
+* **platform-integration:** pin followup thread-fetch target for SPEC-196 ([0b00749](https://github.com/DGouron/review-flow/commit/0b00749dc33f2166ae29ee1a0c0cc88a0a4f1e02))
+
 ## [3.36.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.36.0...reviewflow-v3.36.1) (2026-06-10)
 
 
