@@ -34,7 +34,10 @@ import {
   filterGitLabNoteEvent,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
 import { defaultGitLabExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
-import { resolvePinnedThreadFetchTarget } from '@/modules/platform-integration/services/pinnedThreadFetchTarget.js';
+import {
+  resolvePinnedThreadFetchTarget,
+  resolvePinnedThreads,
+} from '@/modules/platform-integration/services/pinnedThreadFetchTarget.js';
 import type { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
 import { resolveProvenance } from '@/modules/review-execution/entities/actionProvenance/actionProvenance.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
@@ -630,7 +633,18 @@ export async function handleGitLabWebhook(
             const diffMetadataFetchGw = deps.diffMetadataFetchGateway;
 
             try {
-              const threads = threadFetchGw.fetchThreads(j.projectPath, j.mrNumber);
+              const threads = resolvePinnedThreads({
+                payloadProjectPath: j.projectPath,
+                payloadMrNumber: j.mrNumber,
+                findRepository: (projectPath) => {
+                  const matched = findRepositoryByProjectPath(projectPath);
+                  return matched ? { projectPath } : null;
+                },
+                gatedMrNumber: j.mrNumber,
+                fetchThreads: (projectPath, mrNumber) =>
+                  threadFetchGw.fetchThreads(projectPath, mrNumber),
+                logger,
+              });
               let diffMetadata: DiffMetadata | undefined;
               try {
                 diffMetadata = diffMetadataFetchGw.fetchDiffMetadata(j.projectPath, j.mrNumber);
