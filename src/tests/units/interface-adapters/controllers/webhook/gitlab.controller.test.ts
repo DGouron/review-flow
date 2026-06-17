@@ -669,6 +669,49 @@ describe('handleGitLabWebhook', () => {
     });
 
     describe('AC4 - fail-closed membership resolution', () => {
+      function buildFollowupMr(): TrackedMr {
+        return TrackedMrFactory.create({
+          id: 'gitlab-test-org/test-project-42',
+          mrNumber: 42,
+          platform: 'gitlab',
+          project: 'test-org/test-project',
+          state: 'pending-review',
+          openThreads: 3,
+          autoFollowup: true,
+          lastPushAt: '2026-05-26T12:00:00.000Z',
+          lastReviewAt: '2026-05-25T12:00:00.000Z',
+        });
+      }
+
+      function buildNoteEvent(note: string) {
+        return {
+          object_kind: 'note',
+          event_type: 'note',
+          user: { username: 'note-author', name: 'Note Author' },
+          project: {
+            id: 1,
+            name: 'test-project',
+            path_with_namespace: 'test-org/test-project',
+            web_url: 'https://gitlab.com/test-org/test-project',
+            git_http_url: 'https://gitlab.com/test-org/test-project.git',
+          },
+          object_attributes: {
+            id: 7,
+            note,
+            noteable_type: 'MergeRequest',
+            noteable_id: 99,
+          },
+          merge_request: {
+            iid: 42,
+            title: 'Test MR',
+            state: 'opened',
+            source_branch: 'feature/test',
+            target_branch: 'main',
+            url: 'https://gitlab.com/test-org/test-project/-/merge_requests/42',
+          },
+        };
+      }
+
       it('parks a reviewer-added trigger when membership resolution throws', async () => {
         mockGateway.getById.mockReturnValue(null);
         const memberAccess = new StubMemberAccessGateway();
@@ -684,6 +727,47 @@ describe('handleGitLabWebhook', () => {
 
         expect(enqueueReview).not.toHaveBeenCalled();
         expect(pendingGateway.saveCount).toBe(1);
+      });
+
+      it('parks a followup trigger when membership resolution throws', async () => {
+        const followupMr = buildFollowupMr();
+        mockGateway.getById.mockImplementation(() => followupMr);
+        mockGateway.getByNumber.mockImplementation(() => followupMr);
+        mockGateway.recordPush.mockImplementation(() => followupMr);
+        const memberAccess = new StubMemberAccessGateway();
+        memberAccess.setShouldFail(true);
+        const pendingGateway = new StubPendingReviewRequestGateway();
+        const deps = buildGatedDeps(memberAccess, pendingGateway);
+
+        const event = GitLabEventFactory.createMrUpdate();
+        event.user = { username: 'dev-actor', name: 'Dev Actor' };
+        const request = { body: event, headers: {} } as unknown as FastifyRequest;
+
+        await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+
+        expect(enqueueReview).not.toHaveBeenCalled();
+        expect(pendingGateway.saveCount).toBe(1);
+      });
+
+      it('parks a note trigger when membership resolution throws', async () => {
+        vi.mocked(getGitLabEventType).mockReturnValueOnce('Note Hook');
+        const memberAccess = new StubMemberAccessGateway();
+        memberAccess.setShouldFail(true);
+        const pendingGateway = new StubPendingReviewRequestGateway();
+        const deps = buildGatedDeps(memberAccess, pendingGateway);
+
+        const request = {
+          body: buildNoteEvent('/bypass-quality "reason here"'),
+          headers: {},
+        } as unknown as FastifyRequest;
+
+        await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+
+        expect(mockReply.status).toHaveBeenCalledWith(202);
+        expect(mockReply.send).toHaveBeenCalledWith(
+          expect.objectContaining({ status: 'pending-confirmation', reason: 'untrusted-actor' }),
+        );
+        expect(mockGateway.update).not.toHaveBeenCalled();
       });
     });
   });
@@ -721,6 +805,22 @@ describe('handleGitLabWebhook', () => {
       expect(mockReply.status).toHaveBeenCalledWith(401);
       expect(mockReply.send).toHaveBeenCalledWith({ error: 'bad-token' });
       expect(enqueueReview).not.toHaveBeenCalled();
+    });
+
+    it('never queries the membership gateway when the token is invalid (SPEC-197 AC6)', async () => {
+      vi.mocked(verifyGitLabSignature).mockReturnValueOnce({ valid: false, error: 'bad-token' });
+      const memberAccess = new StubMemberAccessGateway();
+      memberAccess.setAccess('dev-actor', MEMBER_ACCESS_LEVELS.developer);
+      const deps = { ...defaultDeps, isTrustedActor: new IsTrustedActorUseCase(memberAccess) };
+
+      const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
+      event.user = { username: 'dev-actor', name: 'Dev Actor' };
+      const request = { body: event, headers: {} } as unknown as FastifyRequest;
+
+      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+
+      expect(mockReply.status).toHaveBeenCalledWith(401);
+      expect(memberAccess.calls.length).toBe(0);
     });
 
     it('ignores events that are neither Note Hook nor Merge Request Hook', async () => {
@@ -897,6 +997,23 @@ describe('handleGitLabWebhook', () => {
         expect.objectContaining({ status: 'pending-confirmation', reason: 'untrusted-actor' }),
       );
       expect(mockGateway.update).not.toHaveBeenCalled();
+    });
+
+    it('lets a note trigger from a Developer actor proceed past the provenance gate (AC3 positive)', async () => {
+      const memberAccess = new StubMemberAccessGateway();
+      memberAccess.setAccess('note-author', MEMBER_ACCESS_LEVELS.developer);
+      const deps = { ...defaultDeps, isTrustedActor: new IsTrustedActorUseCase(memberAccess) };
+      const request = {
+        body: buildNoteEvent('/bypass-quality "reason here"'),
+        headers: {},
+      } as unknown as FastifyRequest;
+
+      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+
+      expect(mockReply.status).not.toHaveBeenCalledWith(202);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'bypass-recorded' }),
+      );
     });
   });
 

@@ -1,6 +1,6 @@
 ---
 title: "SPEC-197: Trusted-actor trigger provenance gate"
-status: draft
+status: implemented
 labels: [gitlab, webhook, provenance, trigger-gate]
 visibility: PRIVATE-UNTIL-P0-SHIPPED
 depends_on: [SPEC-201]
@@ -8,6 +8,23 @@ sibling_specs: [SPEC-196, SPEC-198, SPEC-199, SPEC-174]
 ---
 
 # SPEC-197: Trusted-actor trigger provenance gate
+
+## Status: implemented
+
+## Implementation
+
+Shipped on `master` (landed 2026-06-10 with the provenance cluster); SDD outer-loop acceptance test added 2026-06-17 to close the loop. The gate keys on `event.user.username` (per the amendment below), resolving Users API → numeric id → Members API through the authenticated service token, cached per-username and fail-closed. Non-trusted actors never auto-run: the job parks at the existing `gateClaudeInvocation` chokepoint (SPEC-174 `triggerMode`).
+
+| AC | Artifact | Test |
+|----|----------|------|
+| AC1 — reviewer-added gate | `interface-adapters/controllers/webhook/gitlab.controller.ts` (`resolveActorTrust` → `gateClaudeInvocation` with `actorTrusted`) | `units/.../gitlab.controller.test.ts` (`AC1 - reviewer-added gate`: Reporter parks / Developer enqueues) |
+| AC2 — followup / MR-update gate | `interface-adapters/controllers/webhook/gitlab.controller.ts` (followup branch) | `units/.../gitlab.controller.test.ts` (`AC2 - followup / MR-update gate`: two payloads differing only by username) |
+| AC3 — note / comment gate | `interface-adapters/controllers/webhook/gitlab.controller.ts` (`handleGitLabNoteHook`, parks 202 `untrusted-actor`) | `units/.../gitlab.controller.test.ts` (`parks a note trigger from a non-trusted actor` + `lets a note trigger from a Developer actor proceed`) |
+| AC4 — fail-closed membership resolution | `interface-adapters/gateways/memberAccess.gitlab.cli.gateway.ts` (throw/ambiguous/unknown → `null`); `usecases/isTrustedActor.usecase.ts` (try/catch → false) | `units/.../memberAccess.gitlab.cli.gateway.test.ts`; `units/.../isTrustedActor.usecase.test.ts`; `units/.../gitlab.controller.test.ts` (`AC4 - fail-closed membership resolution`: reviewer + followup + note park on throw) |
+| AC5 — cache does not widen trust | `interface-adapters/gateways/memberAccess.gitlab.cli.gateway.ts` (cache key `${projectPath} ${username}`) | `units/.../memberAccess.gitlab.cli.gateway.test.ts` (`does not apply a cached result for one username to another`) |
+| AC6 — token-boundary ordering | `interface-adapters/controllers/webhook/gitlab.controller.ts` (`verifyGitLabSignature` is the first statement, returns 401 before any gate) | `units/.../gitlab.controller.test.ts` (`never queries the membership gateway when the token is invalid`) |
+
+Supporting: `entities/memberAccess/memberAccess.ts` (access-level scale + `isDeveloperOrAbove`), `entities/memberAccess/memberAccess.gateway.ts` (contract), `usecases/isTrustedActor.usecase.ts`, `usecases/gateClaudeInvocation.usecase.ts` (`actorTrusted` park branch), `tests/stubs/memberAccess.stub.ts`. DI wiring: `src/main/routes.ts`. Outer-loop acceptance: `src/tests/acceptance/197-trusted-actor-provenance-gate.acceptance.test.ts` (six ACs through the controller chokepoint, observable job state only).
 
 ## Context
 
