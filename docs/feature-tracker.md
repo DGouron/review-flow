@@ -63,3 +63,4 @@
 | Run the real review when a parked request is confirmed | [202-confirm-pending-review-runs-review](specs/202-confirm-pending-review-runs-review.md) — [plan](plans/202-confirm-pending-review-runs-review.plan.md) — [report](reports/202-confirm-pending-review-runs-review.report.md) | implemented | 2026-06-01 |
 | Webhook event idempotency & replay protection | [200-webhook-event-idempotency](specs/200-webhook-event-idempotency.md) | implemented | 2026-06-10 |
 | Transport and source provenance hardening | [201-transport-provenance-hardening](specs/201-transport-provenance-hardening.md) — [plan](plans/201-transport-provenance-hardening.plan.md) | implemented | 2026-06-10 |
+| Trusted-actor trigger provenance gate | [197-trusted-actor-provenance-gate](specs/197-trusted-actor-provenance-gate.md) — [plan](plans/197-trusted-actor-provenance-gate.plan.md) — [report](reports/197-trusted-actor-provenance-gate.report.md) | implemented | 2026-06-10 |
