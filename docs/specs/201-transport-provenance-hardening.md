@@ -1,12 +1,29 @@
 ---
 title: "SPEC-201: Transport and source provenance hardening"
-status: draft
+status: implemented
 labels: [transport, infrastructure, ingress, deployment]
 visibility: PRIVATE-UNTIL-P0-SHIPPED
 related: [SPEC-197, SPEC-200]
 ---
 
 # SPEC-201: Transport and source provenance hardening
+
+## Status: implemented
+
+## Implementation
+
+Shipped on `master` (landed 2026-06-10); SDD outer-loop acceptance test added 2026-06-17 to close the loop. All artifacts live under `src/modules/platform-integration/`; the spec's original flat line references (`routes.ts:388-444`, `verifier.ts:14-37`) predate the module restructure.
+
+| AC | Artifact | Test |
+|----|----------|------|
+| AC1–AC4 | `usecases/transport/evaluateTransport.usecase.ts` (3 sequential guards: socket trust → https → CIDR allowlist) | `units/.../evaluateTransport.usecase.test.ts` |
+| AC5 | `interface-adapters/controllers/webhook/transportGuard.middleware.ts` (Express → `evaluateTransport` → status / `next`) | `units/.../transportGuard.middleware.test.ts` |
+| AC6 | middleware reads `socket.remoteAddress` + named headers only; no `req.protocol` / `req.ip` guard | `units/security/noSpoofableTransportGuard.test.ts` |
+| AC8 | `src/security/transportGuardConfig.ts` (`trust proxy` = loopback hop, never `true`) wired in `src/main/server.ts` | `units/security/transportGuardConfig.test.ts` |
+| AC9 | `src/security/gitlabWebhookTokenSource.ts` (reloadable token) + `src/security/verifier.ts` (length-oracle removed, constant-time `timingSafeEqual`) | `units/security/verifier.test.ts` |
+| AC7 / AC10 | `docs/runbooks/webhook-transport-hardening.md` (nginx / Caddy / Traefik runbook + token rotation/revocation + root-trust statement) | documentation-only |
+
+Supporting: `entities/transport/transportContext.ts`, `entities/transport/cidr.ts`, `entities/transport/clientIpResolver.gateway.ts` + `interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.ts`, `tests/factories/transportContext.factory.ts`. Outer-loop acceptance: `src/tests/acceptance/201-transport-provenance-hardening.acceptance.test.ts`.
 
 ## Context
 
