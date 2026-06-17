@@ -10,11 +10,27 @@ import {
   loadSettingsFromDisk,
 } from '@/frameworks/settings/runtimeSettings.js';
 import { InMemorySupervisorHealthGateway } from '@/modules/claude-invocation/interface-adapters/gateways/supervisorHealth.memory.gateway.js';
+import { defaultEgressScanConfig } from '@/modules/platform-integration/entities/egressScan/egressScan.defaults.js';
+import { createEgressScanner } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
+import type { EgressTraceGateway } from '@/modules/platform-integration/entities/egressScan/egressTrace.gateway.js';
+import { GitHubNoteCommentPostCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/noteCommentPost.github.cli.gateway.js';
+import { GitLabNoteCommentPostCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/noteCommentPost.gitlab.cli.gateway.js';
+import { EgressScannedNoteCommentPostGateway } from '@/modules/platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.js';
+import { LoggerEgressTraceGateway } from '@/modules/platform-integration/interface-adapters/gateways/loggerEgressTrace.gateway.js';
+import { defaultGitHubExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.github.gateway.js';
+import {
+  defaultGitLabExecutor,
+  type CommandExecutor as NoteCliExecutor,
+} from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
 import type { JobRecord } from '@/modules/review-execution/entities/job/jobRecord.schema.js';
 import type { JobStatus } from '@/modules/review-execution/entities/job/reviewJob.js';
+import type { ReviewContext } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
 import { JobHistoryFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/fileSystem/jobHistory.fileSystem.gateway.js';
 import { executeActionsFromContext } from '@/modules/review-execution/services/contextActionsExecutor.js';
-import { runReviewRecovery } from '@/modules/review-execution/services/reviewRecovery.service.js';
+import {
+  runReviewRecovery,
+  type ExecuteActionsOutcome,
+} from '@/modules/review-execution/services/reviewRecovery.service.js';
 import { defaultCommandExecutor } from '@/modules/review-execution/services/threadActionsExecutor.js';
 import { LoadRecentJobHistoryUseCase } from '@/modules/review-execution/usecases/jobHistory/loadRecentJobHistory.usecase.js';
 import { PersistJobRecordUseCase } from '@/modules/review-execution/usecases/jobHistory/persistJobRecord.usecase.js';
@@ -30,6 +46,7 @@ import {
   getDefaultSupervisorLockFilePath,
 } from '@/modules/supervisor-management/interface-adapters/gateways/supervisorLock.fileSystem.gateway.js';
 import { transportTrustProxyValue } from '@/security/transportGuardConfig.js';
+import type { CommandExecutor } from '@/shared/foundation/executionGateway.base.js';
 
 import { loadConfig, type Config } from '../config/loader.js';
 import {
@@ -95,6 +112,52 @@ function reviveJobStatusFromRecord(record: JobRecord): JobStatus {
     startedAt: new Date(record.startedAt),
     completedAt: new Date(record.completedAt),
     error: record.exitReason ?? undefined,
+  };
+}
+
+interface RecoveryExecuteActionsLogger {
+  info: (obj: object, msg: string) => void;
+  warn: (obj: object, msg: string) => void;
+  error: (obj: object, msg: string) => void;
+  debug: (obj: object, msg: string) => void;
+}
+
+export interface RecoveryExecuteActionsExecutors {
+  cliExecutor?: CommandExecutor;
+  gitLabNoteExecutor?: NoteCliExecutor;
+  gitHubNoteExecutor?: NoteCliExecutor;
+}
+
+export function buildRecoveryExecuteActions(
+  logger: RecoveryExecuteActionsLogger,
+  egressTraceGateway: EgressTraceGateway,
+  executors: RecoveryExecuteActionsExecutors = {},
+): (context: ReviewContext, localPath: string) => Promise<ExecuteActionsOutcome> {
+  const egressScanner = createEgressScanner(defaultEgressScanConfig);
+  const cliExecutor = executors.cliExecutor ?? defaultCommandExecutor;
+  const gitLabNoteExecutor = executors.gitLabNoteExecutor ?? defaultGitLabExecutor;
+  const gitHubNoteExecutor = executors.gitHubNoteExecutor ?? defaultGitHubExecutor;
+
+  return async (context, localPath) => {
+    const noteSink =
+      context.platform === 'gitlab'
+        ? new GitLabNoteCommentPostCliGateway(gitLabNoteExecutor)
+        : new GitHubNoteCommentPostCliGateway(gitHubNoteExecutor);
+    const noteCommentPostGateway = new EgressScannedNoteCommentPostGateway(
+      noteSink,
+      egressScanner,
+      egressTraceGateway,
+    );
+
+    const result = await executeActionsFromContext(
+      context,
+      localPath,
+      logger,
+      cliExecutor,
+      null,
+      noteCommentPostGateway,
+    );
+    return { posted: result.succeeded, failed: result.failed };
   };
 }
 
@@ -234,15 +297,10 @@ export async function startServer(options: ServerOptions = {}): Promise<FastifyI
       const summary = await runReviewRecovery({
         repositories: config.repositories.filter((repo) => repo.enabled),
         reviewContextGateway: deps.reviewContextGateway,
-        executeActions: async (context, localPath) => {
-          const result = await executeActionsFromContext(
-            context,
-            localPath,
-            deps.logger,
-            defaultCommandExecutor,
-          );
-          return { posted: result.succeeded, failed: result.failed };
-        },
+        executeActions: buildRecoveryExecuteActions(
+          deps.logger,
+          new LoggerEgressTraceGateway(deps.logger),
+        ),
         now: () => Date.now(),
         logger: deps.logger,
       });

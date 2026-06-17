@@ -1,12 +1,32 @@
 ---
 title: "SPEC-199: Review output egress scan before posting"
-status: draft
+status: implemented
 labels: [egress, defense-in-depth, reviewflow]
 visibility: PRIVATE-UNTIL-P0-SHIPPED
 depends_on: [SPEC-196]
 ---
 
 # SPEC-199: Review output egress scan before posting
+
+## Status: implemented
+
+## Implementation
+
+The deterministic egress machinery (scanner, decorator, single fan-in executor, per-platform wiring) shipped with the SPEC-196/198 cluster (landed 2026-06-10). The SDD outer-loop acceptance test was added 2026-06-17 to close the loop, and that pass uncovered **GAP-1**: the boot-time review-recovery path (`src/main/server.ts`) called `executeActionsFromContext` without the post gateway, so the `postGateway === null` branch routed recovered LLM-derived `POST_COMMENT` / `THREAD_REPLY` bodies straight through the raw CLI primitive, **bypassing the egress scan** — the exact class of bypass AC9 forbids, on a live (non-test) path. The fix threads the production decorated gateway into the recovery closure (per-platform CLI sink chosen by `context.platform`, wrapped in `EgressScannedNoteCommentPostGateway` with the same `defaultEgressScanConfig` + `LoggerEgressTraceGateway` the four webhook/processor sites use). Pure wiring — no scanner or decorator behaviour changed.
+
+| AC | Artifact | Test |
+|----|----------|------|
+| AC1 — single enforcement point on the post sink | `platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.ts` (decorator wraps `postComment`, scans before sink) | `units/.../egressScanned.noteCommentPost.gateway.test.ts` (`AC1 — single enforcement point`) |
+| AC2 — secret-shape scan allow/redact/block | `platform-integration/entities/egressScan/egressScan.scanner.ts` (`SECRET_SHAPE_PATTERN` + mode branch) | `units/.../egressScan.scanner.test.ts` (`secret-shape scan (AC2)`); acceptance `AC2 / AC5 — block and fail-closed end-to-end` |
+| AC3 — deterministic length cap | `platform-integration/entities/egressScan/egressScan.scanner.ts` (truncate-with-marker / block) | `units/.../egressScan.scanner.test.ts` (`length cap (AC3)`) |
+| AC4 — out-of-scope reference scan | `platform-integration/entities/egressScan/egressScan.scanner.ts` (`PROJECT_REFERENCE_PATTERN` + `isOutOfScope`) | `units/.../egressScan.scanner.test.ts` (`out-of-scope reference scan (AC4)`) |
+| AC5 — fail-closed on scanner error | `platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.ts` (scanner first; throw propagates before the sink) | `units/.../egressScanned.noteCommentPost.gateway.test.ts` (`AC5 — fail-closed on scanner error`); acceptance `fails closed when the scanner throws` |
+| AC6 — trace without secret | `platform-integration/entities/egressScan/egressScan.scanner.ts` (trace = channel + mode + counts); `loggerEgressTrace.gateway.ts` | `units/.../egressScan.scanner.test.ts` (`trace metadata carries no secret (AC6)`); `units/.../egressScanned.noteCommentPost.gateway.test.ts` (`AC6 — trace without secret`) |
+| AC7 — `THREAD_REPLY` egress is scanned | `review-execution/services/publicOutputExecutor.ts` + `threadActionsExecutor.ts` + `contextActionsExecutor.ts` (route public output through the injected decorated gateway) | `units/.../threadActionsExecutor.egress.test.ts`; `units/.../contextActionsExecutor.egress.test.ts`; acceptance `AC9 — every auto-path public-output verb is scanned` (table-driven over `{POST_COMMENT, THREAD_REPLY}`) |
+| AC8 — revoke accompanying-comment (out-of-scope-by-design for auto path) | `platform-integration/services/autoExecutorActionFilter.ts` (auto path admits only `readMr`+`postComment`; `revoke`/`threadResolve`/`addLabel` dropped → no auto revoke exists) | acceptance `AC8 — out-of-scope-by-design: no auto revoke whose comment could egress` (zero CLI writes for dropped verbs) |
+| AC9 — channel exhaustiveness (no unscanned public-output verb) | `review-execution/services/publicOutputExecutor.ts` (single fan-in); **GAP-1 fix** `src/main/server.ts` (`buildRecoveryExecuteActions` threads the decorated gateway into the recovery closure) | acceptance `199-review-output-egress-scan.acceptance.test.ts` — table-driven over both executors **plus the recovery path** (`the boot-time recovery path is scanned (GAP-1 close-loop)`); raw-executor secret-arg counter == 0 |
+
+DI wiring: `src/main/routes.ts:409-443` (four webhook/processor sites) and `src/main/server.ts` (`buildRecoveryExecuteActions`, GAP-1 fix). Doubles reused: `tests/stubs/egressScan.stub.ts`, `tests/stubs/noteCommentPost.stub.ts`. Outer-loop acceptance: `src/tests/acceptance/199-review-output-egress-scan.acceptance.test.ts` (8 scenarios, observable post-gateway/executor state only). Report: `docs/reports/199-review-output-egress-scan.report.md`.
 
 ## Context
 
