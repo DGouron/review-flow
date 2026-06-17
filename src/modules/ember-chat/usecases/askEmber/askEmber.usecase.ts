@@ -131,13 +131,16 @@ export async function askEmber(
   }
 
   const { readData, memory, projectPath, transport } = dependencies;
-  const systemPrompt = buildEmberSystemPrompt({
-    reviewScores: await readData.reviewScores(projectPath),
-    insights: await readData.insights(projectPath),
-    jobHistory: await readData.jobHistory(projectPath),
-    worktrees: await readData.worktrees(),
-    memory: await loadMemorySafely(memory, projectPath),
-  });
+  const systemPrompt = buildEmberSystemPrompt(
+    {
+      reviewScores: await readData.reviewScores(projectPath),
+      insights: await readData.insights(projectPath),
+      jobHistory: await readData.jobHistory(projectPath),
+      worktrees: await readData.worktrees(),
+      memory: await loadMemorySafely(memory, projectPath),
+    },
+    projectPath,
+  );
 
   const relay = new AnswerRelay((answer) => {
     void rememberTurn(memory, projectPath, message.question, answer);

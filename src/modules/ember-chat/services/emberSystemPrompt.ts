@@ -86,7 +86,19 @@ function reviewCountSummary(stats: ProjectStats | null): string {
   return `… et ${olderCount} reviews plus anciennes que tu peux lire à la demande dans les données du projet.`;
 }
 
-export function buildEmberSystemPrompt(grounding: EmberGrounding): string {
+function recordInsightInstruction(projectPath: string): string {
+  return [
+    '',
+    'CONSTAT RÉCURRENT — quand tu dérives un constat récurrent à partir des données',
+    'de review de ce projet (par exemple un projet qui régresse chaque vendredi), tu peux',
+    "l'enregistrer dans ta mémoire privée en appelant l'outil",
+    `record_insight({ projectPath: "${projectPath}", insight: "<le constat>" }).`,
+    "N'enregistre QU'un véritable constat récurrent issu des reviews — jamais un fait quelconque.",
+    "C'est ta seule écriture autorisée : elle vise ta mémoire privée, jamais l'état du projet.",
+  ].join('\n');
+}
+
+export function buildEmberSystemPrompt(grounding: EmberGrounding, projectPath: string): string {
   const reviewScores = boundReviewScores(grounding.reviewScores);
   const olderReviewsNote = reviewCountSummary(grounding.reviewScores);
   return [
@@ -119,8 +131,10 @@ export function buildEmberSystemPrompt(grounding: EmberGrounding): string {
     'Si la réponse ne se trouve dans aucune de ces données, dis que tu ne sais répondre',
     "qu'à propos des reviews plutôt que d'inventer une réponse. N'invente jamais.",
     '',
-    'LECTURE SEULE : tu ne modifies, ne crées et ne supprimes rien. Si on te demande',
+    "LECTURE SEULE : tu ne modifies, ne crées et ne supprimes rien de l'état du projet",
+    '(reviews, threads, fichiers, configuration). Si on te demande',
     "d'écrire, de créer ou de modifier quelque chose (par exemple un quality gate),",
     "explique que tu restes en lecture seule et n'effectue aucune écriture.",
+    recordInsightInstruction(projectPath),
   ].join('\n');
 }

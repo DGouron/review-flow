@@ -114,4 +114,47 @@ describe('EmberMemoryFileSystemGateway', () => {
     expect(loaded?.insights).toEqual(['Régression du vendredi.']);
     expect(loaded?.turns).toHaveLength(1);
   });
+
+  it('records the same insight only once (a repeated finding does not pile up)', async () => {
+    const gateway = new EmberMemoryFileSystemGateway({ homeDir });
+    await gateway.appendInsight(PROJECT_A, 'Le projet alpha régresse chaque vendredi.');
+    await gateway.appendInsight(PROJECT_A, 'Le projet alpha régresse chaque vendredi.');
+
+    expect((await gateway.load(PROJECT_A))?.insights).toEqual([
+      'Le projet alpha régresse chaque vendredi.',
+    ]);
+  });
+
+  it('treats a trailing-whitespace variant as the same insight', async () => {
+    const gateway = new EmberMemoryFileSystemGateway({ homeDir });
+    await gateway.appendInsight(PROJECT_A, 'Régression du vendredi.');
+    await gateway.appendInsight(PROJECT_A, '  Régression du vendredi.  ');
+
+    expect((await gateway.load(PROJECT_A))?.insights).toEqual(['Régression du vendredi.']);
+  });
+
+  it('records two genuinely different insights in order', async () => {
+    const gateway = new EmberMemoryFileSystemGateway({ homeDir });
+    await gateway.appendInsight(PROJECT_A, 'Régression du vendredi.');
+    await gateway.appendInsight(PROJECT_A, 'Couverture en baisse sur le module paiement.');
+
+    expect((await gateway.load(PROJECT_A))?.insights).toEqual([
+      'Régression du vendredi.',
+      'Couverture en baisse sur le module paiement.',
+    ]);
+  });
+
+  it('never records a blank insight', async () => {
+    const gateway = new EmberMemoryFileSystemGateway({ homeDir });
+    await gateway.appendInsight(PROJECT_A, '   ');
+
+    expect(await gateway.load(PROJECT_A)).toBeNull();
+  });
+
+  it('keeps a recorded insight isolated from another project', async () => {
+    const gateway = new EmberMemoryFileSystemGateway({ homeDir });
+    await gateway.appendInsight(PROJECT_A, 'Le projet alpha régresse chaque vendredi.');
+
+    expect(await gateway.load(PROJECT_B)).toBeNull();
+  });
 });

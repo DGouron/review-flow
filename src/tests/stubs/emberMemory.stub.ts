@@ -33,10 +33,17 @@ export class StubEmberMemoryStore {
   }
 
   appendInsight(projectPath: string, insight: EmberRecurringInsight): void {
+    const normalized = insight.trim();
+    if (normalized.length === 0) {
+      return;
+    }
     const current = this.memoryByProject.get(projectPath) ?? { turns: [], insights: [] };
+    if (current.insights.includes(normalized)) {
+      return;
+    }
     this.memoryByProject.set(projectPath, {
       turns: current.turns,
-      insights: [...current.insights, insight],
+      insights: [...current.insights, normalized],
     });
   }
 

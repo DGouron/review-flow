@@ -1,4 +1,5 @@
 import { readFileSync, existsSync } from 'node:fs';
+import { homedir } from 'node:os';
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -6,6 +7,8 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 
 import type { McpToolResult } from '@/mcp/types.js';
 import { FileSystemMcpCompletionBridge } from '@/modules/claude-invocation/interface-adapters/gateways/mcpCompletion.fileSystem.gateway.js';
+import { createRecordInsightHandler } from '@/modules/ember-chat/interface-adapters/controllers/mcp/recordInsight.handler.js';
+import { EmberMemoryFileSystemGateway } from '@/modules/ember-chat/interface-adapters/gateways/emberMemory.fileSystem.gateway.js';
 import { createAddActionHandler } from '@/modules/review-execution/interface-adapters/controllers/mcp/addAction.handler.js';
 import { createCompleteAgentHandler } from '@/modules/review-execution/interface-adapters/controllers/mcp/completeAgent.handler.js';
 import { createGetThreadsHandler } from '@/modules/review-execution/interface-adapters/controllers/mcp/getThreads.handler.js';
@@ -90,7 +93,7 @@ export function ensureJobContextLoaded(jobId: string, mcpDeps: McpDependencies):
   mcpLogger.info('Progress created via lazy loading', { jobId, agentNames });
 }
 
-const TOOL_DEFINITIONS = [
+export const TOOL_DEFINITIONS = [
   {
     name: 'get_workflow',
     description: 'Get the current workflow state including agents and their status',
@@ -187,6 +190,19 @@ const TOOL_DEFINITIONS = [
       required: ['jobId', 'type'],
     },
   },
+  {
+    name: 'record_insight',
+    description:
+      "Record a recurring review finding Ember derived for the answered project into Ember's private per-project memory, so a later answer reuses it without recomputing. Use only for genuine recurring review findings, never arbitrary facts.",
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        projectPath: { type: 'string', description: 'The answered project path' },
+        insight: { type: 'string', description: 'The recurring finding to record' },
+      },
+      required: ['projectPath', 'insight'],
+    },
+  },
 ];
 
 export async function startMcpServer(): Promise<void> {
@@ -222,6 +238,12 @@ export async function startMcpServer(): Promise<void> {
     jobContextGateway: mcpDeps.jobContextGateway,
     reviewContextGateway: mcpDeps.reviewContextGateway,
   });
+  // Own EmberMemoryFileSystemGateway: the MCP server is a separate subprocess
+  // spawned by `claude --bg` and cannot share the Fastify host's instance. Both
+  // write the same ~/.claude-review/ember-memory/<slug>.json — the filesystem is
+  // the shared store, exactly as SPEC-192 designed it.
+  const emberMemoryGateway = new EmberMemoryFileSystemGateway({ homeDir: homedir() });
+  const recordInsightHandler = createRecordInsightHandler({ memory: emberMemoryGateway });
 
   const handlers: Record<string, (args: Record<string, unknown>) => McpToolResult> = {
     get_workflow: getWorkflowHandler,
@@ -230,6 +252,7 @@ export async function startMcpServer(): Promise<void> {
     set_phase: setPhaseHandler,
     get_threads: getThreadsHandler,
     add_action: addActionHandler,
+    record_insight: recordInsightHandler,
   };
 
   const server = new Server(

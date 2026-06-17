@@ -8,7 +8,7 @@ import type { FastifyInstance } from 'fastify';
 
 import { findRepositoryByProjectPath } from '@/config/loader.js';
 import { loadProjectConfig } from '@/config/projectConfig.js';
-import { defaultProcessRunner } from '@/frameworks/claude/claudeInvoker.js';
+import { defaultProcessRunner, buildMcpConfigJson } from '@/frameworks/claude/claudeInvoker.js';
 import {
   createDefaultClaudeInvokerDependencies,
   type ClaudeInvokerDependencies,
@@ -640,7 +640,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
   });
   const emberAnswerTransport = new EmberAnswerTransportClaudeGateway(
     new ClaudeSessionCliGateway(defaultProcessRunner()),
-    { homeDir: homedir() },
+    { homeDir: homedir(), buildMcpConfig: buildMcpConfigJson },
   );
   const emberMemory = new EmberMemoryFileSystemGateway({ homeDir: homedir() });
 

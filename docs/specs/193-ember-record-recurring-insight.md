@@ -1,6 +1,6 @@
 ---
 title: "SPEC-193: Let Ember record a recurring insight it derives"
-status: drafted
+status: implemented
 milestone: Ember Assistant
 depends_on:
   - "192-ember-ondemand-grounding-and-memory"
@@ -9,6 +9,16 @@ related:
 ---
 
 # SPEC-193: Let Ember record a recurring insight it derives
+
+## Implementation
+
+- **MCP tool**: `record_insight({ projectPath, insight })` exposed via `src/mcp/mcpServerStdio.ts`, handled by `src/modules/ember-chat/interface-adapters/controllers/mcp/recordInsight.handler.ts`. The handler validates `projectPath`, parses `insight` (blank → no-op success), and fire-and-forget writes via `EmberMemoryGateway.appendInsight` (best-effort: rejection swallowed).
+- **Dedup**: lives in the gateway. `EmberMemoryFileSystemGateway.appendInsight` (and the stub) trim, skip blank, and skip an already-present (case-sensitive) insight — idempotent. No standalone use case.
+- **Tool enablement**: `emberAnswerTransport.claude.gateway.ts` attaches the MCP config (lazy `buildMcpConfig` provider, resolved per question so boot never depends on a built `dist`) and adds `mcp__review-progress__record_insight` to `allowedTools`; `Edit/Write/Bash/Task` stay disallowed — read-only over project state is preserved.
+- **Prompt signal**: `buildEmberSystemPrompt(grounding, projectPath)` injects an instruction telling Ember to call `record_insight` with the concrete `projectPath`, only for genuine recurring review findings.
+- **Safeguard**: the no-API-key guard in `askEmber` (`billing-regression-prevented`) runs before dispatch, so the tool is unreachable with an API key set.
+
+Report: `docs/reports/193-ember-record-recurring-insight.report.md`.
 
 ## Context
 

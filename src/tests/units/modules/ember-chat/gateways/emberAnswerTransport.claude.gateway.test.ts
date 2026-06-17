@@ -59,6 +59,7 @@ function projectDirFor(projectPath: string, homeDir: string): string {
 const FAST_OPTIONS = (homeDir: string) => ({
   homeDir,
   pollIntervalMs: 1,
+  buildMcpConfig: () => '{"mcpServers":{}}',
 });
 
 describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)', () => {
@@ -110,11 +111,35 @@ describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)',
 
     const dispatch = sessionGateway.dispatchCalls[0];
     expect(dispatch.jobType).toBe('ember-chat');
-    expect(dispatch.flags.allowedTools).toBe('Read,Glob,Grep');
+    expect(dispatch.flags.allowedTools).toBe('Read,Glob,Grep,mcp__review-progress__record_insight');
     expect(dispatch.flags.disallowedTools).toBe('Edit,Write,Bash,Task');
-    expect(dispatch.flags.mcpConfigJson).toBe('{"mcpServers":{}}');
     expect(dispatch.flags.permissionMode).toBe('auto');
     expect(sessionGateway.stopCalls).toEqual(['stub-session']);
+  });
+
+  it('dispatches with the MCP config resolved lazily from buildMcpConfig', async () => {
+    const dir = projectDirFor(homeDir, homeDir);
+    writeFileSync(
+      join(dir, 'stub-session-mcp.jsonl'),
+      JSON.stringify({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn' },
+      }) + '\n',
+    );
+    const mcpConfig =
+      '{"mcpServers":{"review-progress":{"command":"node","args":["mcpServer.js"]}}}';
+
+    const gateway = new EmberAnswerTransportClaudeGateway(sessionGateway, {
+      homeDir,
+      pollIntervalMs: 1,
+      buildMcpConfig: () => mcpConfig,
+    });
+    const { subscriber, finished } = settled();
+
+    gateway.start(startOptions(), subscriber);
+    await finished;
+
+    expect(sessionGateway.dispatchCalls[0].flags.mcpConfigJson).toBe(mcpConfig);
   });
 
   it('reports ember-answer-dispatch-failed and never stops a session when dispatch fails', async () => {
@@ -189,6 +214,7 @@ describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)',
     const gateway = new EmberAnswerTransportClaudeGateway(sessionGateway, {
       homeDir,
       pollIntervalMs: 1,
+      buildMcpConfig: () => '{"mcpServers":{}}',
     });
     const { subscriber, finished } = settled();
 
