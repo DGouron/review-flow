@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 
-import { emberMemoryGuard } from '@/modules/ember-chat/entities/emberMemory/emberMemory.guard.js';
+import {
+  emberMemoryGuard,
+  emberRecurringInsightGuard,
+} from '@/modules/ember-chat/entities/emberMemory/emberMemory.guard.js';
 
 describe('emberMemoryGuard', () => {
   it('accepts a memory holding conversation turns', () => {
@@ -60,5 +63,32 @@ describe('emberMemoryGuard', () => {
     const result = emberMemoryGuard.safeParse({ turns: [], insights: [''] });
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe('emberRecurringInsightGuard', () => {
+  it('accepts a non-empty insight', () => {
+    const result = emberRecurringInsightGuard.safeParse('Le projet X régresse chaque vendredi.');
+
+    expect(result.success).toBe(true);
+  });
+
+  it('trims a surrounding-whitespace insight to its meaningful content', () => {
+    const result = emberRecurringInsightGuard.safeParse('  Régression du vendredi.  ');
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toBe('Régression du vendredi.');
+    }
+  });
+
+  it('rejects a blank insight', () => {
+    expect(emberRecurringInsightGuard.safeParse('').success).toBe(false);
+    expect(emberRecurringInsightGuard.safeParse('   ').success).toBe(false);
+  });
+
+  it('rejects a value that is not a string', () => {
+    expect(emberRecurringInsightGuard.safeParse(42).success).toBe(false);
+    expect(emberRecurringInsightGuard.safeParse(null).success).toBe(false);
   });
 });

@@ -28,10 +28,13 @@ import type {
  * JSONL, emitting onChunk per new assistant text segment and onDone on the
  * turn-complete marker, then stop the (persistent) background session.
  *
- * Read-only is enforced structurally: read-only tools (Read,Glob,Grep), with
- * Edit/Write/Bash/Task in disallowedTools and no MCP servers. `--permission-mode
+ * Read-only over PROJECT state is enforced structurally: read-only tools
+ * (Read,Glob,Grep) plus the single MCP tool `record_insight` (writes only to
+ * Ember's private per-project memory, never to reviews/threads/files/config —
+ * SPEC-193), with Edit/Write/Bash/Task in disallowedTools. `--permission-mode
  * auto` matches the proven reviews path (`plan` would risk the agent emitting a
- * plan instead of an answer).
+ * plan instead of an answer). The MCP config is resolved lazily per question
+ * (buildMcpConfig provider) so server boot never depends on a built dist.
  *
  * Verified against claude 2.1.154 (`claude --bg --permission-mode auto`):
  *  - The transcript file is named with the FULL session UUID, while `backgrounded
@@ -52,9 +55,12 @@ import type {
 export interface EmberAnswerTransportClaudeGatewayOptions {
   homeDir: string;
   pollIntervalMs?: number;
+  buildMcpConfig: () => string;
 }
 
 const DEFAULT_POLL_INTERVAL_MS = 750;
+
+const EMBER_ALLOWED_TOOLS = 'Read,Glob,Grep,mcp__review-progress__record_insight';
 
 export class EmberAnswerTransportClaudeGateway implements EmberAnswerTransportGateway {
   constructor(
@@ -70,6 +76,7 @@ export class EmberAnswerTransportClaudeGateway implements EmberAnswerTransportGa
       this.sessionGateway,
       this.options.homeDir,
       this.options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS,
+      this.options.buildMcpConfig(),
       options,
       subscriber,
     );
@@ -95,6 +102,7 @@ class EmberAnswerRunner {
     private readonly sessionGateway: ClaudeSessionGateway,
     private readonly homeDir: string,
     private readonly pollIntervalMs: number,
+    private readonly mcpConfigJson: string,
     private readonly options: EmberAnswerStartOptions,
     private readonly subscriber: EmberAnswerSubscriber,
   ) {}
@@ -116,8 +124,8 @@ class EmberAnswerRunner {
         model: 'sonnet',
         permissionMode: 'auto',
         systemPrompt: this.options.systemPrompt,
-        mcpConfigJson: '{"mcpServers":{}}',
-        allowedTools: 'Read,Glob,Grep',
+        mcpConfigJson: this.mcpConfigJson,
+        allowedTools: EMBER_ALLOWED_TOOLS,
         disallowedTools: 'Edit,Write,Bash,Task',
       },
       localPath: this.options.projectPath,

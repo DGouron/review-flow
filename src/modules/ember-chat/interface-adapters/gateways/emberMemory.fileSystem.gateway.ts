@@ -47,8 +47,15 @@ export class EmberMemoryFileSystemGateway implements EmberMemoryGateway {
   }
 
   async appendInsight(projectPath: string, insight: EmberRecurringInsight): Promise<void> {
+    const normalized = insight.trim();
+    if (normalized.length === 0) {
+      return;
+    }
     const current = (await this.load(projectPath)) ?? { turns: [], insights: [] };
-    this.write(projectPath, { turns: current.turns, insights: [...current.insights, insight] });
+    if (current.insights.includes(normalized)) {
+      return;
+    }
+    this.write(projectPath, { turns: current.turns, insights: [...current.insights, normalized] });
   }
 
   async clear(projectPath: string): Promise<void> {

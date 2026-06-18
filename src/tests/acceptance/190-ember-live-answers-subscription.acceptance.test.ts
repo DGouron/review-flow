@@ -201,13 +201,16 @@ describe('Answer Ember questions live via the Claude subscription (acceptance, S
       const reviews = Array.from({ length: 500 }, (_, index) =>
         ReviewStatsFactory.create({ mrNumber: index, score: index % 10 }),
       );
-      const prompt = buildEmberSystemPrompt({
-        reviewScores: ProjectStatsFactory.withReviews(reviews),
-        insights: null,
-        jobHistory: null,
-        worktrees: [],
-        memory: null,
-      });
+      const prompt = buildEmberSystemPrompt(
+        {
+          reviewScores: ProjectStatsFactory.withReviews(reviews),
+          insights: null,
+          jobHistory: null,
+          worktrees: [],
+          memory: null,
+        },
+        '/projects/acme',
+      );
 
       expect(prompt.length).toBeLessThan(60_000);
       expect(prompt).toContain('totalReviews');
