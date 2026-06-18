@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.38.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.37.1...reviewflow-v3.38.0) (2026-06-18)
+
+
+### Added
+
+* **ember-chat:** implement spec-193 record recurring insight ([7e409b3](https://github.com/DGouron/review-flow/commit/7e409b3729311d797b140f4c0f393760e663d55c))
+* **ember-chat:** implement spec-193 record recurring insight ([94192d8](https://github.com/DGouron/review-flow/commit/94192d8746761e20d6a17c2e9ca97eb0b5a91bbc))
+
 ## [3.37.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.37.0...reviewflow-v3.37.1) (2026-06-17)
 
 
