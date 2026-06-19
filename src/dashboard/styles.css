@@ -3190,6 +3190,60 @@ input:focus-visible,
   display: block;
 }
 
+/* Key insights (SPEC-205) */
+.key-insights-panel {
+  grid-column: 1 / -1;
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.key-insights-title {
+  grid-column: 1 / -1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--nsc-text-secondary);
+  margin-bottom: 0.2rem;
+}
+
+.key-insight-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(130, 170, 220, 0.08);
+  border-left: 2px solid #ffca63;
+  border-radius: 12px;
+  padding: 0.85rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.key-insight-card:hover {
+  border-color: rgba(130, 170, 220, 0.15);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.key-insight-card-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--nsc-text-primary);
+  margin-bottom: 0.35rem;
+}
+
+.key-insight-card-body {
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--nsc-text-secondary);
+}
+
+.key-insights-empty {
+  grid-column: 1 / -1;
+  color: var(--nsc-text-secondary);
+  font-size: 0.82rem;
+  padding: 0.6rem 0;
+}
+
 @media (max-width: 640px) {
   .stats-charts-row {
     grid-template-columns: 1fr;
