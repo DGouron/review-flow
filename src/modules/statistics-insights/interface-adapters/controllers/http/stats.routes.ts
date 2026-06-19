@@ -6,6 +6,7 @@ import { safeParseRecalculateBody } from '@/modules/statistics-insights/entities
 import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import { AnalyticsHeaderPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/analyticsHeader.presenter.js';
 import { BugsByCategoryPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/bugsByCategory.presenter.js';
+import { KeyInsightsPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/keyInsights.presenter.js';
 import { getStatsSummary } from '@/modules/statistics-insights/services/statsService.js';
 import { recalculateWithBackfill } from '@/modules/statistics-insights/usecases/stats/recalculateWithBackfill.usecase.js';
 
@@ -32,6 +33,7 @@ export const statsRoutes: FastifyPluginAsync<StatsRoutesOptions> = async (fastif
   const { statsGateway, getRepositories } = options;
   const bugsByCategoryPresenter = new BugsByCategoryPresenter();
   const analyticsHeaderPresenter = new AnalyticsHeaderPresenter();
+  const keyInsightsPresenter = new KeyInsightsPresenter();
 
   fastify.get<{ Querystring: { path?: string } }>('/api/stats', async (request) => {
     const projectPath = request.query.path?.trim();
@@ -51,6 +53,7 @@ export const statsRoutes: FastifyPluginAsync<StatsRoutesOptions> = async (fastif
         summary: getStatsSummary(stats),
         bugsByCategory: bugsByCategoryPresenter.present(stats),
         analyticsHeader: analyticsHeaderPresenter.present(stats, new Date()),
+        keyInsights: keyInsightsPresenter.present(stats, new Date()),
       };
     }
 
@@ -66,6 +69,7 @@ export const statsRoutes: FastifyPluginAsync<StatsRoutesOptions> = async (fastif
           summary: getStatsSummary(stats),
           bugsByCategory: bugsByCategoryPresenter.present(stats),
           analyticsHeader: analyticsHeaderPresenter.present(stats, new Date()),
+          keyInsights: keyInsightsPresenter.present(stats, new Date()),
         });
       }
     }
