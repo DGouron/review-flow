@@ -111,6 +111,21 @@ describe('i18n', () => {
     expect(t('loading.status')).toBe('Rafraîchissement du statut en direct...');
   });
 
+  it('should translate analytics header KPI labels in English', () => {
+    expect(t('stats.kpi.prsReviewed')).toBe('PRs Reviewed');
+    expect(t('stats.kpi.bugsCaught')).toBe('Bugs Caught');
+    expect(t('stats.kpi.averageReviewTime')).toBe('Average Review Time');
+    expect(t('stats.reviewsPerMonth')).toBe('Reviews per Month');
+  });
+
+  it('should translate analytics header KPI labels in French', () => {
+    setLanguage('fr');
+    expect(t('stats.kpi.prsReviewed')).toBe('PR examinées');
+    expect(t('stats.kpi.bugsCaught')).toBe('Bugs détectés');
+    expect(t('stats.kpi.averageReviewTime')).toBe('Durée moyenne de review');
+    expect(t('stats.reviewsPerMonth')).toBe('Reviews par mois');
+  });
+
   it('should translate export PDF labels in English', () => {
     expect(t('export.pdf')).toBe('Export PDF');
     expect(t('export.title')).toBe('Team Insights Report');

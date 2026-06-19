@@ -66,5 +66,5 @@
 | Trusted-actor trigger provenance gate | [197-trusted-actor-provenance-gate](specs/197-trusted-actor-provenance-gate.md) — [plan](plans/197-trusted-actor-provenance-gate.plan.md) — [report](reports/197-trusted-actor-provenance-gate.report.md) | implemented | 2026-06-10 |
 | Review output egress scan before posting | [199-review-output-egress-scan](specs/199-review-output-egress-scan.md) — [plan](plans/199-review-output-egress-scan.plan.md) — [report](reports/199-review-output-egress-scan.report.md) | implemented | 2026-06-10 |
 | Track bugs found by category | [203-bugs-found-by-category](specs/203-bugs-found-by-category.md) — [plan](plans/203-bugs-found-by-category.plan.md) — [report](reports/203-bugs-found-by-category.report.md) | implemented | 2026-06-19 |
-| Show the analytics overview header | [204-analytics-overview-header](specs/204-analytics-overview-header.md) | drafted | 2026-06-19 |
+| Show the analytics overview header | [204-analytics-overview-header](specs/204-analytics-overview-header.md) — [plan](plans/204-analytics-overview-header.plan.md) — [report](reports/204-analytics-overview-header.report.md) | implemented | 2026-06-19 |
 | Show key insight cards on the analytics overview | [205-analytics-key-insight-cards](specs/205-analytics-key-insight-cards.md) | drafted | 2026-06-19 |

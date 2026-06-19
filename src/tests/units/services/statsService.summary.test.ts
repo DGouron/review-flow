@@ -1,8 +1,25 @@
 import { describe, it, expect } from 'vitest';
 
-import { getStatsSummary } from '@/modules/statistics-insights/services/statsService.js';
+import {
+  formatReviewDuration,
+  getStatsSummary,
+} from '@/modules/statistics-insights/services/statsService.js';
 import { DiffStatsFactory } from '@/tests/factories/diffStats.factory.js';
 import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+
+describe('formatReviewDuration', () => {
+  it('formats sub-hour durations as minutes only', () => {
+    expect(formatReviewDuration(252000)).toBe('4m');
+  });
+
+  it('formats hour-plus durations as hours and minutes', () => {
+    expect(formatReviewDuration(4320000)).toBe('1h 12m');
+  });
+
+  it('formats zero as zero minutes', () => {
+    expect(formatReviewDuration(0)).toBe('0m');
+  });
+});
 
 describe('getStatsSummary', () => {
   it('exposes existing aggregates (totalReviews, durations, score, counts)', () => {

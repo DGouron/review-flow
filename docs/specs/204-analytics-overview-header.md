@@ -1,5 +1,7 @@
 # Show the analytics overview header
 
+## Status: implemented
+
 ## Context
 
 The dashboard records per-project review stats but offers no at-a-glance headline. A reviewer wants the analytics overview header from the target design: the three headline numbers (how many PRs were reviewed, how many bugs were caught, the average review time) plus the review-volume trend over the year. Every figure already exists in the recorded stats — this surfaces them, it captures nothing new.
@@ -55,3 +57,19 @@ The dashboard records per-project review stats but offers no at-a-glance headlin
 ## Definition of Done
 
 See `.claude/skills/product-manager/rules/dod.md` for the full checklist.
+
+## Implementation
+
+### Artefacts
+- **Entity** — `monthlyVolume.ts`: pure `reviewsPerMonth(reviews, now)` → 12 trailing months zero-filled.
+- **Service** — exported `formatReviewDuration(ms)` extracted from `getStatsSummary` (single source of truth).
+- **Presenter** — `analyticsHeader.presenter.ts`: 3 KPI cards (PRs Reviewed, Bugs Caught = blocking + warnings, Average Review Time), `reviewsPerMonth`, `isEmpty`, FR empty message.
+- **HTTP** — `GET /api/stats` payload extended with `analyticsHeader` (no new route).
+- **View** — `drawReviewsPerMonthChart` (line) in `statsCharts.js` + KPI cards (animated) + i18n (EN/FR) + `index.html` wiring.
+
+### Decisions
+- KPI `delta` ships as `null` (field reserved, view hides it) — no fake percentages; true period-over-period delta deferred.
+- Monthly chart reads `stats.reviews` (capped at last 100 by `statsService`); older months may undercount for very active projects — accepted for v1.
+
+### Report
+See `docs/reports/204-analytics-overview-header.report.md`.
