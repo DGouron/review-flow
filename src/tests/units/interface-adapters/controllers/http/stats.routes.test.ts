@@ -155,6 +155,47 @@ describe('stats routes', () => {
       expect(body.analyticsHeader.emptyMessage).toBe('Aucune review enregistrée');
     });
 
+    it('should carry the keyInsights view model in the single-project payload', async () => {
+      statsGateway.saveProjectStats(
+        '/known/project',
+        ProjectStatsFactory.create({
+          categoryBreakdown: {
+            security: 0,
+            logic: 4,
+            performance: 0,
+            typeSafety: 0,
+            style: 0,
+            dependencies: 0,
+          },
+        }),
+      );
+      await register();
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/stats?path=/known/project',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.keyInsights.isEmpty).toBe(false);
+      expect(body.keyInsights.cards.length).toBeGreaterThan(0);
+    });
+
+    it('should flag the empty keyInsights state when no candidate qualifies', async () => {
+      statsGateway.saveProjectStats('/empty/project', ProjectStatsFactory.create());
+      await register();
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/stats?path=/empty/project',
+      });
+
+      const body = response.json();
+      expect(body.keyInsights.isEmpty).toBe(true);
+      expect(body.keyInsights.emptyMessage).toBe('Aucun insight disponible pour le moment');
+    });
+
     it('should flag the empty bugsByCategory state when no category data exists', async () => {
       statsGateway.saveProjectStats('/empty/project', ProjectStatsFactory.create());
       await register();
@@ -226,6 +267,10 @@ describe('stats routes', () => {
       expect(body.projects[0].analyticsHeader).toBeDefined();
       expect(body.projects[0].analyticsHeader.prsReviewed.value).toBe(1);
       expect(body.projects[0].analyticsHeader.reviewsPerMonth).toHaveLength(12);
+      expect(body.projects[0].keyInsights).toBeDefined();
+      expect(body.projects[0].keyInsights.emptyMessage).toBe(
+        'Aucun insight disponible pour le moment',
+      );
     });
   });
 

@@ -424,6 +424,7 @@
     import { renderCollapsibleList, toggleCollapsibleList } from './modules/collapsibleList.js';
     import { renderMrSheetContent, drawScoreTimeline, drawIssuesBreakdown } from './modules/mrSheet.js';
     import { drawScoreTrendChart, drawReviewActivityChart, drawScoreDistributionChart, drawBugsByCategoryChart, drawReviewsPerMonthChart, animateCounter } from './modules/statsCharts.js';
+    import { renderKeyInsightsHtml } from './modules/keyInsights.js';
     import { renderTeamTab, fetchAndRenderTeamTab } from './modules/teamTab.js';
     import { renderDeveloperSheetContent, drawRadarChart } from './modules/developerSheet.js';
     import { buildInsightsReport } from './modules/insightsReport.js';
@@ -1125,6 +1126,8 @@
             </div>`
               : '';
 
+          const keyInsightsMarkup = data.keyInsights ? renderKeyInsightsHtml(data.keyInsights) : '';
+
           statsEl.innerHTML = `
             ${analyticsHeaderMarkup}
             <div class="stat-card metric-reviews">
@@ -1179,6 +1182,7 @@
                 <canvas id="stats-bugs-category" class="stats-canvas-wide"></canvas>
               </div>
             </div>
+            ${keyInsightsMarkup}
           `;
           refreshIcons();
 
