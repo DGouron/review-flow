@@ -515,7 +515,11 @@ export function drawBugsByCategoryChart(canvasId, bugsByCategory) {
     ctx.font = '9px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(bar.label, x + barWidth / 2, cssHeight - padding.bottom + 6);
+    ctx.fillText(
+      t('stats.category.' + bar.categoryKey),
+      x + barWidth / 2,
+      cssHeight - padding.bottom + 6,
+    );
   }
 }
 

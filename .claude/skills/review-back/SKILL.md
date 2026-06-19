@@ -558,7 +558,7 @@ Inline comments posted in /diffs: X
 
 Backlog improvements (global report only): X
 
-[REVIEW_STATS:blocking=X:warnings=X:suggestions=X:score=X]
+[REVIEW_STATS:blocking=X:warnings=X:suggestions=X:score=X:categories=security=N,logic=N,performance=N,typeSafety=N,style=N,dependencies=N]
 
 READ-ONLY MODE - No code modified
 
@@ -570,5 +570,20 @@ Recommended skills:
 ```
 
 **IMPORTANT**: The `[REVIEW_STATS:...]` line is **MANDATORY** for automated tracking.
+
+### Category breakdown (`categories=` segment)
+
+Classify every finding (blocking + important + suggestion) into exactly one of the six dashboard categories, then emit the count per category in the marker. The six counts must sum to `blocking + warnings + suggestions`. Map by the audit that raised the finding:
+
+| Audit that raised the finding | Category |
+|-------------------------------|----------|
+| Security | `security` |
+| Clean Architecture, Strategic DDD, SOLID | `logic` |
+| Performance | `performance` |
+| TypeScript Best Practices | `typeSafety` |
+| Testing, Code Quality | `style` |
+| Outdated / vulnerable / misused dependency | `dependencies` |
+
+Use the internal keys exactly: `security`, `logic`, `performance`, `typeSafety`, `style`, `dependencies`. Omit a key or set it to `0` when no finding falls in it. Unknown keys are ignored by the tracker.
 
 **Final reminder**: This skill NEVER modifies code. The report and inline comments are posted via MCP actions so the author can make corrections.

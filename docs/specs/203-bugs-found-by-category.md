@@ -78,9 +78,9 @@ See `.claude/skills/product-manager/rules/dod.md` for the full checklist.
 - Zod guard introduced only at the marker boundary (where untrusted input enters); `ReviewStats`/`ProjectStats` remain plain interfaces, consistent with the existing module.
 - No new entity class, value object, use case, gateway, or route (YAGNI) — a flat `Record` carries the breakdown.
 
-### Humble glue (not yet wired)
+### Humble glue (wired — pending one manual validation run)
 
-The review skills (`review-back`/`review-front`/`review-fullstack`) must emit the `categories=...` segment in their `[REVIEW_STATS:...]` marker for real data to flow. The parser is implemented and unit-tested against sample marker strings; one manual review run is required to validate end-to-end. Until then the chart renders its empty state.
+The review skills `review-back`, `review-front`, and `review-fullstack` now emit the `categories=...` segment in their `[REVIEW_STATS:...]` marker, with an audit→category mapping table per skill (Security→`security`; Clean Architecture/DDD/SOLID/React→`logic`; Performance→`performance`; TypeScript→`typeSafety`; Testing/Code Quality→`style`; dependency findings→`dependencies`). The chart labels were also localized via i18n keys (`stats.category.*`) instead of the hardcoded English entity labels. The TS parser was already unit-tested against sample markers; prompt-level emission cannot be unit-tested, so one real review run is still required to confirm a non-empty chart end-to-end.
 
 ### Report
 
