@@ -155,13 +155,25 @@ describe('parseReviewOutput branch coverage', () => {
       '[REVIEW_STATS:blocking=1:warnings=2:suggestions=3:score=7.5]',
     );
 
-    expect(result).toEqual({ score: 7.5, blocking: 1, warnings: 2, suggestions: 3 });
+    expect(result).toEqual({
+      score: 7.5,
+      blocking: 1,
+      warnings: 2,
+      suggestions: 3,
+      categoryBreakdown: null,
+    });
   });
 
   it('leaves defaults when structured fields are partially absent', () => {
     const result = parseReviewOutput('[REVIEW_STATS:blocking=4]');
 
-    expect(result).toEqual({ score: null, blocking: 4, warnings: 0, suggestions: 0 });
+    expect(result).toEqual({
+      score: null,
+      blocking: 4,
+      warnings: 0,
+      suggestions: 0,
+      categoryBreakdown: null,
+    });
   });
 
   it('parses the summary format with score, blocking, warnings and suggestions', () => {
@@ -174,7 +186,13 @@ describe('parseReviewOutput branch coverage', () => {
 
     const result = parseReviewOutput(stdout);
 
-    expect(result).toEqual({ score: 8, blocking: 2, warnings: 3, suggestions: 4 });
+    expect(result).toEqual({
+      score: 8,
+      blocking: 2,
+      warnings: 3,
+      suggestions: 4,
+      categoryBreakdown: null,
+    });
   });
 
   it('returns summary results when only the score is present alongside a blocking summary line', () => {
@@ -196,7 +214,13 @@ describe('parseReviewOutput branch coverage', () => {
 
     const result = parseReviewOutput(stdout);
 
-    expect(result).toEqual({ score: null, blocking: 2, warnings: 1, suggestions: 1 });
+    expect(result).toEqual({
+      score: null,
+      blocking: 2,
+      warnings: 1,
+      suggestions: 1,
+      categoryBreakdown: null,
+    });
   });
 
   it('reaches the section-header branches without lowering inline marker counts', () => {
@@ -222,7 +246,13 @@ describe('parseReviewOutput branch coverage', () => {
   it('returns all zeros and null score when nothing matches', () => {
     const result = parseReviewOutput('a review with no recognizable markers at all');
 
-    expect(result).toEqual({ score: null, blocking: 0, warnings: 0, suggestions: 0 });
+    expect(result).toEqual({
+      score: null,
+      blocking: 0,
+      warnings: 0,
+      suggestions: 0,
+      categoryBreakdown: null,
+    });
   });
 });
 

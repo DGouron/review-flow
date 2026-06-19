@@ -423,7 +423,7 @@
     import { renderVersionUpdateArea, setVersionCheckState } from './modules/versionUpdate.js';
     import { renderCollapsibleList, toggleCollapsibleList } from './modules/collapsibleList.js';
     import { renderMrSheetContent, drawScoreTimeline, drawIssuesBreakdown } from './modules/mrSheet.js';
-    import { drawScoreTrendChart, drawReviewActivityChart, drawScoreDistributionChart, animateCounter } from './modules/statsCharts.js';
+    import { drawScoreTrendChart, drawReviewActivityChart, drawScoreDistributionChart, drawBugsByCategoryChart, animateCounter } from './modules/statsCharts.js';
     import { renderTeamTab, fetchAndRenderTeamTab } from './modules/teamTab.js';
     import { renderDeveloperSheetContent, drawRadarChart } from './modules/developerSheet.js';
     import { buildInsightsReport } from './modules/insightsReport.js';
@@ -1145,6 +1145,12 @@
                 <canvas id="stats-distribution" class="stats-canvas-wide"></canvas>
               </div>
             </div>
+            <div class="stats-charts-row">
+              <div class="stats-chart-card full-width">
+                <div class="stats-chart-title"><i data-lucide="bug"></i> ${t('stats.bugsByCategory')}</div>
+                <canvas id="stats-bugs-category" class="stats-canvas-wide"></canvas>
+              </div>
+            </div>
           `;
           refreshIcons();
 
@@ -1165,6 +1171,9 @@
               drawScoreTrendChart('stats-score-trend', trendReviews);
               drawReviewActivityChart('stats-activity', reviews);
               drawScoreDistributionChart('stats-distribution', reviews);
+            }
+            if (data.bugsByCategory) {
+              drawBugsByCategoryChart('stats-bugs-category', data.bugsByCategory);
             }
           });
         } else {

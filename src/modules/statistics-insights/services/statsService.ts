@@ -2,6 +2,12 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 
 import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
+import {
+  BUG_CATEGORY_KEYS,
+  emptyBreakdown,
+  type CategoryBreakdown,
+} from '@/modules/statistics-insights/entities/stats/bugCategory.js';
+import { normalizeBreakdown } from '@/modules/statistics-insights/entities/stats/categoryBreakdown.guard.js';
 import type {
   ReviewStats,
   ProjectStats,
@@ -110,13 +116,36 @@ function createEmptyStats(): ProjectStats {
  *
  * 3. Inline markers (fallback):
  *    [BLOQUANT], [IMPORTANT], [SUGGESTION]
+ *
+ * The structured stats line may carry an optional categories segment:
+ *    [REVIEW_STATS:...:categories=security=3,logic=5,performance=1]
+ * Absent segment yields a null breakdown (legacy / no category data).
  */
-export function parseReviewOutput(stdout: string): {
+export interface ParsedReviewOutput {
   score: number | null;
   blocking: number;
   warnings: number;
   suggestions: number;
-} {
+  categoryBreakdown: CategoryBreakdown | null;
+}
+
+function parseCategoriesSegment(statsStr: string): CategoryBreakdown | null {
+  const categoriesMatch = statsStr.match(/categories=([^:]+)/i);
+  if (!categoriesMatch) return null;
+
+  const rawCounts: Record<string, number> = {};
+  for (const pair of categoriesMatch[1].split(',')) {
+    const [key, value] = pair.split('=');
+    const count = Number.parseInt(value, 10);
+    if (key && Number.isInteger(count)) {
+      rawCounts[key.trim()] = count;
+    }
+  }
+
+  return normalizeBreakdown(rawCounts);
+}
+
+export function parseReviewOutput(stdout: string): ParsedReviewOutput {
   let score: number | null = null;
   let blocking = 0;
   let warnings = 0;
@@ -137,7 +166,13 @@ export function parseReviewOutput(stdout: string): {
     if (suggestionsMatch) suggestions = Number.parseInt(suggestionsMatch[1], 10);
     if (scoreMatch) score = Number.parseFloat(scoreMatch[1]);
 
-    return { score, blocking, warnings, suggestions };
+    return {
+      score,
+      blocking,
+      warnings,
+      suggestions,
+      categoryBreakdown: parseCategoriesSegment(statsStr),
+    };
   }
 
   // Method 2: Parse summary format (skill output)
@@ -165,7 +200,7 @@ export function parseReviewOutput(stdout: string): {
 
   // If summary format worked, return
   if (blockingSummary || warningsSummary || suggestionsSummary) {
-    return { score, blocking, warnings, suggestions };
+    return { score, blocking, warnings, suggestions, categoryBreakdown: null };
   }
 
   // Method 3: Fallback - count inline markers
@@ -208,7 +243,7 @@ export function parseReviewOutput(stdout: string): {
     }
   }
 
-  return { score, blocking, warnings, suggestions };
+  return { score, blocking, warnings, suggestions, categoryBreakdown: null };
 }
 
 /**
@@ -237,6 +272,7 @@ export function addReviewStats(
     suggestions: parsed.suggestions,
     assignedBy,
     diffStats: diffStats ?? null,
+    categoryBreakdown: parsed.categoryBreakdown,
   };
 
   initializeCumulativeCounters(stats);
@@ -253,7 +289,23 @@ export function addReviewStats(
   return reviewStats;
 }
 
+function addBreakdown(target: CategoryBreakdown, contribution: CategoryBreakdown): void {
+  for (const key of BUG_CATEGORY_KEYS) {
+    target[key] += contribution[key];
+  }
+}
+
 function initializeCumulativeCounters(stats: ProjectStats): void {
+  if (stats.categoryBreakdown === undefined) {
+    const aggregate = emptyBreakdown();
+    for (const review of stats.reviews) {
+      if (review.categoryBreakdown != null) {
+        addBreakdown(aggregate, review.categoryBreakdown);
+      }
+    }
+    stats.categoryBreakdown = aggregate;
+  }
+
   if (stats.totalScoreSum !== undefined) return;
 
   const reviewsWithScore = stats.reviews.filter((r) => r.score !== null);
@@ -289,6 +341,11 @@ function updateAggregatesForNewReview(stats: ProjectStats, review: ReviewStats):
   if (stats.diffStatsReviewCount && stats.diffStatsReviewCount > 0) {
     stats.averageAdditions = stats.totalAdditions / stats.diffStatsReviewCount;
     stats.averageDeletions = stats.totalDeletions / stats.diffStatsReviewCount;
+  }
+
+  if (review.categoryBreakdown != null) {
+    stats.categoryBreakdown = stats.categoryBreakdown ?? emptyBreakdown();
+    addBreakdown(stats.categoryBreakdown, review.categoryBreakdown);
   }
 }
 

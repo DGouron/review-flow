@@ -1,4 +1,5 @@
 import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
+import type { CategoryBreakdown } from '@/modules/statistics-insights/entities/stats/bugCategory.js';
 
 /**
  * Statistics for a single code review, including score, issue counts,
@@ -15,6 +16,7 @@ export interface ReviewStats {
   suggestions?: number;
   assignedBy?: string;
   diffStats?: DiffStats | null;
+  categoryBreakdown?: CategoryBreakdown | null;
 }
 
 /**
@@ -37,4 +39,5 @@ export interface ProjectStats {
   totalScoreSum?: number;
   scoredReviewCount?: number;
   diffStatsReviewCount?: number;
+  categoryBreakdown?: CategoryBreakdown;
 }
