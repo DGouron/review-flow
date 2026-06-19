@@ -436,6 +436,90 @@ export function drawScoreDistributionChart(canvasId, reviews) {
 }
 
 /**
+ * Draw a vertical bar chart showing the project-wide bug count per category.
+ * The view model bars are already sorted from highest to lowest count.
+ * @param {string} canvasId
+ * @param {{ isEmpty: boolean, emptyMessage: string, bars: Array<{ categoryKey: string, label: string, count: number }> }} bugsByCategory
+ */
+export function drawBugsByCategoryChart(canvasId, bugsByCategory) {
+  const setup = getCanvasContext(canvasId);
+  if (!setup) return;
+  const { ctx, cssWidth } = setup;
+  const cssHeight = 180;
+  setupHiDpiCanvas(ctx, cssWidth, cssHeight);
+
+  if (!bugsByCategory || bugsByCategory.isEmpty) {
+    const message = bugsByCategory?.emptyMessage || t('stats.noCategoryData');
+    drawNoDataMessage(ctx, message, cssWidth, cssHeight);
+    return;
+  }
+
+  const bars = bugsByCategory.bars;
+  const padding = { top: 20, right: 20, bottom: 44, left: 35 };
+  const chartWidth = cssWidth - padding.left - padding.right;
+  const chartHeight = cssHeight - padding.top - padding.bottom;
+
+  const maxCount = Math.max(...bars.map((bar) => bar.count));
+  const yScale = maxCount > 0 ? chartHeight / (maxCount * 1.15) : 1;
+
+  ctx.font = '10px system-ui, -apple-system, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillStyle = COLORS.textMuted;
+  const yTicks = Math.min(maxCount, 5);
+  for (let tick = 0; tick <= yTicks; tick++) {
+    const value = Math.round((maxCount / yTicks) * tick);
+    const y = padding.top + chartHeight - value * yScale;
+    ctx.beginPath();
+    ctx.strokeStyle = COLORS.gridLine;
+    ctx.lineWidth = 0.5;
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(cssWidth - padding.right, y);
+    ctx.stroke();
+    ctx.fillText(String(value), padding.left - 6, y + 3);
+  }
+
+  const barGap = 8;
+  const totalBarWidth = chartWidth / bars.length;
+  const barWidth = Math.max(8, totalBarWidth - barGap);
+  const cornerRadius = Math.min(4, barWidth / 3);
+
+  for (let index = 0; index < bars.length; index++) {
+    const bar = bars[index];
+    const barHeight = bar.count * yScale;
+    const x = padding.left + index * totalBarWidth + (totalBarWidth - barWidth) / 2;
+    const y = padding.top + chartHeight - barHeight;
+
+    const gradient = ctx.createLinearGradient(x, y, x, padding.top + chartHeight);
+    gradient.addColorStop(0, COLORS.focus);
+    gradient.addColorStop(1, 'rgba(122, 216, 255, 0.3)');
+
+    ctx.beginPath();
+    ctx.moveTo(x, padding.top + chartHeight);
+    ctx.lineTo(x, y + cornerRadius);
+    ctx.arcTo(x, y, x + cornerRadius, y, cornerRadius);
+    ctx.arcTo(x + barWidth, y, x + barWidth, y + cornerRadius, cornerRadius);
+    ctx.lineTo(x + barWidth, padding.top + chartHeight);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    if (bar.count > 0 && barHeight > 16) {
+      ctx.fillStyle = COLORS.textPrimary;
+      ctx.font = '10px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(String(bar.count), x + barWidth / 2, y - 3);
+    }
+
+    ctx.fillStyle = COLORS.textMuted;
+    ctx.font = '9px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(bar.label, x + barWidth / 2, cssHeight - padding.bottom + 6);
+  }
+}
+
+/**
  * Animate a counter from 0 to targetValue
  * @param {HTMLElement} element
  * @param {number} targetValue

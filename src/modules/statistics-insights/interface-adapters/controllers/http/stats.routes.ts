@@ -4,6 +4,7 @@ import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/dif
 import type { BackfillProgress } from '@/modules/statistics-insights/entities/backfill/backfillProgress.js';
 import { safeParseRecalculateBody } from '@/modules/statistics-insights/entities/stats/recalculateBody.guard.js';
 import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
+import { BugsByCategoryPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/bugsByCategory.presenter.js';
 import { getStatsSummary } from '@/modules/statistics-insights/services/statsService.js';
 import { recalculateWithBackfill } from '@/modules/statistics-insights/usecases/stats/recalculateWithBackfill.usecase.js';
 
@@ -28,6 +29,7 @@ interface StatsRoutesOptions {
 
 export const statsRoutes: FastifyPluginAsync<StatsRoutesOptions> = async (fastify, options) => {
   const { statsGateway, getRepositories } = options;
+  const bugsByCategoryPresenter = new BugsByCategoryPresenter();
 
   fastify.get<{ Querystring: { path?: string } }>('/api/stats', async (request) => {
     const projectPath = request.query.path?.trim();
@@ -45,6 +47,7 @@ export const statsRoutes: FastifyPluginAsync<StatsRoutesOptions> = async (fastif
       return {
         stats,
         summary: getStatsSummary(stats),
+        bugsByCategory: bugsByCategoryPresenter.present(stats),
       };
     }
 
@@ -58,6 +61,7 @@ export const statsRoutes: FastifyPluginAsync<StatsRoutesOptions> = async (fastif
           path: repo.localPath,
           stats,
           summary: getStatsSummary(stats),
+          bugsByCategory: bugsByCategoryPresenter.present(stats),
         });
       }
     }

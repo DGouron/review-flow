@@ -87,6 +87,49 @@ describe('stats routes', () => {
       expect(body.summary).not.toBeNull();
     });
 
+    it('should carry the sorted bugsByCategory view model in the single-project payload', async () => {
+      statsGateway.saveProjectStats(
+        '/known/project',
+        ProjectStatsFactory.create({
+          categoryBreakdown: {
+            security: 3,
+            logic: 5,
+            performance: 0,
+            typeSafety: 0,
+            style: 1,
+            dependencies: 0,
+          },
+        }),
+      );
+      await register();
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/stats?path=/known/project',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.bugsByCategory.isEmpty).toBe(false);
+      expect(
+        body.bugsByCategory.bars.map((bar: { categoryKey: string }) => bar.categoryKey),
+      ).toEqual(['logic', 'security', 'style', 'performance', 'typeSafety', 'dependencies']);
+    });
+
+    it('should flag the empty bugsByCategory state when no category data exists', async () => {
+      statsGateway.saveProjectStats('/empty/project', ProjectStatsFactory.create());
+      await register();
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/stats?path=/empty/project',
+      });
+
+      const body = response.json();
+      expect(body.bugsByCategory.isEmpty).toBe(true);
+      expect(body.bugsByCategory.emptyMessage).toBe('Aucune donnée de catégorie disponible');
+    });
+
     it('should treat a whitespace-only path as no path and list projects', async () => {
       await register();
 
@@ -139,6 +182,8 @@ describe('stats routes', () => {
       expect(body.projects[0].project).toBe('WithStats');
       expect(body.projects[0].path).toBe('/enabled/with-stats');
       expect(body.projects[0].summary).toBeDefined();
+      expect(body.projects[0].bugsByCategory).toBeDefined();
+      expect(body.projects[0].bugsByCategory.bars).toHaveLength(6);
     });
   });
 

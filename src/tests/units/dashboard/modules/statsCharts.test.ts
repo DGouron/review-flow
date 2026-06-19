@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-import { animateCounter } from '@/dashboard/modules/statsCharts.js';
+import { animateCounter, drawBugsByCategoryChart } from '@/dashboard/modules/statsCharts.js';
 
 /**
  * animateCounter relies on requestAnimationFrame and performance.now which
@@ -43,5 +43,141 @@ describe('animateCounter', () => {
     const element = { textContent: 'placeholder' };
     animateCounter(element as unknown as { textContent: string }, 0, 50, '');
     expect(element.textContent).toBe('0');
+  });
+});
+
+interface RecordingContext {
+  canvas: { width: number; height: number; style: Record<string, string> };
+  filledTexts: string[];
+  gradients: number;
+  scale: () => void;
+  beginPath: () => void;
+  moveTo: () => void;
+  lineTo: () => void;
+  arcTo: () => void;
+  closePath: () => void;
+  fill: () => void;
+  stroke: () => void;
+  fillText: (text: string) => void;
+  createLinearGradient: () => { addColorStop: () => void };
+  fillStyle: string;
+  strokeStyle: string;
+  lineWidth: number;
+  font: string;
+  textAlign: string;
+  textBaseline: string;
+}
+
+function recordingContext(): RecordingContext {
+  const context: RecordingContext = {
+    canvas: { width: 0, height: 0, style: {} },
+    filledTexts: [],
+    gradients: 0,
+    scale: () => {},
+    beginPath: () => {},
+    moveTo: () => {},
+    lineTo: () => {},
+    arcTo: () => {},
+    closePath: () => {},
+    fill: () => {},
+    stroke: () => {},
+    fillText: (text: string) => {
+      context.filledTexts.push(text);
+    },
+    createLinearGradient: () => {
+      context.gradients += 1;
+      return { addColorStop: () => {} };
+    },
+    fillStyle: '',
+    strokeStyle: '',
+    lineWidth: 0,
+    font: '',
+    textAlign: '',
+    textBaseline: '',
+  };
+  return context;
+}
+
+const fullBugsByCategory = {
+  isEmpty: false,
+  emptyMessage: 'Aucune donnée de catégorie disponible',
+  bars: [
+    { categoryKey: 'logic', label: 'Logic', count: 5 },
+    { categoryKey: 'security', label: 'Security', count: 3 },
+    { categoryKey: 'style', label: 'Style', count: 1 },
+    { categoryKey: 'performance', label: 'Performance', count: 0 },
+    { categoryKey: 'typeSafety', label: 'Type Safety', count: 0 },
+    { categoryKey: 'dependencies', label: 'Dependencies', count: 0 },
+  ],
+};
+
+const emptyBugsByCategory = {
+  isEmpty: true,
+  emptyMessage: 'Aucune donnée de catégorie disponible',
+  bars: [
+    { categoryKey: 'security', label: 'Security', count: 0 },
+    { categoryKey: 'logic', label: 'Logic', count: 0 },
+    { categoryKey: 'performance', label: 'Performance', count: 0 },
+    { categoryKey: 'typeSafety', label: 'Type Safety', count: 0 },
+    { categoryKey: 'style', label: 'Style', count: 0 },
+    { categoryKey: 'dependencies', label: 'Dependencies', count: 0 },
+  ],
+};
+
+describe('drawBugsByCategoryChart', () => {
+  const charts = globalThis as Record<string, unknown>;
+  let savedDocument: unknown;
+  let savedWindow: unknown;
+  let context: RecordingContext;
+
+  const installCanvas = (presentCanvasId: string): void => {
+    context = recordingContext();
+    const canvas = { getContext: () => context, parentElement: { clientWidth: 480 } };
+    charts.document = {
+      getElementById: (id: string) => (id === presentCanvasId ? canvas : null),
+    };
+    charts.window = { devicePixelRatio: 1 };
+  };
+
+  beforeEach(() => {
+    savedDocument = charts.document;
+    savedWindow = charts.window;
+  });
+
+  afterEach(() => {
+    charts.document = savedDocument;
+    charts.window = savedWindow;
+  });
+
+  it('renders the empty-state message when the view model is empty', () => {
+    installCanvas('stats-bugs-category');
+
+    drawBugsByCategoryChart('stats-bugs-category', emptyBugsByCategory);
+
+    expect(context.filledTexts).toContain('Aucune donnée de catégorie disponible');
+  });
+
+  it('renders a gradient bar for each category when data is present', () => {
+    installCanvas('stats-bugs-category');
+
+    drawBugsByCategoryChart('stats-bugs-category', fullBugsByCategory);
+
+    expect(context.gradients).toBe(6);
+  });
+
+  it('draws each category label below the axis', () => {
+    installCanvas('stats-bugs-category');
+
+    drawBugsByCategoryChart('stats-bugs-category', fullBugsByCategory);
+
+    expect(context.filledTexts).toContain('Logic');
+    expect(context.filledTexts).toContain('Security');
+    expect(context.filledTexts).toContain('Dependencies');
+  });
+
+  it('does nothing when the canvas is absent', () => {
+    installCanvas('other-id');
+
+    expect(() => drawBugsByCategoryChart('stats-bugs-category', fullBugsByCategory)).not.toThrow();
   });
 });

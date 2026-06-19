@@ -214,6 +214,14 @@ const translations = {
     'stats.reviewActivity': 'Review Activity',
     'stats.scoreDistribution': 'Score Distribution',
     'stats.noChartData': 'Not enough data',
+    'stats.bugsByCategory': 'Bugs Found by Category',
+    'stats.noCategoryData': 'No category data available',
+    'stats.category.security': 'Security',
+    'stats.category.logic': 'Logic',
+    'stats.category.performance': 'Performance',
+    'stats.category.typeSafety': 'Type Safety',
+    'stats.category.style': 'Style',
+    'stats.category.dependencies': 'Dependencies',
     'error.recalculateStats': 'Recalculation error',
 
     // Review types
@@ -663,6 +671,14 @@ const translations = {
     'stats.reviewActivity': 'Activité des reviews',
     'stats.scoreDistribution': 'Distribution des scores',
     'stats.noChartData': 'Pas assez de données',
+    'stats.bugsByCategory': 'Bugs trouvés par catégorie',
+    'stats.noCategoryData': 'Aucune donnée de catégorie disponible',
+    'stats.category.security': 'Sécurité',
+    'stats.category.logic': 'Logique',
+    'stats.category.performance': 'Performance',
+    'stats.category.typeSafety': 'Typage',
+    'stats.category.style': 'Style',
+    'stats.category.dependencies': 'Dépendances',
     'error.recalculateStats': 'Erreur de recalcul',
 
     // Review types
