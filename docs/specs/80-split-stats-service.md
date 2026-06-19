@@ -5,6 +5,30 @@
 **Milestone**: Architecture Cleanup
 **Date**: 2026-03-14
 
+## Status: implemented
+
+Implemented 2026-06-19. Plan: [80-split-stats-service.plan.md](../plans/80-split-stats-service.plan.md) · Report: [80-split-stats-service.report.md](../reports/80-split-stats-service.report.md).
+
+## Implementation
+
+> Note: this spec was written (2026-03-14) against `src/services/statsService.ts` and `@/entities/reviewStats/`. The repo since migrated to a modular monolith, so the real paths are under `src/modules/statistics-insights/`. Scenarios 1–3 (types + `StatsGateway` already in entities) were already satisfied before this work; the dependency-rule violation no longer existed. This refactoring extracted the remaining responsibilities still bundled in the service.
+
+**Artefacts created** (under `src/modules/statistics-insights/`):
+
+| Layer | File | Responsibility |
+|-------|------|----------------|
+| Entity | `entities/stats/projectStats.schema.ts` + `projectStats.guard.ts` | Zod `reviewStatsSchema`/`projectStatsSchema` (byte-identical shape) + `createGuard` boundary validation |
+| Entity | `entities/stats/reviewOutput.parser.ts` | `parseReviewOutput` (pure, moved verbatim) |
+| Entity | `entities/stats/reviewDuration.format.ts` | `formatReviewDuration` (placed inward so the `keyInsights` entity can consume it) |
+| Entity | `entities/stats/projectStats.ts` | types repointed to `z.infer`; `createEmptyStats()` promoted here |
+| Use case | `usecases/stats/addReviewStats.usecase.ts` | `AddReviewStatsUseCase` — aggregation + 100-review cap + `?? createEmptyStats()` write path, `StatsGateway` injected |
+| Use case | `usecases/stats/getProjectStats.usecase.ts` | `GetProjectStatsUseCase` — returns `ProjectStats \| null` (no empty fallback, preserves route null-on-miss) |
+| Presenter | `interface-adapters/presenters/statsSummary.presenter.ts` | `StatsSummaryPresenter` — duration formatting + score/blocking trend |
+
+**Wiring**: `FileSystemStatsGateway.loadProjectStats` validates via `safeParseProjectStats` with a lenient fallback (never throws — old `stats.json` still loads). `stats.routes.ts` loads via `GetProjectStatsUseCase` and formats via `StatsSummaryPresenter` (`GET /api/stats` shape unchanged). `claudeInvoker.ts` records stats via `AddReviewStatsUseCase` with `statsGateway` threaded through `ClaudeInvokerDependencies`. The old `services/statsService.ts` and the `gateways/stats.gateway.ts` re-export shim were deleted; all 14 consumer import sites migrated.
+
+**Architectural decisions** (per user override, DoD-literal): the Zod schema/guard (D6) and `GetProjectStatsUseCase` (D7) were implemented rather than declined, satisfying the literal Definition of Done.
+
 ---
 
 ## Problem Statement

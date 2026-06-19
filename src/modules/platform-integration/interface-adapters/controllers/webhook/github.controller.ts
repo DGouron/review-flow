@@ -54,7 +54,7 @@ import {
 import { parseThreadActions } from '@/modules/review-execution/services/threadActionsParser.js';
 import type { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
-import { parseReviewOutput } from '@/modules/statistics-insights/services/statsService.js';
+import { parseReviewOutput } from '@/modules/statistics-insights/entities/stats/reviewOutput.parser.js';
 import type { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
 import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';

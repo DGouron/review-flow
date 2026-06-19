@@ -35,11 +35,14 @@ import type {
 import { ProjectConfigRoutingPolicyGateway } from '@/modules/review-execution/interface-adapters/gateways/projectConfig/routingPolicy.projectConfig.gateway.js';
 import { SelectModelForReviewUseCase } from '@/modules/review-execution/usecases/selectModelForReview/selectModelForReview.usecase.js';
 import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
+import { parseReviewOutput } from '@/modules/statistics-insights/entities/stats/reviewOutput.parser.js';
+import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import { GitHubDiffStatsFetchGateway } from '@/modules/statistics-insights/interface-adapters/gateways/diffStatsFetch.github.gateway.js';
 import { GitLabDiffStatsFetchGateway } from '@/modules/statistics-insights/interface-adapters/gateways/diffStatsFetch.gitlab.gateway.js';
+import { FileSystemStatsGateway } from '@/modules/statistics-insights/interface-adapters/gateways/fileSystem/stats.fileSystem.js';
 import { ProjectStatsCalculator } from '@/modules/statistics-insights/interface-adapters/presenters/projectStats.calculator.js';
 import { fetchDiffStatsSafely } from '@/modules/statistics-insights/services/fetchDiffStatsSafely.js';
-import { addReviewStats } from '@/modules/statistics-insights/services/statsService.js';
+import { AddReviewStatsUseCase } from '@/modules/statistics-insights/usecases/stats/addReviewStats.usecase.js';
 import type {
   TokenUsage,
   TokenUsageRecord,
@@ -89,6 +92,7 @@ export interface ClaudeInvokerDependencies {
   routingPolicyGateway: ProjectConfigRoutingPolicyGateway;
   selectModelForReview: SelectModelForReviewUseCase;
   trackingGateway: FileSystemReviewRequestTrackingGateway;
+  statsGateway: StatsGateway;
   trackTokenUsage: TrackTokenUsageUseCase;
   getBudgetStatus: GetBudgetStatusUseCase;
   budgetStatusPresenter: BudgetStatusPresenter;
@@ -183,6 +187,7 @@ export function createDefaultClaudeInvokerDependencies(): ClaudeInvokerDependenc
     routingPolicyGateway: new ProjectConfigRoutingPolicyGateway(),
     selectModelForReview: new SelectModelForReviewUseCase(),
     trackingGateway: new FileSystemReviewRequestTrackingGateway(new ProjectStatsCalculator()),
+    statsGateway: new FileSystemStatsGateway(),
     trackTokenUsage: new TrackTokenUsageUseCase(tokenUsageGateway),
     getBudgetStatus: new GetBudgetStatusUseCase({ budgetGateway, tokenUsageGateway }),
     budgetStatusPresenter: new BudgetStatusPresenter(),
@@ -683,14 +688,14 @@ async function invokeViaBackgroundSession(
         const mrId = `${job.platform}-${job.projectPath}-${job.mrNumber}`;
         const mrDetails = deps.trackingGateway.getById(job.localPath, mrId);
         const assignedBy = mrDetails?.assignment?.username;
-        const reviewStats = addReviewStats(
-          job.localPath,
-          job.mrNumber,
-          durationMs,
-          result.content,
+        const reviewStats = new AddReviewStatsUseCase(deps.statsGateway).execute({
+          projectPath: job.localPath,
+          mrNumber: job.mrNumber,
+          duration: durationMs,
+          parsed: parseReviewOutput(result.content),
           assignedBy,
           diffStats,
-        );
+        });
         logger.info({ reviewStats }, 'Stats de review enregistrées');
       } catch (statsError) {
         logger.warn({ error: statsError }, "Erreur lors de l'enregistrement des stats");
