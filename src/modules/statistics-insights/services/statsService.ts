@@ -350,6 +350,18 @@ function updateAggregatesForNewReview(stats: ProjectStats, review: ReviewStats):
 }
 
 /**
+ * Format a review duration in milliseconds as a human-readable string
+ * (e.g. "4m", "1h 12m"). Single source of truth shared by the stats
+ * summary and the analytics header presenter.
+ */
+export function formatReviewDuration(ms: number): string {
+  const hours = Math.floor(ms / 3600000);
+  const minutes = Math.floor((ms % 3600000) / 60000);
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+/**
  * Get statistics summary for display
  */
 export function getStatsSummary(stats: ProjectStats): {
@@ -366,13 +378,6 @@ export function getStatsSummary(stats: ProjectStats): {
   totalLinesReviewed: number;
   trend: { score: 'up' | 'down' | 'stable'; blocking: 'up' | 'down' | 'stable' };
 } {
-  const formatDuration = (ms: number): string => {
-    const hours = Math.floor(ms / 3600000);
-    const minutes = Math.floor((ms % 3600000) / 60000);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
-  };
-
   // Calculate trend based on last 5 vs previous 5 reviews
   const recent = stats.reviews.slice(-5);
   const previous = stats.reviews.slice(-10, -5);
@@ -400,8 +405,8 @@ export function getStatsSummary(stats: ProjectStats): {
 
   return {
     totalReviews: stats.totalReviews,
-    totalTime: formatDuration(stats.totalDuration),
-    averageTime: formatDuration(stats.averageDuration),
+    totalTime: formatReviewDuration(stats.totalDuration),
+    averageTime: formatReviewDuration(stats.averageDuration),
     averageScore: stats.averageScore !== null ? stats.averageScore.toFixed(1) : '-',
     totalBlocking: stats.totalBlocking,
     totalWarnings: stats.totalWarnings,

@@ -242,6 +242,102 @@ export function drawScoreTrendChart(canvasId, reviews) {
 }
 
 /**
+ * Draw a line chart showing the number of reviews per month across the
+ * trailing twelve months. The points are already computed and zero-filled
+ * by the presenter, so this renders them as-is.
+ * @param {string} canvasId
+ * @param {Array<{ month: string, count: number }>} monthlyVolume
+ */
+export function drawReviewsPerMonthChart(canvasId, monthlyVolume) {
+  const setup = getCanvasContext(canvasId);
+  if (!setup) return;
+  const { ctx, cssWidth } = setup;
+  const cssHeight = 180;
+  setupHiDpiCanvas(ctx, cssWidth, cssHeight);
+
+  const series = monthlyVolume || [];
+  const hasReviews = series.some((point) => point.count > 0);
+
+  if (!hasReviews) {
+    drawNoDataMessage(ctx, t('stats.noChartData'), cssWidth, cssHeight);
+    return;
+  }
+
+  const padding = { top: 20, right: 20, bottom: 30, left: 35 };
+  const chartWidth = cssWidth - padding.left - padding.right;
+  const chartHeight = cssHeight - padding.top - padding.bottom;
+
+  const maxCount = Math.max(...series.map((point) => point.count));
+  const yScale = maxCount > 0 ? chartHeight / (maxCount * 1.15) : 1;
+
+  ctx.font = '10px system-ui, -apple-system, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillStyle = COLORS.textMuted;
+  const yTicks = Math.min(maxCount, 5);
+  for (let tick = 0; tick <= yTicks; tick++) {
+    const value = Math.round((maxCount / yTicks) * tick);
+    const y = padding.top + chartHeight - value * yScale;
+    ctx.beginPath();
+    ctx.strokeStyle = COLORS.gridLine;
+    ctx.lineWidth = 0.5;
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(cssWidth - padding.right, y);
+    ctx.stroke();
+    ctx.fillText(String(value), padding.left - 6, y + 3);
+  }
+
+  const points = series.map((point, index) => {
+    const x =
+      series.length === 1
+        ? padding.left + chartWidth / 2
+        : padding.left + (index / (series.length - 1)) * chartWidth;
+    const y = padding.top + chartHeight - point.count * yScale;
+    return { x, y, point };
+  });
+
+  if (points.length >= 2) {
+    const gradient = ctx.createLinearGradient(0, padding.top, 0, cssHeight - padding.bottom);
+    gradient.addColorStop(0, 'rgba(122, 216, 255, 0.12)');
+    gradient.addColorStop(1, 'rgba(122, 216, 255, 0)');
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, cssHeight - padding.bottom);
+    drawSmoothPath(ctx, points);
+    ctx.lineTo(points[points.length - 1].x, cssHeight - padding.bottom);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    ctx.beginPath();
+    drawSmoothPath(ctx, points);
+    ctx.strokeStyle = COLORS.focus;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+
+  for (const entry of points) {
+    ctx.beginPath();
+    ctx.arc(entry.x, entry.y, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = COLORS.reviewPoint;
+    ctx.fill();
+    ctx.strokeStyle = COLORS.textPrimary;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = COLORS.textMuted;
+  ctx.font = '9px system-ui, -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (const entry of points) {
+    const label = entry.point.month.split('-')[1];
+    ctx.fillText(label, entry.x, cssHeight - padding.bottom + 6);
+  }
+}
+
+/**
  * Get ISO week number from a date
  * @param {Date} date
  * @returns {number}

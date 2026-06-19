@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-import { animateCounter, drawBugsByCategoryChart } from '@/dashboard/modules/statsCharts.js';
+import {
+  animateCounter,
+  drawBugsByCategoryChart,
+  drawReviewsPerMonthChart,
+} from '@/dashboard/modules/statsCharts.js';
 
 /**
  * animateCounter relies on requestAnimationFrame and performance.now which
@@ -54,7 +58,11 @@ interface RecordingContext {
   beginPath: () => void;
   moveTo: () => void;
   lineTo: () => void;
+  arc: () => void;
   arcTo: () => void;
+  bezierCurveTo: () => void;
+  setLineDash: () => void;
+  roundRect: () => void;
   closePath: () => void;
   fill: () => void;
   stroke: () => void;
@@ -63,6 +71,8 @@ interface RecordingContext {
   fillStyle: string;
   strokeStyle: string;
   lineWidth: number;
+  lineJoin: string;
+  lineCap: string;
   font: string;
   textAlign: string;
   textBaseline: string;
@@ -77,7 +87,11 @@ function recordingContext(): RecordingContext {
     beginPath: () => {},
     moveTo: () => {},
     lineTo: () => {},
+    arc: () => {},
     arcTo: () => {},
+    bezierCurveTo: () => {},
+    setLineDash: () => {},
+    roundRect: () => {},
     closePath: () => {},
     fill: () => {},
     stroke: () => {},
@@ -91,6 +105,8 @@ function recordingContext(): RecordingContext {
     fillStyle: '',
     strokeStyle: '',
     lineWidth: 0,
+    lineJoin: '',
+    lineCap: '',
     font: '',
     textAlign: '',
     textBaseline: '',
@@ -179,5 +195,79 @@ describe('drawBugsByCategoryChart', () => {
     installCanvas('other-id');
 
     expect(() => drawBugsByCategoryChart('stats-bugs-category', fullBugsByCategory)).not.toThrow();
+  });
+});
+
+const trailingMonths = [
+  { month: '2024-01', count: 2 },
+  { month: '2024-02', count: 0 },
+  { month: '2024-03', count: 1 },
+  { month: '2024-04', count: 0 },
+  { month: '2024-05', count: 3 },
+  { month: '2024-06', count: 1 },
+  { month: '2024-07', count: 0 },
+  { month: '2024-08', count: 4 },
+  { month: '2024-09', count: 2 },
+  { month: '2024-10', count: 0 },
+  { month: '2024-11', count: 1 },
+  { month: '2024-12', count: 5 },
+];
+
+const emptyMonths = trailingMonths.map((point) => ({ month: point.month, count: 0 }));
+
+describe('drawReviewsPerMonthChart', () => {
+  const charts = globalThis as Record<string, unknown>;
+  let savedDocument: unknown;
+  let savedWindow: unknown;
+  let context: RecordingContext;
+
+  const installCanvas = (presentCanvasId: string): void => {
+    context = recordingContext();
+    const canvas = { getContext: () => context, parentElement: { clientWidth: 480 } };
+    charts.document = {
+      getElementById: (id: string) => (id === presentCanvasId ? canvas : null),
+    };
+    charts.window = { devicePixelRatio: 1 };
+  };
+
+  beforeEach(() => {
+    savedDocument = charts.document;
+    savedWindow = charts.window;
+  });
+
+  afterEach(() => {
+    charts.document = savedDocument;
+    charts.window = savedWindow;
+  });
+
+  it('renders the no-data message when every month is empty', () => {
+    installCanvas('stats-reviews-per-month');
+
+    drawReviewsPerMonthChart('stats-reviews-per-month', emptyMonths);
+
+    expect(context.filledTexts).toContain('Not enough data');
+  });
+
+  it('draws the area gradient when at least one month has reviews', () => {
+    installCanvas('stats-reviews-per-month');
+
+    drawReviewsPerMonthChart('stats-reviews-per-month', trailingMonths);
+
+    expect(context.gradients).toBeGreaterThan(0);
+  });
+
+  it('draws month labels below the axis', () => {
+    installCanvas('stats-reviews-per-month');
+
+    drawReviewsPerMonthChart('stats-reviews-per-month', trailingMonths);
+
+    expect(context.filledTexts).toContain('01');
+    expect(context.filledTexts).toContain('12');
+  });
+
+  it('does nothing when the canvas is absent', () => {
+    installCanvas('other-id');
+
+    expect(() => drawReviewsPerMonthChart('stats-reviews-per-month', trailingMonths)).not.toThrow();
   });
 });

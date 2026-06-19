@@ -423,7 +423,7 @@
     import { renderVersionUpdateArea, setVersionCheckState } from './modules/versionUpdate.js';
     import { renderCollapsibleList, toggleCollapsibleList } from './modules/collapsibleList.js';
     import { renderMrSheetContent, drawScoreTimeline, drawIssuesBreakdown } from './modules/mrSheet.js';
-    import { drawScoreTrendChart, drawReviewActivityChart, drawScoreDistributionChart, drawBugsByCategoryChart, animateCounter } from './modules/statsCharts.js';
+    import { drawScoreTrendChart, drawReviewActivityChart, drawScoreDistributionChart, drawBugsByCategoryChart, drawReviewsPerMonthChart, animateCounter } from './modules/statsCharts.js';
     import { renderTeamTab, fetchAndRenderTeamTab } from './modules/teamTab.js';
     import { renderDeveloperSheetContent, drawRadarChart } from './modules/developerSheet.js';
     import { buildInsightsReport } from './modules/insightsReport.js';
@@ -1097,8 +1097,36 @@
 
           const numericScore = parseFloat(s.averageScore);
           const isScoreNumeric = !isNaN(numericScore);
+          const header = data.analyticsHeader;
+
+          const analyticsHeaderMarkup = header && header.isEmpty
+            ? `<div class="empty-state">${header.emptyMessage || t('stats.noReviews')}</div>`
+            : header
+              ? `
+            <div class="stats-kpi-row">
+              <div class="stat-card metric-reviews">
+                <div class="stat-value"><span class="stat-main" data-target="${header.prsReviewed.value}">0</span></div>
+                <div class="stat-label"><i data-lucide="git-pull-request"></i> ${t(header.prsReviewed.labelKey)}</div>
+              </div>
+              <div class="stat-card warning metric-blocking">
+                <div class="stat-value"><span class="stat-main" data-target="${header.bugsCaught.value}">0</span></div>
+                <div class="stat-label"><i data-lucide="bug"></i> ${t(header.bugsCaught.labelKey)}</div>
+              </div>
+              <div class="stat-card metric-average-time">
+                <div class="stat-value"><span class="stat-main">${header.averageReviewTime.value}</span></div>
+                <div class="stat-label"><i data-lucide="clock"></i> ${t(header.averageReviewTime.labelKey)}</div>
+              </div>
+            </div>
+            <div class="stats-charts-row">
+              <div class="stats-chart-card full-width">
+                <div class="stats-chart-title"><i data-lucide="calendar"></i> ${t('stats.reviewsPerMonth')}</div>
+                <canvas id="stats-reviews-per-month" class="stats-canvas-wide"></canvas>
+              </div>
+            </div>`
+              : '';
 
           statsEl.innerHTML = `
+            ${analyticsHeaderMarkup}
             <div class="stat-card metric-reviews">
               <div class="stat-value"><span class="stat-main" data-target="${s.totalReviews}">0</span></div>
               <div class="stat-label"><i data-lucide="file-search"></i> ${t('stats.reviews')}</div>
@@ -1174,6 +1202,9 @@
             }
             if (data.bugsByCategory) {
               drawBugsByCategoryChart('stats-bugs-category', data.bugsByCategory);
+            }
+            if (data.analyticsHeader && !data.analyticsHeader.isEmpty) {
+              drawReviewsPerMonthChart('stats-reviews-per-month', data.analyticsHeader.reviewsPerMonth);
             }
           });
         } else {

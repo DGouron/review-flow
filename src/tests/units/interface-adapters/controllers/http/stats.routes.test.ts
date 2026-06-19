@@ -116,6 +116,45 @@ describe('stats routes', () => {
       ).toEqual(['logic', 'security', 'style', 'performance', 'typeSafety', 'dependencies']);
     });
 
+    it('should carry the analyticsHeader view model in the single-project payload', async () => {
+      statsGateway.saveProjectStats(
+        '/known/project',
+        ProjectStatsFactory.create({
+          totalReviews: 43,
+          totalBlocking: 16,
+          totalWarnings: 41,
+          averageDuration: 252000,
+        }),
+      );
+      await register();
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/stats?path=/known/project',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.analyticsHeader.isEmpty).toBe(false);
+      expect(body.analyticsHeader.prsReviewed.value).toBe(43);
+      expect(body.analyticsHeader.bugsCaught.value).toBe(57);
+      expect(body.analyticsHeader.averageReviewTime.value).toBe('4m');
+    });
+
+    it('should flag the empty analyticsHeader state when the project has no reviews', async () => {
+      statsGateway.saveProjectStats('/empty/project', ProjectStatsFactory.create());
+      await register();
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/stats?path=/empty/project',
+      });
+
+      const body = response.json();
+      expect(body.analyticsHeader.isEmpty).toBe(true);
+      expect(body.analyticsHeader.emptyMessage).toBe('Aucune review enregistrée');
+    });
+
     it('should flag the empty bugsByCategory state when no category data exists', async () => {
       statsGateway.saveProjectStats('/empty/project', ProjectStatsFactory.create());
       await register();
@@ -184,6 +223,9 @@ describe('stats routes', () => {
       expect(body.projects[0].summary).toBeDefined();
       expect(body.projects[0].bugsByCategory).toBeDefined();
       expect(body.projects[0].bugsByCategory.bars).toHaveLength(6);
+      expect(body.projects[0].analyticsHeader).toBeDefined();
+      expect(body.projects[0].analyticsHeader.prsReviewed.value).toBe(1);
+      expect(body.projects[0].analyticsHeader.reviewsPerMonth).toHaveLength(12);
     });
   });
 
