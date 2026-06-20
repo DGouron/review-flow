@@ -1,12 +1,45 @@
 ---
 title: "SPEC-073: Extract Webhook Processing Use Case"
-status: draft
+status: implementing
 issue: "#73 (absorbs #76)"
 labels: refactor, P2-important, webhook, architecture
 milestone: "Architecture Cleanup"
 ---
 
 # SPEC-073: Extract Webhook Processing Use Case
+
+## Status: implementing (Stage 1 of 4 done)
+
+> The codebase was restructured into a modular monolith (`src/modules/<context>/...`) after
+> this spec was drafted; the original flat `src/usecases/` paths below are stale. See the
+> plan/report for the real paths.
+
+## Implementation (Stage 1 — `executeReview` extraction)
+
+Plan: `docs/plans/73-execute-review-usecase.plan.md` · Report: `docs/reports/73-execute-review-usecase.report.md`
+
+The shared review-execution block (create context → invoke Claude → track progress →
+execute post-review actions → record stats → notify), previously copy-pasted across 4
+processor paths (GitLab review + followup, GitHub review + followup), is extracted into a
+single function-based use case. All 4 paths now delegate to it.
+
+**Artefacts**
+- Use case: `src/modules/review-execution/usecases/executeReview.usecase.ts`
+- Ports (entities, Dependency Rule): `entities/review/claudeReviewInvoker.gateway.ts`, `entities/progress/progressWatcher.gateway.ts`
+- Composition root: `src/main/executeReviewWiring.ts` (`buildExecuteReview`, `buildGitHubInventoryGateway`) wired in `src/main/routes.ts`
+- Both webhook controllers now delegate to `deps.executeReview` (no inlined review-execution logic)
+
+**Decisions** — fallback executor unified on `dispatchConstrainedActions` for both platforms
+(GitHub gains the SPEC-198 constrained chokepoint via a thin inventory adapter derived from
+its thread-fetch gateway); GitHub review **dual-action-execution bug fixed** (single
+primary/fallback path, regression-tested); per-site thread-fetch strategy preserved
+(GitLab pinned, GitHub plain).
+
+**Verification** — `yarn verify` green (465 files / 3865 tests pass); acceptance test GREEN.
+
+**Remaining (out of scope here, future runs):** Stage 2 `handleClose`/state-transition
+extraction, Stage 3 `ProcessWebhook` orchestrator + `WebhookEvent` discriminated union,
+Stage 4 full controller thinning.
 
 ## User Story
 

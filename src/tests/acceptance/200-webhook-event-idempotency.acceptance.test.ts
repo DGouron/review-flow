@@ -170,6 +170,18 @@ function createDeps(
     transitionState: new TransitionStateUseCase(trackingGateway),
     checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGateway),
     syncThreads: new SyncThreadsUseCase(trackingGateway, threadFetchGateway),
+    executeReview: vi.fn(async () => ({
+      status: 'completed' as const,
+      stats: {
+        score: 9,
+        blocking: 0,
+        warnings: 0,
+        suggestions: 0,
+        threadsOpened: 0,
+        threadsClosed: 0,
+        durationMs: 1200,
+      },
+    })),
     enforceBudget: createAcceptAllEnforceBudget(),
     broadcastBudgetExceeded: vi.fn(),
     getRepositories: vi.fn(() => []),

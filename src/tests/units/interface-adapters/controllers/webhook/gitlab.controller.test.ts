@@ -91,7 +91,6 @@ vi.mock(
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-import { invokeClaudeReview } from '@/claude/invoker.js';
 import { findRepositoryByProjectPath } from '@/config/loader.js';
 import { enqueueReview } from '@/frameworks/queue/pQueueAdapter.js';
 import { MEMBER_ACCESS_LEVELS } from '@/modules/platform-integration/entities/memberAccess/memberAccess.js';
@@ -101,6 +100,7 @@ import {
   buildGitLabReviewProcessor,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
 import { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
+import type { ExecuteReviewResult } from '@/modules/review-execution/usecases/executeReview.usecase.js';
 import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
@@ -189,6 +189,20 @@ function createDefaultDeps(trackingGateway: ReturnType<typeof createMockTracking
     transitionState: new TransitionStateUseCase(trackingGateway),
     checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGateway),
     syncThreads: new SyncThreadsUseCase(trackingGateway, threadFetchGateway),
+    executeReview: vi.fn(
+      async (): Promise<ExecuteReviewResult> => ({
+        status: 'completed',
+        stats: {
+          score: 9,
+          blocking: 0,
+          warnings: 0,
+          suggestions: 0,
+          threadsOpened: 0,
+          threadsClosed: 0,
+          durationMs: 1200,
+        },
+      }),
+    ),
     enforceBudget: createAcceptAllEnforceBudget(),
     broadcastBudgetExceeded: vi.fn(),
     getRepositories: vi.fn(() => []),
@@ -380,68 +394,45 @@ describe('handleGitLabWebhook', () => {
       );
     });
 
-    it('should create review context via injected gateway when review is enqueued', async () => {
-      vi.mocked(invokeClaudeReview).mockResolvedValue({
-        success: false,
-        cancelled: true,
-        stdout: '',
-        stderr: '',
-        exitCode: null,
-        durationMs: 0,
-      });
+    it('should delegate the review run to executeReview when a review is enqueued', async () => {
       vi.mocked(enqueueReview).mockImplementation(async (job, callback) => {
         await callback(job, new AbortController().signal);
         return true;
       });
 
-      const contextGateway = createStubContextGateway();
-      const deps = { ...defaultDeps, reviewContextGateway: contextGateway };
-
       const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
 
-      expect(contextGateway.create).toHaveBeenCalledWith(
+      expect(defaultDeps.executeReview).toHaveBeenCalledWith(
         expect.objectContaining({
           platform: 'gitlab',
-          projectPath: 'test-org/test-project',
-          mergeRequestNumber: 42,
+          isFollowup: false,
+          notificationPrefix: 'MR !',
+          job: expect.objectContaining({ projectPath: 'test-org/test-project', mrNumber: 42 }),
         }),
       );
     });
 
-    it('should use injected threadFetchGateway to fetch threads when review is enqueued', async () => {
-      const stubThreadFetch = { fetchThreads: vi.fn(() => []) };
-      const stubDiffMetadataFetch = {
-        fetchDiffMetadata: vi.fn(() => ({ baseSha: 'a', headSha: 'b', startSha: 'c' })),
-      };
-
-      vi.mocked(invokeClaudeReview).mockResolvedValue({
-        success: false,
-        cancelled: true,
-        stdout: '',
-        stderr: '',
-        exitCode: null,
-        durationMs: 0,
-      });
+    it('should throw to trigger queue retry when executeReview returns failed', async () => {
+      defaultDeps.executeReview.mockResolvedValueOnce({ status: 'failed', reason: 'boom' });
+      const capturedMessages: string[] = [];
       vi.mocked(enqueueReview).mockImplementation(async (job, callback) => {
-        await callback(job, new AbortController().signal);
+        try {
+          await callback(job, new AbortController().signal);
+        } catch (error) {
+          capturedMessages.push(error instanceof Error ? error.message : String(error));
+        }
         return true;
       });
-
-      const deps = {
-        ...defaultDeps,
-        threadFetchGateway: stubThreadFetch,
-        diffMetadataFetchGateway: stubDiffMetadataFetch,
-      };
 
       const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
 
-      expect(stubThreadFetch.fetchThreads).toHaveBeenCalledWith('test-org/test-project', 42);
+      expect(capturedMessages).toEqual(['boom']);
     });
   });
 
@@ -1224,65 +1215,80 @@ describe('handleGitLabWebhook', () => {
       ).rejects.toThrow(/No GitLab repository configured/);
     });
 
-    it('records completion stats on a successful review run', async () => {
+    it('delegates a successful review run to executeReview', async () => {
       mockGateway.getById.mockReturnValue(null);
-      const recordCompletion = new RecordReviewCompletionUseCase(mockGateway);
-      const recordSpy = vi.spyOn(recordCompletion, 'execute');
-      const diffStatsFetchGateway = { fetchDiffStats: vi.fn(() => null) };
-      const deps = { ...defaultDeps, recordCompletion, diffStatsFetchGateway };
-
-      vi.mocked(invokeClaudeReview).mockResolvedValue({
-        success: true,
-        cancelled: false,
-        stdout: 'Score: 9/10',
-        stderr: '',
-        exitCode: 0,
-        durationMs: 1200,
-      });
-      vi.mocked(enqueueReview).mockImplementation(async (job, callback) => {
-        await callback(job, new AbortController().signal);
-        return true;
+      const processor = buildGitLabReviewProcessor(
+        defaultDeps,
+        logger,
+      )({
+        id: 'gitlab-test-org/test-project-42',
+        platform: 'gitlab',
+        projectPath: 'test-org/test-project',
+        localPath: '/home/user/projects/test-project',
+        mrNumber: 42,
+        skill: 'review-front',
+        mrUrl: 'https://gitlab.com/test-org/test-project/-/merge_requests/42',
+        sourceBranch: 'feature/test',
+        targetBranch: 'main',
+        jobType: 'review',
       });
 
-      const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
-      const request = { body: event, headers: {} } as unknown as FastifyRequest;
+      await processor(
+        {
+          id: 'gitlab-test-org/test-project-42',
+          platform: 'gitlab',
+          projectPath: 'test-org/test-project',
+          localPath: '/home/user/projects/test-project',
+          mrNumber: 42,
+          skill: 'review-front',
+          mrUrl: 'https://gitlab.com/test-org/test-project/-/merge_requests/42',
+          sourceBranch: 'feature/test',
+          targetBranch: 'main',
+          jobType: 'review',
+        },
+        new AbortController().signal,
+      );
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
-
-      expect(recordSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mrId: 'gitlab-test-org/test-project-42',
-          reviewData: expect.objectContaining({ type: 'review' }),
-        }),
+      expect(defaultDeps.executeReview).toHaveBeenCalledWith(
+        expect.objectContaining({ platform: 'gitlab', isFollowup: false }),
       );
     });
 
-    it('throws when a non-cancelled review run fails', async () => {
-      mockGateway.getById.mockReturnValue(null);
-      vi.mocked(invokeClaudeReview).mockResolvedValue({
-        success: false,
-        cancelled: false,
-        stdout: '',
-        stderr: 'boom',
-        exitCode: 1,
-        durationMs: 50,
-      });
-      const capturedMessages: string[] = [];
-      vi.mocked(enqueueReview).mockImplementation(async (job, callback) => {
-        try {
-          await callback(job, new AbortController().signal);
-        } catch (error) {
-          capturedMessages.push(error instanceof Error ? error.message : String(error));
-        }
-        return true;
+    it('throws when executeReview returns failed', async () => {
+      defaultDeps.executeReview.mockResolvedValueOnce({ status: 'failed', reason: 'boom' });
+      const processor = buildGitLabReviewProcessor(
+        defaultDeps,
+        logger,
+      )({
+        id: 'gitlab-test-org/test-project-42',
+        platform: 'gitlab',
+        projectPath: 'test-org/test-project',
+        localPath: '/home/user/projects/test-project',
+        mrNumber: 42,
+        skill: 'review-front',
+        mrUrl: 'https://gitlab.com/test-org/test-project/-/merge_requests/42',
+        sourceBranch: 'feature/test',
+        targetBranch: 'main',
+        jobType: 'review',
       });
 
-      const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
-      const request = { body: event, headers: {} } as unknown as FastifyRequest;
-
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
-
-      expect(capturedMessages).toEqual(['boom']);
+      await expect(
+        processor(
+          {
+            id: 'gitlab-test-org/test-project-42',
+            platform: 'gitlab',
+            projectPath: 'test-org/test-project',
+            localPath: '/home/user/projects/test-project',
+            mrNumber: 42,
+            skill: 'review-front',
+            mrUrl: 'https://gitlab.com/test-org/test-project/-/merge_requests/42',
+            sourceBranch: 'feature/test',
+            targetBranch: 'main',
+            jobType: 'review',
+          },
+          new AbortController().signal,
+        ),
+      ).rejects.toThrow('boom');
     });
   });
 });
