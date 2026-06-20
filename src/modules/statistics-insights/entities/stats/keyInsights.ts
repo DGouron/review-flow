@@ -7,7 +7,7 @@ import type {
   ProjectStats,
   ReviewStats,
 } from '@/modules/statistics-insights/entities/stats/projectStats.js';
-import { formatReviewDuration } from '@/modules/statistics-insights/services/statsService.js';
+import { formatReviewDuration } from '@/modules/statistics-insights/entities/stats/reviewDuration.format.js';
 
 export type KeyInsightKey = 'reviewVolume' | 'dominantCategory' | 'reviewTime';
 

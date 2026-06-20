@@ -3,7 +3,7 @@ import {
   type MonthlyVolumePoint,
 } from '@/modules/statistics-insights/entities/stats/monthlyVolume.js';
 import type { ProjectStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
-import { formatReviewDuration } from '@/modules/statistics-insights/services/statsService.js';
+import { formatReviewDuration } from '@/modules/statistics-insights/entities/stats/reviewDuration.format.js';
 
 const EMPTY_MESSAGE = 'Aucune review enregistrée';
 

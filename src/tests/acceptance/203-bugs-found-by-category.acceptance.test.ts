@@ -20,18 +20,44 @@ import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
+import type {
+  ProjectStats,
+  ReviewStats,
+} from '@/modules/statistics-insights/entities/stats/projectStats.js';
+import { parseReviewOutput } from '@/modules/statistics-insights/entities/stats/reviewOutput.parser.js';
 import { statsRoutes } from '@/modules/statistics-insights/interface-adapters/controllers/http/stats.routes.js';
+import { FileSystemStatsGateway } from '@/modules/statistics-insights/interface-adapters/gateways/fileSystem/stats.fileSystem.js';
 import { BugsByCategoryPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/bugsByCategory.presenter.js';
-import {
-  addReviewStats,
-  loadProjectStats,
-  saveProjectStats,
-} from '@/modules/statistics-insights/services/statsService.js';
+import { AddReviewStatsUseCase } from '@/modules/statistics-insights/usecases/stats/addReviewStats.usecase.js';
 import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 
 const marker = (categories: string): string =>
   `[REVIEW_STATS:blocking=0:warnings=0:suggestions=0:score=8:categories=${categories}]`;
+
+const fileSystemStatsGateway = new FileSystemStatsGateway();
+
+const addReviewStats = (
+  projectPath: string,
+  mrNumber: number,
+  duration: number,
+  stdout: string,
+): ReviewStats =>
+  new AddReviewStatsUseCase(fileSystemStatsGateway).execute({
+    projectPath,
+    mrNumber,
+    duration,
+    parsed: parseReviewOutput(stdout),
+  });
+
+const loadProjectStats = (projectPath: string): ProjectStats => {
+  const stats = fileSystemStatsGateway.loadProjectStats(projectPath);
+  if (stats === null) throw new Error(`No stats found for ${projectPath}`);
+  return stats;
+};
+
+const saveProjectStats = (projectPath: string, stats: ProjectStats): void =>
+  fileSystemStatsGateway.saveProjectStats(projectPath, stats);
 
 describe('Acceptance — SPEC-203: Track bugs found by category', () => {
   let projectPath: string;

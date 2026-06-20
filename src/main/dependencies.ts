@@ -15,9 +15,9 @@ import type { ReviewFileGateway } from '@/modules/review-execution/interface-ada
 import { ReviewContextProgressPresenter } from '@/modules/review-execution/interface-adapters/presenters/reviewContextProgress.presenter.js';
 import { ReviewContextWatcherService } from '@/modules/review-execution/services/reviewContextWatcher.service.js';
 import type { InsightsGateway } from '@/modules/statistics-insights/entities/insight/insights.gateway.js';
+import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import { FileSystemInsightsGateway } from '@/modules/statistics-insights/interface-adapters/gateways/fileSystem/insights.fileSystem.js';
 import { FileSystemStatsGateway } from '@/modules/statistics-insights/interface-adapters/gateways/fileSystem/stats.fileSystem.js';
-import type { StatsGateway } from '@/modules/statistics-insights/interface-adapters/gateways/stats.gateway.js';
 import { ProjectStatsCalculator } from '@/modules/statistics-insights/interface-adapters/presenters/projectStats.calculator.js';
 import type { SupervisorStatusStore } from '@/modules/supervisor-management/entities/supervisor/supervisorStatusStore.gateway.js';
 import { InMemorySupervisorStatusStore } from '@/modules/supervisor-management/interface-adapters/gateways/supervisorStatusStore.memory.gateway.js';

@@ -5,7 +5,7 @@ import type {
   CategoryLevels,
 } from '@/modules/statistics-insights/entities/insight/developerInsight.js';
 import type { InsightTrend } from '@/modules/statistics-insights/entities/insight/insightTrend.js';
-import type { ReviewStats } from '@/modules/statistics-insights/services/statsService.js';
+import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
 import {
   normalizeHigherIsBetter,
   normalizeLowerIsBetter,

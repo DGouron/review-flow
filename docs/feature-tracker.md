@@ -25,7 +25,7 @@
 | Extract webhook processing usecase | [73-extract-webhook-processing-usecase](specs/73-extract-webhook-processing-usecase.md) | drafted | 2026-03-14 |
 | Standardize MR vocabulary | [77-standardize-mr-vocabulary](specs/77-standardize-mr-vocabulary.md) | implemented | 2026-03-14 |
 | Remove old progress tracking | [79-remove-old-progress-tracking](specs/79-remove-old-progress-tracking.md) | implemented | 2026-03-15 |
-| Split stats service | [80-split-stats-service](specs/80-split-stats-service.md) | drafted | 2026-03-14 |
+| Split stats service | [80-split-stats-service](specs/80-split-stats-service.md) — [plan](plans/80-split-stats-service.plan.md) — [report](reports/80-split-stats-service.report.md) | implemented | 2026-06-19 |
 | EventBus queue state | [82-eventbus-queue-state](specs/82-eventbus-queue-state.md) | implemented | 2026-03-14 |
 | Delete services folder | [83-delete-services-folder](specs/83-delete-services-folder.md) | implemented | 2026-03-14 |
 | Dashboard multi-project overview | [91-dashboard-multi-project-overview](specs/91-dashboard-multi-project-overview.md) — [report](reports/91-dashboard-multi-project-overview.report.md) | implemented | 2026-05-25 |
