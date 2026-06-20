@@ -29,7 +29,7 @@ export async function backfillDiffStats(
   }
 
   const reviewsNeedingBackfill = stats.reviews.filter(
-    (review) => review.diffStats === undefined || !('diffStats' in review),
+    (review) => review.diffStats === null || review.diffStats === undefined,
   );
 
   if (reviewsNeedingBackfill.length === 0) {
