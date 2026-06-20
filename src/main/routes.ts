@@ -122,6 +122,7 @@ import {
 } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import { ListPendingReviewsUseCase } from '@/modules/review-execution/usecases/listPendingReviews.usecase.js';
 import { setupWizardRoutes } from '@/modules/setup-wizard/interface-adapters/controllers/http/setupWizard.routes.js';
+import { GitRemoteCliGateway } from '@/modules/setup-wizard/interface-adapters/gateways/gitRemote.cli.gateway.js';
 import { SetupProcessChildProcessGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupProcess.childProcess.gateway.js';
 import { SetupStateFileSystemGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupState.fileSystem.gateway.js';
 import { SetupRunRegistry } from '@/modules/setup-wizard/usecases/streamSetupRun.usecase.js';
@@ -201,6 +202,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
   await app.register(statsRoutes, {
     statsGateway: deps.statsGateway,
     getRepositories: () => deps.config.repositories,
+    gitRemoteGateway: new GitRemoteCliGateway(),
     diffStatsFetchGateways: {
       gitlab: new GitLabDiffStatsFetchGateway(defaultGitLabExecutor),
       github: new GitHubDiffStatsFetchGateway(defaultGitHubExecutor),

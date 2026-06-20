@@ -27,6 +27,7 @@ export function recalculateProjectStats(
       totalDeletions: 0,
       averageAdditions: 0,
       averageDeletions: 0,
+      diffStatsReviewCount: 0,
     };
     return emptyStats;
   }
@@ -49,6 +50,7 @@ export function recalculateProjectStats(
   const reviewsWithDiffStats = reviews.filter(
     (review) => review.diffStats !== null && review.diffStats !== undefined,
   );
+  stats.diffStatsReviewCount = reviewsWithDiffStats.length;
 
   if (reviewsWithDiffStats.length > 0) {
     stats.totalAdditions = reviewsWithDiffStats.reduce(

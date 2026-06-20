@@ -32,7 +32,12 @@ describe('recalculateWithBackfill', () => {
     const progressUpdates: BackfillProgress[] = [];
 
     const promise = recalculateWithBackfill(
-      { projectPath: '/test/project', shouldBackfill: false, platform: 'gitlab' },
+      {
+        projectPath: '/test/project',
+        shouldBackfill: false,
+        platform: 'gitlab',
+        projectIdentifier: 'group/proj',
+      },
       {
         statsGateway,
         diffStatsFetchGateways: null,
@@ -59,7 +64,12 @@ describe('recalculateWithBackfill', () => {
     const progressUpdates: BackfillProgress[] = [];
 
     const promise = recalculateWithBackfill(
-      { projectPath: '/test/project', shouldBackfill: true, platform: 'gitlab' },
+      {
+        projectPath: '/test/project',
+        shouldBackfill: true,
+        platform: 'gitlab',
+        projectIdentifier: 'group/proj',
+      },
       {
         statsGateway,
         diffStatsFetchGateways: { gitlab: diffStatsFetchGateway, github: diffStatsFetchGateway },
@@ -73,6 +83,7 @@ describe('recalculateWithBackfill', () => {
 
     const saved = statsGateway.loadProjectStats('/test/project');
     expect(saved?.reviews[0].diffStats).toEqual({ commitsCount: 3, additions: 100, deletions: 20 });
+    expect(diffStatsFetchGateway.lastProjectIdentifier).toBe('group/proj');
     expect(progressUpdates.at(-1)?.status).toBe('completed');
   });
 
@@ -85,7 +96,12 @@ describe('recalculateWithBackfill', () => {
     const progressUpdates: BackfillProgress[] = [];
 
     const promise = recalculateWithBackfill(
-      { projectPath: '/test/project', shouldBackfill: true, platform: null },
+      {
+        projectPath: '/test/project',
+        shouldBackfill: true,
+        platform: null,
+        projectIdentifier: null,
+      },
       {
         statsGateway,
         diffStatsFetchGateways: { gitlab: diffStatsFetchGateway, github: diffStatsFetchGateway },
@@ -110,7 +126,12 @@ describe('recalculateWithBackfill', () => {
     githubGateway.setResponse(10, { commitsCount: 5, additions: 200, deletions: 50 });
 
     const promise = recalculateWithBackfill(
-      { projectPath: '/test/project', shouldBackfill: true, platform: 'github' },
+      {
+        projectPath: '/test/project',
+        shouldBackfill: true,
+        platform: 'github',
+        projectIdentifier: 'owner/repo',
+      },
       {
         statsGateway,
         diffStatsFetchGateways: { gitlab: gitlabGateway, github: githubGateway },
@@ -123,6 +144,7 @@ describe('recalculateWithBackfill', () => {
     await promise;
 
     expect(githubGateway.fetchCallCount).toBe(1);
+    expect(githubGateway.lastProjectIdentifier).toBe('owner/repo');
     expect(gitlabGateway.fetchCallCount).toBe(0);
   });
 
@@ -137,7 +159,12 @@ describe('recalculateWithBackfill', () => {
     statsGateway.saveProjectStats('/test/project', ProjectStatsFactory.create({ reviews }));
 
     const promise = recalculateWithBackfill(
-      { projectPath: '/test/project', shouldBackfill: true, platform: 'gitlab' },
+      {
+        projectPath: '/test/project',
+        shouldBackfill: true,
+        platform: 'gitlab',
+        projectIdentifier: 'group/proj',
+      },
       {
         statsGateway,
         diffStatsFetchGateways: { gitlab: diffStatsFetchGateway, github: diffStatsFetchGateway },
@@ -158,7 +185,12 @@ describe('recalculateWithBackfill', () => {
     const progressUpdates: BackfillProgress[] = [];
 
     const promise = recalculateWithBackfill(
-      { projectPath: '/test/project', shouldBackfill: false, platform: null },
+      {
+        projectPath: '/test/project',
+        shouldBackfill: false,
+        platform: null,
+        projectIdentifier: null,
+      },
       {
         statsGateway,
         diffStatsFetchGateways: null,

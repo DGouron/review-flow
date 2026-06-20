@@ -1,5 +1,7 @@
 # Make the Recalculate button backfill change-size data
 
+## Status: implemented
+
 ## Context
 
 The dashboard `Recalculate` button is meant to backfill missing change-size data, but it
@@ -56,3 +58,25 @@ be repaired by an out-of-band script. This makes the button self-service.
 ## Definition of Done
 
 See `.claude/skills/product-manager/rules/dod.md`.
+
+## Implementation
+
+### Artefacts
+
+- **Entity (new)**: `src/modules/statistics-insights/entities/projectIdentifier/projectIdentifier.ts` — pure `resolveProjectIdentifier(remoteUrl)` parsing SSH/HTTPS git remotes into `group/proj` or `owner/repo` (nested GitLab groups preserved, `.git` stripped, self-hosted hosts dropped), `null` when unparseable.
+- **Use cases (modified)**:
+  - `recalculateProjectStats.usecase.ts` — now stores `diffStatsReviewCount` alongside totals/averages (RULE 4).
+  - `backfillDiffStats.usecase.ts` — takes a `projectIdentifier` and forwards it to the platform gateway instead of the local filesystem path (RULE 2). `projectPath` is retained only as the stats load/save key.
+  - `recalculateWithBackfill.usecase.ts` — threads `projectIdentifier` through; backfill guard tightened to require platform **and** identifier.
+- **Controller (modified)**: `stats.routes.ts` — resolves platform + project identifier from the project's git remote via the reused `GitRemoteCliGateway`; rejects unresolvable projects with `422 Plateforme du projet introuvable` (RULE 3). Stale `repository.platform ?? null` removed (RULE 1).
+- **Wiring**: `src/main/routes.ts` — injects `new GitRemoteCliGateway()` into the stats routes.
+
+### Reused (not reinvented)
+
+- `GitRemoteCliGateway` (`setup-wizard`) — `getOriginRemote()` + `detectPlatform()`. The `DiffStatsFetchGateway` contract was left unchanged: it always expected the platform identifier; the defect was the caller passing the local path.
+
+### Decisions
+
+- Rejection status code: **422 Unprocessable Entity** (project exists in config but cannot be backfilled).
+- The resolver is a pure function (no Zod schema, no class) — a regex parse does not warrant a branded type yet (YAGNI).
+- `gitRemoteGateway` is an optional route option (backfill-only dependency), consistent with `diffStatsFetchGateways`; recompute-only calls do not require it.

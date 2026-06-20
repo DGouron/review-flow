@@ -5,9 +5,11 @@ export class StubDiffStatsFetchGateway implements DiffStatsFetchGateway {
   private responses = new Map<number, DiffStats | null>();
   private failingMergeRequests = new Set<number>();
   fetchCallCount = 0;
+  lastProjectIdentifier: string | null = null;
 
-  fetchDiffStats(_projectPath: string, mergeRequestNumber: number): DiffStats | null {
+  fetchDiffStats(projectIdentifier: string, mergeRequestNumber: number): DiffStats | null {
     this.fetchCallCount++;
+    this.lastProjectIdentifier = projectIdentifier;
 
     if (this.failingMergeRequests.has(mergeRequestNumber)) {
       throw new Error(`API error for MR ${mergeRequestNumber}`);

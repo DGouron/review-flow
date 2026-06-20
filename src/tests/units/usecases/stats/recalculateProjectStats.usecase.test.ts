@@ -67,6 +67,7 @@ describe('recalculateProjectStats', () => {
     expect(result.totalDeletions).toBe(30);
     expect(result.averageAdditions).toBe(75);
     expect(result.averageDeletions).toBe(15);
+    expect(result.diffStatsReviewCount).toBe(2);
   });
 
   it('should exclude null diffStats from averages', () => {
@@ -93,6 +94,7 @@ describe('recalculateProjectStats', () => {
     expect(result.totalDeletions).toBe(30);
     expect(result.averageAdditions).toBe(75);
     expect(result.averageDeletions).toBe(15);
+    expect(result.diffStatsReviewCount).toBe(2);
   });
 
   it('should handle empty reviews array', () => {
@@ -114,6 +116,7 @@ describe('recalculateProjectStats', () => {
     expect(result.totalDeletions).toBe(0);
     expect(result.averageAdditions).toBe(0);
     expect(result.averageDeletions).toBe(0);
+    expect(result.diffStatsReviewCount).toBe(0);
   });
 
   it('should recalculate totalDuration and averageDuration', () => {
