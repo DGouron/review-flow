@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.39.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.39.0...reviewflow-v3.39.1) (2026-06-20)
+
+
+### Fixed
+
+* **deps:** patch hono, ws, qs, vite advisories via resolutions ([120dec1](https://github.com/DGouron/review-flow/commit/120dec1b98039401e6ad69e7fbe1a48a8591caf2))
+* **stats:** real GitLab diff stats + backfill null-poisoned reviews ([03ee814](https://github.com/DGouron/review-flow/commit/03ee814c0900dd43dd982c4ddfb62d53a2c588c7))
+* **stats:** real GitLab diff stats + backfill null-poisoned reviews (spec-206, spec-207) ([fa166d9](https://github.com/DGouron/review-flow/commit/fa166d985b109c252853ed6c7a7052ecb41d8ad7))
+
 ## [3.39.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.38.0...reviewflow-v3.39.0) (2026-06-20)
 
 
