@@ -1,12 +1,69 @@
 ---
 title: "SPEC-073: Extract Webhook Processing Use Case"
-status: draft
+status: implementing
 issue: "#73 (absorbs #76)"
 labels: refactor, P2-important, webhook, architecture
 milestone: "Architecture Cleanup"
 ---
 
 # SPEC-073: Extract Webhook Processing Use Case
+
+## Status: implementing (Stages 1-2 of 4 done)
+
+> The codebase was restructured into a modular monolith (`src/modules/<context>/...`) after
+> this spec was drafted; the original flat `src/usecases/` paths below are stale. See the
+> plan/report for the real paths.
+
+## Implementation (Stage 1 — `executeReview` extraction)
+
+Plan: `docs/plans/73-execute-review-usecase.plan.md` · Report: `docs/reports/73-execute-review-usecase.report.md`
+
+The shared review-execution block (create context → invoke Claude → track progress →
+execute post-review actions → record stats → notify), previously copy-pasted across 4
+processor paths (GitLab review + followup, GitHub review + followup), is extracted into a
+single function-based use case. All 4 paths now delegate to it.
+
+**Artefacts**
+- Use case: `src/modules/review-execution/usecases/executeReview.usecase.ts`
+- Ports (entities, Dependency Rule): `entities/review/claudeReviewInvoker.gateway.ts`, `entities/progress/progressWatcher.gateway.ts`
+- Composition root: `src/main/executeReviewWiring.ts` (`buildExecuteReview`, `buildGitHubInventoryGateway`) wired in `src/main/routes.ts`
+- Both webhook controllers now delegate to `deps.executeReview` (no inlined review-execution logic)
+
+**Decisions** — fallback executor unified on `dispatchConstrainedActions` for both platforms
+(GitHub gains the SPEC-198 constrained chokepoint via a thin inventory adapter derived from
+its thread-fetch gateway); GitHub review **dual-action-execution bug fixed** (single
+primary/fallback path, regression-tested); per-site thread-fetch strategy preserved
+(GitLab pinned, GitHub plain).
+
+**Verification** — `yarn verify` green (465 files / 3865 tests pass); acceptance test GREEN.
+
+## Implementation (Stage 2 — `handleClose` extraction)
+
+Plan: `docs/plans/73-handle-close.plan.md` · Report: `docs/reports/73-handle-close.report.md`
+
+The close/cleanup block (cancel running job → archive tracking → delete review context →
+remove worktree), copy-pasted in both controllers' close handlers, is extracted into one
+function-based use case. Both controllers' close paths now delegate to it.
+
+**Artefacts**
+- Use case: `src/modules/review-execution/usecases/handleClose.usecase.ts` (4-effect cleanup,
+  best-effort worktree removal; `mergeRequestId` built internally — the only platform divergence)
+- `RemoveWorktreeAction` type moved to the worktree entity layer
+  (`src/modules/worktree-management/entities/worktree/worktree.schema.ts`) so the use case
+  imports it inward-safely (Dependency Rule)
+- Both webhook controllers' close handlers delegate to `deps.handleClose`; wired in `routes.ts`
+
+**Decisions** — `cancelJob`/`buildJobId` injected as plain fns (no port); merge/approve
+transitions LEFT in controllers (already composed from `TransitionStateUseCase` — wrapping
+them would drag platform-divergent HTTP gateways into a use case); HTTP reply shapes preserved
+(unification deferred to Stage 4). Known pre-existing asymmetry flagged: a merged GitHub PR
+arrives as a close event and is archived, not recorded as `state:'merged'` (out of scope).
+
+**Verification** — `yarn verify` green (467 files / 3879 tests pass); acceptance test GREEN.
+
+**Remaining (out of scope here, future runs):** Stage 3 `ProcessWebhook` orchestrator +
+`WebhookEvent` discriminated union, Stage 4 full controller thinning (incl. removing the
+now-unused `_trackingGateway` param and unifying HTTP reply shapes).
 
 ## User Story
 

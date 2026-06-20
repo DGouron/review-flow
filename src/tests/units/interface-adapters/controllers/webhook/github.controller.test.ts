@@ -85,7 +85,6 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { handleGitHubWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 
-import { invokeClaudeReview } from '../../../../../claude/invoker.js';
 import { findRepositoryByRemoteUrl } from '../../../../../config/loader.js';
 import { enqueueReview } from '../../../../../frameworks/queue/pQueueAdapter.js';
 import { verifyGitHubSignature, getGitHubEventType } from '../../../../../security/verifier.js';
@@ -121,6 +120,24 @@ function createMockDeps(): GitHubWebhookDependencies {
     transitionState: { execute: vi.fn() },
     checkFollowupNeeded: { execute: vi.fn(() => false) },
     syncThreads: { execute: vi.fn(() => null) },
+    executeReview: vi.fn(async () => ({
+      status: 'completed',
+      stats: {
+        score: 9,
+        blocking: 0,
+        warnings: 0,
+        suggestions: 0,
+        threadsOpened: 0,
+        threadsClosed: 0,
+        durationMs: 1200,
+      },
+    })),
+    handleClose: vi.fn(async () => ({
+      status: 'cleaned',
+      jobCancelled: true,
+      trackingArchived: true,
+      contextDeleted: true,
+    })),
     enforceBudget: {
       execute: vi.fn(async () => ({
         accepted: true,
@@ -241,184 +258,48 @@ describe('handleGitHubWebhook', () => {
   });
 
   describe('review completion callback', () => {
-    it('should record review stats after successful review', async () => {
-      const mockResult = {
-        success: true,
-        cancelled: false,
-        stdout: '[REVIEW_STATS:blocking=2:warnings=3:suggestions=1:score=7.5]',
-        durationMs: 120000,
-        exitCode: 0,
-        stderr: '',
-      };
-
+    it('delegates a review run to executeReview with the github review input', async () => {
       vi.mocked(enqueueReview).mockImplementation(async (job, callback) => {
         await callback(job, new AbortController().signal);
         return true;
       });
-
-      vi.mocked(invokeClaudeReview).mockResolvedValue(mockResult);
 
       const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
       await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
 
-      expect(mockDeps.recordCompletion.execute).toHaveBeenCalledWith(
+      expect(mockDeps.executeReview).toHaveBeenCalledWith(
         expect.objectContaining({
-          projectPath: '/home/user/projects/test-repo',
-          mrId: 'github-test-owner/test-repo-123',
-          reviewData: expect.objectContaining({
-            type: 'review',
-            score: 7.5,
-            blocking: 2,
-            warnings: 3,
-            suggestions: 1,
-          }),
+          platform: 'github',
+          isFollowup: false,
+          notificationPrefix: 'PR #',
+          job: expect.objectContaining({ projectPath: 'test-owner/test-repo', mrNumber: 123 }),
         }),
       );
     });
 
-    it('should count only blocking issues as open threads, not warnings', async () => {
-      const mockResult = {
-        success: true,
-        cancelled: false,
-        stdout: '[REVIEW_STATS:blocking=1:warnings=5:suggestions=2:score=6]',
-        durationMs: 90000,
-        exitCode: 0,
-        stderr: '',
-      };
-
-      vi.mocked(enqueueReview).mockImplementation(async (job, callback) => {
-        await callback(job, new AbortController().signal);
-        return true;
+    it('throws to trigger queue retry when executeReview returns failed', async () => {
+      vi.mocked(mockDeps.executeReview).mockResolvedValueOnce({
+        status: 'failed',
+        reason: 'dispatch-failed: branch-not-found',
       });
-
-      vi.mocked(invokeClaudeReview).mockResolvedValue(mockResult);
-
-      const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
-      const request = { body: event, headers: {} } as unknown as FastifyRequest;
-
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
-
-      expect(mockDeps.recordCompletion.execute).toHaveBeenCalledWith(
-        expect.objectContaining({
-          reviewData: expect.objectContaining({
-            blocking: 1,
-            threadsOpened: 1, // Only blocking count, not blocking + warnings (6)
-          }),
-        }),
-      );
-    });
-
-    it('finalises the review-context with setResult after actions are posted', async () => {
-      const setResultMock = vi.fn(
-        (_localPath: string, _mergeRequestId: string, _result: unknown) => ({ success: true }),
-      );
-      const readMock = vi.fn(() => ({
-        version: '1.0',
-        mergeRequestId: 'github-test-owner/test-repo-123',
-        platform: 'github',
-        projectPath: 'test-owner/test-repo',
-        mergeRequestNumber: 123,
-        createdAt: '2026-05-26T00:00:00Z',
-        threads: [],
-        actions: [{ type: 'POST_COMMENT', body: 'review report' }],
-        progress: { phase: 'completed', currentStep: null },
-      }));
-      const depsWithReadAndSet = {
-        ...mockDeps,
-        reviewContextGateway: {
-          ...mockDeps.reviewContextGateway,
-          read: readMock,
-          setResult: setResultMock,
-        },
-      } as unknown as GitHubWebhookDependencies;
-
-      vi.mocked(enqueueReview).mockImplementation(async (job, callback) => {
-        await callback(job, new AbortController().signal);
-        return true;
-      });
-      vi.mocked(invokeClaudeReview).mockResolvedValue({
-        success: true,
-        cancelled: false,
-        stdout: '[REVIEW_STATS:blocking=3:warnings=1:suggestions=0:score=5]',
-        durationMs: 100,
-        exitCode: 0,
-        stderr: '',
-      });
-
-      const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
-      const request = { body: event, headers: {} } as unknown as FastifyRequest;
-
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, depsWithReadAndSet);
-
-      expect(setResultMock).toHaveBeenCalledTimes(1);
-      const [, , passedResult] = setResultMock.mock.calls[0];
-      expect(passedResult).toEqual({
-        kind: 'measured',
-        blocking: 3,
-        warnings: 1,
-        suggestions: 0,
-        score: 5,
-        verdict: 'needs_fixes',
-      });
-    });
-
-    it('should not record stats when review is cancelled', async () => {
-      const mockResult = {
-        success: false,
-        cancelled: true,
-        stdout: '',
-        durationMs: 5000,
-        exitCode: 1,
-        stderr: '',
-      };
-
-      vi.mocked(enqueueReview).mockImplementation(async (job, callback) => {
-        await callback(job, new AbortController().signal);
-        return true;
-      });
-
-      vi.mocked(invokeClaudeReview).mockResolvedValue(mockResult);
-
-      const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
-      const request = { body: event, headers: {} } as unknown as FastifyRequest;
-
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
-
-      expect(mockDeps.recordCompletion.execute).not.toHaveBeenCalled();
-    });
-
-    it('should not record stats when review fails', async () => {
-      const mockResult = {
-        success: false,
-        cancelled: false,
-        stdout: 'Error occurred',
-        durationMs: 10000,
-        exitCode: 1,
-        stderr: 'dispatch-failed: branch-not-found',
-      };
-
-      // Simulate pQueue behaviour: queue swallows processor throws and surfaces
-      // them via jobStatus.error (see pQueueAdapter.ts catch block).
+      const capturedMessages: string[] = [];
       vi.mocked(enqueueReview).mockImplementation(async (job, callback) => {
         try {
           await callback(job, new AbortController().signal);
-        } catch {
-          // expected: controller now throws on dispatch failure so the
-          // queue can populate jobStatus.error for dashboard surfacing
+        } catch (error) {
+          capturedMessages.push(error instanceof Error ? error.message : String(error));
         }
         return true;
       });
 
-      vi.mocked(invokeClaudeReview).mockResolvedValue(mockResult);
-
       const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
       await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
 
-      expect(mockDeps.recordCompletion.execute).not.toHaveBeenCalled();
+      expect(capturedMessages).toEqual(['dispatch-failed: branch-not-found']);
     });
   });
 
@@ -805,35 +686,39 @@ describe('handleGitHubWebhook', () => {
     });
   });
 
-  describe('worktree cleanup on close', () => {
-    it('calls removeWorktree on PR close with github identity (covers both closed and merged)', async () => {
-      const removeWorktree = vi.fn(async () => ({ status: 'removed' as const }));
-      const deps = { ...createMockDeps(), removeWorktree };
+  describe('cleanup on PR close', () => {
+    it('delegates cleanup to handleClose with the github identity on PR close', async () => {
+      const deps = createMockDeps();
       const event = GitHubEventFactory.createClosedPr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
       await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
 
-      expect(removeWorktree).toHaveBeenCalledWith(
-        expect.objectContaining({
-          identity: expect.objectContaining({
-            platform: 'github',
-            mrNumber: 123,
-          }),
-        }),
-      );
+      expect(deps.handleClose).toHaveBeenCalledWith({
+        platform: 'github',
+        projectPath: 'test-owner/test-repo',
+        localPath: '/home/user/projects/test-repo',
+        mergeRequestNumber: 123,
+      });
       expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'cleaned', prNumber: 123 }),
+      );
     });
 
-    it('keeps webhook response success when removeWorktree fails on close', async () => {
-      const removeWorktree = vi.fn(async () => ({ status: 'failed' as const, warning: 'boom' }));
-      const deps = { ...createMockDeps(), removeWorktree };
+    it('keeps webhook response success when handleClose reports a failed cleanup outcome', async () => {
+      const deps = createMockDeps();
+      vi.mocked(deps.handleClose).mockResolvedValueOnce({
+        status: 'cleaned',
+        jobCancelled: false,
+        trackingArchived: false,
+        contextDeleted: false,
+      });
       const event = GitHubEventFactory.createClosedPr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
       await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
 
-      expect(removeWorktree).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'cleaned' }));
     });
@@ -919,6 +804,7 @@ describe('handleGitHubWebhook', () => {
 
       await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
 
+      expect(mockDeps.handleClose).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({

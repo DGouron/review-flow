@@ -19,6 +19,7 @@ import {
 } from '@/frameworks/config/configLoader.js';
 import {
   cancelJob,
+  createJobId,
   getJobStatus,
   enqueueReview,
   getJobsStatus,
@@ -35,6 +36,7 @@ import {
   setTriggerMode,
 } from '@/frameworks/settings/runtimeSettings.js';
 import type { Dependencies } from '@/main/dependencies.js';
+import { buildExecuteReview, buildGitHubInventoryGateway } from '@/main/executeReviewWiring.js';
 import { registerWebSocketRoutes } from '@/main/websocket.js';
 import {
   broadcastBudgetExceeded,
@@ -107,11 +109,13 @@ import { pendingReviewsRoutes } from '@/modules/review-execution/interface-adapt
 import { reviewRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/reviews.routes.js';
 import { PendingReviewRequestFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/pendingReviewRequest.fileSystem.gateway.js';
 import { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
+import { GitLabThreadInventoryGateway } from '@/modules/review-execution/interface-adapters/gateways/threadInventory.gitlab.gateway.js';
 import { PendingReviewPresenter } from '@/modules/review-execution/interface-adapters/presenters/pendingReview.presenter.js';
 import { ProcessorRegistry } from '@/modules/review-execution/services/processorRegistry.js';
 import { ConfirmPendingReviewUseCase } from '@/modules/review-execution/usecases/confirmPendingReview.usecase.js';
 import { DismissPendingReviewUseCase } from '@/modules/review-execution/usecases/dismissPendingReview.usecase.js';
 import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
+import { handleClose } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import { ListPendingReviewsUseCase } from '@/modules/review-execution/usecases/listPendingReviews.usecase.js';
 import { setupWizardRoutes } from '@/modules/setup-wizard/interface-adapters/controllers/http/setupWizard.routes.js';
 import { SetupProcessChildProcessGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupProcess.childProcess.gateway.js';
@@ -415,31 +419,60 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
   // ReviewJob snapshot. One builder per platform, registered across every trigger
   // source and job type (the registry keys on platform × triggerSource × jobType).
   const processorRegistry = new ProcessorRegistry();
-  const gitLabReviewProcessorDeps = {
+
+  const gitLabThreadFetchGatewayForReview = new GitLabThreadFetchGateway(defaultGitLabExecutor);
+  const gitHubThreadFetchGatewayForReview = new GitHubThreadFetchGateway(defaultGitHubExecutor);
+  const gitLabNoteCommentPostGateway = new EgressScannedNoteCommentPostGateway(
+    new GitLabNoteCommentPostCliGateway(defaultGitLabExecutor),
+    egressScanner,
+    egressTraceGateway,
+  );
+  const gitHubNoteCommentPostGateway = new EgressScannedNoteCommentPostGateway(
+    new GitHubNoteCommentPostCliGateway(defaultGitHubExecutor),
+    egressScanner,
+    egressTraceGateway,
+  );
+
+  const gitLabExecuteReview = buildExecuteReview({
+    platform: 'gitlab',
+    logger: deps.logger,
     reviewContextGateway: deps.reviewContextGateway,
-    threadFetchGateway: new GitLabThreadFetchGateway(defaultGitLabExecutor),
+    threadFetchGateway: gitLabThreadFetchGatewayForReview,
     diffMetadataFetchGateway: new GitLabDiffMetadataFetchGateway(defaultGitLabExecutor),
     diffStatsFetchGateway: new GitLabDiffStatsFetchGateway(defaultGitLabExecutor),
+    noteCommentPostGateway: gitLabNoteCommentPostGateway,
+    inventoryGateway: new GitLabThreadInventoryGateway(defaultGitLabExecutor),
     recordCompletion: new RecordReviewCompletionUseCase(trackingGw),
+    syncThreads: new SyncThreadsUseCase(trackingGw, gitLabThreadFetchGatewayForReview),
     claudeInvokerDeps,
-    noteCommentPostGateway: new EgressScannedNoteCommentPostGateway(
-      new GitLabNoteCommentPostCliGateway(defaultGitLabExecutor),
-      egressScanner,
-      egressTraceGateway,
-    ),
+  });
+  const gitHubExecuteReview = buildExecuteReview({
+    platform: 'github',
+    logger: deps.logger,
+    reviewContextGateway: deps.reviewContextGateway,
+    threadFetchGateway: gitHubThreadFetchGatewayForReview,
+    diffMetadataFetchGateway: new GitHubDiffMetadataFetchGateway(defaultGitHubExecutor),
+    diffStatsFetchGateway: new GitHubDiffStatsFetchGateway(defaultGitHubExecutor),
+    noteCommentPostGateway: gitHubNoteCommentPostGateway,
+    inventoryGateway: buildGitHubInventoryGateway(gitHubThreadFetchGatewayForReview),
+    recordCompletion: new RecordReviewCompletionUseCase(trackingGw),
+    syncThreads: new SyncThreadsUseCase(trackingGw, gitHubThreadFetchGatewayForReview),
+    claudeInvokerDeps,
+  });
+
+  const gitLabReviewProcessorDeps = {
+    reviewContextGateway: deps.reviewContextGateway,
+    diffStatsFetchGateway: new GitLabDiffStatsFetchGateway(defaultGitLabExecutor),
+    recordCompletion: new RecordReviewCompletionUseCase(trackingGw),
+    noteCommentPostGateway: gitLabNoteCommentPostGateway,
+    executeReview: gitLabExecuteReview,
   };
   const gitHubReviewProcessorDeps = {
     reviewContextGateway: deps.reviewContextGateway,
-    threadFetchGateway: new GitHubThreadFetchGateway(defaultGitHubExecutor),
-    diffMetadataFetchGateway: new GitHubDiffMetadataFetchGateway(defaultGitHubExecutor),
     diffStatsFetchGateway: new GitHubDiffStatsFetchGateway(defaultGitHubExecutor),
     recordCompletion: new RecordReviewCompletionUseCase(trackingGw),
-    claudeInvokerDeps,
-    noteCommentPostGateway: new EgressScannedNoteCommentPostGateway(
-      new GitHubNoteCommentPostCliGateway(defaultGitHubExecutor),
-      egressScanner,
-      egressTraceGateway,
-    ),
+    noteCommentPostGateway: gitHubNoteCommentPostGateway,
+    executeReview: gitHubExecuteReview,
   };
   const gitLabReviewProcessorBuilder = buildGitLabReviewProcessor(
     gitLabReviewProcessorDeps,
@@ -538,6 +571,16 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
       transitionState: new TransitionStateUseCase(trackingGw),
       checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGw),
       syncThreads: new SyncThreadsUseCase(trackingGw, threadFetchGw),
+      executeReview: gitLabExecuteReview,
+      handleClose: (input) =>
+        handleClose(input, {
+          trackingGateway: trackingGw,
+          reviewContextGateway: deps.reviewContextGateway,
+          cancelJob,
+          buildJobId: createJobId,
+          removeWorktree: removeWorktreeAction,
+          logger: deps.logger,
+        }),
       enforceBudget,
       broadcastBudgetExceeded,
       getRepositories: () => deps.config.repositories,
@@ -592,6 +635,16 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
       transitionState: new TransitionStateUseCase(trackingGw),
       checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGw),
       syncThreads: new SyncThreadsUseCase(trackingGw, gitHubThreadFetchGw),
+      executeReview: gitHubExecuteReview,
+      handleClose: (input) =>
+        handleClose(input, {
+          trackingGateway: trackingGw,
+          reviewContextGateway: deps.reviewContextGateway,
+          cancelJob,
+          buildJobId: createJobId,
+          removeWorktree: removeWorktreeAction,
+          logger: deps.logger,
+        }),
       enforceBudget,
       broadcastBudgetExceeded,
       getRepositories: () => deps.config.repositories,
