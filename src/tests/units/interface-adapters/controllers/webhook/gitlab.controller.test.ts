@@ -94,12 +94,17 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { findRepositoryByProjectPath } from '@/config/loader.js';
 import { enqueueReview } from '@/frameworks/queue/pQueueAdapter.js';
 import { MEMBER_ACCESS_LEVELS } from '@/modules/platform-integration/entities/memberAccess/memberAccess.js';
+import type { WebhookEvent } from '@/modules/platform-integration/entities/webhookEvent/webhookEvent.js';
 import {
   handleGitLabWebhook,
   extractBaseUrl,
   buildGitLabReviewProcessor,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
 import { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
+import {
+  processWebhook,
+  type ProcessWebhookResult,
+} from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { ExecuteReviewResult } from '@/modules/review-execution/usecases/executeReview.usecase.js';
 import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
 import type { HandleCloseResult } from '@/modules/review-execution/usecases/handleClose.usecase.js';
@@ -177,6 +182,18 @@ function createAcceptAllEnforceBudget() {
 
 function createDefaultDeps(trackingGateway: ReturnType<typeof createMockTrackingGateway>) {
   const threadFetchGateway = { fetchThreads: vi.fn(() => []) };
+  const recordPush = new RecordPushUseCase(trackingGateway);
+  const transitionState = new TransitionStateUseCase(trackingGateway);
+  const checkFollowupNeeded = new CheckFollowupNeededUseCase(trackingGateway);
+  const removeWorktree = vi.fn(async () => ({ status: 'removed' as const }));
+  const handleClose = vi.fn(
+    async (): Promise<HandleCloseResult> => ({
+      status: 'cleaned',
+      jobCancelled: true,
+      trackingArchived: true,
+      contextDeleted: true,
+    }),
+  );
   return {
     reviewContextGateway: createStubContextGateway(),
     threadFetchGateway,
@@ -186,9 +203,9 @@ function createDefaultDeps(trackingGateway: ReturnType<typeof createMockTracking
     diffStatsFetchGateway: { fetchDiffStats: vi.fn(() => null) },
     trackAssignment: new TrackAssignmentUseCase(trackingGateway),
     recordCompletion: new RecordReviewCompletionUseCase(trackingGateway),
-    recordPush: new RecordPushUseCase(trackingGateway),
-    transitionState: new TransitionStateUseCase(trackingGateway),
-    checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGateway),
+    recordPush,
+    transitionState,
+    checkFollowupNeeded,
     syncThreads: new SyncThreadsUseCase(trackingGateway, threadFetchGateway),
     executeReview: vi.fn(
       async (): Promise<ExecuteReviewResult> => ({
@@ -204,18 +221,20 @@ function createDefaultDeps(trackingGateway: ReturnType<typeof createMockTracking
         },
       }),
     ),
-    handleClose: vi.fn(
-      async (): Promise<HandleCloseResult> => ({
-        status: 'cleaned',
-        jobCancelled: true,
-        trackingArchived: true,
-        contextDeleted: true,
+    handleClose,
+    processWebhook: (event: WebhookEvent): Promise<ProcessWebhookResult> =>
+      processWebhook(event, {
+        handleClose,
+        transitionState,
+        recordPush,
+        checkFollowupNeeded,
+        removeWorktree,
+        logger: createStubLogger(),
       }),
-    ),
     enforceBudget: createAcceptAllEnforceBudget(),
     broadcastBudgetExceeded: vi.fn(),
     getRepositories: vi.fn(() => []),
-    removeWorktree: vi.fn(async () => ({ status: 'removed' as const })),
+    removeWorktree,
     recordBypass: new RecordBypassUseCase(trackingGateway),
     noteCommentPostGateway: new StubNoteCommentPostGateway(),
     handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGateway),
@@ -465,7 +484,19 @@ describe('handleGitLabWebhook', () => {
 
     it('calls removeWorktree on MR merge with platform/projectPath/mrNumber identity', async () => {
       const removeWorktree = vi.fn(async () => ({ status: 'removed' as const }));
-      const deps = { ...defaultDeps, removeWorktree };
+      const deps = {
+        ...defaultDeps,
+        removeWorktree,
+        processWebhook: (event: WebhookEvent): Promise<ProcessWebhookResult> =>
+          processWebhook(event, {
+            handleClose: defaultDeps.handleClose,
+            transitionState: defaultDeps.transitionState,
+            recordPush: defaultDeps.recordPush,
+            checkFollowupNeeded: defaultDeps.checkFollowupNeeded,
+            removeWorktree,
+            logger: createStubLogger(),
+          }),
+      };
       const event = GitLabEventFactory.createMergedMr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 

@@ -63,9 +63,15 @@ vi.mock('@/config/projectConfig.js', () => ({
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 import { enqueueReview } from '@/frameworks/queue/pQueueAdapter.js';
+import type { WebhookEvent } from '@/modules/platform-integration/entities/webhookEvent/webhookEvent.js';
 import { handleGitHubWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
 import type { GitHubWebhookDependencies } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
+import {
+  processWebhook,
+  type ProcessWebhookResult,
+} from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import type { TransitionStateResult } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
 import { GitHubEventFactory } from '@/tests/factories/gitHubEvent.factory.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
@@ -158,6 +164,20 @@ function createDefaultDeps(
     transitionState: { execute: vi.fn() },
     checkFollowupNeeded: { execute: checkFollowupNeededExecute },
     syncThreads: { execute: vi.fn(() => null) },
+    processWebhook: (event: WebhookEvent): Promise<ProcessWebhookResult> =>
+      processWebhook(event, {
+        handleClose: async () => ({
+          status: 'cleaned',
+          jobCancelled: false,
+          trackingArchived: false,
+          contextDeleted: false,
+        }),
+        transitionState: { execute: vi.fn((): TransitionStateResult => ({ ok: true })) },
+        recordPush: { execute: recordPushExecute },
+        checkFollowupNeeded: { execute: checkFollowupNeededExecute },
+        removeWorktree: async () => ({ status: 'removed' }),
+        logger: createStubLogger(),
+      }),
     enforceBudget: { execute: enforceBudgetExecute },
     broadcastBudgetExceeded: vi.fn(),
     getRepositories: vi.fn(() => []),

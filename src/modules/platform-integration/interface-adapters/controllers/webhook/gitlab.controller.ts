@@ -27,6 +27,7 @@ import {
   filterGitLabNoteEvent,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
 import type { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
+import type { ProcessWebhook } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import {
   DEFAULT_AGENTS,
@@ -104,6 +105,7 @@ export interface GitLabWebhookDependencies {
   syncThreads: SyncThreadsUseCase;
   executeReview: ExecuteReview;
   handleClose: HandleClose;
+  processWebhook: ProcessWebhook;
   enforceBudget: Pick<EnforceBudgetUseCase, 'execute'>;
   broadcastBudgetExceeded: (payload: BudgetExceededPayload) => void;
   getRepositories: () => RepositoryConfig[];
@@ -235,7 +237,7 @@ export async function handleGitLabWebhook(
   _trackingGateway: ReviewRequestTrackingGateway,
   deps: GitLabWebhookDependencies,
 ): Promise<void> {
-  const { trackAssignment, recordPush, transitionState, checkFollowupNeeded } = deps;
+  const { trackAssignment } = deps;
   // 1. Verify signature
   const verification = verifyGitLabSignature(request);
   if (!verification.valid) {
@@ -292,20 +294,23 @@ export async function handleGitLabWebhook(
 
     const repoConfig = findRepositoryByProjectPath(projectPath);
     if (repoConfig) {
-      const cleanup = await deps.handleClose({
+      const result = await deps.processWebhook({
+        type: 'close',
         platform: 'gitlab',
         projectPath,
         localPath: repoConfig.localPath,
         mergeRequestNumber: mrNumber,
       });
 
-      reply.status(200).send({
-        status: cleanup.status,
-        mrNumber,
-        jobCancelled: cleanup.jobCancelled,
-        trackingArchived: cleanup.trackingArchived,
-      });
-      return;
+      if (result.type === 'closed') {
+        reply.status(200).send({
+          status: 'cleaned',
+          mrNumber,
+          jobCancelled: result.jobCancelled,
+          trackingArchived: result.trackingArchived,
+        });
+        return;
+      }
     }
 
     // No repo config, just acknowledge
@@ -319,37 +324,19 @@ export async function handleGitLabWebhook(
   if (mergeResult.shouldProcess) {
     const repoConfig = findRepositoryByProjectPath(mergeResult.projectPath);
     if (repoConfig) {
-      const mrId = `gitlab-${mergeResult.projectPath}-${mergeResult.mergeRequestNumber}`;
-      transitionState.execute({ projectPath: repoConfig.localPath, mrId, targetState: 'merged' });
+      const result = await deps.processWebhook({
+        type: 'merge',
+        platform: 'gitlab',
+        projectPath: mergeResult.projectPath,
+        localPath: repoConfig.localPath,
+        mergeRequestNumber: mergeResult.mergeRequestNumber,
+      });
 
-      try {
-        const worktreeRemoval = await deps.removeWorktree({
-          identity: {
-            platform: 'gitlab',
-            projectPath: mergeResult.projectPath,
-            mrNumber: mergeResult.mergeRequestNumber,
-          },
-          sourceCheckoutPath: repoConfig.localPath,
-        });
-        if (worktreeRemoval.status === 'failed') {
-          logger.warn(
-            { mrNumber: mergeResult.mergeRequestNumber, warning: worktreeRemoval.warning },
-            'removeWorktree failed on merge',
-          );
-        }
-      } catch (error) {
-        logger.warn(
-          {
-            mrNumber: mergeResult.mergeRequestNumber,
-            error: error instanceof Error ? error.message : String(error),
-          },
-          'removeWorktree threw on merge',
-        );
+      if (result.type === 'merged') {
+        logger.info({ mrNumber: mergeResult.mergeRequestNumber }, 'MR marked as merged');
+        reply.status(200).send({ status: 'merged', mrNumber: mergeResult.mergeRequestNumber });
+        return;
       }
-
-      logger.info({ mrNumber: mergeResult.mergeRequestNumber }, 'MR marked as merged');
-      reply.status(200).send({ status: 'merged', mrNumber: mergeResult.mergeRequestNumber });
-      return;
     }
   }
 
@@ -360,7 +347,7 @@ export async function handleGitLabWebhook(
     if (repoConfig) {
       const mrId = `gitlab-${approveResult.projectPath}-${approveResult.mergeRequestNumber}`;
       const threshold = deps.getQualityThreshold(repoConfig.localPath);
-      const transitionResult = transitionState.execute({
+      const transitionResult = deps.transitionState.execute({
         projectPath: repoConfig.localPath,
         mrId,
         targetState: 'approved',
@@ -479,43 +466,26 @@ export async function handleGitLabWebhook(
       // Find repo config to get local path
       const updateRepoConfig = findRepositoryByProjectPath(updateResult.projectPath);
       if (updateRepoConfig) {
-        // Record the push event
-        const mr = recordPush.execute({
-          projectPath: updateRepoConfig.localPath,
-          mrNumber: updateResult.mergeRequestNumber,
+        const eligibility = await deps.processWebhook({
+          type: 'followup-push',
           platform: 'gitlab',
+          projectPath: updateResult.projectPath,
+          localPath: updateRepoConfig.localPath,
+          mergeRequestNumber: updateResult.mergeRequestNumber,
+          mergeRequestUrl: updateResult.mergeRequestUrl,
+          sourceBranch: updateResult.sourceBranch,
+          targetBranch: updateResult.targetBranch,
         });
-        logger.info(
-          {
-            mrNumber: updateResult.mergeRequestNumber,
-            mrFound: !!mr,
-            mrState: mr?.state,
-            lastPushAt: mr?.lastPushAt,
-            lastReviewAt: mr?.lastReviewAt,
-          },
-          'Push event recorded',
-        );
 
-        // Check if this MR needs a followup (has open threads and was pushed since last review)
-        const needsFollowup =
-          mr &&
-          checkFollowupNeeded.execute({
-            projectPath: updateRepoConfig.localPath,
-            mrNumber: updateResult.mergeRequestNumber,
-            platform: 'gitlab',
-          });
-        logger.info({ needsFollowup, mrState: mr?.state }, 'Followup check result');
+        if (
+          eligibility.type === 'followup-skipped' &&
+          eligibility.reason === 'Auto-followup disabled'
+        ) {
+          reply.status(200).send({ status: 'ignored', reason: 'Auto-followup disabled' });
+          return;
+        }
 
-        if (needsFollowup) {
-          if (mr.autoFollowup === false) {
-            logger.info(
-              { mrNumber: updateResult.mergeRequestNumber, project: updateResult.projectPath },
-              'Auto-followup disabled for this MR, skipping',
-            );
-            reply.status(200).send({ status: 'ignored', reason: 'Auto-followup disabled' });
-            return;
-          }
-
+        if (eligibility.type === 'followup-eligible') {
           logger.info(
             { mrNumber: updateResult.mergeRequestNumber, project: updateResult.projectPath },
             'Auto-triggering followup review after push',

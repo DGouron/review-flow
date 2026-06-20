@@ -26,6 +26,7 @@ import {
   filterGitHubIssueCommentEvent,
   filterGitHubPullRequestReviewEvent,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
+import type { ProcessWebhook } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import {
   DEFAULT_AGENTS,
@@ -67,6 +68,7 @@ export interface GitHubWebhookDependencies {
   syncThreads: SyncThreadsUseCase;
   executeReview: ExecuteReview;
   handleClose: HandleClose;
+  processWebhook: ProcessWebhook;
   enforceBudget: Pick<EnforceBudgetUseCase, 'execute'>;
   broadcastBudgetExceeded: (payload: BudgetExceededPayload) => void;
   getRepositories: () => RepositoryConfig[];
@@ -315,7 +317,7 @@ export async function handleGitHubWebhook(
   _trackingGateway: ReviewRequestTrackingGateway,
   deps: GitHubWebhookDependencies,
 ): Promise<void> {
-  const { trackAssignment, recordPush, checkFollowupNeeded } = deps;
+  const { trackAssignment } = deps;
   // 1. Verify signature
   const verification = verifyGitHubSignature(request);
   if (!verification.valid) {
@@ -360,20 +362,23 @@ export async function handleGitHubWebhook(
 
     const repoConfig = findRepositoryByRemoteUrl(event.repository.clone_url);
     if (repoConfig) {
-      const cleanup = await deps.handleClose({
+      const result = await deps.processWebhook({
+        type: 'close',
         platform: 'github',
         projectPath,
         localPath: repoConfig.localPath,
         mergeRequestNumber: prNumber,
       });
 
-      reply.status(200).send({
-        status: cleanup.status,
-        prNumber,
-        jobCancelled: cleanup.jobCancelled,
-        trackingArchived: cleanup.trackingArchived,
-      });
-      return;
+      if (result.type === 'closed') {
+        reply.status(200).send({
+          status: 'cleaned',
+          prNumber,
+          jobCancelled: result.jobCancelled,
+          trackingArchived: result.trackingArchived,
+        });
+        return;
+      }
     }
 
     // No repo config, just acknowledge
@@ -408,41 +413,26 @@ export async function handleGitHubWebhook(
     if (updateResult.shouldProcess && updateResult.isFollowup) {
       const updateRepoConfig = findRepositoryByRemoteUrl(event.repository.clone_url);
       if (updateRepoConfig) {
-        const mr = recordPush.execute({
-          projectPath: updateRepoConfig.localPath,
-          mrNumber: updateResult.mergeRequestNumber,
+        const eligibility = await deps.processWebhook({
+          type: 'followup-push',
           platform: 'github',
+          projectPath: updateResult.projectPath,
+          localPath: updateRepoConfig.localPath,
+          mergeRequestNumber: updateResult.mergeRequestNumber,
+          mergeRequestUrl: updateResult.mergeRequestUrl,
+          sourceBranch: updateResult.sourceBranch,
+          targetBranch: updateResult.targetBranch,
         });
-        logger.info(
-          {
-            prNumber: updateResult.mergeRequestNumber,
-            mrFound: !!mr,
-            mrState: mr?.state,
-            lastPushAt: mr?.lastPushAt,
-            lastReviewAt: mr?.lastReviewAt,
-          },
-          'Push event recorded',
-        );
 
-        const needsFollowup =
-          mr &&
-          checkFollowupNeeded.execute({
-            projectPath: updateRepoConfig.localPath,
-            mrNumber: updateResult.mergeRequestNumber,
-            platform: 'github',
-          });
-        logger.info({ needsFollowup, mrState: mr?.state }, 'Followup check result');
+        if (
+          eligibility.type === 'followup-skipped' &&
+          eligibility.reason === 'Auto-followup disabled'
+        ) {
+          reply.status(200).send({ status: 'ignored', reason: 'Auto-followup disabled' });
+          return;
+        }
 
-        if (needsFollowup) {
-          if (mr.autoFollowup === false) {
-            logger.info(
-              { prNumber: updateResult.mergeRequestNumber, project: updateResult.projectPath },
-              'Auto-followup disabled for this PR, skipping',
-            );
-            reply.status(200).send({ status: 'ignored', reason: 'Auto-followup disabled' });
-            return;
-          }
-
+        if (eligibility.type === 'followup-eligible') {
           logger.info(
             { prNumber: updateResult.mergeRequestNumber, project: updateResult.projectPath },
             'Auto-triggering followup review after push',

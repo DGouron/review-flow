@@ -105,6 +105,7 @@ import {
 } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
 import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
 import { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
+import { processWebhook } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import { pendingReviewsRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/pendingReviews.routes.js';
 import { reviewRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/reviews.routes.js';
 import { PendingReviewRequestFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/pendingReviewRequest.fileSystem.gateway.js';
@@ -115,7 +116,10 @@ import { ProcessorRegistry } from '@/modules/review-execution/services/processor
 import { ConfirmPendingReviewUseCase } from '@/modules/review-execution/usecases/confirmPendingReview.usecase.js';
 import { DismissPendingReviewUseCase } from '@/modules/review-execution/usecases/dismissPendingReview.usecase.js';
 import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
-import { handleClose } from '@/modules/review-execution/usecases/handleClose.usecase.js';
+import {
+  handleClose,
+  type HandleClose,
+} from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import { ListPendingReviewsUseCase } from '@/modules/review-execution/usecases/listPendingReviews.usecase.js';
 import { setupWizardRoutes } from '@/modules/setup-wizard/interface-adapters/controllers/http/setupWizard.routes.js';
 import { SetupProcessChildProcessGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupProcess.childProcess.gateway.js';
@@ -560,6 +564,15 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     if (!proceed) {
       return;
     }
+    const gitLabHandleClose: HandleClose = (input) =>
+      handleClose(input, {
+        trackingGateway: trackingGw,
+        reviewContextGateway: deps.reviewContextGateway,
+        cancelJob,
+        buildJobId: createJobId,
+        removeWorktree: removeWorktreeAction,
+        logger: deps.logger,
+      });
     await handleGitLabWebhook(request, reply, deps.logger, trackingGw, {
       reviewContextGateway: deps.reviewContextGateway,
       threadFetchGateway: threadFetchGw,
@@ -572,12 +585,13 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
       checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGw),
       syncThreads: new SyncThreadsUseCase(trackingGw, threadFetchGw),
       executeReview: gitLabExecuteReview,
-      handleClose: (input) =>
-        handleClose(input, {
-          trackingGateway: trackingGw,
-          reviewContextGateway: deps.reviewContextGateway,
-          cancelJob,
-          buildJobId: createJobId,
+      handleClose: gitLabHandleClose,
+      processWebhook: (event) =>
+        processWebhook(event, {
+          handleClose: gitLabHandleClose,
+          transitionState: new TransitionStateUseCase(trackingGw),
+          recordPush: new RecordPushUseCase(trackingGw),
+          checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGw),
           removeWorktree: removeWorktreeAction,
           logger: deps.logger,
         }),
@@ -624,6 +638,15 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     if (!proceedGitHub) {
       return;
     }
+    const gitHubHandleClose: HandleClose = (input) =>
+      handleClose(input, {
+        trackingGateway: trackingGw,
+        reviewContextGateway: deps.reviewContextGateway,
+        cancelJob,
+        buildJobId: createJobId,
+        removeWorktree: removeWorktreeAction,
+        logger: deps.logger,
+      });
     await handleGitHubWebhook(request, reply, deps.logger, trackingGw, {
       reviewContextGateway: deps.reviewContextGateway,
       threadFetchGateway: gitHubThreadFetchGw,
@@ -636,12 +659,13 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
       checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGw),
       syncThreads: new SyncThreadsUseCase(trackingGw, gitHubThreadFetchGw),
       executeReview: gitHubExecuteReview,
-      handleClose: (input) =>
-        handleClose(input, {
-          trackingGateway: trackingGw,
-          reviewContextGateway: deps.reviewContextGateway,
-          cancelJob,
-          buildJobId: createJobId,
+      handleClose: gitHubHandleClose,
+      processWebhook: (event) =>
+        processWebhook(event, {
+          handleClose: gitHubHandleClose,
+          transitionState: new TransitionStateUseCase(trackingGw),
+          recordPush: new RecordPushUseCase(trackingGw),
+          checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGw),
           removeWorktree: removeWorktreeAction,
           logger: deps.logger,
         }),

@@ -82,7 +82,13 @@ vi.mock('../../../../../config/projectConfig.js', () => ({
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
+import type { WebhookEvent } from '@/modules/platform-integration/entities/webhookEvent/webhookEvent.js';
 import { handleGitHubWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
+import {
+  processWebhook,
+  type ProcessWebhookResult,
+} from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
+import type { HandleCloseResult } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 
 import { findRepositoryByRemoteUrl } from '../../../../../config/loader.js';
@@ -93,6 +99,18 @@ import { TrackedMrFactory } from '../../../../factories/trackedMr.factory.js';
 import { createStubLogger } from '../../../../stubs/logger.stub.js';
 
 function createMockDeps(): GitHubWebhookDependencies {
+  const recordPush = { execute: vi.fn(() => null) };
+  const transitionState = { execute: vi.fn() };
+  const checkFollowupNeeded = { execute: vi.fn(() => false) };
+  const removeWorktree = vi.fn(async () => ({ status: 'removed' as const }));
+  const handleClose = vi.fn(
+    async (): Promise<HandleCloseResult> => ({
+      status: 'cleaned',
+      jobCancelled: true,
+      trackingArchived: true,
+      contextDeleted: true,
+    }),
+  );
   return {
     reviewContextGateway: {
       create: vi.fn(),
@@ -116,9 +134,9 @@ function createMockDeps(): GitHubWebhookDependencies {
     },
     trackAssignment: { execute: vi.fn() },
     recordCompletion: { execute: vi.fn() },
-    recordPush: { execute: vi.fn(() => null) },
-    transitionState: { execute: vi.fn() },
-    checkFollowupNeeded: { execute: vi.fn(() => false) },
+    recordPush,
+    transitionState,
+    checkFollowupNeeded,
     syncThreads: { execute: vi.fn(() => null) },
     executeReview: vi.fn(async () => ({
       status: 'completed',
@@ -132,12 +150,16 @@ function createMockDeps(): GitHubWebhookDependencies {
         durationMs: 1200,
       },
     })),
-    handleClose: vi.fn(async () => ({
-      status: 'cleaned',
-      jobCancelled: true,
-      trackingArchived: true,
-      contextDeleted: true,
-    })),
+    handleClose,
+    processWebhook: (event: WebhookEvent): Promise<ProcessWebhookResult> =>
+      processWebhook(event, {
+        handleClose,
+        transitionState,
+        recordPush,
+        checkFollowupNeeded,
+        removeWorktree,
+        logger: createStubLogger(),
+      }),
     enforceBudget: {
       execute: vi.fn(async () => ({
         accepted: true,
@@ -153,7 +175,7 @@ function createMockDeps(): GitHubWebhookDependencies {
     },
     broadcastBudgetExceeded: vi.fn(),
     getRepositories: vi.fn(() => []),
-    removeWorktree: vi.fn(async () => ({ status: 'removed' as const })),
+    removeWorktree,
     recordBypass: { execute: vi.fn(() => ({ kind: 'no-marker' })) },
     noteCommentPostGateway: { postComment: vi.fn(async () => undefined) },
     handlePlatformApproval: { execute: vi.fn(() => ({ kind: 'allowed' })) },
