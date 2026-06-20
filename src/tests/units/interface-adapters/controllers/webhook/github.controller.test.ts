@@ -132,6 +132,12 @@ function createMockDeps(): GitHubWebhookDependencies {
         durationMs: 1200,
       },
     })),
+    handleClose: vi.fn(async () => ({
+      status: 'cleaned',
+      jobCancelled: true,
+      trackingArchived: true,
+      contextDeleted: true,
+    })),
     enforceBudget: {
       execute: vi.fn(async () => ({
         accepted: true,
@@ -680,35 +686,39 @@ describe('handleGitHubWebhook', () => {
     });
   });
 
-  describe('worktree cleanup on close', () => {
-    it('calls removeWorktree on PR close with github identity (covers both closed and merged)', async () => {
-      const removeWorktree = vi.fn(async () => ({ status: 'removed' as const }));
-      const deps = { ...createMockDeps(), removeWorktree };
+  describe('cleanup on PR close', () => {
+    it('delegates cleanup to handleClose with the github identity on PR close', async () => {
+      const deps = createMockDeps();
       const event = GitHubEventFactory.createClosedPr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
       await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
 
-      expect(removeWorktree).toHaveBeenCalledWith(
-        expect.objectContaining({
-          identity: expect.objectContaining({
-            platform: 'github',
-            mrNumber: 123,
-          }),
-        }),
-      );
+      expect(deps.handleClose).toHaveBeenCalledWith({
+        platform: 'github',
+        projectPath: 'test-owner/test-repo',
+        localPath: '/home/user/projects/test-repo',
+        mergeRequestNumber: 123,
+      });
       expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'cleaned', prNumber: 123 }),
+      );
     });
 
-    it('keeps webhook response success when removeWorktree fails on close', async () => {
-      const removeWorktree = vi.fn(async () => ({ status: 'failed' as const, warning: 'boom' }));
-      const deps = { ...createMockDeps(), removeWorktree };
+    it('keeps webhook response success when handleClose reports a failed cleanup outcome', async () => {
+      const deps = createMockDeps();
+      vi.mocked(deps.handleClose).mockResolvedValueOnce({
+        status: 'cleaned',
+        jobCancelled: false,
+        trackingArchived: false,
+        contextDeleted: false,
+      });
       const event = GitHubEventFactory.createClosedPr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
       await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
 
-      expect(removeWorktree).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'cleaned' }));
     });
@@ -794,6 +804,7 @@ describe('handleGitHubWebhook', () => {
 
       await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
 
+      expect(mockDeps.handleClose).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({

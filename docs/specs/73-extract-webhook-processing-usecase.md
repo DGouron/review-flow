@@ -8,7 +8,7 @@ milestone: "Architecture Cleanup"
 
 # SPEC-073: Extract Webhook Processing Use Case
 
-## Status: implementing (Stage 1 of 4 done)
+## Status: implementing (Stages 1-2 of 4 done)
 
 > The codebase was restructured into a modular monolith (`src/modules/<context>/...`) after
 > this spec was drafted; the original flat `src/usecases/` paths below are stale. See the
@@ -37,9 +37,33 @@ primary/fallback path, regression-tested); per-site thread-fetch strategy preser
 
 **Verification** — `yarn verify` green (465 files / 3865 tests pass); acceptance test GREEN.
 
-**Remaining (out of scope here, future runs):** Stage 2 `handleClose`/state-transition
-extraction, Stage 3 `ProcessWebhook` orchestrator + `WebhookEvent` discriminated union,
-Stage 4 full controller thinning.
+## Implementation (Stage 2 — `handleClose` extraction)
+
+Plan: `docs/plans/73-handle-close.plan.md` · Report: `docs/reports/73-handle-close.report.md`
+
+The close/cleanup block (cancel running job → archive tracking → delete review context →
+remove worktree), copy-pasted in both controllers' close handlers, is extracted into one
+function-based use case. Both controllers' close paths now delegate to it.
+
+**Artefacts**
+- Use case: `src/modules/review-execution/usecases/handleClose.usecase.ts` (4-effect cleanup,
+  best-effort worktree removal; `mergeRequestId` built internally — the only platform divergence)
+- `RemoveWorktreeAction` type moved to the worktree entity layer
+  (`src/modules/worktree-management/entities/worktree/worktree.schema.ts`) so the use case
+  imports it inward-safely (Dependency Rule)
+- Both webhook controllers' close handlers delegate to `deps.handleClose`; wired in `routes.ts`
+
+**Decisions** — `cancelJob`/`buildJobId` injected as plain fns (no port); merge/approve
+transitions LEFT in controllers (already composed from `TransitionStateUseCase` — wrapping
+them would drag platform-divergent HTTP gateways into a use case); HTTP reply shapes preserved
+(unification deferred to Stage 4). Known pre-existing asymmetry flagged: a merged GitHub PR
+arrives as a close event and is archived, not recorded as `state:'merged'` (out of scope).
+
+**Verification** — `yarn verify` green (467 files / 3879 tests pass); acceptance test GREEN.
+
+**Remaining (out of scope here, future runs):** Stage 3 `ProcessWebhook` orchestrator +
+`WebhookEvent` discriminated union, Stage 4 full controller thinning (incl. removing the
+now-unused `_trackingGateway` param and unifying HTTP reply shapes).
 
 ## User Story
 

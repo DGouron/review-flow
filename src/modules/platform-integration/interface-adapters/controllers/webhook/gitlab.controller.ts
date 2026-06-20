@@ -9,7 +9,7 @@ import {
   getProjectLanguage,
 } from '@/config/projectConfig.js';
 import type { ClaudeInvokerDependencies } from '@/frameworks/claude/claudeInvoker.js';
-import { enqueueReview, createJobId, cancelJob } from '@/frameworks/queue/pQueueAdapter.js';
+import { enqueueReview, createJobId } from '@/frameworks/queue/pQueueAdapter.js';
 import type { BudgetExceededPayload } from '@/main/websocket.js';
 import type { ApprovalRevocationGateway } from '@/modules/platform-integration/entities/approvalRevocation/approvalRevocation.gateway.js';
 import type { DiffMetadataFetchGateway } from '@/modules/platform-integration/entities/diffMetadata/diffMetadata.gateway.js';
@@ -39,6 +39,7 @@ import type {
   ExecuteReviewInput,
 } from '@/modules/review-execution/usecases/executeReview.usecase.js';
 import type { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
+import type { HandleClose } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
 import type { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
@@ -51,20 +52,12 @@ import type { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/
 import type { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
 import type { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
 import type { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
-import type {
-  RemoveResult,
-  WorktreeIdentity,
-} from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+import type { RemoveWorktreeAction } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 import {
   verifyGitLabSignature,
   getGitLabEventType,
   getGitLabEventUuid,
 } from '@/security/verifier.js';
-
-export type RemoveWorktreeAction = (input: {
-  identity: WorktreeIdentity;
-  sourceCheckoutPath: string;
-}) => Promise<RemoveResult>;
 
 export function extractBaseUrl(remoteUrl: string): string | null {
   try {
@@ -110,6 +103,7 @@ export interface GitLabWebhookDependencies {
   checkFollowupNeeded: CheckFollowupNeededUseCase;
   syncThreads: SyncThreadsUseCase;
   executeReview: ExecuteReview;
+  handleClose: HandleClose;
   enforceBudget: Pick<EnforceBudgetUseCase, 'execute'>;
   broadcastBudgetExceeded: (payload: BudgetExceededPayload) => void;
   getRepositories: () => RepositoryConfig[];
@@ -238,7 +232,7 @@ export async function handleGitLabWebhook(
   request: FastifyRequest,
   reply: FastifyReply,
   logger: Logger,
-  trackingGateway: ReviewRequestTrackingGateway,
+  _trackingGateway: ReviewRequestTrackingGateway,
   deps: GitLabWebhookDependencies,
 ): Promise<void> {
   const { trackAssignment, recordPush, transitionState, checkFollowupNeeded } = deps;
@@ -295,60 +289,21 @@ export async function handleGitLabWebhook(
   if (closeResult.shouldProcess) {
     const projectPath = closeResult.projectPath;
     const mrNumber = closeResult.mergeRequestNumber;
-    const mrId = `gitlab-${projectPath}-${mrNumber}`;
 
-    // Find repo config
     const repoConfig = findRepositoryByProjectPath(projectPath);
     if (repoConfig) {
-      // Cancel any running job for this MR
-      const jobId = createJobId('gitlab', projectPath, mrNumber);
-      const cancelled = cancelJob(jobId);
-
-      // Archive the MR from tracking
-      const archived = trackingGateway.archive(repoConfig.localPath, mrId);
-
-      // Delete review context file
-      const contextGateway = deps.reviewContextGateway;
-      const contextDeleted = contextGateway.delete(repoConfig.localPath, mrId);
-
-      try {
-        const worktreeRemoval = await deps.removeWorktree({
-          identity: { platform: 'gitlab', projectPath, mrNumber },
-          sourceCheckoutPath: repoConfig.localPath,
-        });
-        if (worktreeRemoval.status === 'failed') {
-          logger.warn(
-            { mrNumber, project: projectPath, warning: worktreeRemoval.warning },
-            'removeWorktree failed on close',
-          );
-        }
-      } catch (error) {
-        logger.warn(
-          {
-            mrNumber,
-            project: projectPath,
-            error: error instanceof Error ? error.message : String(error),
-          },
-          'removeWorktree threw on close',
-        );
-      }
-
-      logger.info(
-        {
-          mrNumber,
-          project: projectPath,
-          jobCancelled: cancelled,
-          trackingArchived: archived,
-          contextDeleted: contextDeleted.deleted,
-        },
-        'MR closed - cleaned up tracking and cancelled job',
-      );
+      const cleanup = await deps.handleClose({
+        platform: 'gitlab',
+        projectPath,
+        localPath: repoConfig.localPath,
+        mergeRequestNumber: mrNumber,
+      });
 
       reply.status(200).send({
-        status: 'cleaned',
+        status: cleanup.status,
         mrNumber,
-        jobCancelled: cancelled,
-        trackingArchived: archived,
+        jobCancelled: cleanup.jobCancelled,
+        trackingArchived: cleanup.trackingArchived,
       });
       return;
     }

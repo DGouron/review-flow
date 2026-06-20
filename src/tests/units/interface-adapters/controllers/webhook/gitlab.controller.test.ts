@@ -102,6 +102,7 @@ import {
 import { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
 import type { ExecuteReviewResult } from '@/modules/review-execution/usecases/executeReview.usecase.js';
 import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
+import type { HandleCloseResult } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
@@ -201,6 +202,14 @@ function createDefaultDeps(trackingGateway: ReturnType<typeof createMockTracking
           threadsClosed: 0,
           durationMs: 1200,
         },
+      }),
+    ),
+    handleClose: vi.fn(
+      async (): Promise<HandleCloseResult> => ({
+        status: 'cleaned',
+        jobCancelled: true,
+        trackingArchived: true,
+        contextDeleted: true,
       }),
     ),
     enforceBudget: createAcceptAllEnforceBudget(),
@@ -378,20 +387,19 @@ describe('handleGitLabWebhook', () => {
     });
   });
 
-  describe('dependency injection: reviewContextGateway', () => {
-    it('should delete review context via injected gateway when MR is closed', async () => {
-      const contextGateway = createStubContextGateway();
-      const deps = { ...defaultDeps, reviewContextGateway: contextGateway };
-
+  describe('dependency injection: handleClose on MR close', () => {
+    it('should delegate cleanup to handleClose when MR is closed', async () => {
       const event = GitLabEventFactory.createClosedMr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
 
-      expect(contextGateway.delete).toHaveBeenCalledWith(
-        '/home/user/projects/test-project',
-        'gitlab-test-org/test-project-42',
-      );
+      expect(defaultDeps.handleClose).toHaveBeenCalledWith({
+        platform: 'gitlab',
+        projectPath: 'test-org/test-project',
+        localPath: '/home/user/projects/test-project',
+        mergeRequestNumber: 42,
+      });
     });
 
     it('should delegate the review run to executeReview when a review is enqueued', async () => {
@@ -437,24 +445,22 @@ describe('handleGitLabWebhook', () => {
   });
 
   describe('worktree cleanup on close and merge', () => {
-    it('calls removeWorktree on MR close with platform/projectPath/mrNumber identity', async () => {
-      const removeWorktree = vi.fn(async () => ({ status: 'removed' as const }));
-      const deps = { ...defaultDeps, removeWorktree };
+    it('maps the handleClose cleanup result onto a 200 cleaned reply on MR close', async () => {
       const event = GitLabEventFactory.createClosedMr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
 
-      expect(removeWorktree).toHaveBeenCalledWith(
-        expect.objectContaining({
-          identity: {
-            platform: 'gitlab',
-            projectPath: 'test-org/test-project',
-            mrNumber: 42,
-          },
-        }),
-      );
+      expect(defaultDeps.handleClose).toHaveBeenCalledWith({
+        platform: 'gitlab',
+        projectPath: 'test-org/test-project',
+        localPath: '/home/user/projects/test-project',
+        mergeRequestNumber: 42,
+      });
       expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'cleaned', mrNumber: 42 }),
+      );
     });
 
     it('calls removeWorktree on MR merge with platform/projectPath/mrNumber identity', async () => {
@@ -477,15 +483,18 @@ describe('handleGitLabWebhook', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('keeps webhook response success when removeWorktree fails', async () => {
-      const removeWorktree = vi.fn(async () => ({ status: 'failed' as const, warning: 'boom' }));
-      const deps = { ...defaultDeps, removeWorktree };
+    it('keeps webhook response success when handleClose reports a failed cleanup outcome', async () => {
+      defaultDeps.handleClose.mockResolvedValueOnce({
+        status: 'cleaned',
+        jobCancelled: false,
+        trackingArchived: false,
+        contextDeleted: false,
+      });
       const event = GitLabEventFactory.createClosedMr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
 
-      expect(removeWorktree).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'cleaned' }));
     });
@@ -1016,6 +1025,7 @@ describe('handleGitLabWebhook', () => {
 
       await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
 
+      expect(defaultDeps.handleClose).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'ignored', reason: 'MR closed, repo not configured' }),

@@ -35,3 +35,8 @@ export type RemoveResult =
   | { status: 'removed' }
   | { status: 'absent' }
   | { status: 'failed'; warning: string };
+
+export type RemoveWorktreeAction = (input: {
+  identity: WorktreeIdentity;
+  sourceCheckoutPath: string;
+}) => Promise<RemoveResult>;

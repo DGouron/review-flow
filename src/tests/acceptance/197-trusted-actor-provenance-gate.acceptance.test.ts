@@ -190,6 +190,12 @@ function buildBaseDeps(trackingGateway: ReturnType<typeof createMockTrackingGate
         durationMs: 1200,
       },
     })),
+    handleClose: vi.fn(async () => ({
+      status: 'cleaned' as const,
+      jobCancelled: true,
+      trackingArchived: true,
+      contextDeleted: true,
+    })),
     enforceBudget: createAcceptAllEnforceBudget(),
     broadcastBudgetExceeded: vi.fn(),
     getRepositories: vi.fn(() => []),

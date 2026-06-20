@@ -19,6 +19,7 @@ import {
 } from '@/frameworks/config/configLoader.js';
 import {
   cancelJob,
+  createJobId,
   getJobStatus,
   enqueueReview,
   getJobsStatus,
@@ -114,6 +115,7 @@ import { ProcessorRegistry } from '@/modules/review-execution/services/processor
 import { ConfirmPendingReviewUseCase } from '@/modules/review-execution/usecases/confirmPendingReview.usecase.js';
 import { DismissPendingReviewUseCase } from '@/modules/review-execution/usecases/dismissPendingReview.usecase.js';
 import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
+import { handleClose } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import { ListPendingReviewsUseCase } from '@/modules/review-execution/usecases/listPendingReviews.usecase.js';
 import { setupWizardRoutes } from '@/modules/setup-wizard/interface-adapters/controllers/http/setupWizard.routes.js';
 import { SetupProcessChildProcessGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupProcess.childProcess.gateway.js';
@@ -570,6 +572,15 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
       checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGw),
       syncThreads: new SyncThreadsUseCase(trackingGw, threadFetchGw),
       executeReview: gitLabExecuteReview,
+      handleClose: (input) =>
+        handleClose(input, {
+          trackingGateway: trackingGw,
+          reviewContextGateway: deps.reviewContextGateway,
+          cancelJob,
+          buildJobId: createJobId,
+          removeWorktree: removeWorktreeAction,
+          logger: deps.logger,
+        }),
       enforceBudget,
       broadcastBudgetExceeded,
       getRepositories: () => deps.config.repositories,
@@ -625,6 +636,15 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
       checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGw),
       syncThreads: new SyncThreadsUseCase(trackingGw, gitHubThreadFetchGw),
       executeReview: gitHubExecuteReview,
+      handleClose: (input) =>
+        handleClose(input, {
+          trackingGateway: trackingGw,
+          reviewContextGateway: deps.reviewContextGateway,
+          cancelJob,
+          buildJobId: createJobId,
+          removeWorktree: removeWorktreeAction,
+          logger: deps.logger,
+        }),
       enforceBudget,
       broadcastBudgetExceeded,
       getRepositories: () => deps.config.repositories,
