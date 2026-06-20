@@ -10,6 +10,7 @@ export interface BackfillDiffStatsDependencies {
 
 export interface BackfillDiffStatsInput {
   projectPath: string;
+  projectIdentifier: string;
   batchSize?: number;
   batchDelayMs?: number;
   onProgress?: (progress: BackfillProgress) => void;
@@ -20,7 +21,7 @@ export async function backfillDiffStats(
   dependencies: BackfillDiffStatsDependencies,
 ): Promise<BackfillProgress> {
   const { statsGateway, diffStatsFetchGateway, logger } = dependencies;
-  const { projectPath, batchSize = 10, batchDelayMs = 2000, onProgress } = input;
+  const { projectPath, projectIdentifier, batchSize = 10, batchDelayMs = 2000, onProgress } = input;
 
   const stats = statsGateway.loadProjectStats(projectPath);
 
@@ -49,7 +50,10 @@ export async function backfillDiffStats(
 
     for (const review of batch) {
       try {
-        const diffStats = await diffStatsFetchGateway.fetchDiffStats(projectPath, review.mrNumber);
+        const diffStats = await diffStatsFetchGateway.fetchDiffStats(
+          projectIdentifier,
+          review.mrNumber,
+        );
         review.diffStats = diffStats;
       } catch (error) {
         logger.warn('Failed to fetch diff stats for review', { mrNumber: review.mrNumber, error });

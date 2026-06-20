@@ -15,6 +15,32 @@ describe('backfillDiffStats', () => {
     vi.useRealTimers();
   });
 
+  it('should forward the projectIdentifier to the gateway, not the projectPath', async () => {
+    const statsGateway = new InMemoryStatsGateway();
+    const diffStatsFetchGateway = new StubDiffStatsFetchGateway();
+
+    const reviews = [ReviewStatsFactory.create({ id: 'r1', mrNumber: 10 })];
+    const projectStats = ProjectStatsFactory.create({ reviews });
+    statsGateway.saveProjectStats('/test/project', projectStats);
+
+    diffStatsFetchGateway.setResponse(10, { commitsCount: 3, additions: 100, deletions: 20 });
+
+    const promise = backfillDiffStats(
+      {
+        projectPath: '/test/project',
+        projectIdentifier: 'group/proj',
+        batchSize: 10,
+        batchDelayMs: 0,
+      },
+      { statsGateway, diffStatsFetchGateway, logger: { warn: vi.fn() } },
+    );
+
+    await vi.runAllTimersAsync();
+    await promise;
+
+    expect(diffStatsFetchGateway.lastProjectIdentifier).toBe('group/proj');
+  });
+
   it('should fetch diff stats for reviews with undefined diffStats', async () => {
     const statsGateway = new InMemoryStatsGateway();
     const diffStatsFetchGateway = new StubDiffStatsFetchGateway();
@@ -26,7 +52,12 @@ describe('backfillDiffStats', () => {
     diffStatsFetchGateway.setResponse(10, { commitsCount: 3, additions: 100, deletions: 20 });
 
     const promise = backfillDiffStats(
-      { projectPath: '/test/project', batchSize: 10, batchDelayMs: 0 },
+      {
+        projectPath: '/test/project',
+        projectIdentifier: 'group/proj',
+        batchSize: 10,
+        batchDelayMs: 0,
+      },
       { statsGateway, diffStatsFetchGateway, logger: { warn: vi.fn() } },
     );
 
@@ -55,7 +86,12 @@ describe('backfillDiffStats', () => {
     statsGateway.saveProjectStats('/test/project', projectStats);
 
     const promise = backfillDiffStats(
-      { projectPath: '/test/project', batchSize: 10, batchDelayMs: 0 },
+      {
+        projectPath: '/test/project',
+        projectIdentifier: 'group/proj',
+        batchSize: 10,
+        batchDelayMs: 0,
+      },
       { statsGateway, diffStatsFetchGateway, logger: { warn: vi.fn() } },
     );
 
@@ -79,7 +115,12 @@ describe('backfillDiffStats', () => {
     diffStatsFetchGateway.setResponse(10, { commitsCount: 3, additions: 100, deletions: 20 });
 
     const promise = backfillDiffStats(
-      { projectPath: '/test/project', batchSize: 10, batchDelayMs: 0 },
+      {
+        projectPath: '/test/project',
+        projectIdentifier: 'group/proj',
+        batchSize: 10,
+        batchDelayMs: 0,
+      },
       { statsGateway, diffStatsFetchGateway, logger: { warn: vi.fn() } },
     );
 
@@ -114,6 +155,7 @@ describe('backfillDiffStats', () => {
     const promise = backfillDiffStats(
       {
         projectPath: '/test/project',
+        projectIdentifier: 'group/proj',
         batchSize: 10,
         batchDelayMs: 0,
         onProgress: (progress) => progressUpdates.push({ ...progress }),
@@ -141,7 +183,12 @@ describe('backfillDiffStats', () => {
     diffStatsFetchGateway.setFailure(10);
 
     const promise = backfillDiffStats(
-      { projectPath: '/test/project', batchSize: 10, batchDelayMs: 0 },
+      {
+        projectPath: '/test/project',
+        projectIdentifier: 'group/proj',
+        batchSize: 10,
+        batchDelayMs: 0,
+      },
       { statsGateway, diffStatsFetchGateway, logger },
     );
 
@@ -174,7 +221,12 @@ describe('backfillDiffStats', () => {
     diffStatsFetchGateway.setResponse(12, { commitsCount: 2, additions: 20, deletions: 10 });
 
     const promise = backfillDiffStats(
-      { projectPath: '/test/project', batchSize: 10, batchDelayMs: 0 },
+      {
+        projectPath: '/test/project',
+        projectIdentifier: 'group/proj',
+        batchSize: 10,
+        batchDelayMs: 0,
+      },
       { statsGateway, diffStatsFetchGateway, logger: { warn: vi.fn() } },
     );
 
@@ -198,7 +250,12 @@ describe('backfillDiffStats', () => {
     diffStatsFetchGateway.setResponse(10, { commitsCount: 3, additions: 100, deletions: 20 });
 
     const promise = backfillDiffStats(
-      { projectPath: '/test/project', batchSize: 10, batchDelayMs: 0 },
+      {
+        projectPath: '/test/project',
+        projectIdentifier: 'group/proj',
+        batchSize: 10,
+        batchDelayMs: 0,
+      },
       { statsGateway, diffStatsFetchGateway, logger: { warn: vi.fn() } },
     );
 
@@ -228,7 +285,12 @@ describe('backfillDiffStats', () => {
     statsGateway.saveProjectStats('/test/project', projectStats);
 
     const result = await backfillDiffStats(
-      { projectPath: '/test/project', batchSize: 10, batchDelayMs: 0 },
+      {
+        projectPath: '/test/project',
+        projectIdentifier: 'group/proj',
+        batchSize: 10,
+        batchDelayMs: 0,
+      },
       { statsGateway, diffStatsFetchGateway, logger: { warn: vi.fn() } },
     );
 
@@ -258,6 +320,7 @@ describe('backfillDiffStats', () => {
     const promise = backfillDiffStats(
       {
         projectPath: '/test/project',
+        projectIdentifier: 'group/proj',
         batchSize: 2,
         batchDelayMs: 1000,
         onProgress: (progress) => progressUpdates.push({ ...progress }),

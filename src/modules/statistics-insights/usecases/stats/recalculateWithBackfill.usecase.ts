@@ -8,6 +8,7 @@ export interface RecalculateWithBackfillInput {
   projectPath: string;
   shouldBackfill: boolean;
   platform: string | null;
+  projectIdentifier: string | null;
 }
 
 export interface RecalculateWithBackfillDependencies {
@@ -24,17 +25,18 @@ export async function recalculateWithBackfill(
   input: RecalculateWithBackfillInput,
   dependencies: RecalculateWithBackfillDependencies,
 ): Promise<void> {
-  const { projectPath, shouldBackfill, platform } = input;
+  const { projectPath, shouldBackfill, platform, projectIdentifier } = input;
   const { statsGateway, diffStatsFetchGateways, onProgress, logger } = dependencies;
 
   try {
-    if (shouldBackfill && diffStatsFetchGateways && platform) {
+    if (shouldBackfill && diffStatsFetchGateways && platform && projectIdentifier) {
       const resolvedPlatform = platform === 'github' ? 'github' : 'gitlab';
       const gateway = diffStatsFetchGateways[resolvedPlatform];
 
       await backfillDiffStats(
         {
           projectPath,
+          projectIdentifier,
           onProgress: (progress) => {
             onProgress(progress);
           },

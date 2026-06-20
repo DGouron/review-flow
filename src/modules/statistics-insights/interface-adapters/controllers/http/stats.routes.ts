@@ -1,7 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify';
 
+import type { GitRemoteGateway } from '@/modules/setup-wizard/entities/gitRemote/gitRemote.gateway.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
 import type { BackfillProgress } from '@/modules/statistics-insights/entities/backfill/backfillProgress.js';
+import { resolveProjectIdentifier } from '@/modules/statistics-insights/entities/projectIdentifier/projectIdentifier.js';
 import { safeParseRecalculateBody } from '@/modules/statistics-insights/entities/stats/recalculateBody.guard.js';
 import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import { AnalyticsHeaderPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/analyticsHeader.presenter.js';
@@ -14,12 +16,12 @@ interface RepositoryInfo {
   localPath: string;
   name: string;
   enabled: boolean;
-  platform?: string;
 }
 
 interface StatsRoutesOptions {
   statsGateway: StatsGateway;
   getRepositories: () => RepositoryInfo[];
+  gitRemoteGateway?: GitRemoteGateway;
   diffStatsFetchGateways?: { gitlab: DiffStatsFetchGateway; github: DiffStatsFetchGateway };
   broadcastBackfillProgress?: (progress: BackfillProgress) => void;
   logger?: {
@@ -27,6 +29,29 @@ interface StatsRoutesOptions {
     info: (message: string, data?: unknown) => void;
     error: (message: string, data?: unknown) => void;
   };
+}
+
+interface ResolvedProject {
+  platform: string;
+  projectIdentifier: string;
+}
+
+function resolveBackfillTarget(
+  localPath: string,
+  gitRemoteGateway: GitRemoteGateway,
+): ResolvedProject | null {
+  const remote = gitRemoteGateway.getOriginRemote(localPath);
+  if (!remote) {
+    return null;
+  }
+
+  const platform = gitRemoteGateway.detectPlatform(remote);
+  const projectIdentifier = resolveProjectIdentifier(remote);
+  if (platform === 'unknown' || projectIdentifier === null) {
+    return null;
+  }
+
+  return { platform, projectIdentifier };
 }
 
 export const statsRoutes: FastifyPluginAsync<StatsRoutesOptions> = async (fastify, options) => {
@@ -96,14 +121,25 @@ export const statsRoutes: FastifyPluginAsync<StatsRoutesOptions> = async (fastif
       return;
     }
 
-    const { diffStatsFetchGateways, broadcastBackfillProgress, logger } = options;
+    const { diffStatsFetchGateways, gitRemoteGateway, broadcastBackfillProgress, logger } = options;
     const noopLogger = { warn: () => {}, error: () => {} };
+
+    const resolved =
+      shouldBackfill && gitRemoteGateway
+        ? resolveBackfillTarget(repository.localPath, gitRemoteGateway)
+        : null;
+
+    if (shouldBackfill && resolved === null) {
+      reply.status(422).send({ error: 'Plateforme du projet introuvable' });
+      return;
+    }
 
     recalculateWithBackfill(
       {
         projectPath,
         shouldBackfill,
-        platform: repository.platform ?? null,
+        platform: resolved?.platform ?? null,
+        projectIdentifier: resolved?.projectIdentifier ?? null,
       },
       {
         statsGateway,
