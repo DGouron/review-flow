@@ -22,7 +22,7 @@
 | Skill catalog system | [61-skill-catalog-system](specs/61-skill-catalog-system.md) | drafted | 2026-03-14 |
 | Skill create command | [62-skill-create-command](specs/62-skill-create-command.md) | drafted | 2026-03-14 |
 | Extract dashboard domain modules | [72-extract-dashboard-domain-modules](specs/72-extract-dashboard-domain-modules.md) | implemented | 2026-03-14 |
-| Extract webhook processing usecase | [73-extract-webhook-processing-usecase](specs/73-extract-webhook-processing-usecase.md) — [plan (Stage 1)](plans/73-execute-review-usecase.plan.md) — [report (Stage 1)](reports/73-execute-review-usecase.report.md) — [plan (Stage 2)](plans/73-handle-close.plan.md) — [report (Stage 2)](reports/73-handle-close.report.md) | implementing | 2026-06-20 |
+| Extract webhook processing usecase | [73-extract-webhook-processing-usecase](specs/73-extract-webhook-processing-usecase.md) — [plan (Stage 1)](plans/73-execute-review-usecase.plan.md) — [report (Stage 1)](reports/73-execute-review-usecase.report.md) — [plan (Stage 2)](plans/73-handle-close.plan.md) — [report (Stage 2)](reports/73-handle-close.report.md) — [plan (Stage 3)](plans/73-process-webhook.plan.md) — [report (Stage 3)](reports/73-process-webhook.report.md) | implementing (Stage 3 done, Stage 4 remaining) | 2026-06-20 |
 | Standardize MR vocabulary | [77-standardize-mr-vocabulary](specs/77-standardize-mr-vocabulary.md) | implemented | 2026-03-14 |
 | Remove old progress tracking | [79-remove-old-progress-tracking](specs/79-remove-old-progress-tracking.md) | implemented | 2026-03-15 |
 | Split stats service | [80-split-stats-service](specs/80-split-stats-service.md) — [plan](plans/80-split-stats-service.plan.md) — [report](reports/80-split-stats-service.report.md) | implemented | 2026-06-19 |

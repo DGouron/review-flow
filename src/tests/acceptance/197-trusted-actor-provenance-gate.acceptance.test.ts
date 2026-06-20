@@ -90,8 +90,13 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 import { enqueueReview } from '@/frameworks/queue/pQueueAdapter.js';
 import { MEMBER_ACCESS_LEVELS } from '@/modules/platform-integration/entities/memberAccess/memberAccess.js';
+import type { WebhookEvent } from '@/modules/platform-integration/entities/webhookEvent/webhookEvent.js';
 import { handleGitLabWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
 import { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
+import {
+  processWebhook,
+  type ProcessWebhookResult,
+} from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
@@ -165,6 +170,16 @@ function createAcceptAllEnforceBudget() {
 
 function buildBaseDeps(trackingGateway: ReturnType<typeof createMockTrackingGateway>) {
   const threadFetchGateway = { fetchThreads: vi.fn(() => []) };
+  const recordPush = new RecordPushUseCase(trackingGateway);
+  const transitionState = new TransitionStateUseCase(trackingGateway);
+  const checkFollowupNeeded = new CheckFollowupNeededUseCase(trackingGateway);
+  const removeWorktree = vi.fn(async () => ({ status: 'removed' as const }));
+  const handleClose = vi.fn(async () => ({
+    status: 'cleaned' as const,
+    jobCancelled: true,
+    trackingArchived: true,
+    contextDeleted: true,
+  }));
   return {
     reviewContextGateway: createStubContextGateway(),
     threadFetchGateway,
@@ -174,9 +189,9 @@ function buildBaseDeps(trackingGateway: ReturnType<typeof createMockTrackingGate
     diffStatsFetchGateway: { fetchDiffStats: vi.fn(() => null) },
     trackAssignment: new TrackAssignmentUseCase(trackingGateway),
     recordCompletion: new RecordReviewCompletionUseCase(trackingGateway),
-    recordPush: new RecordPushUseCase(trackingGateway),
-    transitionState: new TransitionStateUseCase(trackingGateway),
-    checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGateway),
+    recordPush,
+    transitionState,
+    checkFollowupNeeded,
     syncThreads: new SyncThreadsUseCase(trackingGateway, threadFetchGateway),
     executeReview: vi.fn(async () => ({
       status: 'completed' as const,
@@ -190,16 +205,20 @@ function buildBaseDeps(trackingGateway: ReturnType<typeof createMockTrackingGate
         durationMs: 1200,
       },
     })),
-    handleClose: vi.fn(async () => ({
-      status: 'cleaned' as const,
-      jobCancelled: true,
-      trackingArchived: true,
-      contextDeleted: true,
-    })),
+    handleClose,
+    processWebhook: (event: WebhookEvent): Promise<ProcessWebhookResult> =>
+      processWebhook(event, {
+        handleClose,
+        transitionState,
+        recordPush,
+        checkFollowupNeeded,
+        removeWorktree,
+        logger,
+      }),
     enforceBudget: createAcceptAllEnforceBudget(),
     broadcastBudgetExceeded: vi.fn(),
     getRepositories: vi.fn(() => []),
-    removeWorktree: vi.fn(async () => ({ status: 'removed' as const })),
+    removeWorktree,
     recordBypass: new RecordBypassUseCase(trackingGateway),
     noteCommentPostGateway: new StubNoteCommentPostGateway(),
     handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGateway),

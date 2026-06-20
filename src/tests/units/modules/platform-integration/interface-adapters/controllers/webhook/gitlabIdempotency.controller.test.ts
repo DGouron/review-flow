@@ -57,8 +57,13 @@ vi.mock('@/config/projectConfig.js', () => ({
 
 import { describe, it, expect, beforeEach } from 'vitest';
 
+import type { WebhookEvent } from '@/modules/platform-integration/entities/webhookEvent/webhookEvent.js';
 import { handleGitLabWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
 import { InMemoryIdempotencyStore } from '@/modules/platform-integration/interface-adapters/gateways/inMemoryIdempotencyStore.gateway.js';
+import {
+  processWebhook,
+  type ProcessWebhookResult,
+} from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type {
   GateClaudeInvocationInput,
   GateClaudeInvocationResult,
@@ -157,6 +162,16 @@ function createDeps(
   overrides: Record<string, unknown> = {},
 ) {
   const threadFetchGateway = { fetchThreads: vi.fn(() => []) };
+  const recordPush = new RecordPushUseCase(trackingGateway);
+  const transitionState = new TransitionStateUseCase(trackingGateway);
+  const checkFollowupNeeded = new CheckFollowupNeededUseCase(trackingGateway);
+  const removeWorktree = vi.fn(async () => ({ status: 'removed' as const }));
+  const handleClose = vi.fn(async () => ({
+    status: 'cleaned' as const,
+    jobCancelled: true,
+    trackingArchived: true,
+    contextDeleted: true,
+  }));
   return {
     reviewContextGateway: createStubContextGateway(),
     threadFetchGateway,
@@ -166,9 +181,9 @@ function createDeps(
     diffStatsFetchGateway: { fetchDiffStats: vi.fn(() => null) },
     trackAssignment: new TrackAssignmentUseCase(trackingGateway),
     recordCompletion: new RecordReviewCompletionUseCase(trackingGateway),
-    recordPush: new RecordPushUseCase(trackingGateway),
-    transitionState: new TransitionStateUseCase(trackingGateway),
-    checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGateway),
+    recordPush,
+    transitionState,
+    checkFollowupNeeded,
     syncThreads: new SyncThreadsUseCase(trackingGateway, threadFetchGateway),
     executeReview: vi.fn(async () => ({
       status: 'completed' as const,
@@ -182,16 +197,20 @@ function createDeps(
         durationMs: 1200,
       },
     })),
-    handleClose: vi.fn(async () => ({
-      status: 'cleaned' as const,
-      jobCancelled: true,
-      trackingArchived: true,
-      contextDeleted: true,
-    })),
+    handleClose,
+    processWebhook: (event: WebhookEvent): Promise<ProcessWebhookResult> =>
+      processWebhook(event, {
+        handleClose,
+        transitionState,
+        recordPush,
+        checkFollowupNeeded,
+        removeWorktree,
+        logger: createStubLogger(),
+      }),
     enforceBudget: createAcceptAllEnforceBudget(),
     broadcastBudgetExceeded: vi.fn(),
     getRepositories: vi.fn(() => []),
-    removeWorktree: vi.fn(async () => ({ status: 'removed' as const })),
+    removeWorktree,
     recordBypass: new RecordBypassUseCase(trackingGateway),
     noteCommentPostGateway: new StubNoteCommentPostGateway(),
     handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGateway),

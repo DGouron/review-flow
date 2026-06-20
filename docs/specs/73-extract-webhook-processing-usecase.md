@@ -8,7 +8,7 @@ milestone: "Architecture Cleanup"
 
 # SPEC-073: Extract Webhook Processing Use Case
 
-## Status: implementing (Stages 1-2 of 4 done)
+## Status: implementing (Stages 1-3 of 4 done)
 
 > The codebase was restructured into a modular monolith (`src/modules/<context>/...`) after
 > this spec was drafted; the original flat `src/usecases/` paths below are stale. See the
@@ -61,9 +61,42 @@ arrives as a close event and is archived, not recorded as `state:'merged'` (out 
 
 **Verification** — `yarn verify` green (467 files / 3879 tests pass); acceptance test GREEN.
 
-**Remaining (out of scope here, future runs):** Stage 3 `ProcessWebhook` orchestrator +
-`WebhookEvent` discriminated union, Stage 4 full controller thinning (incl. removing the
-now-unused `_trackingGateway` param and unifying HTTP reply shapes).
+## Implementation (Stage 3 — `ProcessWebhook` orchestrator + `WebhookEvent` union)
+
+Plan: `docs/plans/73-process-webhook.plan.md` · Report: `docs/reports/73-process-webhook.report.md`
+
+A platform-neutral `WebhookEvent` discriminated union (entity layer) plus a function-based
+`processWebhook(event, deps)` orchestrator that routes the **synchronous** webhook outcomes
+(`close`, `merge`, `followup-push` eligibility, `ignored`) to the existing extracted use cases.
+Both webhook controllers map their already-parsed close/merge/followup events into `WebhookEvent`,
+call `deps.processWebhook`, and map the `ProcessWebhookResult` back to their **exact** existing HTTP
+replies (status code + body keys byte-for-byte, incl. GitLab `mrNumber` vs GitHub `prNumber`).
+
+**Artefacts**
+- Entity: `src/modules/platform-integration/entities/webhookEvent/webhookEvent.ts` — `WebhookEvent`
+  discriminated union (6 variants), pure type module (no Zod guard; data validated upstream by the
+  platform guards). Imports only `Language` + `Platform` entity types.
+- Use case: `src/modules/platform-integration/usecases/processWebhook.usecase.ts` — `processWebhook`,
+  `ProcessWebhookResult`, `ProcessWebhookDependencies`, `ProcessWebhook` type. Imports only `entities/`
+  + sibling `usecases/` (Dependency Rule verified: no `interface-adapters/`, no `frameworks/`, no
+  platform-specific event type / gateway).
+- Composition root: `src/main/routes.ts` — `processWebhook` composed per-platform from existing use
+  cases, injected into both controller dependency objects.
+
+**Decisions** — Scope locked to the **synchronous** routing only. The `approve` and `review-requested`
+paths stay 100% controller-side (the union carries both variants for completeness, but the orchestrator
+returns `{ type:'ignored', reason:'<variant>-handled-by-controller' }` for them, keeping the switch total
+without a `never` throw). The async enqueue tail — budget gate, processor closure capturing
+`executeReview`, `gateClaudeInvocation`, actor-trust, `enqueueReview`, and the 3-way 202/200 reply shapes
+— remains controller-side: moving it inward IS Stage 4. HTTP reply shapes preserved exactly (unification
+deferred to Stage 4). `eventFilter.ts` untouched (its `filter*` functions are the controller-side mappers).
+
+**Verification** — `yarn verify` green (473 files / 3921 tests pass); 13 unit + 8 acceptance Stage-3
+tests GREEN; acceptance asserts platform-neutrality (imports no `GitLab*`/`GitHub*` type).
+
+**Remaining (out of scope here, future runs):** Stage 4 full controller thinning — move the
+`review-requested` enqueue path and `approve` verdict inward, unify HTTP reply shapes, and remove the
+now-unused `_trackingGateway` controller param.
 
 ## User Story
 
