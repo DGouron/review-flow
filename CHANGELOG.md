@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.39.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.38.0...reviewflow-v3.39.0) (2026-06-20)
+
+
+### Added
+
+* **analytics:** emit spec-203 bug categories from review skills ([37f8d8b](https://github.com/DGouron/review-flow/commit/37f8d8ba288c3131719e4fec795d501f25f2790d))
+* **analytics:** emit spec-203 bug categories from review skills ([1c8c9fd](https://github.com/DGouron/review-flow/commit/1c8c9fdf5f7480ea349698b07f09cb7f7b7493dc))
+* **analytics:** implement spec-203 bugs found by category ([b78cee4](https://github.com/DGouron/review-flow/commit/b78cee493da2a1de7015adfd913aca80f1c7a903))
+* **analytics:** implement spec-203 bugs found by category ([8eb783b](https://github.com/DGouron/review-flow/commit/8eb783b57bf3e9558a94fa8c8197d419a202ccc4))
+* **analytics:** implement spec-204 analytics overview header ([ae0d2c5](https://github.com/DGouron/review-flow/commit/ae0d2c5f5dcb46687300acc782a9fbe55532e32d))
+* **analytics:** implement spec-204 analytics overview header ([48864da](https://github.com/DGouron/review-flow/commit/48864da6f158cccc488fdb69eaf4706602f3c36d))
+* **analytics:** implement spec-205 key insight cards ([29b1917](https://github.com/DGouron/review-flow/commit/29b19176b7c816d0af328983513c389d831f241f))
+* **analytics:** implement spec-205 key insight cards ([54b1ea0](https://github.com/DGouron/review-flow/commit/54b1ea07cf6c70058ca3e9e33f105bcf50dc6dc7))
+
+
+### Fixed
+
+* **dashboard:** style key insight cards (spec-205) ([b2055f5](https://github.com/DGouron/review-flow/commit/b2055f55d00fa5a5a650290cecdbd5e20e8e9f83))
+* **dashboard:** style key insight cards (spec-205) ([a6670b2](https://github.com/DGouron/review-flow/commit/a6670b2b534407ea11848f8237f3bf8c3c92d2ba))
+
+
+### Changed
+
+* **stats:** split statsService god object into layers (spec-80) ([7e2b73d](https://github.com/DGouron/review-flow/commit/7e2b73d70ddd9067d3582ac8f9f6105bcec5edea))
+* **stats:** split statsService god object into layers (spec-80) ([07ec13d](https://github.com/DGouron/review-flow/commit/07ec13daab22bffadf40bee91a132ab566f07a7e))
+
 ## [3.38.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.37.1...reviewflow-v3.38.0) (2026-06-18)
 
 
