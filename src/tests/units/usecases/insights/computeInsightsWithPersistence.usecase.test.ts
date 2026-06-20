@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import type { ReviewStats } from '@/modules/statistics-insights/services/statsService.js';
+import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
 import { computeDeveloperInsights } from '@/modules/statistics-insights/usecases/insights/computeDeveloperInsights.usecase.js';
 import { computeInsightsWithPersistence } from '@/modules/statistics-insights/usecases/insights/computeInsightsWithPersistence.usecase.js';
 import { computeTeamInsights } from '@/modules/statistics-insights/usecases/insights/computeTeamInsights.usecase.js';

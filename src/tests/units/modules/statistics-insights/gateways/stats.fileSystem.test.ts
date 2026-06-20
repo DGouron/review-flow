@@ -59,6 +59,25 @@ describe('FileSystemStatsGateway (integration with real filesystem)', () => {
 
       expect(gateway.loadProjectStats(projectPath)).toBeNull();
     });
+
+    it('leniently loads a schema-divergent stats.json without throwing', () => {
+      writeStatsFile(
+        projectPath,
+        JSON.stringify({
+          totalReviews: 1,
+          totalDuration: 60000,
+          lastUpdated: '2024-01-15T10:00:00Z',
+          reviews: [{ id: 'r1', mrNumber: 1 }],
+          unexpectedField: true,
+        }),
+      );
+
+      const loaded = gateway.loadProjectStats(projectPath);
+
+      expect(loaded).not.toBeNull();
+      expect(loaded?.totalReviews).toBe(1);
+      expect(loaded?.reviews).toHaveLength(1);
+    });
   });
 
   describe('saveProjectStats', () => {

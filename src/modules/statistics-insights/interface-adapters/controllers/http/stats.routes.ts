@@ -7,7 +7,8 @@ import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/
 import { AnalyticsHeaderPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/analyticsHeader.presenter.js';
 import { BugsByCategoryPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/bugsByCategory.presenter.js';
 import { KeyInsightsPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/keyInsights.presenter.js';
-import { getStatsSummary } from '@/modules/statistics-insights/services/statsService.js';
+import { StatsSummaryPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/statsSummary.presenter.js';
+import { GetProjectStatsUseCase } from '@/modules/statistics-insights/usecases/stats/getProjectStats.usecase.js';
 import { recalculateWithBackfill } from '@/modules/statistics-insights/usecases/stats/recalculateWithBackfill.usecase.js';
 
 interface RepositoryInfo {
@@ -34,6 +35,8 @@ export const statsRoutes: FastifyPluginAsync<StatsRoutesOptions> = async (fastif
   const bugsByCategoryPresenter = new BugsByCategoryPresenter();
   const analyticsHeaderPresenter = new AnalyticsHeaderPresenter();
   const keyInsightsPresenter = new KeyInsightsPresenter();
+  const statsSummaryPresenter = new StatsSummaryPresenter();
+  const getProjectStatsUseCase = new GetProjectStatsUseCase(statsGateway);
 
   fastify.get<{ Querystring: { path?: string } }>('/api/stats', async (request) => {
     const projectPath = request.query.path?.trim();
@@ -43,14 +46,14 @@ export const statsRoutes: FastifyPluginAsync<StatsRoutesOptions> = async (fastif
         return { error: 'Invalid path' };
       }
 
-      const stats = statsGateway.loadProjectStats(projectPath);
+      const stats = getProjectStatsUseCase.execute({ projectPath });
       if (!stats) {
         return { stats: null, summary: null };
       }
 
       return {
         stats,
-        summary: getStatsSummary(stats),
+        summary: statsSummaryPresenter.present(stats),
         bugsByCategory: bugsByCategoryPresenter.present(stats),
         analyticsHeader: analyticsHeaderPresenter.present(stats, new Date()),
         keyInsights: keyInsightsPresenter.present(stats, new Date()),
@@ -60,13 +63,13 @@ export const statsRoutes: FastifyPluginAsync<StatsRoutesOptions> = async (fastif
     const allStats = [];
     for (const repo of getRepositories()) {
       if (!repo.enabled) continue;
-      const stats = statsGateway.loadProjectStats(repo.localPath);
+      const stats = getProjectStatsUseCase.execute({ projectPath: repo.localPath });
       if (stats) {
         allStats.push({
           project: repo.name,
           path: repo.localPath,
           stats,
-          summary: getStatsSummary(stats),
+          summary: statsSummaryPresenter.present(stats),
           bugsByCategory: bugsByCategoryPresenter.present(stats),
           analyticsHeader: analyticsHeaderPresenter.present(stats, new Date()),
           keyInsights: keyInsightsPresenter.present(stats, new Date()),
