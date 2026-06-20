@@ -70,3 +70,4 @@
 | Show key insight cards on the analytics overview | [205-analytics-key-insight-cards](specs/205-analytics-key-insight-cards.md) — [plan](plans/205-analytics-key-insight-cards.plan.md) — [report](reports/205-analytics-key-insight-cards.report.md) | implemented | 2026-06-19 |
 | Fix the GitLab change-size source | [206-fix-gitlab-diff-stats-source](specs/206-fix-gitlab-diff-stats-source.md) — [plan](plans/206-fix-gitlab-diff-stats-source.plan.md) — [report](reports/206-fix-gitlab-diff-stats-source.report.md) | implemented | 2026-06-20 |
 | Backfill change-size data for past reviews | [207-backfill-historical-diff-stats](specs/207-backfill-historical-diff-stats.md) | implemented | 2026-06-20 |
+| Make the Recalculate button backfill change-size data | [208-self-service-backfill-button](specs/208-self-service-backfill-button.md) | drafted | 2026-06-20 |
