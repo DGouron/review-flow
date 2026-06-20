@@ -17,7 +17,7 @@ import type {
 import { ReviewContextResultFactory } from '@/modules/review-execution/entities/reviewContext/reviewContextResult.factory.js';
 import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
-import { parseReviewOutput } from '@/modules/statistics-insights/services/statsService.js';
+import { parseReviewOutput } from '@/modules/statistics-insights/entities/stats/reviewOutput.parser.js';
 import type { Platform } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import type { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
 import type { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';

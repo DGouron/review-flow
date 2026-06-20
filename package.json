@@ -1,6 +1,6 @@
 {
   "name": "reviewflow",
-  "version": "3.38.0",
+  "version": "3.39.1",
   "description": "AI-powered code review automation for GitLab/GitHub using Claude Code",
   "type": "module",
   "main": "dist/main/server.js",
@@ -92,9 +92,13 @@
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
   "resolutions": {
     "esbuild": "^0.25.0",
-    "vitest/vite": "^7.3.2",
-    "@vitest/coverage-v8/vite": "^7.3.2",
-    "@vitest/ui/vite": "^7.3.2",
-    "vite-node/vite": "^7.3.2"
+    "hono": "^4.12.25",
+    "ws": "^8.21.0",
+    "qs": "^6.15.2",
+    "vitest/vite": "^7.3.5",
+    "@vitest/coverage-v8/vite": "^7.3.5",
+    "@vitest/ui/vite": "^7.3.5",
+    "vite-node/vite": "^7.3.5",
+    "vitepress/vite": "^6.4.3"
   }
 }

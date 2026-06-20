@@ -25,7 +25,7 @@
 | Extract webhook processing usecase | [73-extract-webhook-processing-usecase](specs/73-extract-webhook-processing-usecase.md) — [plan (Stage 1)](plans/73-execute-review-usecase.plan.md) — [report (Stage 1)](reports/73-execute-review-usecase.report.md) — [plan (Stage 2)](plans/73-handle-close.plan.md) — [report (Stage 2)](reports/73-handle-close.report.md) | implementing | 2026-06-20 |
 | Standardize MR vocabulary | [77-standardize-mr-vocabulary](specs/77-standardize-mr-vocabulary.md) | implemented | 2026-03-14 |
 | Remove old progress tracking | [79-remove-old-progress-tracking](specs/79-remove-old-progress-tracking.md) | implemented | 2026-03-15 |
-| Split stats service | [80-split-stats-service](specs/80-split-stats-service.md) | drafted | 2026-03-14 |
+| Split stats service | [80-split-stats-service](specs/80-split-stats-service.md) — [plan](plans/80-split-stats-service.plan.md) — [report](reports/80-split-stats-service.report.md) | implemented | 2026-06-19 |
 | EventBus queue state | [82-eventbus-queue-state](specs/82-eventbus-queue-state.md) | implemented | 2026-03-14 |
 | Delete services folder | [83-delete-services-folder](specs/83-delete-services-folder.md) | implemented | 2026-03-14 |
 | Dashboard multi-project overview | [91-dashboard-multi-project-overview](specs/91-dashboard-multi-project-overview.md) — [report](reports/91-dashboard-multi-project-overview.report.md) | implemented | 2026-05-25 |
@@ -68,3 +68,5 @@
 | Track bugs found by category | [203-bugs-found-by-category](specs/203-bugs-found-by-category.md) — [plan](plans/203-bugs-found-by-category.plan.md) — [report](reports/203-bugs-found-by-category.report.md) | implemented | 2026-06-19 |
 | Show the analytics overview header | [204-analytics-overview-header](specs/204-analytics-overview-header.md) — [plan](plans/204-analytics-overview-header.plan.md) — [report](reports/204-analytics-overview-header.report.md) | implemented | 2026-06-19 |
 | Show key insight cards on the analytics overview | [205-analytics-key-insight-cards](specs/205-analytics-key-insight-cards.md) — [plan](plans/205-analytics-key-insight-cards.plan.md) — [report](reports/205-analytics-key-insight-cards.report.md) | implemented | 2026-06-19 |
+| Fix the GitLab change-size source | [206-fix-gitlab-diff-stats-source](specs/206-fix-gitlab-diff-stats-source.md) — [plan](plans/206-fix-gitlab-diff-stats-source.plan.md) — [report](reports/206-fix-gitlab-diff-stats-source.report.md) | implemented | 2026-06-20 |
+| Backfill change-size data for past reviews | [207-backfill-historical-diff-stats](specs/207-backfill-historical-diff-stats.md) | implemented | 2026-06-20 |

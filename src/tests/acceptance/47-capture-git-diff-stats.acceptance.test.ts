@@ -23,12 +23,15 @@ import { pino, type Logger } from 'pino';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
+import type {
+  ProjectStats,
+  ReviewStats,
+} from '@/modules/statistics-insights/entities/stats/projectStats.js';
+import { parseReviewOutput } from '@/modules/statistics-insights/entities/stats/reviewOutput.parser.js';
+import { FileSystemStatsGateway } from '@/modules/statistics-insights/interface-adapters/gateways/fileSystem/stats.fileSystem.js';
+import { StatsSummaryPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/statsSummary.presenter.js';
 import { fetchDiffStatsSafely } from '@/modules/statistics-insights/services/fetchDiffStatsSafely.js';
-import {
-  addReviewStats,
-  loadProjectStats,
-  getStatsSummary,
-} from '@/modules/statistics-insights/services/statsService.js';
+import { AddReviewStatsUseCase } from '@/modules/statistics-insights/usecases/stats/addReviewStats.usecase.js';
 import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
 import { DiffStatsFactory } from '@/tests/factories/diffStats.factory.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
@@ -36,6 +39,34 @@ import { StubDiffStatsFetchGateway } from '@/tests/stubs/diffStatsFetch.stub.js'
 import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 
 const REVIEW_OUTPUT = '[REVIEW_STATS:blocking=1:warnings=2:suggestions=3:score=7.5]';
+
+const fileSystemStatsGateway = new FileSystemStatsGateway();
+const statsSummaryPresenter = new StatsSummaryPresenter();
+
+const addReviewStats = (
+  projectPath: string,
+  mrNumber: number,
+  duration: number,
+  stdout: string,
+  assignedBy?: string,
+  diffStats?: DiffStats | null,
+): ReviewStats =>
+  new AddReviewStatsUseCase(fileSystemStatsGateway).execute({
+    projectPath,
+    mrNumber,
+    duration,
+    parsed: parseReviewOutput(stdout),
+    assignedBy,
+    diffStats,
+  });
+
+const loadProjectStats = (projectPath: string): ProjectStats => {
+  const stats = fileSystemStatsGateway.loadProjectStats(projectPath);
+  if (stats === null) throw new Error(`No stats found for ${projectPath}`);
+  return stats;
+};
+
+const getStatsSummary = (stats: ProjectStats) => statsSummaryPresenter.present(stats);
 
 let projectCounter = 0;
 

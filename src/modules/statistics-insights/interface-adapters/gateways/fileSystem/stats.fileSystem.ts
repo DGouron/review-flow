@@ -1,11 +1,22 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 
+import { safeParseProjectStats } from '@/modules/statistics-insights/entities/stats/projectStats.guard.js';
 import type { ProjectStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
 import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 
 function getStatsPath(projectPath: string): string {
   return join(projectPath, '.claude', 'reviews', 'stats.json');
+}
+
+function normalizeRawStats(parsed: unknown): ProjectStats {
+  const stats: ProjectStats = JSON.parse(JSON.stringify(parsed));
+
+  if (!Array.isArray(stats.reviews)) {
+    stats.reviews = [];
+  }
+
+  return stats;
 }
 
 export class FileSystemStatsGateway implements StatsGateway {
@@ -18,13 +29,16 @@ export class FileSystemStatsGateway implements StatsGateway {
 
     try {
       const content = readFileSync(statsPath, 'utf-8');
-      const stats: ProjectStats = JSON.parse(content);
+      const parsed: unknown = JSON.parse(content);
 
-      if (!Array.isArray(stats.reviews)) {
-        stats.reviews = [];
+      const validation = safeParseProjectStats(parsed);
+      if (validation.success) {
+        return validation.data;
       }
 
-      return stats;
+      // Lenient fallback: a slightly-off real stats.json (legacy / partial)
+      // must still load so the dashboard never crashes. Never throw here.
+      return normalizeRawStats(parsed);
     } catch {
       return null;
     }

@@ -68,13 +68,15 @@ describe('backfillDiffStats', () => {
     expect(diffStatsFetchGateway.fetchCallCount).toBe(0);
   });
 
-  it('should skip reviews that have diffStats === null (already attempted)', async () => {
+  it('should retry reviews that have diffStats === null (poisoned by a failed fetch)', async () => {
     const statsGateway = new InMemoryStatsGateway();
     const diffStatsFetchGateway = new StubDiffStatsFetchGateway();
 
     const reviews = [ReviewStatsFactory.create({ id: 'r1', mrNumber: 10, diffStats: null })];
     const projectStats = ProjectStatsFactory.create({ reviews });
     statsGateway.saveProjectStats('/test/project', projectStats);
+
+    diffStatsFetchGateway.setResponse(10, { commitsCount: 3, additions: 100, deletions: 20 });
 
     const promise = backfillDiffStats(
       { projectPath: '/test/project', batchSize: 10, batchDelayMs: 0 },
@@ -84,9 +86,13 @@ describe('backfillDiffStats', () => {
     await vi.runAllTimersAsync();
     const result = await promise;
 
-    expect(result.total).toBe(0);
-    expect(result.completed).toBe(0);
-    expect(diffStatsFetchGateway.fetchCallCount).toBe(0);
+    expect(result.total).toBe(1);
+    expect(result.completed).toBe(1);
+    expect(result.failed).toBe(0);
+    expect(diffStatsFetchGateway.fetchCallCount).toBe(1);
+
+    const saved = statsGateway.loadProjectStats('/test/project');
+    expect(saved?.reviews[0].diffStats).toEqual({ commitsCount: 3, additions: 100, deletions: 20 });
   });
 
   it('should call onProgress after each review', async () => {
@@ -213,7 +219,10 @@ describe('backfillDiffStats', () => {
         { commitsCount: 1, additions: 10, deletions: 5 },
         { id: 'r1', mrNumber: 10 },
       ),
-      ReviewStatsFactory.create({ id: 'r2', mrNumber: 11, diffStats: null }),
+      ReviewStatsFactory.withDiffStats(
+        { commitsCount: 2, additions: 20, deletions: 10 },
+        { id: 'r2', mrNumber: 11 },
+      ),
     ];
     const projectStats = ProjectStatsFactory.create({ reviews });
     statsGateway.saveProjectStats('/test/project', projectStats);
