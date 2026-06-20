@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.39.3](https://github.com/DGouron/review-flow/compare/reviewflow-v3.39.2...reviewflow-v3.39.3) (2026-06-20)
+
+
+### Fixed
+
+* **stats:** self-service backfill via Recalculate button (spec-208) ([#312](https://github.com/DGouron/review-flow/issues/312)) ([807f00d](https://github.com/DGouron/review-flow/commit/807f00daf8c7230176ce7489e3bf6c597cdc2d9b))
+
+
+### Changed
+
+* **webhook:** add processWebhook orchestrator (spec-073 stage 3) ([52e479f](https://github.com/DGouron/review-flow/commit/52e479f8d156377b47c32cf0e0af715f351967c7))
+* **webhook:** processWebhook orchestrator + WebhookEvent union (spec-073 stage 3) ([7b2f856](https://github.com/DGouron/review-flow/commit/7b2f856c8afa53d64d26b81b8e9faf2bf853c075))
+
 ## [3.39.2](https://github.com/DGouron/review-flow/compare/reviewflow-v3.39.1...reviewflow-v3.39.2) (2026-06-20)
 
 
