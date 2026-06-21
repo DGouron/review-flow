@@ -26,6 +26,7 @@ import {
   filterGitHubIssueCommentEvent,
   filterGitHubPullRequestReviewEvent,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
+import { sendWebhookReply } from '@/modules/platform-integration/interface-adapters/controllers/webhook/webhookReply.js';
 import type { ProcessWebhook } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import {
@@ -130,15 +131,21 @@ async function handleGitHubPullRequestReviewHook(
       { errors: parseResult.error },
       'Invalid GitHub pull_request_review payload (ignored)',
     );
-    reply
-      .status(200)
-      .send({ status: 'ignored', reason: 'pull_request_review payload not parseable' });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'pull_request_review payload not parseable' },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
   const filterResult = filterGitHubPullRequestReviewEvent(parseResult.data);
   if (!filterResult.shouldProcess) {
-    reply.status(200).send({ status: 'ignored', reason: filterResult.reason });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: filterResult.reason },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
@@ -148,7 +155,11 @@ async function handleGitHubPullRequestReviewHook(
       { projectPath: filterResult.projectPath },
       'Pull request review for unconfigured repository (ignored)',
     );
-    reply.status(200).send({ status: 'ignored', reason: 'Repository not configured' });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'Repository not configured' },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
@@ -168,7 +179,11 @@ async function handleGitHubPullRequestReviewHook(
 
   if (transitionResult.ok) {
     logger.info({ prNumber: filterResult.mergeRequestNumber }, 'PR marked as approved');
-    reply.status(200).send({ status: 'approved', prNumber: filterResult.mergeRequestNumber });
+    sendWebhookReply(
+      reply,
+      { kind: 'approved', mergeRequestNumber: filterResult.mergeRequestNumber },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
@@ -217,27 +232,39 @@ async function handleGitHubPullRequestReviewHook(
         { prNumber: filterResult.mergeRequestNumber, reason: verdict.reason },
         'Platform approval revoked on non-qualified PR',
       );
-      reply.status(200).send({
-        status: 'unapproved',
-        prNumber: filterResult.mergeRequestNumber,
-        reason: verdict.reason,
-      });
+      sendWebhookReply(
+        reply,
+        {
+          kind: 'unapproved',
+          mergeRequestNumber: filterResult.mergeRequestNumber,
+          reason: verdict.reason,
+        },
+        { numberKey: 'prNumber' },
+      );
       return;
     }
 
-    reply.status(200).send({
-      status: 'ignored',
-      prNumber: filterResult.mergeRequestNumber,
-      reason: verdict.kind,
-    });
+    sendWebhookReply(
+      reply,
+      {
+        kind: 'ignored-with-number',
+        mergeRequestNumber: filterResult.mergeRequestNumber,
+        reason: verdict.kind,
+      },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
-  reply.status(200).send({
-    status: 'ignored',
-    prNumber: filterResult.mergeRequestNumber,
-    reason: transitionResult.reason,
-  });
+  sendWebhookReply(
+    reply,
+    {
+      kind: 'ignored-with-number',
+      mergeRequestNumber: filterResult.mergeRequestNumber,
+      reason: transitionResult.reason,
+    },
+    { numberKey: 'prNumber' },
+  );
 }
 
 async function handleGitHubIssueCommentHook(
@@ -249,13 +276,21 @@ async function handleGitHubIssueCommentHook(
   const parseResult = gitHubIssueCommentEventGuard.safeParse(request.body);
   if (!parseResult.success) {
     logger.debug({ errors: parseResult.error }, 'Invalid GitHub issue_comment payload (ignored)');
-    reply.status(200).send({ status: 'ignored', reason: 'Comment payload not parseable' });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'Comment payload not parseable' },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
   const filterResult = filterGitHubIssueCommentEvent(parseResult.data);
   if (!filterResult.shouldProcess) {
-    reply.status(200).send({ status: 'ignored', reason: filterResult.reason });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: filterResult.reason },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
@@ -265,7 +300,11 @@ async function handleGitHubIssueCommentHook(
       { projectPath: filterResult.projectPath },
       'Comment for unconfigured repository (ignored)',
     );
-    reply.status(200).send({ status: 'ignored', reason: 'Repository not configured' });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'Repository not configured' },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
@@ -302,11 +341,19 @@ async function handleGitHubIssueCommentHook(
   }
 
   if (result.kind === 'mr-not-found') {
-    reply.status(200).send({ status: 'ignored', reason: 'PR not tracked' });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'PR not tracked' },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
-  reply.status(200).send({ status: 'ignored', reason: 'No bypass marker' });
+  sendWebhookReply(
+    reply,
+    { kind: 'ignored', reason: 'No bypass marker' },
+    { numberKey: 'prNumber' },
+  );
 }
 
 export async function handleGitHubWebhook(
@@ -339,7 +386,11 @@ export async function handleGitHubWebhook(
 
   if (eventType !== 'pull_request') {
     logger.debug({ eventType }, 'Ignoring non-PR event');
-    reply.status(200).send({ status: 'ignored', reason: 'Not a PR event' });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'Not a PR event' },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
@@ -369,19 +420,27 @@ export async function handleGitHubWebhook(
       });
 
       if (result.type === 'closed') {
-        reply.status(200).send({
-          status: 'cleaned',
-          prNumber,
-          jobCancelled: result.jobCancelled,
-          trackingArchived: result.trackingArchived,
-        });
+        sendWebhookReply(
+          reply,
+          {
+            kind: 'cleaned',
+            mergeRequestNumber: prNumber,
+            jobCancelled: result.jobCancelled,
+            trackingArchived: result.trackingArchived,
+          },
+          { numberKey: 'prNumber' },
+        );
         return;
       }
     }
 
     // No repo config, just acknowledge
     logger.info({ prNumber, repo: projectPath }, 'PR closed but repo not configured');
-    reply.status(200).send({ status: 'ignored', reason: 'PR closed, repo not configured' });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'PR closed, repo not configured' },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
@@ -426,7 +485,11 @@ export async function handleGitHubWebhook(
           eligibility.type === 'followup-skipped' &&
           eligibility.reason === 'Auto-followup disabled'
         ) {
-          reply.status(200).send({ status: 'ignored', reason: 'Auto-followup disabled' });
+          sendWebhookReply(
+            reply,
+            { kind: 'ignored', reason: 'Auto-followup disabled' },
+            { numberKey: 'prNumber' },
+          );
           return;
         }
 
@@ -477,7 +540,11 @@ export async function handleGitHubWebhook(
               limitUsd: followupBudgetDecision.status.limitUsd,
               consumedUsd: followupBudgetDecision.status.consumedUsd,
             });
-            reply.status(200).send({ status: 'rejected', reason: 'budget-exceeded' });
+            sendWebhookReply(
+              reply,
+              { kind: 'rejected', reason: 'budget-exceeded' },
+              { numberKey: 'prNumber' },
+            );
             return;
           }
 
@@ -499,28 +566,40 @@ export async function handleGitHubWebhook(
               processor: followupProcessor,
             });
             if (gateResult.status === 'pending') {
-              reply.status(202).send({
-                status: 'pending-confirmation',
-                pendingId: gateResult.pendingId,
-                prNumber: updateResult.mergeRequestNumber,
-              });
+              sendWebhookReply(
+                reply,
+                {
+                  kind: 'pending-confirmation',
+                  pendingId: gateResult.pendingId,
+                  mergeRequestNumber: updateResult.mergeRequestNumber,
+                },
+                { numberKey: 'prNumber' },
+              );
               return;
             }
           } else {
             await enqueueReview(followupJob, followupProcessor);
           }
 
-          reply.status(202).send({
-            status: 'followup-queued',
-            jobId: followupJobId,
-            prNumber: updateResult.mergeRequestNumber,
-          });
+          sendWebhookReply(
+            reply,
+            {
+              kind: 'followup-queued',
+              jobId: followupJobId,
+              mergeRequestNumber: updateResult.mergeRequestNumber,
+            },
+            { numberKey: 'prNumber' },
+          );
           return;
         }
       }
     }
 
-    reply.status(200).send({ status: 'ignored', reason: filterResult.reason });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: filterResult.reason },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
@@ -528,10 +607,11 @@ export async function handleGitHubWebhook(
   const repoConfig = findRepositoryByRemoteUrl(event.repository.clone_url);
   if (!repoConfig) {
     logger.warn({ cloneUrl: event.repository.clone_url }, 'Projet non configuré');
-    reply.status(200).send({
-      status: 'ignored',
-      reason: 'Repository not configured',
-    });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'Repository not configured' },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
@@ -618,7 +698,11 @@ export async function handleGitHubWebhook(
       limitUsd: budgetDecision.status.limitUsd,
       consumedUsd: budgetDecision.status.consumedUsd,
     });
-    reply.status(200).send({ status: 'rejected', reason: 'budget-exceeded' });
+    sendWebhookReply(
+      reply,
+      { kind: 'rejected', reason: 'budget-exceeded' },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
@@ -631,43 +715,55 @@ export async function handleGitHubWebhook(
       processor: reviewProcessor,
     });
     if (gateResult.status === 'pending') {
-      reply.status(202).send({
-        status: 'pending-confirmation',
-        pendingId: gateResult.pendingId,
-        prNumber: filterResult.mergeRequestNumber,
-      });
+      sendWebhookReply(
+        reply,
+        {
+          kind: 'pending-confirmation',
+          pendingId: gateResult.pendingId,
+          mergeRequestNumber: filterResult.mergeRequestNumber,
+        },
+        { numberKey: 'prNumber' },
+      );
       return;
     }
     if (gateResult.status === 'enqueued') {
-      reply.status(202).send({
-        status: 'queued',
-        jobId,
-        prNumber: filterResult.mergeRequestNumber,
-      });
+      sendWebhookReply(
+        reply,
+        { kind: 'queued', jobId, mergeRequestNumber: filterResult.mergeRequestNumber },
+        { numberKey: 'prNumber' },
+      );
       return;
     }
-    reply.status(200).send({
-      status: 'deduplicated',
-      jobId,
-      reason: 'Review already in progress or recently completed',
-    });
+    sendWebhookReply(
+      reply,
+      {
+        kind: 'deduplicated',
+        jobId,
+        reason: 'Review already in progress or recently completed',
+      },
+      { numberKey: 'prNumber' },
+    );
     return;
   }
 
   const enqueued = await enqueueReview(job, reviewProcessor);
 
   if (enqueued) {
-    reply.status(202).send({
-      status: 'queued',
-      jobId,
-      prNumber: filterResult.mergeRequestNumber,
-    });
+    sendWebhookReply(
+      reply,
+      { kind: 'queued', jobId, mergeRequestNumber: filterResult.mergeRequestNumber },
+      { numberKey: 'prNumber' },
+    );
   } else {
-    reply.status(200).send({
-      status: 'deduplicated',
-      jobId,
-      reason: 'Review already in progress or recently completed',
-    });
+    sendWebhookReply(
+      reply,
+      {
+        kind: 'deduplicated',
+        jobId,
+        reason: 'Review already in progress or recently completed',
+      },
+      { numberKey: 'prNumber' },
+    );
   }
 }
 
