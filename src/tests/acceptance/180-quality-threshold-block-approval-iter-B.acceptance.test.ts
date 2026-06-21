@@ -218,7 +218,7 @@ describe('Acceptance — SPEC-180 Iteration B: Comment-based bypass', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, tracking, deps);
+      await handleGitLabWebhook(request, mockReply, logger, deps);
 
       const afterBypass = tracking.getById(PROJECT_PATH, MR_ID);
       expect(afterBypass?.bypass).toEqual({
@@ -265,7 +265,7 @@ describe('Acceptance — SPEC-180 Iteration B: Comment-based bypass', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, tracking, deps);
+      await handleGitLabWebhook(request, mockReply, logger, deps);
 
       expect(noteCommentPost.calls).toHaveLength(1);
       expect(noteCommentPost.calls[0]).toEqual({
@@ -341,7 +341,7 @@ describe('Acceptance — SPEC-180 Iteration B: Comment-based bypass', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, tracking, deps);
+      await handleGitLabWebhook(request, mockReply, logger, deps);
 
       const updated = tracking.getById(PROJECT_PATH, MR_ID);
       expect(updated?.bypass).toEqual({

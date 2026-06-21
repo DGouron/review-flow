@@ -43,7 +43,6 @@ import type { HandleClose } from '@/modules/review-execution/usecases/handleClos
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
 import type { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import type { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import type { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
 import type { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
@@ -314,7 +313,6 @@ export async function handleGitHubWebhook(
   request: FastifyRequest,
   reply: FastifyReply,
   logger: Logger,
-  _trackingGateway: ReviewRequestTrackingGateway,
   deps: GitHubWebhookDependencies,
 ): Promise<void> {
   const { trackAssignment } = deps;

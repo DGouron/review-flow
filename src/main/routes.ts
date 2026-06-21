@@ -575,7 +575,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
         removeWorktree: removeWorktreeAction,
         logger: deps.logger,
       });
-    await handleGitLabWebhook(request, reply, deps.logger, trackingGw, {
+    await handleGitLabWebhook(request, reply, deps.logger, {
       reviewContextGateway: deps.reviewContextGateway,
       threadFetchGateway: threadFetchGw,
       diffMetadataFetchGateway: new GitLabDiffMetadataFetchGateway(defaultGitLabExecutor),
@@ -649,7 +649,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
         removeWorktree: removeWorktreeAction,
         logger: deps.logger,
       });
-    await handleGitHubWebhook(request, reply, deps.logger, trackingGw, {
+    await handleGitHubWebhook(request, reply, deps.logger, {
       reviewContextGateway: deps.reviewContextGateway,
       threadFetchGateway: gitHubThreadFetchGw,
       diffMetadataFetchGateway: new GitHubDiffMetadataFetchGateway(defaultGitHubExecutor),

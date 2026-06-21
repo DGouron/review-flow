@@ -273,7 +273,7 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockGateway.update).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
@@ -293,7 +293,7 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockGateway.update).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
@@ -317,7 +317,7 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockGateway.create).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
@@ -341,7 +341,7 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockGateway.create).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
@@ -368,7 +368,7 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockGateway.create).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
@@ -392,7 +392,7 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockGateway.create).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
@@ -411,7 +411,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createClosedMr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(defaultDeps.handleClose).toHaveBeenCalledWith({
         platform: 'gitlab',
@@ -430,7 +430,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(defaultDeps.executeReview).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -457,7 +457,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(capturedMessages).toEqual(['boom']);
     });
@@ -468,7 +468,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createClosedMr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(defaultDeps.handleClose).toHaveBeenCalledWith({
         platform: 'gitlab',
@@ -500,7 +500,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createMergedMr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(request, mockReply, logger, deps);
 
       expect(removeWorktree).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -524,7 +524,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createClosedMr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'cleaned' }));
@@ -553,7 +553,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(request, mockReply, logger, deps);
 
       expect(enforceBudget.execute).toHaveBeenCalled();
       expect(enqueueReview).not.toHaveBeenCalled();
@@ -577,7 +577,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(defaultDeps.enforceBudget.execute).toHaveBeenCalled();
       expect(enqueueReview).toHaveBeenCalled();
@@ -616,7 +616,7 @@ describe('handleGitLabWebhook', () => {
         event.user = { username: 'reporter-actor', name: 'Reporter Actor' };
         const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-        await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+        await handleGitLabWebhook(request, mockReply, logger, deps);
 
         expect(enqueueReview).not.toHaveBeenCalled();
         expect(pendingGateway.saveCount).toBe(1);
@@ -636,7 +636,7 @@ describe('handleGitLabWebhook', () => {
         event.user = { username: 'dev-actor', name: 'Dev Actor' };
         const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-        await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+        await handleGitLabWebhook(request, mockReply, logger, deps);
 
         expect(enqueueReview).toHaveBeenCalled();
         expect(pendingGateway.saveCount).toBe(0);
@@ -672,7 +672,7 @@ describe('handleGitLabWebhook', () => {
         event.user = { username: 'reporter-actor', name: 'Reporter Actor' };
         const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-        await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+        await handleGitLabWebhook(request, mockReply, logger, deps);
 
         expect(enqueueReview).not.toHaveBeenCalled();
         expect(pendingGateway.saveCount).toBe(1);
@@ -692,7 +692,7 @@ describe('handleGitLabWebhook', () => {
         event.user = { username: 'dev-actor', name: 'Dev Actor' };
         const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-        await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+        await handleGitLabWebhook(request, mockReply, logger, deps);
 
         expect(enqueueReview).toHaveBeenCalled();
         expect(pendingGateway.saveCount).toBe(0);
@@ -754,7 +754,7 @@ describe('handleGitLabWebhook', () => {
         event.user = { username: 'dev-actor', name: 'Dev Actor' };
         const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-        await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+        await handleGitLabWebhook(request, mockReply, logger, deps);
 
         expect(enqueueReview).not.toHaveBeenCalled();
         expect(pendingGateway.saveCount).toBe(1);
@@ -774,7 +774,7 @@ describe('handleGitLabWebhook', () => {
         event.user = { username: 'dev-actor', name: 'Dev Actor' };
         const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-        await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+        await handleGitLabWebhook(request, mockReply, logger, deps);
 
         expect(enqueueReview).not.toHaveBeenCalled();
         expect(pendingGateway.saveCount).toBe(1);
@@ -792,7 +792,7 @@ describe('handleGitLabWebhook', () => {
           headers: {},
         } as unknown as FastifyRequest;
 
-        await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+        await handleGitLabWebhook(request, mockReply, logger, deps);
 
         expect(mockReply.status).toHaveBeenCalledWith(202);
         expect(mockReply.send).toHaveBeenCalledWith(
@@ -831,7 +831,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
       expect(mockReply.send).toHaveBeenCalledWith({ error: 'bad-token' });
@@ -848,7 +848,7 @@ describe('handleGitLabWebhook', () => {
       event.user = { username: 'dev-actor', name: 'Dev Actor' };
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(request, mockReply, logger, deps);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
       expect(memberAccess.calls.length).toBe(0);
@@ -859,7 +859,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -873,7 +873,7 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith({ error: 'Invalid webhook payload' });
@@ -917,7 +917,7 @@ describe('handleGitLabWebhook', () => {
     it('ignores a note payload that does not match the note schema', async () => {
       const request = { body: { object_kind: 'note' }, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -930,7 +930,7 @@ describe('handleGitLabWebhook', () => {
       body.object_attributes.noteable_type = 'Issue';
       const request = { body, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'ignored' }));
@@ -940,7 +940,7 @@ describe('handleGitLabWebhook', () => {
       vi.mocked(findRepositoryByProjectPath).mockReturnValueOnce(undefined);
       const request = { body: buildNoteEvent('hello'), headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -954,7 +954,7 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockGateway.update).toHaveBeenCalledWith(
         '/home/user/projects/test-project',
@@ -974,7 +974,7 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(request, mockReply, logger, deps);
 
       expect(noteCommentPostGateway.calls).toHaveLength(1);
       expect(noteCommentPostGateway.calls[0]).toEqual(
@@ -992,7 +992,7 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'ignored', reason: 'MR not tracked' }),
@@ -1005,7 +1005,7 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'ignored', reason: 'No bypass marker' }),
@@ -1021,7 +1021,7 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(request, mockReply, logger, deps);
 
       expect(mockReply.status).toHaveBeenCalledWith(202);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -1039,7 +1039,7 @@ describe('handleGitLabWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(request, mockReply, logger, deps);
 
       expect(mockReply.status).not.toHaveBeenCalledWith(202);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -1054,7 +1054,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createClosedMr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(defaultDeps.handleClose).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -1094,7 +1094,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createApprovedMr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(request, mockReply, logger, deps);
 
       expect(approvalRevocationGateway.calls).toHaveLength(1);
       expect(noteCommentPostGateway.calls).toHaveLength(1);
@@ -1119,7 +1119,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createApprovedMr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(request, mockReply, logger, deps);
 
       expect(noteCommentPostGateway.calls).toHaveLength(1);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -1132,7 +1132,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createApprovedMr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'ignored', reason: 'not-found', mrNumber: 42 }),
@@ -1179,7 +1179,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createMrUpdate();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(request, mockReply, logger, deps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(broadcastBudgetExceeded).toHaveBeenCalledWith(
@@ -1209,7 +1209,7 @@ describe('handleGitLabWebhook', () => {
       const event = GitLabEventFactory.createMrUpdate();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitLabWebhook(request, mockReply, logger, defaultDeps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(mockReply.send).toHaveBeenCalledWith(

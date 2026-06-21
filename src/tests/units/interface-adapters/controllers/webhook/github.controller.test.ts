@@ -89,7 +89,6 @@ import {
   type ProcessWebhookResult,
 } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { HandleCloseResult } from '@/modules/review-execution/usecases/handleClose.usecase.js';
-import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 
 import { findRepositoryByRemoteUrl } from '../../../../../config/loader.js';
 import { enqueueReview } from '../../../../../frameworks/queue/pQueueAdapter.js';
@@ -185,33 +184,8 @@ function createMockDeps(): GitHubWebhookDependencies {
   } as unknown as GitHubWebhookDependencies;
 }
 
-function createMockTrackingGateway() {
-  const basicMr = TrackedMrFactory.create({
-    id: 'github-test-owner/test-repo-123',
-    mrNumber: 123,
-    platform: 'github',
-    project: 'test-owner/test-repo',
-  });
-
-  return {
-    getById: vi.fn((): TrackedMr | null => basicMr),
-    getByNumber: vi.fn(() => null),
-    create: vi.fn(),
-    update: vi.fn(),
-    getByState: vi.fn(() => []),
-    getActiveMrs: vi.fn(() => []),
-    remove: vi.fn(() => true),
-    archive: vi.fn(() => true),
-    recordReviewEvent: vi.fn(),
-    recordPush: vi.fn(() => null),
-    loadTracking: vi.fn(() => null),
-    saveTracking: vi.fn(),
-  };
-}
-
 describe('handleGitHubWebhook', () => {
   let mockReply: FastifyReply;
-  let mockGateway: ReturnType<typeof createMockTrackingGateway>;
   let mockDeps: GitHubWebhookDependencies;
 
   const logger = createStubLogger();
@@ -222,7 +196,6 @@ describe('handleGitHubWebhook', () => {
       status: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     } as unknown as FastifyReply;
-    mockGateway = createMockTrackingGateway();
     mockDeps = createMockDeps();
   });
 
@@ -238,7 +211,7 @@ describe('handleGitHubWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockDeps.trackAssignment.execute).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -266,7 +239,7 @@ describe('handleGitHubWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockDeps.trackAssignment.execute).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -289,7 +262,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockDeps.executeReview).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -319,7 +292,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(capturedMessages).toEqual(['dispatch-failed: branch-not-found']);
     });
@@ -336,7 +309,7 @@ describe('handleGitHubWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockDeps.trackAssignment.execute).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -358,7 +331,7 @@ describe('handleGitHubWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockDeps.trackAssignment.execute).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -380,7 +353,7 @@ describe('handleGitHubWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockDeps.trackAssignment.execute).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -402,7 +375,7 @@ describe('handleGitHubWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockDeps.trackAssignment.execute).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -436,7 +409,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, exceededDeps);
+      await handleGitHubWebhook(request, mockReply, logger, exceededDeps);
 
       expect(exceededDeps.enforceBudget.execute).toHaveBeenCalled();
       expect(enqueueReview).not.toHaveBeenCalled();
@@ -459,7 +432,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       const acceptedDeps = mockDeps as unknown as {
         enforceBudget: { execute: ReturnType<typeof vi.fn> };
@@ -496,7 +469,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createSynchronizePr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitHubWebhook(request, mockReply, logger, deps);
 
       expect(deps.recordPush.execute).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -541,7 +514,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createSynchronizePr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitHubWebhook(request, mockReply, logger, deps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -557,7 +530,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createSynchronizePr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitHubWebhook(request, mockReply, logger, deps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -570,7 +543,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createSynchronizePr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitHubWebhook(request, mockReply, logger, deps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -593,7 +566,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createSynchronizePr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitHubWebhook(request, mockReply, logger, deps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(deps.broadcastBudgetExceeded).toHaveBeenCalledWith(
@@ -617,7 +590,7 @@ describe('handleGitHubWebhook', () => {
       });
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitHubWebhook(request, mockReply, logger, deps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(deps.recordPush.execute).not.toHaveBeenCalled();
@@ -638,7 +611,7 @@ describe('handleGitHubWebhook', () => {
 
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(enqueueReview).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -661,7 +634,7 @@ describe('handleGitHubWebhook', () => {
 
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(enqueueReview).toHaveBeenCalled();
       const enqueuedJob = vi.mocked(enqueueReview).mock.calls[0][0];
@@ -696,7 +669,7 @@ describe('handleGitHubWebhook', () => {
 
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitHubWebhook(request, mockReply, logger, deps);
 
       expect(enqueueReview).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -714,7 +687,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createClosedPr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitHubWebhook(request, mockReply, logger, deps);
 
       expect(deps.handleClose).toHaveBeenCalledWith({
         platform: 'github',
@@ -739,7 +712,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createClosedPr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitHubWebhook(request, mockReply, logger, deps);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'cleaned' }));
@@ -761,7 +734,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
       expect(mockReply.send).toHaveBeenCalledWith({ error: 'bad-signature' });
@@ -773,7 +746,7 @@ describe('handleGitHubWebhook', () => {
 
       const request = { body: {}, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -788,7 +761,7 @@ describe('handleGitHubWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -809,7 +782,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -824,7 +797,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createClosedPr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockDeps.handleClose).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -844,7 +817,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -880,7 +853,7 @@ describe('handleGitHubWebhook', () => {
       vi.mocked(getGitHubEventType).mockReturnValue('issue_comment');
       const request = { body: { action: 'created' }, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -892,7 +865,7 @@ describe('handleGitHubWebhook', () => {
       vi.mocked(findRepositoryByRemoteUrl).mockReturnValue(undefined);
       const request = buildCommentRequest('/bypass: shipping hotfix');
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       vi.mocked(findRepositoryByRemoteUrl).mockReturnValue(mockRepoConfig);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -907,7 +880,7 @@ describe('handleGitHubWebhook', () => {
       });
       const request = buildCommentRequest('/bypass');
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockDeps.noteCommentPostGateway.postComment).toHaveBeenCalledWith(
         expect.objectContaining({ body: 'Please provide a reason' }),
@@ -924,7 +897,7 @@ describe('handleGitHubWebhook', () => {
       });
       const request = buildCommentRequest('/bypass: hotfix');
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'bypass-recorded' }),
@@ -937,7 +910,7 @@ describe('handleGitHubWebhook', () => {
       });
       const request = buildCommentRequest('/bypass: hotfix');
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'ignored', reason: 'PR not tracked' }),
@@ -950,7 +923,7 @@ describe('handleGitHubWebhook', () => {
       });
       const request = buildCommentRequest('just a normal comment');
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'ignored', reason: 'No bypass marker' }),
@@ -984,7 +957,7 @@ describe('handleGitHubWebhook', () => {
       vi.mocked(getGitHubEventType).mockReturnValue('pull_request_review');
       const request = { body: { action: 'submitted' }, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({ reason: 'pull_request_review payload not parseable' }),
@@ -1007,7 +980,7 @@ describe('handleGitHubWebhook', () => {
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1021,7 +994,7 @@ describe('handleGitHubWebhook', () => {
       vi.mocked(findRepositoryByRemoteUrl).mockReturnValue(undefined);
       const request = buildApprovalRequest();
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       vi.mocked(findRepositoryByRemoteUrl).mockReturnValue(mockRepoConfig);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -1033,7 +1006,7 @@ describe('handleGitHubWebhook', () => {
       (mockDeps.transitionState.execute as ReturnType<typeof vi.fn>).mockReturnValue({ ok: true });
       const request = buildApprovalRequest();
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'approved', prNumber: 123 }),
@@ -1053,7 +1026,7 @@ describe('handleGitHubWebhook', () => {
       });
       const request = buildApprovalRequest();
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockDeps.approvalRevocationGateway.revoke).toHaveBeenCalledWith(
         expect.objectContaining({ mrNumber: 123, reviewId: 55 }),
@@ -1085,7 +1058,7 @@ describe('handleGitHubWebhook', () => {
       );
       const request = buildApprovalRequest();
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'unapproved', reason: 'blockers-present' }),
@@ -1103,7 +1076,7 @@ describe('handleGitHubWebhook', () => {
       });
       const request = buildApprovalRequest();
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockDeps.approvalRevocationGateway.revoke).not.toHaveBeenCalled();
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -1118,7 +1091,7 @@ describe('handleGitHubWebhook', () => {
       });
       const request = buildApprovalRequest();
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, mockDeps);
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
 
       expect(mockDeps.handlePlatformApproval.execute).not.toHaveBeenCalled();
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -1139,7 +1112,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitHubWebhook(request, mockReply, logger, deps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(202);
@@ -1163,7 +1136,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitHubWebhook(request, mockReply, logger, deps);
 
       expect(mockReply.status).toHaveBeenCalledWith(202);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -1182,7 +1155,7 @@ describe('handleGitHubWebhook', () => {
       const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, deps);
+      await handleGitHubWebhook(request, mockReply, logger, deps);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(

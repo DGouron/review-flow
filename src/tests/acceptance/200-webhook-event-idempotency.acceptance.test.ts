@@ -263,10 +263,10 @@ describe('Acceptance — SPEC-200: Webhook event idempotency and replay protecti
         trackAssignment,
       });
 
-      await handleGitLabWebhook(requestWith('event-uuid-A'), mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(requestWith('event-uuid-A'), mockReply, logger, deps);
       const trackCallsAfterFirst = trackSpy.mock.calls.length;
 
-      await handleGitLabWebhook(requestWith('event-uuid-A'), mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(requestWith('event-uuid-A'), mockReply, logger, deps);
 
       expect(gateClaudeInvocation.invocationCount).toBe(1);
       expect(trackSpy.mock.calls.length).toBe(trackCallsAfterFirst);
@@ -282,8 +282,8 @@ describe('Acceptance — SPEC-200: Webhook event idempotency and replay protecti
       const gateClaudeInvocation = new StubGateClaudeInvocation();
       const deps = createDeps(mockGateway, { idempotencyStore, gateClaudeInvocation });
 
-      await handleGitLabWebhook(requestWith('event-uuid-A'), mockReply, logger, mockGateway, deps);
-      await handleGitLabWebhook(requestWith('event-uuid-B'), mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(requestWith('event-uuid-A'), mockReply, logger, deps);
+      await handleGitLabWebhook(requestWith('event-uuid-B'), mockReply, logger, deps);
 
       expect(gateClaudeInvocation.invocationCount).toBe(2);
     });
@@ -295,7 +295,7 @@ describe('Acceptance — SPEC-200: Webhook event idempotency and replay protecti
       const gateClaudeInvocation = new StubGateClaudeInvocation();
       const deps = createDeps(mockGateway, { idempotencyStore, gateClaudeInvocation });
 
-      await handleGitLabWebhook(requestWith(undefined), mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(requestWith(undefined), mockReply, logger, deps);
 
       expect(gateClaudeInvocation.invocationCount).toBe(1);
       expect(idempotencyStore.recordedKeys).toHaveLength(0);
@@ -315,13 +315,13 @@ describe('Acceptance — SPEC-200: Webhook event idempotency and replay protecti
       const gateClaudeInvocation = new StubGateClaudeInvocation();
       const deps = createDeps(mockGateway, { idempotencyStore, gateClaudeInvocation });
 
-      await handleGitLabWebhook(requestWith('event-uuid-A'), mockReply, logger, mockGateway, deps);
-      await handleGitLabWebhook(requestWith('event-uuid-A'), mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(requestWith('event-uuid-A'), mockReply, logger, deps);
+      await handleGitLabWebhook(requestWith('event-uuid-A'), mockReply, logger, deps);
 
       expect(gateClaudeInvocation.invocationCount).toBe(1);
 
       currentTimeMs = 60_001;
-      await handleGitLabWebhook(requestWith('event-uuid-A'), mockReply, logger, mockGateway, deps);
+      await handleGitLabWebhook(requestWith('event-uuid-A'), mockReply, logger, deps);
 
       expect(gateClaudeInvocation.invocationCount).toBe(2);
     });

@@ -262,11 +262,11 @@ describe('handleGitLabWebhook idempotency guard', () => {
       trackAssignment,
     });
 
-    await handleGitLabWebhook(requestWith('uuid-A'), mockReply, logger, mockGateway, deps);
+    await handleGitLabWebhook(requestWith('uuid-A'), mockReply, logger, deps);
 
     const trackCallsAfterFirst = trackSpy.mock.calls.length;
 
-    await handleGitLabWebhook(requestWith('uuid-A'), mockReply, logger, mockGateway, deps);
+    await handleGitLabWebhook(requestWith('uuid-A'), mockReply, logger, deps);
 
     expect(gateClaudeInvocation.invocationCount).toBe(1);
     expect(trackSpy.mock.calls.length).toBe(trackCallsAfterFirst);
@@ -280,8 +280,8 @@ describe('handleGitLabWebhook idempotency guard', () => {
     const gateClaudeInvocation = new StubGateClaudeInvocation();
     const deps = createDeps(mockGateway, { idempotencyStore, gateClaudeInvocation });
 
-    await handleGitLabWebhook(requestWith('uuid-A'), mockReply, logger, mockGateway, deps);
-    await handleGitLabWebhook(requestWith('uuid-B'), mockReply, logger, mockGateway, deps);
+    await handleGitLabWebhook(requestWith('uuid-A'), mockReply, logger, deps);
+    await handleGitLabWebhook(requestWith('uuid-B'), mockReply, logger, deps);
 
     expect(gateClaudeInvocation.invocationCount).toBe(2);
   });
@@ -291,7 +291,7 @@ describe('handleGitLabWebhook idempotency guard', () => {
     const gateClaudeInvocation = new StubGateClaudeInvocation();
     const deps = createDeps(mockGateway, { idempotencyStore, gateClaudeInvocation });
 
-    await handleGitLabWebhook(requestWith(undefined), mockReply, logger, mockGateway, deps);
+    await handleGitLabWebhook(requestWith(undefined), mockReply, logger, deps);
 
     expect(gateClaudeInvocation.invocationCount).toBe(1);
     expect(idempotencyStore.recordedKeys).toHaveLength(0);

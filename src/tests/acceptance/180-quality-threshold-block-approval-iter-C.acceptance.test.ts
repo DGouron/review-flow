@@ -307,7 +307,7 @@ describe('Acceptance — SPEC-180 Iteration C: Platform approval revoked on non-
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitLabWebhook(request, mockReply, logger, tracking, deps);
+      await handleGitLabWebhook(request, mockReply, logger, deps);
 
       expect(approvalRevocation.calls).toHaveLength(1);
       expect(approvalRevocation.calls[0]).toMatchObject({
@@ -347,7 +347,7 @@ describe('Acceptance — SPEC-180 Iteration C: Platform approval revoked on non-
         headers: {},
       } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, tracking, deps);
+      await handleGitHubWebhook(request, mockReply, logger, deps);
 
       expect(approvalRevocation.calls).toHaveLength(1);
       expect(approvalRevocation.calls[0]).toMatchObject({

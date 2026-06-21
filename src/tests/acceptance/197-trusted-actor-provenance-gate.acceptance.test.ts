@@ -326,13 +326,7 @@ describe('SPEC-197 trusted-actor trigger provenance gate (acceptance — full ch
       const reporterEvent = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       reporterEvent.user = { username: 'reporter-actor', name: 'Reporter Actor' };
 
-      await handleGitLabWebhook(
-        asRequest(reporterEvent),
-        mockReply,
-        logger,
-        reporterTracking,
-        reporterDeps,
-      );
+      await handleGitLabWebhook(asRequest(reporterEvent), mockReply, logger, reporterDeps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(reporterPending.saveCount).toBe(1);
@@ -346,13 +340,7 @@ describe('SPEC-197 trusted-actor trigger provenance gate (acceptance — full ch
       const developerEvent = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       developerEvent.user = { username: 'dev-actor', name: 'Dev Actor' };
 
-      await handleGitLabWebhook(
-        asRequest(developerEvent),
-        mockReply,
-        logger,
-        developerTracking,
-        developerDeps,
-      );
+      await handleGitLabWebhook(asRequest(developerEvent), mockReply, logger, developerDeps);
 
       expect(enqueueReview).toHaveBeenCalledTimes(1);
       expect(developerPending.saveCount).toBe(0);
@@ -372,13 +360,7 @@ describe('SPEC-197 trusted-actor trigger provenance gate (acceptance — full ch
       const reporterEvent = GitLabEventFactory.createMrUpdate();
       reporterEvent.user = { username: 'reporter-actor', name: 'Reporter Actor' };
 
-      await handleGitLabWebhook(
-        asRequest(reporterEvent),
-        mockReply,
-        logger,
-        reporterTracking,
-        reporterDeps,
-      );
+      await handleGitLabWebhook(asRequest(reporterEvent), mockReply, logger, reporterDeps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(reporterPending.saveCount).toBe(1);
@@ -394,13 +376,7 @@ describe('SPEC-197 trusted-actor trigger provenance gate (acceptance — full ch
       const developerEvent = GitLabEventFactory.createMrUpdate();
       developerEvent.user = { username: 'dev-actor', name: 'Dev Actor' };
 
-      await handleGitLabWebhook(
-        asRequest(developerEvent),
-        mockReply,
-        logger,
-        developerTracking,
-        developerDeps,
-      );
+      await handleGitLabWebhook(asRequest(developerEvent), mockReply, logger, developerDeps);
 
       expect(enqueueReview).toHaveBeenCalledTimes(1);
       expect(developerPending.saveCount).toBe(0);
@@ -428,7 +404,6 @@ describe('SPEC-197 trusted-actor trigger provenance gate (acceptance — full ch
         asRequest(buildNoteEvent('/bypass-quality "reason here"')),
         mockReply,
         logger,
-        reporterTracking,
         reporterDeps,
       );
 
@@ -459,7 +434,6 @@ describe('SPEC-197 trusted-actor trigger provenance gate (acceptance — full ch
         asRequest(buildNoteEvent('/bypass-quality "reason here"')),
         developerReply,
         logger,
-        developerTracking,
         developerDeps,
       );
 
@@ -481,13 +455,7 @@ describe('SPEC-197 trusted-actor trigger provenance gate (acceptance — full ch
       const reviewerEvent = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       reviewerEvent.user = { username: 'dev-actor', name: 'Dev Actor' };
 
-      await handleGitLabWebhook(
-        asRequest(reviewerEvent),
-        mockReply,
-        logger,
-        reviewerTracking,
-        reviewerDeps,
-      );
+      await handleGitLabWebhook(asRequest(reviewerEvent), mockReply, logger, reviewerDeps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(reviewerPending.saveCount).toBe(1);
@@ -503,13 +471,7 @@ describe('SPEC-197 trusted-actor trigger provenance gate (acceptance — full ch
       const followupEvent = GitLabEventFactory.createMrUpdate();
       followupEvent.user = { username: 'dev-actor', name: 'Dev Actor' };
 
-      await handleGitLabWebhook(
-        asRequest(followupEvent),
-        mockReply,
-        logger,
-        followupTracking,
-        followupDeps,
-      );
+      await handleGitLabWebhook(asRequest(followupEvent), mockReply, logger, followupDeps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(followupPending.saveCount).toBe(1);
@@ -536,7 +498,6 @@ describe('SPEC-197 trusted-actor trigger provenance gate (acceptance — full ch
         asRequest(buildNoteEvent('/bypass-quality "reason here"')),
         noteReply,
         logger,
-        noteTracking,
         noteDeps,
       );
 
@@ -559,13 +520,7 @@ describe('SPEC-197 trusted-actor trigger provenance gate (acceptance — full ch
       const trustedEvent = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       trustedEvent.user = { username: 'dev-actor', name: 'Dev Actor' };
 
-      await handleGitLabWebhook(
-        asRequest(trustedEvent),
-        mockReply,
-        logger,
-        trustedTracking,
-        trustedDeps,
-      );
+      await handleGitLabWebhook(asRequest(trustedEvent), mockReply, logger, trustedDeps);
 
       expect(enqueueReview).toHaveBeenCalledTimes(1);
       expect(pendingGateway.saveCount).toBe(0);
@@ -575,13 +530,7 @@ describe('SPEC-197 trusted-actor trigger provenance gate (acceptance — full ch
       const malloryEvent = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       malloryEvent.user = { username: 'mallory', name: 'Mallory' };
 
-      await handleGitLabWebhook(
-        asRequest(malloryEvent),
-        mockReply,
-        logger,
-        malloryTracking,
-        malloryDeps,
-      );
+      await handleGitLabWebhook(asRequest(malloryEvent), mockReply, logger, malloryDeps);
 
       expect(enqueueReview).toHaveBeenCalledTimes(1);
       expect(pendingGateway.saveCount).toBe(1);
@@ -604,7 +553,7 @@ describe('SPEC-197 trusted-actor trigger provenance gate (acceptance — full ch
       const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
       event.user = { username: 'dev-actor', name: 'Dev Actor' };
 
-      await handleGitLabWebhook(asRequest(event), mockReply, logger, tracking, deps);
+      await handleGitLabWebhook(asRequest(event), mockReply, logger, deps);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
       expect(mockReply.send).toHaveBeenCalledWith({ error: 'bad-token' });
