@@ -26,8 +26,12 @@ import {
   filterGitLabMrApprove,
   filterGitLabNoteEvent,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
-import { sendWebhookReply } from '@/modules/platform-integration/interface-adapters/controllers/webhook/webhookReply.js';
+import {
+  sendWebhookReply,
+  sendReviewRequestReply,
+} from '@/modules/platform-integration/interface-adapters/controllers/webhook/webhookReply.js';
 import type { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
+import { processReviewRequest } from '@/modules/platform-integration/usecases/processReviewRequest.usecase.js';
 import type { ProcessWebhook } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import {
@@ -548,33 +552,6 @@ export async function handleGitLabWebhook(
             jobType: 'followup',
           };
 
-          const followupBudgetDecision = await deps.enforceBudget.execute({
-            localPaths: listEnabledLocalPaths(deps.getRepositories),
-          });
-          if (!followupBudgetDecision.accepted) {
-            logger.warn(
-              {
-                mrNumber: followupJob.mrNumber,
-                limitUsd: followupBudgetDecision.status.limitUsd,
-                consumedUsd: followupBudgetDecision.status.consumedUsd,
-              },
-              'Budget exceeded, followup not enqueued',
-            );
-            deps.broadcastBudgetExceeded({
-              mrNumber: followupJob.mrNumber,
-              platform: 'gitlab',
-              projectPath: followupJob.projectPath,
-              limitUsd: followupBudgetDecision.status.limitUsd,
-              consumedUsd: followupBudgetDecision.status.consumedUsd,
-            });
-            sendWebhookReply(
-              reply,
-              { kind: 'rejected', reason: 'budget-exceeded' },
-              { numberKey: 'mrNumber' },
-            );
-            return;
-          }
-
           const followupProcessor = async (j: ReviewJob, signal: AbortSignal): Promise<void> => {
             await runGitLabReview(deps.executeReview, {
               job: j,
@@ -586,59 +563,48 @@ export async function handleGitLabWebhook(
             });
           };
 
-          // SPEC-197 AC2: gate the followup trigger on actor provenance.
-          const followupActorTrusted = await resolveActorTrust(
-            deps,
-            updateResult.projectPath,
-            event.user.username,
-          );
-
-          if (deps.gateClaudeInvocation) {
-            const gateResult = await deps.gateClaudeInvocation.execute({
-              job: followupJob,
-              triggerSource: 'webhook-followup',
-              processor: followupProcessor,
-              actorTrusted: followupActorTrusted,
-            });
-            if (gateResult.status === 'pending') {
-              sendWebhookReply(
-                reply,
-                {
-                  kind: 'pending-confirmation',
-                  pendingId: gateResult.pendingId,
-                  mergeRequestNumber: updateResult.mergeRequestNumber,
-                },
-                { numberKey: 'mrNumber' },
-              );
-              return;
-            }
-          } else if (followupActorTrusted) {
-            enqueueReview(followupJob, followupProcessor);
-          } else {
-            logger.info(
-              { mrNumber: updateResult.mergeRequestNumber, actor: event.user.username },
-              'Followup trigger from non-trusted actor parked (provenance gate)',
-            );
-            sendWebhookReply(
-              reply,
-              {
-                kind: 'pending-confirmation-untrusted',
-                mergeRequestNumber: updateResult.mergeRequestNumber,
-              },
-              { numberKey: 'mrNumber' },
-            );
-            return;
-          }
-
-          sendWebhookReply(
-            reply,
+          const followupVerdict = await processReviewRequest(
             {
-              kind: 'followup-queued',
-              jobId: followupJobId,
-              mergeRequestNumber: updateResult.mergeRequestNumber,
+              job: followupJob,
+              processor: followupProcessor,
+              triggerSource: 'webhook-followup',
+              localPaths: listEnabledLocalPaths(deps.getRepositories),
+              actorUsername: event.user.username,
+              projectPath: updateResult.projectPath,
+              gateActorTrust: true,
             },
-            { numberKey: 'mrNumber' },
+            {
+              enforceBudget: deps.enforceBudget,
+              gateClaudeInvocation: deps.gateClaudeInvocation,
+              isTrustedActor: deps.isTrustedActor,
+              enqueue: enqueueReview,
+              logger,
+            },
           );
+
+          sendReviewRequestReply(reply, followupVerdict, {
+            numberKey: 'mrNumber',
+            mergeRequestNumber: updateResult.mergeRequestNumber,
+            jobId: followupJobId,
+            flow: 'followup',
+            onBudgetExceeded: (status) => {
+              logger.warn(
+                {
+                  mrNumber: followupJob.mrNumber,
+                  limitUsd: status.limitUsd,
+                  consumedUsd: status.consumedUsd,
+                },
+                'Budget exceeded, followup not enqueued',
+              );
+              deps.broadcastBudgetExceeded({
+                mrNumber: followupJob.mrNumber,
+                platform: 'gitlab',
+                projectPath: followupJob.projectPath,
+                limitUsd: status.limitUsd,
+                consumedUsd: status.consumedUsd,
+              });
+            },
+          });
           return;
         }
       }
@@ -718,116 +684,46 @@ export async function handleGitLabWebhook(
     author,
   };
 
-  const budgetDecision = await deps.enforceBudget.execute({
-    localPaths: listEnabledLocalPaths(deps.getRepositories),
-  });
-  if (!budgetDecision.accepted) {
-    logger.warn(
-      {
-        mrNumber: job.mrNumber,
-        limitUsd: budgetDecision.status.limitUsd,
-        consumedUsd: budgetDecision.status.consumedUsd,
-      },
-      'Budget exceeded, review not enqueued',
-    );
-    deps.broadcastBudgetExceeded({
-      mrNumber: job.mrNumber,
-      platform: 'gitlab',
-      projectPath: job.projectPath,
-      limitUsd: budgetDecision.status.limitUsd,
-      consumedUsd: budgetDecision.status.consumedUsd,
-    });
-    sendWebhookReply(
-      reply,
-      { kind: 'rejected', reason: 'budget-exceeded' },
-      { numberKey: 'mrNumber' },
-    );
-    return;
-  }
-
   const reviewProcessor = buildGitLabReviewProcessor(deps, logger)(job);
 
-  // SPEC-197 AC1: gate the reviewer-added trigger on actor provenance.
-  const reviewerActorTrusted = await resolveActorTrust(
-    deps,
-    filterResult.projectPath,
-    event.user.username,
+  const verdict = await processReviewRequest(
+    {
+      job,
+      processor: reviewProcessor,
+      triggerSource: 'webhook-initial',
+      localPaths: listEnabledLocalPaths(deps.getRepositories),
+      actorUsername: event.user.username,
+      projectPath: filterResult.projectPath,
+      gateActorTrust: true,
+    },
+    {
+      enforceBudget: deps.enforceBudget,
+      gateClaudeInvocation: deps.gateClaudeInvocation,
+      isTrustedActor: deps.isTrustedActor,
+      enqueue: enqueueReview,
+      logger,
+    },
   );
 
-  if (deps.gateClaudeInvocation) {
-    const gateResult = await deps.gateClaudeInvocation.execute({
-      job,
-      triggerSource: 'webhook-initial',
-      processor: reviewProcessor,
-      actorTrusted: reviewerActorTrusted,
-    });
-    if (gateResult.status === 'pending') {
-      sendWebhookReply(
-        reply,
-        {
-          kind: 'pending-confirmation',
-          pendingId: gateResult.pendingId,
-          mergeRequestNumber: filterResult.mergeRequestNumber,
-        },
-        { numberKey: 'mrNumber' },
+  sendReviewRequestReply(reply, verdict, {
+    numberKey: 'mrNumber',
+    mergeRequestNumber: filterResult.mergeRequestNumber,
+    jobId,
+    flow: 'initial',
+    onBudgetExceeded: (status) => {
+      logger.warn(
+        { mrNumber: job.mrNumber, limitUsd: status.limitUsd, consumedUsd: status.consumedUsd },
+        'Budget exceeded, review not enqueued',
       );
-      return;
-    }
-    if (gateResult.status === 'enqueued') {
-      sendWebhookReply(
-        reply,
-        { kind: 'queued', jobId, mergeRequestNumber: filterResult.mergeRequestNumber },
-        { numberKey: 'mrNumber' },
-      );
-      return;
-    }
-    sendWebhookReply(
-      reply,
-      {
-        kind: 'deduplicated',
-        jobId,
-        reason: 'Review already in progress or recently completed',
-      },
-      { numberKey: 'mrNumber' },
-    );
-    return;
-  }
-
-  if (!reviewerActorTrusted) {
-    logger.info(
-      { mrNumber: filterResult.mergeRequestNumber, actor: event.user.username },
-      'Reviewer-added trigger from non-trusted actor parked (provenance gate)',
-    );
-    sendWebhookReply(
-      reply,
-      {
-        kind: 'pending-confirmation-untrusted',
-        mergeRequestNumber: filterResult.mergeRequestNumber,
-      },
-      { numberKey: 'mrNumber' },
-    );
-    return;
-  }
-
-  const enqueued = await enqueueReview(job, reviewProcessor);
-
-  if (enqueued) {
-    sendWebhookReply(
-      reply,
-      { kind: 'queued', jobId, mergeRequestNumber: filterResult.mergeRequestNumber },
-      { numberKey: 'mrNumber' },
-    );
-  } else {
-    sendWebhookReply(
-      reply,
-      {
-        kind: 'deduplicated',
-        jobId,
-        reason: 'Review already in progress or recently completed',
-      },
-      { numberKey: 'mrNumber' },
-    );
-  }
+      deps.broadcastBudgetExceeded({
+        mrNumber: job.mrNumber,
+        platform: 'gitlab',
+        projectPath: job.projectPath,
+        limitUsd: status.limitUsd,
+        consumedUsd: status.consumedUsd,
+      });
+    },
+  });
 }
 
 type GitLabReviewProcessorDeps = Pick<

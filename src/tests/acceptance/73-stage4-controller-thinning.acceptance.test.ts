@@ -1,10 +1,18 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 import type { WebhookEvent } from '@/modules/platform-integration/entities/webhookEvent/webhookEvent.js';
+import {
+  processReviewRequest,
+  type ProcessReviewRequestDependencies,
+  type ProcessReviewRequestInput,
+} from '@/modules/platform-integration/usecases/processReviewRequest.usecase.js';
 import {
   processWebhook,
   type ProcessWebhookDependencies,
 } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
+import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
+import type { GateClaudeInvocationProcessor } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
+import type { BudgetStatus } from '@/modules/token-accounting/entities/budget/budgetStatus.js';
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
@@ -125,6 +133,165 @@ describe('SPEC-073 Stage 4b — approve verdict via processWebhook (acceptance)'
   describe('the platform-neutral usecase imports no platform-specific types', () => {
     it('uses evaluateQualityGate as the gate function for the transition check', () => {
       expect(typeof evaluateQualityGate).toBe('function');
+    });
+  });
+});
+
+const REVIEW_PROJECT_PATH = 'group/project';
+const reviewProcessor: GateClaudeInvocationProcessor = async () => {};
+
+function buildReviewJob(): ReviewJob {
+  return {
+    id: 'gitlab-group/project-42',
+    platform: 'gitlab',
+    projectPath: REVIEW_PROJECT_PATH,
+    localPath: PROJECT_PATH,
+    mrNumber: 42,
+    skill: 'review-front',
+    mrUrl: 'https://gitlab.com/group/project/-/merge_requests/42',
+    sourceBranch: 'feature/x',
+    targetBranch: 'main',
+    jobType: 'review',
+  };
+}
+
+function acceptedBudget(): BudgetStatus {
+  return {
+    limitUsd: 200,
+    consumedUsd: 0,
+    remainingUsd: 200,
+    percentUsed: 0,
+    exceeded: false,
+    periodStart: '2026-05-01T00:00:00.000Z',
+  };
+}
+
+function exceededBudget(): BudgetStatus {
+  return {
+    limitUsd: 200,
+    consumedUsd: 250,
+    remainingUsd: -50,
+    percentUsed: 125,
+    exceeded: true,
+    periodStart: '2026-05-01T00:00:00.000Z',
+  };
+}
+
+function buildReviewInput(
+  overrides: Partial<ProcessReviewRequestInput> = {},
+): ProcessReviewRequestInput {
+  return {
+    job: buildReviewJob(),
+    processor: reviewProcessor,
+    triggerSource: 'webhook-initial',
+    localPaths: [PROJECT_PATH],
+    actorUsername: 'alice',
+    projectPath: REVIEW_PROJECT_PATH,
+    gateActorTrust: true,
+    ...overrides,
+  };
+}
+
+function buildReviewDeps(
+  overrides: Partial<ProcessReviewRequestDependencies> = {},
+): ProcessReviewRequestDependencies {
+  return {
+    enforceBudget: { execute: vi.fn(async () => ({ accepted: true, status: acceptedBudget() })) },
+    enqueue: vi.fn(async () => true),
+    logger: createStubLogger(),
+    ...overrides,
+  };
+}
+
+describe('SPEC-073 Stage 4a — review-request enqueue sequencing via processReviewRequest (acceptance)', () => {
+  describe('the review-request verdict is decided inward, platform-neutral', () => {
+    it('budget-exceeded: a refused budget short-circuits before any enqueue', async () => {
+      const enqueue = vi.fn(async () => true);
+      const verdict = await processReviewRequest(
+        buildReviewInput(),
+        buildReviewDeps({
+          enforceBudget: {
+            execute: vi.fn(async () => ({ accepted: false, status: exceededBudget() })),
+          },
+          enqueue,
+        }),
+      );
+
+      expect(verdict).toEqual({ type: 'budget-exceeded', status: exceededBudget() });
+      expect(enqueue).not.toHaveBeenCalled();
+    });
+
+    it('queued: a trusted full-auto trigger is enqueued through the gate', async () => {
+      const gateClaudeInvocation = {
+        execute: vi.fn(async () => ({
+          status: 'enqueued' as const,
+          jobId: 'gitlab-group/project-42',
+        })),
+      };
+      const verdict = await processReviewRequest(
+        buildReviewInput(),
+        buildReviewDeps({
+          gateClaudeInvocation,
+          isTrustedActor: { execute: vi.fn(async () => true) },
+        }),
+      );
+
+      expect(verdict).toEqual({ type: 'queued', jobId: 'gitlab-group/project-42' });
+    });
+
+    it('pending: a semi-auto trigger is parked with its pendingId', async () => {
+      const gateClaudeInvocation = {
+        execute: vi.fn(async () => ({
+          status: 'pending' as const,
+          pendingId: 'pending-gitlab-42',
+        })),
+      };
+      const verdict = await processReviewRequest(
+        buildReviewInput(),
+        buildReviewDeps({
+          gateClaudeInvocation,
+          isTrustedActor: { execute: vi.fn(async () => true) },
+        }),
+      );
+
+      expect(verdict).toEqual({ type: 'pending', pendingId: 'pending-gitlab-42' });
+    });
+
+    it('pending (untrusted-actor): the no-gate fallback parks an untrusted actor without enqueuing', async () => {
+      const enqueue = vi.fn(async () => true);
+      const verdict = await processReviewRequest(
+        buildReviewInput({ gateActorTrust: true }),
+        buildReviewDeps({ enqueue, isTrustedActor: { execute: vi.fn(async () => false) } }),
+      );
+
+      expect(verdict).toEqual({ type: 'pending', pendingId: null, reason: 'untrusted-actor' });
+      expect(enqueue).not.toHaveBeenCalled();
+    });
+
+    it('deduplicated: the gate rejecting the job yields a deduplicated verdict', async () => {
+      const gateClaudeInvocation = {
+        execute: vi.fn(async () => ({ status: 'rejected' as const, reason: 'already-active' })),
+      };
+      const verdict = await processReviewRequest(
+        buildReviewInput(),
+        buildReviewDeps({
+          gateClaudeInvocation,
+          isTrustedActor: { execute: vi.fn(async () => true) },
+        }),
+      );
+
+      expect(verdict).toEqual({ type: 'deduplicated', jobId: 'gitlab-group/project-42' });
+    });
+
+    it('queued (no gate): the followup raw-enqueue fallback queues an ungated trigger', async () => {
+      const enqueue = vi.fn(async () => true);
+      const verdict = await processReviewRequest(
+        buildReviewInput({ triggerSource: 'webhook-followup', gateActorTrust: false }),
+        buildReviewDeps({ enqueue }),
+      );
+
+      expect(verdict).toEqual({ type: 'queued', jobId: 'gitlab-group/project-42' });
+      expect(enqueue).toHaveBeenCalledTimes(1);
     });
   });
 });

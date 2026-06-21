@@ -1,3 +1,6 @@
+import type { ReviewRequestVerdict } from '@/modules/platform-integration/usecases/processReviewRequest.usecase.js';
+import type { BudgetStatus } from '@/modules/token-accounting/entities/budget/budgetStatus.js';
+
 export type WebhookReplyResult =
   | {
       kind: 'cleaned';
@@ -101,6 +104,75 @@ export function sendWebhookReply(
         reason: 'untrusted-actor',
         [numberKey]: result.mergeRequestNumber,
       });
+      return;
+  }
+}
+
+export interface ReviewRequestReplyOptions {
+  numberKey: 'mrNumber' | 'prNumber';
+  mergeRequestNumber: number;
+  jobId: string;
+  /**
+   * Initial reviews distinguish a freshly queued job from a deduplicated one
+   * (`'queued'` + a `deduplicated` body). Followup pushes collapse both outcomes
+   * into a single `'followup-queued'` reply, matching the historical wire contract.
+   */
+  flow: 'initial' | 'followup';
+  onBudgetExceeded: (status: BudgetStatus) => void;
+}
+
+const DEDUPLICATED_REASON = 'Review already in progress or recently completed';
+
+export function sendReviewRequestReply(
+  reply: WebhookReplyTarget,
+  verdict: ReviewRequestVerdict,
+  options: ReviewRequestReplyOptions,
+): void {
+  const { numberKey, mergeRequestNumber, jobId, flow, onBudgetExceeded } = options;
+
+  switch (verdict.type) {
+    case 'budget-exceeded':
+      onBudgetExceeded(verdict.status);
+      sendWebhookReply(reply, { kind: 'rejected', reason: 'budget-exceeded' }, { numberKey });
+      return;
+    case 'pending':
+      if (verdict.reason === 'untrusted-actor') {
+        sendWebhookReply(
+          reply,
+          { kind: 'pending-confirmation-untrusted', mergeRequestNumber },
+          { numberKey },
+        );
+        return;
+      }
+      sendWebhookReply(
+        reply,
+        { kind: 'pending-confirmation', pendingId: verdict.pendingId, mergeRequestNumber },
+        { numberKey },
+      );
+      return;
+    case 'queued':
+      sendWebhookReply(
+        reply,
+        flow === 'followup'
+          ? { kind: 'followup-queued', jobId, mergeRequestNumber }
+          : { kind: 'queued', jobId, mergeRequestNumber },
+        { numberKey },
+      );
+      return;
+    case 'deduplicated':
+      if (flow === 'followup') {
+        sendWebhookReply(
+          reply,
+          { kind: 'followup-queued', jobId, mergeRequestNumber },
+          { numberKey },
+        );
+        return;
+      }
+      sendWebhookReply(
+        reply,
+        { kind: 'deduplicated', jobId, reason: DEDUPLICATED_REASON },
+        { numberKey },
+      );
       return;
   }
 }

@@ -1,6 +1,6 @@
 ---
 title: "SPEC-073: Extract Webhook Processing Use Case"
-status: implementing
+status: implemented
 issue: "#73 (absorbs #76)"
 labels: refactor, P2-important, webhook, architecture
 milestone: "Architecture Cleanup"
@@ -8,7 +8,7 @@ milestone: "Architecture Cleanup"
 
 # SPEC-073: Extract Webhook Processing Use Case
 
-## Status: implementing (Stages 1-3 of 4 done)
+## Status: implemented (all 4 stages done)
 
 > The codebase was restructured into a modular monolith (`src/modules/<context>/...`) after
 > this spec was drafted; the original flat `src/usecases/` paths below are stale. See the
@@ -97,6 +97,47 @@ tests GREEN; acceptance asserts platform-neutrality (imports no `GitLab*`/`GitHu
 **Remaining (out of scope here, future runs):** Stage 4 full controller thinning — move the
 `review-requested` enqueue path and `approve` verdict inward, unify HTTP reply shapes, and remove the
 now-unused `_trackingGateway` controller param.
+
+## Implementation (Stage 4 — final controller thinning)
+
+Plan: `docs/plans/73-stage4-controller-thinning.plan.md` · Reports:
+`docs/reports/73-stage4d-drop-tracking-gateway.report.md`,
+`docs/reports/73-stage4c-reply-mapper.report.md`,
+`docs/reports/73-stage4b-approve-verdict.report.md`,
+`docs/reports/73-stage4a-review-request-tail.report.md`
+
+Stage 4 was split into 4 independently `yarn verify`-green sub-commits (lowest risk first):
+
+- **4d** — drop the dead `_trackingGateway` controller param from both webhook handlers + `routes.ts`
+  call sites + all positional test sites. Mechanical, no behavior change.
+- **4c** — centralize HTTP reply shaping into a shared `webhookReply` mapper parameterised by
+  `numberKey` (`mrNumber` vs `prNumber`). Byte-for-byte preserved — the platform number-key wire
+  contract is NOT unified to a single key.
+- **4b** — move the platform-neutral `approve` verdict decision inward into `processWebhook`
+  (returns `approved` / `approval-revoked` / `approval-ignored`); platform I/O (approval revoke arg
+  shape + FR dismissal label + note comment) stays controller-side. `WebhookEvent` `approve` variant
+  gains `reviewId: number | null`.
+- **4a** — extract the review-request + followup enqueue sequencing (budget → actor trust → gate →
+  enqueue + verdict classification) into a function-style `processReviewRequest` usecase (Option A).
+  4 copy-pasted controller sites collapse into 1. Config-bound assembly, processor closures, and the
+  `broadcastBudgetExceeded` WebSocket I/O stay controller-side (per the anti-overengineering analysis
+  in the plan §7 — no single-implementation ports invented).
+
+**Artefacts**
+- `…/interface-adapters/controllers/webhook/webhookReply.ts` — shared reply mapper (4c)
+- `…/usecases/processReviewRequest.usecase.ts` — review/followup enqueue sequencing (4a)
+- `…/usecases/processWebhook.usecase.ts` — extended with the `approve` routing (4b)
+- `…/entities/webhookEvent/webhookEvent.ts` — `approve` variant `reviewId` (4b)
+- Both webhook controllers thinned; `src/main/routes.ts` wiring updated
+
+**Decisions** — DoD bar is "no business logic in controllers" (no raw `enqueueReview`/budget-decision/
+verdict logic), NOT "everything inside `processWebhook`". The queue was already behind the
+`EnqueueReviewFunction` port — no new port created. WebSocket broadcast, `@/config` reads, and
+platform-specific `ReviewJob`/processor assembly remain controller-side as legitimate ACL work.
+HTTP wire contract preserved byte-for-byte.
+
+**Verification** — `yarn verify` green (478 files / 3994 tests) after the final sub-stage; regression
+net (spec-46/197/200 + 73-process-webhook acceptance) green with unchanged assertions.
 
 ## User Story
 

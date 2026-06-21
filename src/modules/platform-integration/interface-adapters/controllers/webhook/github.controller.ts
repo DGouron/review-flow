@@ -26,7 +26,11 @@ import {
   filterGitHubIssueCommentEvent,
   filterGitHubPullRequestReviewEvent,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
-import { sendWebhookReply } from '@/modules/platform-integration/interface-adapters/controllers/webhook/webhookReply.js';
+import {
+  sendWebhookReply,
+  sendReviewRequestReply,
+} from '@/modules/platform-integration/interface-adapters/controllers/webhook/webhookReply.js';
+import { processReviewRequest } from '@/modules/platform-integration/usecases/processReviewRequest.usecase.js';
 import type { ProcessWebhook } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import {
@@ -499,33 +503,6 @@ export async function handleGitHubWebhook(
             sourceForkCloneUrl: computeSourceForkCloneUrl(event.pull_request),
           };
 
-          const followupBudgetDecision = await deps.enforceBudget.execute({
-            localPaths: listEnabledLocalPaths(deps.getRepositories),
-          });
-          if (!followupBudgetDecision.accepted) {
-            logger.warn(
-              {
-                prNumber: followupJob.mrNumber,
-                limitUsd: followupBudgetDecision.status.limitUsd,
-                consumedUsd: followupBudgetDecision.status.consumedUsd,
-              },
-              'Budget exceeded, followup not enqueued',
-            );
-            deps.broadcastBudgetExceeded({
-              mrNumber: followupJob.mrNumber,
-              platform: 'github',
-              projectPath: followupJob.projectPath,
-              limitUsd: followupBudgetDecision.status.limitUsd,
-              consumedUsd: followupBudgetDecision.status.consumedUsd,
-            });
-            sendWebhookReply(
-              reply,
-              { kind: 'rejected', reason: 'budget-exceeded' },
-              { numberKey: 'prNumber' },
-            );
-            return;
-          }
-
           const followupProcessor = async (j: ReviewJob, signal: AbortSignal): Promise<void> => {
             await runGitHubReview(deps.executeReview, {
               job: j,
@@ -537,37 +514,47 @@ export async function handleGitHubWebhook(
             });
           };
 
-          if (deps.gateClaudeInvocation) {
-            const gateResult = await deps.gateClaudeInvocation.execute({
-              job: followupJob,
-              triggerSource: 'webhook-followup',
-              processor: followupProcessor,
-            });
-            if (gateResult.status === 'pending') {
-              sendWebhookReply(
-                reply,
-                {
-                  kind: 'pending-confirmation',
-                  pendingId: gateResult.pendingId,
-                  mergeRequestNumber: updateResult.mergeRequestNumber,
-                },
-                { numberKey: 'prNumber' },
-              );
-              return;
-            }
-          } else {
-            await enqueueReview(followupJob, followupProcessor);
-          }
-
-          sendWebhookReply(
-            reply,
+          const followupVerdict = await processReviewRequest(
             {
-              kind: 'followup-queued',
-              jobId: followupJobId,
-              mergeRequestNumber: updateResult.mergeRequestNumber,
+              job: followupJob,
+              processor: followupProcessor,
+              triggerSource: 'webhook-followup',
+              localPaths: listEnabledLocalPaths(deps.getRepositories),
+              actorUsername: event.sender?.login ?? 'unknown',
+              projectPath: updateResult.projectPath,
+              gateActorTrust: false,
             },
-            { numberKey: 'prNumber' },
+            {
+              enforceBudget: deps.enforceBudget,
+              gateClaudeInvocation: deps.gateClaudeInvocation,
+              enqueue: enqueueReview,
+              logger,
+            },
           );
+
+          sendReviewRequestReply(reply, followupVerdict, {
+            numberKey: 'prNumber',
+            mergeRequestNumber: updateResult.mergeRequestNumber,
+            jobId: followupJobId,
+            flow: 'followup',
+            onBudgetExceeded: (status) => {
+              logger.warn(
+                {
+                  prNumber: followupJob.mrNumber,
+                  limitUsd: status.limitUsd,
+                  consumedUsd: status.consumedUsd,
+                },
+                'Budget exceeded, followup not enqueued',
+              );
+              deps.broadcastBudgetExceeded({
+                mrNumber: followupJob.mrNumber,
+                platform: 'github',
+                projectPath: followupJob.projectPath,
+                limitUsd: status.limitUsd,
+                consumedUsd: status.consumedUsd,
+              });
+            },
+          });
           return;
         }
       }
@@ -657,92 +644,45 @@ export async function handleGitHubWebhook(
     sourceForkCloneUrl: computeSourceForkCloneUrl(event.pull_request),
   };
 
-  const budgetDecision = await deps.enforceBudget.execute({
-    localPaths: listEnabledLocalPaths(deps.getRepositories),
-  });
-  if (!budgetDecision.accepted) {
-    logger.warn(
-      {
-        mrNumber: job.mrNumber,
-        limitUsd: budgetDecision.status.limitUsd,
-        consumedUsd: budgetDecision.status.consumedUsd,
-      },
-      'Budget exceeded, review not enqueued',
-    );
-    deps.broadcastBudgetExceeded({
-      mrNumber: job.mrNumber,
-      platform: 'github',
-      projectPath: job.projectPath,
-      limitUsd: budgetDecision.status.limitUsd,
-      consumedUsd: budgetDecision.status.consumedUsd,
-    });
-    sendWebhookReply(
-      reply,
-      { kind: 'rejected', reason: 'budget-exceeded' },
-      { numberKey: 'prNumber' },
-    );
-    return;
-  }
-
   const reviewProcessor = buildGitHubReviewProcessor(deps, logger)(job);
 
-  if (deps.gateClaudeInvocation) {
-    const gateResult = await deps.gateClaudeInvocation.execute({
+  const verdict = await processReviewRequest(
+    {
       job,
-      triggerSource: 'webhook-initial',
       processor: reviewProcessor,
-    });
-    if (gateResult.status === 'pending') {
-      sendWebhookReply(
-        reply,
-        {
-          kind: 'pending-confirmation',
-          pendingId: gateResult.pendingId,
-          mergeRequestNumber: filterResult.mergeRequestNumber,
-        },
-        { numberKey: 'prNumber' },
-      );
-      return;
-    }
-    if (gateResult.status === 'enqueued') {
-      sendWebhookReply(
-        reply,
-        { kind: 'queued', jobId, mergeRequestNumber: filterResult.mergeRequestNumber },
-        { numberKey: 'prNumber' },
-      );
-      return;
-    }
-    sendWebhookReply(
-      reply,
-      {
-        kind: 'deduplicated',
-        jobId,
-        reason: 'Review already in progress or recently completed',
-      },
-      { numberKey: 'prNumber' },
-    );
-    return;
-  }
+      triggerSource: 'webhook-initial',
+      localPaths: listEnabledLocalPaths(deps.getRepositories),
+      actorUsername: event.sender?.login ?? 'unknown',
+      projectPath: filterResult.projectPath,
+      gateActorTrust: false,
+    },
+    {
+      enforceBudget: deps.enforceBudget,
+      gateClaudeInvocation: deps.gateClaudeInvocation,
+      enqueue: enqueueReview,
+      logger,
+    },
+  );
 
-  const enqueued = await enqueueReview(job, reviewProcessor);
-
-  if (enqueued) {
-    sendWebhookReply(
-      reply,
-      { kind: 'queued', jobId, mergeRequestNumber: filterResult.mergeRequestNumber },
-      { numberKey: 'prNumber' },
-    );
-  } else {
-    sendWebhookReply(
-      reply,
-      {
-        kind: 'deduplicated',
-        jobId,
-        reason: 'Review already in progress or recently completed',
-      },
-      { numberKey: 'prNumber' },
-    );
-  }
+  sendReviewRequestReply(reply, verdict, {
+    numberKey: 'prNumber',
+    mergeRequestNumber: filterResult.mergeRequestNumber,
+    jobId,
+    flow: 'initial',
+    onBudgetExceeded: (status) => {
+      logger.warn(
+        { mrNumber: job.mrNumber, limitUsd: status.limitUsd, consumedUsd: status.consumedUsd },
+        'Budget exceeded, review not enqueued',
+      );
+      deps.broadcastBudgetExceeded({
+        mrNumber: job.mrNumber,
+        platform: 'github',
+        projectPath: job.projectPath,
+        limitUsd: status.limitUsd,
+        consumedUsd: status.consumedUsd,
+      });
+    },
+  });
 }
 
 type GitHubReviewProcessorDeps = Pick<

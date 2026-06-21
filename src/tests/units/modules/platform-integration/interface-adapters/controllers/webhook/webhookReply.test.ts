@@ -2,8 +2,11 @@ import { describe, it, expect, vi } from 'vitest';
 
 import {
   sendWebhookReply,
+  sendReviewRequestReply,
   type WebhookReplyResult,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/webhookReply.js';
+import type { ReviewRequestVerdict } from '@/modules/platform-integration/usecases/processReviewRequest.usecase.js';
+import type { BudgetStatus } from '@/modules/token-accounting/entities/budget/budgetStatus.js';
 
 function shapeReply(result: WebhookReplyResult, numberKey: 'mrNumber' | 'prNumber') {
   const sendSpy = vi.fn<(body: unknown) => unknown>();
@@ -14,6 +17,41 @@ function shapeReply(result: WebhookReplyResult, numberKey: 'mrNumber' | 'prNumbe
   return {
     status: statusSpy.mock.calls[0]?.[0],
     body: sendSpy.mock.calls[0]?.[0],
+  };
+}
+
+function exceededBudget(): BudgetStatus {
+  return {
+    limitUsd: 200,
+    consumedUsd: 250,
+    remainingUsd: -50,
+    percentUsed: 125,
+    exceeded: true,
+    periodStart: '2026-05-01T00:00:00.000Z',
+  };
+}
+
+function shapeVerdict(
+  verdict: ReviewRequestVerdict,
+  numberKey: 'mrNumber' | 'prNumber',
+  flow: 'initial' | 'followup',
+) {
+  const sendSpy = vi.fn<(body: unknown) => unknown>();
+  const statusSpy = vi.fn<(code: number) => { send(body: unknown): unknown }>(() => ({
+    send: sendSpy,
+  }));
+  const onBudgetExceeded = vi.fn<(status: BudgetStatus) => void>();
+  sendReviewRequestReply({ status: statusSpy }, verdict, {
+    numberKey,
+    mergeRequestNumber: 42,
+    jobId: 'job-1',
+    flow,
+    onBudgetExceeded,
+  });
+  return {
+    status: statusSpy.mock.calls[0]?.[0],
+    body: sendSpy.mock.calls[0]?.[0],
+    budgetCalls: onBudgetExceeded.mock.calls,
   };
 }
 
@@ -241,6 +279,87 @@ describe('sendWebhookReply', () => {
       expect(shapeReply(result, 'prNumber')).toEqual({
         status: 202,
         body: { status: 'pending-confirmation', reason: 'untrusted-actor', prNumber: 21 },
+      });
+    });
+  });
+});
+
+describe('sendReviewRequestReply', () => {
+  describe('budget-exceeded verdict', () => {
+    const verdict: ReviewRequestVerdict = { type: 'budget-exceeded', status: exceededBudget() };
+
+    it('invokes the budget broadcast callback with the status and replies rejected (200)', () => {
+      const result = shapeVerdict(verdict, 'mrNumber', 'initial');
+      expect(result.status).toBe(200);
+      expect(result.body).toEqual({ status: 'rejected', reason: 'budget-exceeded' });
+      expect(result.budgetCalls).toEqual([[exceededBudget()]]);
+    });
+
+    it('replies rejected for prNumber too', () => {
+      const result = shapeVerdict(verdict, 'prNumber', 'followup');
+      expect(result.status).toBe(200);
+      expect(result.body).toEqual({ status: 'rejected', reason: 'budget-exceeded' });
+    });
+  });
+
+  describe('queued verdict', () => {
+    const verdict: ReviewRequestVerdict = { type: 'queued', jobId: 'job-1' };
+
+    it('initial flow shapes a queued reply at 202', () => {
+      expect(shapeVerdict(verdict, 'mrNumber', 'initial')).toMatchObject({
+        status: 202,
+        body: { status: 'queued', jobId: 'job-1', mrNumber: 42 },
+      });
+    });
+
+    it('followup flow shapes a followup-queued reply at 202', () => {
+      expect(shapeVerdict(verdict, 'prNumber', 'followup')).toMatchObject({
+        status: 202,
+        body: { status: 'followup-queued', jobId: 'job-1', prNumber: 42 },
+      });
+    });
+  });
+
+  describe('deduplicated verdict', () => {
+    const verdict: ReviewRequestVerdict = { type: 'deduplicated', jobId: 'job-1' };
+
+    it('initial flow shapes a deduplicated reply at 200', () => {
+      expect(shapeVerdict(verdict, 'mrNumber', 'initial')).toMatchObject({
+        status: 200,
+        body: {
+          status: 'deduplicated',
+          jobId: 'job-1',
+          reason: 'Review already in progress or recently completed',
+        },
+      });
+    });
+
+    it('followup flow collapses a deduplicated outcome into followup-queued at 202', () => {
+      expect(shapeVerdict(verdict, 'prNumber', 'followup')).toMatchObject({
+        status: 202,
+        body: { status: 'followup-queued', jobId: 'job-1', prNumber: 42 },
+      });
+    });
+  });
+
+  describe('pending verdict', () => {
+    it('shapes a pending-confirmation reply with pendingId at 202', () => {
+      const verdict: ReviewRequestVerdict = { type: 'pending', pendingId: 'pending-1' };
+      expect(shapeVerdict(verdict, 'mrNumber', 'initial')).toMatchObject({
+        status: 202,
+        body: { status: 'pending-confirmation', pendingId: 'pending-1', mrNumber: 42 },
+      });
+    });
+
+    it('shapes an untrusted-actor pending reply without a pendingId at 202', () => {
+      const verdict: ReviewRequestVerdict = {
+        type: 'pending',
+        pendingId: null,
+        reason: 'untrusted-actor',
+      };
+      expect(shapeVerdict(verdict, 'prNumber', 'initial')).toMatchObject({
+        status: 202,
+        body: { status: 'pending-confirmation', reason: 'untrusted-actor', prNumber: 42 },
       });
     });
   });
