@@ -43,7 +43,6 @@ import type { GateClaudeInvocationUseCase } from '@/modules/review-execution/use
 import type { HandleClose } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
 import type { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
-import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
 import type { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import type { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
 import type { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
@@ -163,21 +162,16 @@ async function handleGitHubPullRequestReviewHook(
     return;
   }
 
-  const mrId = `github-${filterResult.projectPath}-${filterResult.mergeRequestNumber}`;
-  const threshold = deps.getQualityThreshold(repoConfig.localPath);
-  const transitionResult = deps.transitionState.execute({
-    projectPath: repoConfig.localPath,
-    mrId,
-    targetState: 'approved',
-    qualityCheck: (mr) =>
-      evaluateQualityGate({
-        latestScore: mr.latestScore,
-        blockingIssues: mr.openThreads,
-        threshold,
-      }),
+  const result = await deps.processWebhook({
+    type: 'approve',
+    platform: 'github',
+    projectPath: filterResult.projectPath,
+    localPath: repoConfig.localPath,
+    mergeRequestNumber: filterResult.mergeRequestNumber,
+    reviewId: filterResult.reviewId,
   });
 
-  if (transitionResult.ok) {
+  if (result.type === 'approved') {
     logger.info({ prNumber: filterResult.mergeRequestNumber }, 'PR marked as approved');
     sendWebhookReply(
       reply,
@@ -187,84 +181,68 @@ async function handleGitHubPullRequestReviewHook(
     return;
   }
 
-  if (transitionResult.reason === 'quality-gate') {
-    const verdict = deps.handlePlatformApproval.execute({
-      projectPath: repoConfig.localPath,
-      mrId,
-      qualityThreshold: threshold,
-    });
-
-    if (verdict.kind === 'reverted') {
-      try {
-        await deps.approvalRevocationGateway.revoke({
-          projectPath: filterResult.projectPath,
-          mrNumber: filterResult.mergeRequestNumber,
-          reviewId: filterResult.reviewId,
-          dismissalMessage: shortDismissalLabel(verdict.reason),
-        });
-      } catch (error) {
-        logger.warn(
-          {
-            prNumber: filterResult.mergeRequestNumber,
-            error: error instanceof Error ? error.message : String(error),
-          },
-          'Failed to dismiss GitHub approval review; continuing with FR comment',
-        );
-      }
-
-      try {
-        await deps.noteCommentPostGateway.postComment({
-          projectPath: filterResult.projectPath,
-          mrNumber: filterResult.mergeRequestNumber,
-          body: verdict.message,
-        });
-      } catch (error) {
-        logger.warn(
-          {
-            prNumber: filterResult.mergeRequestNumber,
-            error: error instanceof Error ? error.message : String(error),
-          },
-          'Failed to post FR explanation comment after dismissing GitHub approval',
-        );
-      }
-
-      logger.info(
-        { prNumber: filterResult.mergeRequestNumber, reason: verdict.reason },
-        'Platform approval revoked on non-qualified PR',
-      );
-      sendWebhookReply(
-        reply,
+  if (result.type === 'approval-revoked') {
+    try {
+      await deps.approvalRevocationGateway.revoke({
+        projectPath: filterResult.projectPath,
+        mrNumber: filterResult.mergeRequestNumber,
+        reviewId: filterResult.reviewId,
+        dismissalMessage: shortDismissalLabel(result.reason),
+      });
+    } catch (error) {
+      logger.warn(
         {
-          kind: 'unapproved',
-          mergeRequestNumber: filterResult.mergeRequestNumber,
-          reason: verdict.reason,
+          prNumber: filterResult.mergeRequestNumber,
+          error: error instanceof Error ? error.message : String(error),
         },
-        { numberKey: 'prNumber' },
+        'Failed to dismiss GitHub approval review; continuing with FR comment',
       );
-      return;
     }
 
+    try {
+      await deps.noteCommentPostGateway.postComment({
+        projectPath: filterResult.projectPath,
+        mrNumber: filterResult.mergeRequestNumber,
+        body: result.revokeMessage,
+      });
+    } catch (error) {
+      logger.warn(
+        {
+          prNumber: filterResult.mergeRequestNumber,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        'Failed to post FR explanation comment after dismissing GitHub approval',
+      );
+    }
+
+    logger.info(
+      { prNumber: filterResult.mergeRequestNumber, reason: result.reason },
+      'Platform approval revoked on non-qualified PR',
+    );
     sendWebhookReply(
       reply,
       {
-        kind: 'ignored-with-number',
+        kind: 'unapproved',
         mergeRequestNumber: filterResult.mergeRequestNumber,
-        reason: verdict.kind,
+        reason: result.reason,
       },
       { numberKey: 'prNumber' },
     );
     return;
   }
 
-  sendWebhookReply(
-    reply,
-    {
-      kind: 'ignored-with-number',
-      mergeRequestNumber: filterResult.mergeRequestNumber,
-      reason: transitionResult.reason,
-    },
-    { numberKey: 'prNumber' },
-  );
+  if (result.type === 'approval-ignored') {
+    sendWebhookReply(
+      reply,
+      {
+        kind: 'ignored-with-number',
+        mergeRequestNumber: filterResult.mergeRequestNumber,
+        reason: result.reason,
+      },
+      { numberKey: 'prNumber' },
+    );
+    return;
+  }
 }
 
 async function handleGitHubIssueCommentHook(

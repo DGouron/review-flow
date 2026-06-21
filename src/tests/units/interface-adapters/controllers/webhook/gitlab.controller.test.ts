@@ -180,12 +180,17 @@ function createAcceptAllEnforceBudget() {
   };
 }
 
-function createDefaultDeps(trackingGateway: ReturnType<typeof createMockTrackingGateway>) {
+function createDefaultDeps(
+  trackingGateway: ReturnType<typeof createMockTrackingGateway>,
+  qualityThreshold: number | null = null,
+) {
   const threadFetchGateway = { fetchThreads: vi.fn(() => []) };
   const recordPush = new RecordPushUseCase(trackingGateway);
   const transitionState = new TransitionStateUseCase(trackingGateway);
   const checkFollowupNeeded = new CheckFollowupNeededUseCase(trackingGateway);
   const removeWorktree = vi.fn(async () => ({ status: 'removed' as const }));
+  const handlePlatformApproval = new HandlePlatformApprovalUseCase(trackingGateway);
+  const getQualityThreshold = (): number | null => qualityThreshold;
   const handleClose = vi.fn(
     async (): Promise<HandleCloseResult> => ({
       status: 'cleaned',
@@ -229,6 +234,8 @@ function createDefaultDeps(trackingGateway: ReturnType<typeof createMockTracking
         recordPush,
         checkFollowupNeeded,
         removeWorktree,
+        handlePlatformApproval,
+        getQualityThreshold,
         logger: createStubLogger(),
       }),
     enforceBudget: createAcceptAllEnforceBudget(),
@@ -237,9 +244,9 @@ function createDefaultDeps(trackingGateway: ReturnType<typeof createMockTracking
     removeWorktree,
     recordBypass: new RecordBypassUseCase(trackingGateway),
     noteCommentPostGateway: new StubNoteCommentPostGateway(),
-    handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGateway),
+    handlePlatformApproval,
     approvalRevocationGateway: new StubApprovalRevocationGateway(),
-    getQualityThreshold: (): number | null => null,
+    getQualityThreshold,
     now: (): string => '2026-05-26T12:00:00.000Z',
   };
 }
@@ -494,6 +501,8 @@ describe('handleGitLabWebhook', () => {
             recordPush: defaultDeps.recordPush,
             checkFollowupNeeded: defaultDeps.checkFollowupNeeded,
             removeWorktree,
+            handlePlatformApproval: defaultDeps.handlePlatformApproval,
+            getQualityThreshold: defaultDeps.getQualityThreshold,
             logger: createStubLogger(),
           }),
       };
@@ -1085,10 +1094,9 @@ describe('handleGitLabWebhook', () => {
       const approvalRevocationGateway = new StubApprovalRevocationGateway();
       const noteCommentPostGateway = new StubNoteCommentPostGateway();
       const deps = {
-        ...defaultDeps,
+        ...createDefaultDeps(mockGateway, 8),
         approvalRevocationGateway,
         noteCommentPostGateway,
-        getQualityThreshold: (): number | null => 8,
       };
 
       const event = GitLabEventFactory.createApprovedMr();
@@ -1110,10 +1118,9 @@ describe('handleGitLabWebhook', () => {
       approvalRevocationGateway.shouldThrow = true;
       const noteCommentPostGateway = new StubNoteCommentPostGateway();
       const deps = {
-        ...defaultDeps,
+        ...createDefaultDeps(mockGateway, 8),
         approvalRevocationGateway,
         noteCommentPostGateway,
-        getQualityThreshold: (): number | null => 8,
       };
 
       const event = GitLabEventFactory.createApprovedMr();

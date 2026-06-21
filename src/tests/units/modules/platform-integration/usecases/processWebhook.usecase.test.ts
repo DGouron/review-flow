@@ -5,6 +5,7 @@ import {
   processWebhook,
   type ProcessWebhookDependencies,
 } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
+import type { HandlePlatformApprovalResult } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
 import type { TransitionStateResult } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
@@ -16,6 +17,12 @@ interface Harness {
   recordPushCalls: Array<{ projectPath: string; mrNumber: number; platform: string }>;
   checkFollowupNeededCalls: Array<{ projectPath: string; mrNumber: number; platform: string }>;
   removeWorktreeCalls: Array<{ platform: string; sourceCheckoutPath: string }>;
+  handlePlatformApprovalCalls: Array<{
+    projectPath: string;
+    mrId: string;
+    qualityThreshold: number | null;
+  }>;
+  getQualityThresholdCalls: string[];
 }
 
 function buildHarness(overrides?: Partial<ProcessWebhookDependencies>): Harness {
@@ -24,6 +31,8 @@ function buildHarness(overrides?: Partial<ProcessWebhookDependencies>): Harness 
   const recordPushCalls: Harness['recordPushCalls'] = [];
   const checkFollowupNeededCalls: Harness['checkFollowupNeededCalls'] = [];
   const removeWorktreeCalls: Harness['removeWorktreeCalls'] = [];
+  const handlePlatformApprovalCalls: Harness['handlePlatformApprovalCalls'] = [];
+  const getQualityThresholdCalls: Harness['getQualityThresholdCalls'] = [];
 
   const deps: ProcessWebhookDependencies = {
     handleClose: async (input) => {
@@ -73,6 +82,20 @@ function buildHarness(overrides?: Partial<ProcessWebhookDependencies>): Harness 
       removeWorktreeCalls.push({ platform: identity.platform, sourceCheckoutPath });
       return { status: 'removed' };
     },
+    handlePlatformApproval: {
+      execute: (input): HandlePlatformApprovalResult => {
+        handlePlatformApprovalCalls.push({
+          projectPath: input.projectPath,
+          mrId: input.mrId,
+          qualityThreshold: input.qualityThreshold,
+        });
+        return { kind: 'allowed' };
+      },
+    },
+    getQualityThreshold: (projectPath) => {
+      getQualityThresholdCalls.push(projectPath);
+      return null;
+    },
     logger: createStubLogger(),
     ...overrides,
   };
@@ -84,6 +107,8 @@ function buildHarness(overrides?: Partial<ProcessWebhookDependencies>): Harness 
     recordPushCalls,
     checkFollowupNeededCalls,
     removeWorktreeCalls,
+    handlePlatformApprovalCalls,
+    getQualityThresholdCalls,
   };
 }
 
@@ -259,22 +284,102 @@ describe('processWebhook', () => {
         reason: 'review-requested-handled-by-controller',
       });
     });
+  });
 
-    it('treats approve as handled by the controller', async () => {
+  describe('approve', () => {
+    const approveEvent: WebhookEvent = {
+      type: 'approve',
+      platform: 'gitlab',
+      projectPath: 'group/project',
+      localPath: '/checkout/project',
+      mergeRequestNumber: 42,
+      reviewId: null,
+    };
+
+    it('transitions to approved with the quality gate threshold and returns approved', async () => {
       const harness = buildHarness();
 
-      const result = await processWebhook(
-        {
-          type: 'approve',
-          platform: 'gitlab',
-          projectPath: 'group/project',
-          localPath: '/checkout/project',
-          mergeRequestNumber: 42,
-        },
-        harness.deps,
-      );
+      const result = await processWebhook(approveEvent, harness.deps);
 
-      expect(result).toEqual({ type: 'ignored', reason: 'approve-handled-by-controller' });
+      expect(harness.getQualityThresholdCalls).toEqual(['/checkout/project']);
+      expect(harness.transitionStateCalls).toEqual([
+        {
+          projectPath: '/checkout/project',
+          mrId: 'gitlab-group/project-42',
+          targetState: 'approved',
+        },
+      ]);
+      expect(result).toEqual({ type: 'approved', mergeRequestNumber: 42 });
+    });
+
+    it('revokes the approval when the quality gate fails and the verdict is reverted', async () => {
+      const harness = buildHarness({
+        transitionState: {
+          execute: (): TransitionStateResult => ({
+            ok: false,
+            reason: 'quality-gate',
+            message: 'gate failed',
+          }),
+        },
+        handlePlatformApproval: {
+          execute: (): HandlePlatformApprovalResult => ({
+            kind: 'reverted',
+            reason: 'below-threshold',
+            threshold: 8,
+            latestScore: 4,
+            message: 'Approbation annulée',
+          }),
+        },
+      });
+
+      const result = await processWebhook(approveEvent, harness.deps);
+
+      expect(result).toEqual({
+        type: 'approval-revoked',
+        mergeRequestNumber: 42,
+        reason: 'below-threshold',
+        revokeMessage: 'Approbation annulée',
+      });
+    });
+
+    it('ignores the approval when the gate fails but the verdict is not reverted', async () => {
+      const harness = buildHarness({
+        transitionState: {
+          execute: (): TransitionStateResult => ({
+            ok: false,
+            reason: 'quality-gate',
+            message: 'gate failed',
+          }),
+        },
+        handlePlatformApproval: {
+          execute: (): HandlePlatformApprovalResult => ({ kind: 'bypass-active' }),
+        },
+      });
+
+      const result = await processWebhook(approveEvent, harness.deps);
+
+      expect(result).toEqual({
+        type: 'approval-ignored',
+        mergeRequestNumber: 42,
+        reason: 'bypass-active',
+      });
+    });
+
+    it('ignores the approval when the merge request is not tracked', async () => {
+      const harness = buildHarness({
+        transitionState: {
+          execute: (): TransitionStateResult => ({ ok: false, reason: 'not-found' }),
+        },
+      });
+
+      const result = await processWebhook(approveEvent, harness.deps);
+
+      expect(harness.handlePlatformApprovalCalls).toEqual([]);
+      expect(result).toEqual({
+        type: 'approval-ignored',
+        mergeRequestNumber: 42,
+        reason: 'not-found',
+      });
     });
   });
 

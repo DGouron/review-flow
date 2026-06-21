@@ -2,7 +2,10 @@ import type { Logger } from 'pino';
 
 import type { WebhookEvent } from '@/modules/platform-integration/entities/webhookEvent/webhookEvent.js';
 import type { HandleClose } from '@/modules/review-execution/usecases/handleClose.usecase.js';
+import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
+import type { QualityGateRejectionReason } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
 import type { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
+import type { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
 import type { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
 import type { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
 import type { RemoveWorktreeAction } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
@@ -12,6 +15,14 @@ export type ProcessWebhookResult =
   | { type: 'merged'; mergeRequestNumber: number }
   | { type: 'followup-eligible'; mergeRequestNumber: number }
   | { type: 'followup-skipped'; mergeRequestNumber: number; reason: string }
+  | { type: 'approved'; mergeRequestNumber: number }
+  | {
+      type: 'approval-revoked';
+      mergeRequestNumber: number;
+      reason: QualityGateRejectionReason;
+      revokeMessage: string;
+    }
+  | { type: 'approval-ignored'; mergeRequestNumber: number; reason: string }
   | { type: 'ignored'; reason: string };
 
 export interface ProcessWebhookDependencies {
@@ -20,6 +31,8 @@ export interface ProcessWebhookDependencies {
   recordPush: Pick<RecordPushUseCase, 'execute'>;
   checkFollowupNeeded: Pick<CheckFollowupNeededUseCase, 'execute'>;
   removeWorktree: RemoveWorktreeAction;
+  handlePlatformApproval: Pick<HandlePlatformApprovalUseCase, 'execute'>;
+  getQualityThreshold: (projectPath: string) => number | null;
   logger: Logger;
 }
 
@@ -28,6 +41,7 @@ export type ProcessWebhook = (event: WebhookEvent) => Promise<ProcessWebhookResu
 type CloseEvent = Extract<WebhookEvent, { type: 'close' }>;
 type MergeEvent = Extract<WebhookEvent, { type: 'merge' }>;
 type FollowupEvent = Extract<WebhookEvent, { type: 'followup-push' }>;
+type ApproveEvent = Extract<WebhookEvent, { type: 'approve' }>;
 
 function buildMergeRequestId(event: {
   platform: string;
@@ -137,6 +151,56 @@ function routeFollowup(
   return { type: 'followup-eligible', mergeRequestNumber: event.mergeRequestNumber };
 }
 
+function routeApprove(event: ApproveEvent, deps: ProcessWebhookDependencies): ProcessWebhookResult {
+  const mrId = buildMergeRequestId(event);
+  const threshold = deps.getQualityThreshold(event.localPath);
+
+  const transitionResult = deps.transitionState.execute({
+    projectPath: event.localPath,
+    mrId,
+    targetState: 'approved',
+    qualityCheck: (mr) =>
+      evaluateQualityGate({
+        latestScore: mr.latestScore,
+        blockingIssues: mr.openThreads,
+        threshold,
+      }),
+  });
+
+  if (transitionResult.ok) {
+    return { type: 'approved', mergeRequestNumber: event.mergeRequestNumber };
+  }
+
+  if (transitionResult.reason === 'quality-gate') {
+    const verdict = deps.handlePlatformApproval.execute({
+      projectPath: event.localPath,
+      mrId,
+      qualityThreshold: threshold,
+    });
+
+    if (verdict.kind === 'reverted') {
+      return {
+        type: 'approval-revoked',
+        mergeRequestNumber: event.mergeRequestNumber,
+        reason: verdict.reason,
+        revokeMessage: verdict.message,
+      };
+    }
+
+    return {
+      type: 'approval-ignored',
+      mergeRequestNumber: event.mergeRequestNumber,
+      reason: verdict.kind,
+    };
+  }
+
+  return {
+    type: 'approval-ignored',
+    mergeRequestNumber: event.mergeRequestNumber,
+    reason: transitionResult.reason,
+  };
+}
+
 export async function processWebhook(
   event: WebhookEvent,
   deps: ProcessWebhookDependencies,
@@ -151,7 +215,7 @@ export async function processWebhook(
     case 'review-requested':
       return { type: 'ignored', reason: 'review-requested-handled-by-controller' };
     case 'approve':
-      return { type: 'ignored', reason: 'approve-handled-by-controller' };
+      return routeApprove(event, deps);
     case 'ignored':
       return { type: 'ignored', reason: event.reason };
   }

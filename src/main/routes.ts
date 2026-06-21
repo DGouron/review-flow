@@ -595,6 +595,9 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
           recordPush: new RecordPushUseCase(trackingGw),
           checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGw),
           removeWorktree: removeWorktreeAction,
+          handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGw),
+          getQualityThreshold: (projectPath: string) =>
+            loadProjectConfig(projectPath)?.qualityThreshold ?? null,
           logger: deps.logger,
         }),
       enforceBudget,
@@ -669,6 +672,9 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
           recordPush: new RecordPushUseCase(trackingGw),
           checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGw),
           removeWorktree: removeWorktreeAction,
+          handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGw),
+          getQualityThreshold: (projectPath: string) =>
+            loadProjectConfig(projectPath)?.qualityThreshold ?? null,
           logger: deps.logger,
         }),
       enforceBudget,

@@ -176,6 +176,8 @@ function createDefaultDeps(
         recordPush: { execute: recordPushExecute },
         checkFollowupNeeded: { execute: checkFollowupNeededExecute },
         removeWorktree: async () => ({ status: 'removed' }),
+        handlePlatformApproval: { execute: vi.fn(() => ({ kind: 'allowed' as const })) },
+        getQualityThreshold: (): number | null => null,
         logger: createStubLogger(),
       }),
     enforceBudget: { execute: enforceBudgetExecute },

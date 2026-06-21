@@ -205,6 +205,8 @@ function createDeps(
         recordPush,
         checkFollowupNeeded,
         removeWorktree,
+        handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGateway),
+        getQualityThreshold: (): number | null => null,
         logger: createStubLogger(),
       }),
     enforceBudget: createAcceptAllEnforceBudget(),

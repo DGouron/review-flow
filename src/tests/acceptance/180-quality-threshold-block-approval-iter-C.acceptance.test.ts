@@ -89,10 +89,15 @@ vi.mock('@/config/projectConfig.js', () => ({
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
+import type { WebhookEvent } from '@/modules/platform-integration/entities/webhookEvent/webhookEvent.js';
 import { handleGitHubWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
 import type { GitHubWebhookDependencies } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
 import { handleGitLabWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
 import type { GitLabWebhookDependencies } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
+import {
+  processWebhook,
+  type ProcessWebhookResult,
+} from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
 import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
@@ -159,6 +164,27 @@ function buildGitHubPullRequestReviewEvent(): unknown {
   };
 }
 
+function buildApproveProcessWebhook(
+  tracking: InMemoryReviewRequestTrackingGateway,
+): (event: WebhookEvent) => Promise<ProcessWebhookResult> {
+  return (event: WebhookEvent): Promise<ProcessWebhookResult> =>
+    processWebhook(event, {
+      handleClose: async () => ({
+        status: 'cleaned',
+        jobCancelled: false,
+        trackingArchived: false,
+        contextDeleted: false,
+      }),
+      transitionState: new TransitionStateUseCase(tracking),
+      recordPush: new RecordPushUseCase(tracking),
+      checkFollowupNeeded: new CheckFollowupNeededUseCase(tracking),
+      removeWorktree: async () => ({ status: 'removed' }),
+      handlePlatformApproval: new HandlePlatformApprovalUseCase(tracking),
+      getQualityThreshold: () => 7,
+      logger: createStubLogger(),
+    });
+}
+
 function buildGitLabDeps(
   tracking: InMemoryReviewRequestTrackingGateway,
   noteCommentPost: StubNoteCommentPostGateway,
@@ -183,6 +209,7 @@ function buildGitLabDeps(
     recordCompletion: new RecordReviewCompletionUseCase(tracking),
     recordPush: new RecordPushUseCase(tracking),
     transitionState: new TransitionStateUseCase(tracking),
+    processWebhook: buildApproveProcessWebhook(tracking),
     checkFollowupNeeded: new CheckFollowupNeededUseCase(tracking),
     syncThreads: new SyncThreadsUseCase(tracking, threadFetchGateway),
     recordBypass: new RecordBypassUseCase(tracking),
@@ -234,6 +261,7 @@ function buildGitHubDeps(
     recordCompletion: new RecordReviewCompletionUseCase(tracking),
     recordPush: new RecordPushUseCase(tracking),
     transitionState: new TransitionStateUseCase(tracking),
+    processWebhook: buildApproveProcessWebhook(tracking),
     checkFollowupNeeded: new CheckFollowupNeededUseCase(tracking),
     syncThreads: new SyncThreadsUseCase(tracking, threadFetchGateway),
     recordBypass: new RecordBypassUseCase(tracking),

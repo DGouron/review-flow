@@ -102,6 +102,8 @@ function createMockDeps(): GitHubWebhookDependencies {
   const transitionState = { execute: vi.fn() };
   const checkFollowupNeeded = { execute: vi.fn(() => false) };
   const removeWorktree = vi.fn(async () => ({ status: 'removed' as const }));
+  const handlePlatformApproval = { execute: vi.fn(() => ({ kind: 'allowed' as const })) };
+  const getQualityThreshold = vi.fn((): number | null => null);
   const handleClose = vi.fn(
     async (): Promise<HandleCloseResult> => ({
       status: 'cleaned',
@@ -157,6 +159,8 @@ function createMockDeps(): GitHubWebhookDependencies {
         recordPush,
         checkFollowupNeeded,
         removeWorktree,
+        handlePlatformApproval,
+        getQualityThreshold,
         logger: createStubLogger(),
       }),
     enforceBudget: {
@@ -177,9 +181,9 @@ function createMockDeps(): GitHubWebhookDependencies {
     removeWorktree,
     recordBypass: { execute: vi.fn(() => ({ kind: 'no-marker' })) },
     noteCommentPostGateway: { postComment: vi.fn(async () => undefined) },
-    handlePlatformApproval: { execute: vi.fn(() => ({ kind: 'allowed' })) },
+    handlePlatformApproval,
     approvalRevocationGateway: { revoke: vi.fn(async () => undefined) },
-    getQualityThreshold: vi.fn(() => null),
+    getQualityThreshold,
     now: (): string => '2026-05-26T12:00:00.000Z',
   } as unknown as GitHubWebhookDependencies;
 }

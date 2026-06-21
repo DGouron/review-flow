@@ -213,6 +213,8 @@ function buildBaseDeps(trackingGateway: ReturnType<typeof createMockTrackingGate
         recordPush,
         checkFollowupNeeded,
         removeWorktree,
+        handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGateway),
+        getQualityThreshold: (): number | null => null,
         logger,
       }),
     enforceBudget: createAcceptAllEnforceBudget(),

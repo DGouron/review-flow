@@ -44,7 +44,6 @@ import type { GateClaudeInvocationUseCase } from '@/modules/review-execution/use
 import type { HandleClose } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
 import type { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
-import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
 import type { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import type { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
 import type { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
@@ -384,21 +383,16 @@ export async function handleGitLabWebhook(
   if (approveResult.shouldProcess) {
     const repoConfig = findRepositoryByProjectPath(approveResult.projectPath);
     if (repoConfig) {
-      const mrId = `gitlab-${approveResult.projectPath}-${approveResult.mergeRequestNumber}`;
-      const threshold = deps.getQualityThreshold(repoConfig.localPath);
-      const transitionResult = deps.transitionState.execute({
-        projectPath: repoConfig.localPath,
-        mrId,
-        targetState: 'approved',
-        qualityCheck: (mr) =>
-          evaluateQualityGate({
-            latestScore: mr.latestScore,
-            blockingIssues: mr.openThreads,
-            threshold,
-          }),
+      const result = await deps.processWebhook({
+        type: 'approve',
+        platform: 'gitlab',
+        projectPath: approveResult.projectPath,
+        localPath: repoConfig.localPath,
+        mergeRequestNumber: approveResult.mergeRequestNumber,
+        reviewId: null,
       });
 
-      if (transitionResult.ok) {
+      if (result.type === 'approved') {
         logger.info({ mrNumber: approveResult.mergeRequestNumber }, 'MR marked as approved');
         sendWebhookReply(
           reply,
@@ -408,87 +402,70 @@ export async function handleGitLabWebhook(
         return;
       }
 
-      if (transitionResult.reason === 'quality-gate') {
-        const verdict = deps.handlePlatformApproval.execute({
-          projectPath: repoConfig.localPath,
-          mrId,
-          qualityThreshold: threshold,
-        });
-
-        if (verdict.kind === 'reverted') {
-          try {
-            await deps.approvalRevocationGateway.revoke({
-              projectPath: approveResult.projectPath,
-              mrNumber: approveResult.mergeRequestNumber,
-            });
-          } catch (error) {
-            logger.warn(
-              {
-                mrNumber: approveResult.mergeRequestNumber,
-                error: error instanceof Error ? error.message : String(error),
-              },
-              'Failed to revoke GitLab approval; continuing with FR comment',
-            );
-          }
-
-          try {
-            await deps.noteCommentPostGateway.postComment({
-              projectPath: approveResult.projectPath,
-              mrNumber: approveResult.mergeRequestNumber,
-              body: verdict.message,
-            });
-          } catch (error) {
-            logger.warn(
-              {
-                mrNumber: approveResult.mergeRequestNumber,
-                error: error instanceof Error ? error.message : String(error),
-              },
-              'Failed to post FR explanation comment after revoking GitLab approval',
-            );
-          }
-
-          logger.info(
-            { mrNumber: approveResult.mergeRequestNumber, reason: verdict.reason },
-            'Platform approval revoked on non-qualified MR',
-          );
-          sendWebhookReply(
-            reply,
+      if (result.type === 'approval-revoked') {
+        try {
+          await deps.approvalRevocationGateway.revoke({
+            projectPath: approveResult.projectPath,
+            mrNumber: approveResult.mergeRequestNumber,
+          });
+        } catch (error) {
+          logger.warn(
             {
-              kind: 'unapproved',
-              mergeRequestNumber: approveResult.mergeRequestNumber,
-              reason: verdict.reason,
+              mrNumber: approveResult.mergeRequestNumber,
+              error: error instanceof Error ? error.message : String(error),
             },
-            { numberKey: 'mrNumber' },
+            'Failed to revoke GitLab approval; continuing with FR comment',
           );
-          return;
         }
 
+        try {
+          await deps.noteCommentPostGateway.postComment({
+            projectPath: approveResult.projectPath,
+            mrNumber: approveResult.mergeRequestNumber,
+            body: result.revokeMessage,
+          });
+        } catch (error) {
+          logger.warn(
+            {
+              mrNumber: approveResult.mergeRequestNumber,
+              error: error instanceof Error ? error.message : String(error),
+            },
+            'Failed to post FR explanation comment after revoking GitLab approval',
+          );
+        }
+
+        logger.info(
+          { mrNumber: approveResult.mergeRequestNumber, reason: result.reason },
+          'Platform approval revoked on non-qualified MR',
+        );
         sendWebhookReply(
           reply,
           {
-            kind: 'ignored-with-number',
+            kind: 'unapproved',
             mergeRequestNumber: approveResult.mergeRequestNumber,
-            reason: verdict.kind,
+            reason: result.reason,
           },
           { numberKey: 'mrNumber' },
         );
         return;
       }
 
-      logger.info(
-        { mrNumber: approveResult.mergeRequestNumber, reason: transitionResult.reason },
-        'GitLab approval ignored (MR not tracked)',
-      );
-      sendWebhookReply(
-        reply,
-        {
-          kind: 'ignored-with-number',
-          mergeRequestNumber: approveResult.mergeRequestNumber,
-          reason: transitionResult.reason,
-        },
-        { numberKey: 'mrNumber' },
-      );
-      return;
+      if (result.type === 'approval-ignored') {
+        logger.info(
+          { mrNumber: approveResult.mergeRequestNumber, reason: result.reason },
+          'GitLab approval ignored',
+        );
+        sendWebhookReply(
+          reply,
+          {
+            kind: 'ignored-with-number',
+            mergeRequestNumber: approveResult.mergeRequestNumber,
+            reason: result.reason,
+          },
+          { numberKey: 'mrNumber' },
+        );
+        return;
+      }
     }
   }
 
