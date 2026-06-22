@@ -100,6 +100,7 @@ import {
   extractBaseUrl,
   buildGitLabReviewProcessor,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
+import { GuardDiffSizeUseCase } from '@/modules/platform-integration/usecases/guardDiffSize.usecase.js';
 import { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
 import {
   processWebhook,
@@ -121,6 +122,7 @@ import { verifyGitLabSignature, getGitLabEventType } from '@/security/verifier.j
 import { GitLabEventFactory } from '@/tests/factories/gitLabEvent.factory.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
 import { StubApprovalRevocationGateway } from '@/tests/stubs/approvalRevocation.stub.js';
+import { StubChangedFilesFetchGateway } from '@/tests/stubs/changedFilesFetch.stub.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { StubMemberAccessGateway } from '@/tests/stubs/memberAccess.stub.js';
 import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
@@ -247,6 +249,10 @@ function createDefaultDeps(
     handlePlatformApproval,
     approvalRevocationGateway: new StubApprovalRevocationGateway(),
     getQualityThreshold,
+    guardDiffSize: new GuardDiffSizeUseCase({
+      changedFilesFetchGateway: new StubChangedFilesFetchGateway(),
+    }),
+    getMaxDiffLines: (): number => 2000,
     now: (): string => '2026-05-26T12:00:00.000Z',
   };
 }

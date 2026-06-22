@@ -60,6 +60,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { WebhookEvent } from '@/modules/platform-integration/entities/webhookEvent/webhookEvent.js';
 import { handleGitLabWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
 import { InMemoryIdempotencyStore } from '@/modules/platform-integration/interface-adapters/gateways/inMemoryIdempotencyStore.gateway.js';
+import { GuardDiffSizeUseCase } from '@/modules/platform-integration/usecases/guardDiffSize.usecase.js';
 import {
   processWebhook,
   type ProcessWebhookResult,
@@ -80,6 +81,7 @@ import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/tra
 import { GitLabEventFactory } from '@/tests/factories/gitLabEvent.factory.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
 import { StubApprovalRevocationGateway } from '@/tests/stubs/approvalRevocation.stub.js';
+import { StubChangedFilesFetchGateway } from '@/tests/stubs/changedFilesFetch.stub.js';
 import { StubIdempotencyStore } from '@/tests/stubs/idempotencyStore.stub.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
@@ -218,6 +220,10 @@ function createDeps(
     handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGateway),
     approvalRevocationGateway: new StubApprovalRevocationGateway(),
     getQualityThreshold: (): number | null => null,
+    guardDiffSize: new GuardDiffSizeUseCase({
+      changedFilesFetchGateway: new StubChangedFilesFetchGateway(),
+    }),
+    getMaxDiffLines: (): number => 2000,
     now: (): string => '2026-05-26T12:00:00.000Z',
     ...overrides,
   };

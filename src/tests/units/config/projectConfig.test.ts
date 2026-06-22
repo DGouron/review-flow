@@ -161,6 +161,73 @@ describe('loadProjectConfig', () => {
     expect(config?.qualityThreshold).toBe(0);
   });
 
+  it('should leave maxDiffLines undefined when not specified', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        github: true,
+        gitlab: false,
+        defaultModel: 'sonnet',
+        reviewSkill: 'review-front',
+        reviewFollowupSkill: 'review-followup',
+      }),
+    );
+
+    const config = loadProjectConfig('/fake/path');
+
+    expect(config?.maxDiffLines).toBeUndefined();
+  });
+
+  it('should accept a positive integer maxDiffLines', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        github: true,
+        gitlab: false,
+        defaultModel: 'sonnet',
+        reviewSkill: 'review-front',
+        reviewFollowupSkill: 'review-followup',
+        maxDiffLines: 500,
+      }),
+    );
+
+    const config = loadProjectConfig('/fake/path');
+
+    expect(config?.maxDiffLines).toBe(500);
+  });
+
+  it('should reject a non-integer maxDiffLines', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        github: true,
+        gitlab: false,
+        defaultModel: 'sonnet',
+        reviewSkill: 'review-front',
+        reviewFollowupSkill: 'review-followup',
+        maxDiffLines: 500.5,
+      }),
+    );
+
+    expect(() => loadProjectConfig('/fake/path')).toThrow(/maxDiffLines/);
+  });
+
+  it('should reject a maxDiffLines below 1', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        github: true,
+        gitlab: false,
+        defaultModel: 'sonnet',
+        reviewSkill: 'review-front',
+        reviewFollowupSkill: 'review-followup',
+        maxDiffLines: 0,
+      }),
+    );
+
+    expect(() => loadProjectConfig('/fake/path')).toThrow(/maxDiffLines/);
+  });
+
   it('should use custom retentionDays when specified', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue(

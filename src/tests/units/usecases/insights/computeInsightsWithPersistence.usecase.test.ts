@@ -443,6 +443,111 @@ describe('computeInsightsWithPersistence', () => {
     });
   });
 
+  describe('diffStats reconciliation from retained window (backfill recovery)', () => {
+    const windowReviews = [
+      ReviewStatsFactory.create({
+        id: 'alice-r1',
+        assignedBy: 'alice',
+        mrNumber: 1,
+        score: 8,
+        diffStats: { commitsCount: 2, additions: 100, deletions: 20 },
+      }),
+      ReviewStatsFactory.create({
+        id: 'alice-r2',
+        assignedBy: 'alice',
+        mrNumber: 2,
+        score: 8,
+        diffStats: { commitsCount: 1, additions: 50, deletions: 10 },
+      }),
+    ];
+
+    function persistedWithStaleDiffStats() {
+      const staleRecentReviews = windowReviews.map((review) => ({ ...review, diffStats: null }));
+      return PersistedInsightsDataFactory.withDevelopers(
+        [
+          PersistedDeveloperMetricsFactory.create({
+            developerName: 'alice',
+            totalReviews: 2,
+            totalAdditions: 0,
+            totalDeletions: 0,
+            diffStatsReviewCount: 0,
+            recentReviews: staleRecentReviews,
+          }),
+        ],
+        ['alice-r1', 'alice-r2'],
+      );
+    }
+
+    it('recomputes per-developer diffStats totals from the window even when reviews were already processed', () => {
+      const result = computeInsightsWithPersistence(windowReviews, persistedWithStaleDiffStats());
+
+      const alice = result.persistedData.developers.find(
+        (developer) => developer.developerName === 'alice',
+      );
+      expect(alice?.totalAdditions).toBe(150);
+      expect(alice?.totalDeletions).toBe(30);
+      expect(alice?.diffStatsReviewCount).toBe(2);
+    });
+
+    it('refreshes recentReviews diffStats from the window', () => {
+      const result = computeInsightsWithPersistence(windowReviews, persistedWithStaleDiffStats());
+
+      const alice = result.persistedData.developers.find(
+        (developer) => developer.developerName === 'alice',
+      );
+      expect(alice?.recentReviews.every((review) => review.diffStats !== null)).toBe(true);
+    });
+
+    it('does not wipe persisted diffStats when the window is empty', () => {
+      const persistedData = PersistedInsightsDataFactory.withDevelopers(
+        [
+          PersistedDeveloperMetricsFactory.create({
+            developerName: 'alice',
+            totalReviews: 20,
+            totalAdditions: 5000,
+            totalDeletions: 1000,
+            diffStatsReviewCount: 15,
+            recentReviews: createReviewsForDeveloper('alice', 15, { score: 8 }),
+          }),
+        ],
+        Array.from({ length: 20 }, (_, index) => `old-${index}`),
+      );
+
+      const result = computeInsightsWithPersistence([], persistedData);
+
+      const alice = result.persistedData.developers.find(
+        (developer) => developer.developerName === 'alice',
+      );
+      expect(alice?.totalAdditions).toBe(5000);
+      expect(alice?.totalDeletions).toBe(1000);
+      expect(alice?.diffStatsReviewCount).toBe(15);
+    });
+
+    it('leaves a developer untouched when none of their reviews are in the window', () => {
+      const persistedData = PersistedInsightsDataFactory.withDevelopers(
+        [
+          PersistedDeveloperMetricsFactory.create({
+            developerName: 'bob',
+            totalReviews: 5,
+            totalAdditions: 800,
+            totalDeletions: 200,
+            diffStatsReviewCount: 5,
+            recentReviews: createReviewsForDeveloper('bob', 5, { score: 7 }),
+          }),
+        ],
+        Array.from({ length: 5 }, (_, index) => `bob-old-${index}`),
+      );
+
+      const result = computeInsightsWithPersistence(windowReviews, persistedData);
+
+      const bob = result.persistedData.developers.find(
+        (developer) => developer.developerName === 'bob',
+      );
+      expect(bob?.totalAdditions).toBe(800);
+      expect(bob?.diffStatsReviewCount).toBe(5);
+    });
+  });
+
   describe('aiInsights preservation', () => {
     it('should default aiInsights to null and reviewCountAtAiGeneration to 0 on first run', () => {
       const reviews = createReviewsForDeveloper('alice', 6, { score: 8 });

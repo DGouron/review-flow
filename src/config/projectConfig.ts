@@ -34,6 +34,7 @@ export interface ProjectConfig {
   externalLink?: string;
   qualityThreshold?: number;
   maxConcurrentReviews?: number;
+  maxDiffLines?: number;
 }
 
 const projectConfigFileSchema = z.record(z.string(), z.unknown());
@@ -63,6 +64,16 @@ function parseQualityThreshold(value: unknown): number | undefined {
   }
   if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 10) {
     throw new Error('Invalid qualityThreshold: must be an integer between 0 and 10');
+  }
+  return value;
+}
+
+function parseMaxDiffLines(value: unknown): number | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+    throw new Error('Invalid maxDiffLines: must be a positive integer');
   }
   return value;
 }
@@ -246,6 +257,11 @@ export function parseProjectConfig(parsed: Record<string, unknown>): ProjectConf
   const maxConcurrentReviews = parseMaxConcurrentReviews(parsed.maxConcurrentReviews);
   if (maxConcurrentReviews !== undefined) {
     config.maxConcurrentReviews = maxConcurrentReviews;
+  }
+
+  const maxDiffLines = parseMaxDiffLines(parsed.maxDiffLines);
+  if (maxDiffLines !== undefined) {
+    config.maxDiffLines = maxDiffLines;
   }
 
   return config;

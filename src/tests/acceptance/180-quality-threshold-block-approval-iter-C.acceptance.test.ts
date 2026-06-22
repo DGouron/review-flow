@@ -217,6 +217,8 @@ function buildGitLabDeps(
     handlePlatformApproval: new HandlePlatformApprovalUseCase(tracking),
     approvalRevocationGateway: approvalRevocation,
     getQualityThreshold: () => 7,
+    guardDiffSize: { execute: () => ({ kind: 'allowed' }) },
+    getMaxDiffLines: () => 2000,
     now: () => '2026-05-26T12:00:00.000Z',
     enforceBudget: {
       execute: vi.fn(async () => ({
@@ -269,6 +271,8 @@ function buildGitHubDeps(
     handlePlatformApproval: new HandlePlatformApprovalUseCase(tracking),
     approvalRevocationGateway: approvalRevocation,
     getQualityThreshold: () => 7,
+    guardDiffSize: { execute: () => ({ kind: 'allowed' }) },
+    getMaxDiffLines: () => 2000,
     now: () => '2026-05-26T12:00:00.000Z',
     enforceBudget: {
       execute: vi.fn(async () => ({
