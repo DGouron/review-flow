@@ -13,6 +13,18 @@ description: Basic code review skill template. Customize for your project.
 - Focus on bugs, security, and code smells
 - Explain the "why" before the "how"
 
+## Scoring discipline (anti-sandbagging)
+
+A score is a claim, not a vibe. Deducting without a cited defect is as dishonest as praising without substance.
+
+- **Max is the default.** A clean diff scores the maximum — never round down to look rigorous.
+- **Every point deducted is sourced:** `file:line` + the real problem + the fix. No citable defect -> the score IS the maximum.
+- **Never invent a flaw to dodge a perfect score.** A justified design choice or a deliberate trade-off is not a defect.
+- **Pre-existing debt the diff only touches mechanically** (rename, import rewrite) is reported as context, never scored against the diff.
+- **Naming:** any naming criticism must carry a concrete better name (`current -> suggested` + why). If you cannot propose a clearer name, the name is fine — say so. "Could be clearer" with no alternative is not a finding.
+
+---
+
 ## Customization Points
 
 <!-- CUSTOMIZE: List your project-specific rules here -->
