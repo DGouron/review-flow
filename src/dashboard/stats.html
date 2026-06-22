@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reviewflow — Stats</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .stats-page-body {
+      background: var(--bg-0);
+      color: var(--ink-1);
+      font-family: var(--font-sans);
+      margin: 0;
+      min-height: 100vh;
+    }
+    .stats-page-shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: var(--space-6) var(--space-5) var(--space-7);
+    }
+    .stats-page-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+      padding-bottom: var(--space-4);
+      border-bottom: 1px solid var(--ink-4);
+      margin-bottom: var(--space-6);
+    }
+    .stats-page-eyebrow {
+      font-family: var(--font-mono);
+      font-size: var(--type-xs);
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      margin: 0 0 var(--space-2);
+    }
+    .stats-page-title {
+      font-family: var(--font-mono);
+      font-size: var(--type-xl);
+      font-weight: 600;
+      color: var(--ink-0);
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .stats-page-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+    .stats-project-field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+    .stats-project-field label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-2);
+    }
+    .stats-project-select {
+      background: var(--bg-2);
+      color: var(--ink-0);
+      border: 1px solid var(--ink-4);
+      border-radius: 8px;
+      padding: 0.5rem 0.6rem;
+      font-family: var(--font-mono);
+      font-size: var(--type-sm);
+      min-width: 180px;
+    }
+    .stats-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--accent-ghost);
+      border: 1px solid rgba(244, 169, 61, 0.3);
+      color: var(--accent);
+      border-radius: 8px;
+      padding: 0.55rem 0.85rem;
+      font-family: var(--font-mono);
+      font-size: var(--type-sm);
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .stats-back:hover {
+      background: rgba(244, 169, 61, 0.18);
+      color: var(--accent-hover);
+    }
+    .stats-section-eyebrow {
+      font-family: var(--font-mono);
+      font-size: var(--type-xs);
+      letter-spacing: 0.12em;
+      color: var(--ink-2);
+      margin-bottom: var(--space-3);
+    }
+    .stats-volume { margin-bottom: var(--space-6); }
+    .stats-hero-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: var(--space-3);
+    }
+    .stats-hero-tile {
+      position: relative;
+      background: linear-gradient(165deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015));
+      border: 1px solid var(--ink-4);
+      border-radius: 12px;
+      padding: var(--space-4);
+      overflow: hidden;
+    }
+    .stats-hero-tile::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 2px;
+      background: var(--ink-3);
+    }
+    .hero-commits::before { background: var(--info); }
+    .hero-additions::before { background: var(--success); }
+    .hero-deletions::before { background: var(--danger); }
+    .hero-net::before { background: var(--accent); }
+    .stats-hero-icon { color: var(--ink-2); margin-bottom: var(--space-2); }
+    .stats-hero-icon i { width: 18px; height: 18px; }
+    .stats-hero-value {
+      font-family: var(--font-mono);
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--ink-0);
+      line-height: 1.1;
+    }
+    .hero-additions .stats-hero-value { color: var(--success); }
+    .hero-deletions .stats-hero-value { color: var(--danger); }
+    .hero-net .stats-hero-value { color: var(--accent); }
+    .stats-hero-label {
+      font-size: var(--type-sm);
+      color: var(--ink-1);
+      margin-top: var(--space-2);
+    }
+    .stats-hero-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-2);
+      margin-top: 2px;
+    }
+    .stats-ratio-bar {
+      display: flex;
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: var(--space-4);
+      background: var(--bg-3);
+    }
+    .stats-ratio-add { background: var(--success); }
+    .stats-ratio-del { background: var(--danger); }
+    .stats-quality { margin-bottom: var(--space-6); }
+    .stats-insights { margin-top: var(--space-6); }
+  </style>
+</head>
+<body class="stats-page-body">
+  <main class="stats-page-shell">
+    <header class="stats-page-header">
+      <div class="stats-page-title-block">
+        <p class="stats-page-eyebrow">// REVIEWFLOW</p>
+        <h1 id="stats-title" class="stats-page-title"></h1>
+      </div>
+      <div class="stats-page-actions">
+        <div class="stats-project-field">
+          <label id="stats-project-label" for="stats-project-select"></label>
+          <select id="stats-project-select" class="stats-project-select"></select>
+        </div>
+        <button type="button" id="recalculate-btn" class="btn btn-sm btn-secondary" onclick="recalculateStats()">
+          <i data-lucide="refresh-cw" style="width: 13px; height: 13px;"></i>
+          <span id="recalculate-label"></span>
+        </button>
+        <a href="/dashboard/" class="stats-back">
+          <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
+          <span id="stats-back-label"></span>
+        </a>
+      </div>
+    </header>
+
+    <div id="stats-content">
+      <div class="empty-state">…</div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { t, setLanguage } from './modules/i18n.js';
+    import { refreshIcons } from './modules/icons.js';
+    import { renderStatsPageHtml } from './modules/statsPage.js';
+    import {
+      drawScoreTrendChart,
+      drawReviewActivityChart,
+      drawScoreDistributionChart,
+      drawBugsByCategoryChart,
+      drawReviewsPerMonthChart,
+      animateCounter,
+    } from './modules/statsCharts.js';
+    import { escapeHtml } from './modules/html.js';
+
+    const API_URL = window.location.origin;
+    const projectPath = new URLSearchParams(window.location.search).get('path');
+    const contentEl = document.getElementById('stats-content');
+    let currentStatsReviews = [];
+    let currentDevFilter = 'all';
+
+    function renderStaticLabels() {
+      document.getElementById('stats-title').textContent = t('section.stats');
+      document.getElementById('stats-back-label').textContent = t('stats.backToDashboard');
+      document.getElementById('recalculate-label').textContent = t('stats.recalculate');
+      document.getElementById('stats-project-label').textContent = t('stats.project');
+    }
+
+    async function loadLanguage() {
+      try {
+        const response = await fetch(`${API_URL}/api/settings`);
+        const data = await response.json();
+        if (data.language) {
+          setLanguage(data.language);
+          document.documentElement.lang = data.language;
+        }
+      } catch {
+        /* default language stays */
+      }
+    }
+
+    async function loadProjects() {
+      try {
+        const response = await fetch(`${API_URL}/api/stats`);
+        const data = await response.json();
+        const projects = data.projects || [];
+        const select = document.getElementById('stats-project-select');
+        select.innerHTML = projects
+          .map((project) => {
+            const selected = project.path === projectPath ? ' selected' : '';
+            return `<option value="${escapeHtml(project.path)}"${selected}>${escapeHtml(project.project)}</option>`;
+          })
+          .join('');
+        select.addEventListener('change', (event) => {
+          window.location.href = `/stats?path=${encodeURIComponent(event.target.value)}`;
+        });
+      } catch {
+        /* selector stays empty; the content area still renders for ?path= */
+      }
+    }
+
+    function drawCharts(data) {
+      requestAnimationFrame(() => {
+        if (currentStatsReviews.length) {
+          drawScoreTrendChart('stats-score-trend', currentStatsReviews);
+          drawReviewActivityChart('stats-activity', currentStatsReviews);
+          drawScoreDistributionChart('stats-distribution', currentStatsReviews);
+        }
+        if (data.bugsByCategory) {
+          drawBugsByCategoryChart('stats-bugs-category', data.bugsByCategory);
+        }
+        if (data.analyticsHeader && !data.analyticsHeader.isEmpty) {
+          drawReviewsPerMonthChart('stats-reviews-per-month', data.analyticsHeader.reviewsPerMonth);
+        }
+      });
+    }
+
+    async function loadStats() {
+      if (!projectPath) {
+        contentEl.innerHTML = `<div class="empty-state">${t('empty.statsNoProject')}</div>`;
+        return;
+      }
+      try {
+        const response = await fetch(`${API_URL}/api/stats?path=${encodeURIComponent(projectPath)}`);
+        const data = await response.json();
+        if (!data.summary) {
+          contentEl.innerHTML = `<div class="empty-state">${t('empty.statsNoData')}</div>`;
+          return;
+        }
+        contentEl.innerHTML = renderStatsPageHtml(data, t);
+        refreshIcons();
+        currentStatsReviews = (data.stats && data.stats.reviews) || [];
+        contentEl.querySelectorAll('.stat-main[data-target]').forEach((element) => {
+          const target = parseFloat(element.dataset.target);
+          if (!Number.isNaN(target)) {
+            animateCounter(element, target, 800, element.dataset.suffix || '');
+          }
+        });
+        drawCharts(data);
+      } catch (error) {
+        console.error('Error loading stats:', error);
+        contentEl.innerHTML = `<div class="empty-state">${t('error.loadingStats')}</div>`;
+      }
+    }
+
+    window.filterScoreTrend = function filterScoreTrend(selectedDev) {
+      currentDevFilter = selectedDev;
+      document.querySelectorAll('.dev-filter-btn').forEach((button) => {
+        button.classList.toggle('active', button.dataset.dev === selectedDev);
+      });
+      const filtered =
+        selectedDev === 'all'
+          ? currentStatsReviews
+          : currentStatsReviews.filter((review) => review.assignedBy === selectedDev);
+      drawScoreTrendChart('stats-score-trend', filtered);
+    };
+
+    window.recalculateStats = async function recalculateStats() {
+      if (!projectPath) return;
+      const button = document.getElementById('recalculate-btn');
+      if (button) button.disabled = true;
+      try {
+        const response = await fetch(`${API_URL}/api/stats/recalculate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: projectPath, backfill: true }),
+        });
+        if (!response.ok) throw new Error('Recalculation failed');
+        window.setTimeout(() => window.location.reload(), 1500);
+      } catch (error) {
+        console.error('Error recalculating stats:', error);
+        if (button) button.disabled = false;
+      }
+    };
+
+    async function init() {
+      await loadLanguage();
+      renderStaticLabels();
+      await loadProjects();
+      await loadStats();
+      refreshIcons();
+    }
+
+    init();
+  </script>
+</body>
+</html>

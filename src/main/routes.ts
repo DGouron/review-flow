@@ -729,6 +729,12 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     reply.redirect('/dashboard/setup.html');
   });
 
+  app.get<{ Querystring: { path?: string } }>('/stats', async (request, reply) => {
+    const path = request.query.path;
+    const suffix = path ? `?path=${encodeURIComponent(path)}` : '';
+    reply.redirect(`/dashboard/stats.html${suffix}`);
+  });
+
   const emberGroundingProjectPath =
     deps.config.repositories.find((repository) => repository.enabled)?.localPath ?? '';
   const emberReadData = new EmberReadDataCompositeGateway({
