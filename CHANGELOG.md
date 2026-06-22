@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.40.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.39.3...reviewflow-v3.40.0) (2026-06-22)
+
+
+### Added
+
+* **webhook:** guard oversized merge requests (spec-209) ([#316](https://github.com/DGouron/review-flow/issues/316)) ([78e4b0d](https://github.com/DGouron/review-flow/commit/78e4b0da2c5ea45a3b76c4f5f8013a42004dff23))
+
+
+### Fixed
+
+* **dashboard:** show MR diff stats in the detail sheet from project stats ([49693bd](https://github.com/DGouron/review-flow/commit/49693bd58bbe98fa331dc7b35917a47787e76a18))
+* **insights:** reconcile per-developer diff stats from retained review window ([df63172](https://github.com/DGouron/review-flow/commit/df631729fc59be960b6e6b8224617d8651725531))
+* **stats:** MR detail diff stats + per-developer diff aggregation ([3470dce](https://github.com/DGouron/review-flow/commit/3470dce66a907c806dd17ca62a1ecfcea6aa562e))
+
 ## [3.39.3](https://github.com/DGouron/review-flow/compare/reviewflow-v3.39.2...reviewflow-v3.39.3) (2026-06-20)
 
 
