@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.40.2](https://github.com/DGouron/review-flow/compare/reviewflow-v3.40.1...reviewflow-v3.40.2) (2026-06-22)
+
+
+### Fixed
+
+* **claude-invocation:** [#318](https://github.com/DGouron/review-flow/issues/318) pin review report to .claude/reviews, forbid bg tmp dir ([#319](https://github.com/DGouron/review-flow/issues/319)) ([fae2f5f](https://github.com/DGouron/review-flow/commit/fae2f5f7c674a2958ff99bbde209fdf2e5383fba))
+
 ## [3.40.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.40.0...reviewflow-v3.40.1) (2026-06-22)
 
 
