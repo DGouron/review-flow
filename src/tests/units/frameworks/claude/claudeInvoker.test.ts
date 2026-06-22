@@ -66,4 +66,25 @@ describe('buildMcpSystemPrompt', () => {
       expect(prompt).toContain('job-xyz');
     });
   });
+
+  describe('report output path — prevents report-missing in --bg mode', () => {
+    it('pins the review report to .claude/reviews with the review suffix', () => {
+      const prompt = buildMcpSystemPrompt(buildJob({ jobType: 'review', mrNumber: 5450 }));
+
+      expect(prompt).toContain('.claude/reviews/');
+      expect(prompt).toContain('-MR-5450-review.md');
+    });
+
+    it('uses the followup suffix for followup jobs', () => {
+      const prompt = buildMcpSystemPrompt(buildJob({ jobType: 'followup', mrNumber: 77 }));
+
+      expect(prompt).toContain('-MR-77-followup.md');
+    });
+
+    it('forbids writing the report to the background job tmp directory', () => {
+      const prompt = buildMcpSystemPrompt(buildJob({ jobType: 'review', mrNumber: 5450 }));
+
+      expect(prompt).toContain('CLAUDE_JOB_DIR');
+    });
+  });
 });
