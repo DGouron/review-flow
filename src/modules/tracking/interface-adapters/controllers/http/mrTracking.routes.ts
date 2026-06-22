@@ -1,13 +1,16 @@
 import type { FastifyPluginAsync } from 'fastify';
 
 import { logInfo, logError } from '@/frameworks/logging/logBuffer.js';
+import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
 import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
+import { MrDiffStatsPresenter } from '@/modules/tracking/interface-adapters/presenters/mrDiffStats.presenter.js';
 import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
 
 interface MrTrackingRoutesOptions {
   reviewRequestTrackingGateway: ReviewRequestTrackingGateway;
   getQualityThreshold?: (projectPath: string) => number | null;
+  statsGateway?: StatsGateway;
 }
 
 function validateProjectPath(
@@ -29,7 +32,8 @@ export const mrTrackingRoutes: FastifyPluginAsync<MrTrackingRoutesOptions> = asy
   fastify,
   opts,
 ) => {
-  const { reviewRequestTrackingGateway, getQualityThreshold } = opts;
+  const { reviewRequestTrackingGateway, getQualityThreshold, statsGateway } = opts;
+  const mrDiffStatsPresenter = new MrDiffStatsPresenter();
 
   fastify.get<{ Querystring: { path?: string } }>('/api/mr-tracking', async (request, reply) => {
     const validation = validateProjectPath(request.query.path);
@@ -45,10 +49,11 @@ export const mrTrackingRoutes: FastifyPluginAsync<MrTrackingRoutesOptions> = asy
         validation.path,
         'pending-approval',
       );
+      const stats = statsGateway?.loadProjectStats(validation.path) ?? null;
       return {
         success: true,
-        pendingFix,
-        pendingApproval,
+        pendingFix: mrDiffStatsPresenter.present(pendingFix, stats),
+        pendingApproval: mrDiffStatsPresenter.present(pendingApproval, stats),
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

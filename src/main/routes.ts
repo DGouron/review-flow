@@ -249,6 +249,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     reviewRequestTrackingGateway: deps.reviewRequestTrackingGateway,
     getQualityThreshold: (projectPath: string) =>
       loadProjectConfig(projectPath)?.qualityThreshold ?? null,
+    statsGateway: deps.statsGateway,
   });
 
   const tokenUsageGateway = new FilesystemTokenUsageGateway();
