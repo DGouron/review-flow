@@ -357,25 +357,6 @@
     </div>
   </div>
 
-  <div id="stats-sheet-overlay" class="sheet-overlay" onclick="closeStatsSheet()"></div>
-  <div id="stats-sheet" class="sheet-panel">
-    <div id="stats-sheet-content" class="sheet-content">
-      <button class="sheet-close" onclick="closeStatsSheet()"><i data-lucide="x"></i></button>
-      <div class="sheet-mr-header">
-        <div class="sheet-mr-title">
-          <i data-lucide="bar-chart-3"></i> <span id="i18n-section-stats"></span>
-          <button id="recalculate-btn" class="btn btn-sm btn-secondary" onclick="recalculateStats()" style="margin-left: auto; font-size: 0.75rem; padding: 2px 8px;">
-            <i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i>
-            <span id="recalculate-label"></span>
-          </button>
-          <span id="backfill-progress" class="badge-count hidden" style="margin-left: 4px;"></span>
-        </div>
-      </div>
-      <div id="project-stats" class="stats-grid">
-        <div class="empty-state" id="i18n-empty-stats"></div>
-      </div>
-    </div>
-  </div>
 
   <dialog id="settings-modal" class="settings-modal" aria-labelledby="settings-modal-title"></dialog>
 
@@ -423,7 +404,7 @@
     import { renderVersionUpdateArea, setVersionCheckState } from './modules/versionUpdate.js';
     import { renderCollapsibleList, toggleCollapsibleList } from './modules/collapsibleList.js';
     import { renderMrSheetContent, drawScoreTimeline, drawIssuesBreakdown } from './modules/mrSheet.js';
-    import { drawScoreTrendChart, drawReviewActivityChart, drawScoreDistributionChart, drawBugsByCategoryChart, drawReviewsPerMonthChart, animateCounter } from './modules/statsCharts.js';
+    import { drawScoreTrendChart } from './modules/statsCharts.js';
     import { renderKeyInsightsHtml } from './modules/keyInsights.js';
     import { renderTeamTab, fetchAndRenderTeamTab } from './modules/teamTab.js';
     import { renderDeveloperSheetContent, drawRadarChart } from './modules/developerSheet.js';
@@ -473,7 +454,6 @@
     const mrDataStore = new Map();
     let loadedReviews = {};
     let currentStatsReviews = [];
-    let currentDevFilter = 'all';
     let focusStripCompact = false;
     let teamCollapsed = true;
     let currentInsightsData = null;
@@ -1073,162 +1053,19 @@
       }
     }
 
+    // Fetches project stats only to keep currentStatsReviews fresh for the
+    // developer sheet. The stats UI itself now lives on the standalone /stats page.
     async function fetchProjectStats() {
-      const statsEl = document.getElementById('project-stats');
+      if (!currentProjectPath) return;
       setLoadingFlag('stats', true);
-
-      if (!currentProjectPath) {
-        statsEl.innerHTML = `<div class="empty-state">${t('empty.statsNoProject')}</div>`;
-        setLoadingFlag('stats', false);
-        return;
-      }
-
       try {
         const response = await fetch(`${API_URL}/api/stats?path=${encodeURIComponent(currentProjectPath)}`);
         const data = await response.json();
-
         if (data.summary) {
-          const s = data.summary;
-          const reviews = data.stats?.reviews || [];
-          const trendIcon = (trend) => trend === 'up'
-            ? '<span class="stat-trend up"><i data-lucide="trending-up"></i></span>'
-            : trend === 'down'
-              ? '<span class="stat-trend down"><i data-lucide="trending-down"></i></span>'
-              : '<span class="stat-trend flat"><i data-lucide="minus"></i></span>';
-
-          const numericScore = parseFloat(s.averageScore);
-          const isScoreNumeric = !isNaN(numericScore);
-          const header = data.analyticsHeader;
-
-          const analyticsHeaderMarkup = header && header.isEmpty
-            ? `<div class="empty-state">${header.emptyMessage || t('stats.noReviews')}</div>`
-            : header
-              ? `
-            <div class="stats-kpi-row">
-              <div class="stat-card metric-reviews">
-                <div class="stat-value"><span class="stat-main" data-target="${header.prsReviewed.value}">0</span></div>
-                <div class="stat-label"><i data-lucide="git-pull-request"></i> ${t(header.prsReviewed.labelKey)}</div>
-              </div>
-              <div class="stat-card warning metric-blocking">
-                <div class="stat-value"><span class="stat-main" data-target="${header.bugsCaught.value}">0</span></div>
-                <div class="stat-label"><i data-lucide="bug"></i> ${t(header.bugsCaught.labelKey)}</div>
-              </div>
-              <div class="stat-card metric-average-time">
-                <div class="stat-value"><span class="stat-main">${header.averageReviewTime.value}</span></div>
-                <div class="stat-label"><i data-lucide="clock"></i> ${t(header.averageReviewTime.labelKey)}</div>
-              </div>
-            </div>
-            <div class="stats-charts-row">
-              <div class="stats-chart-card full-width">
-                <div class="stats-chart-title"><i data-lucide="calendar"></i> ${t('stats.reviewsPerMonth')}</div>
-                <canvas id="stats-reviews-per-month" class="stats-canvas-wide"></canvas>
-              </div>
-            </div>`
-              : '';
-
-          const keyInsightsMarkup = data.keyInsights ? renderKeyInsightsHtml(data.keyInsights) : '';
-
-          statsEl.innerHTML = `
-            ${analyticsHeaderMarkup}
-            <div class="stat-card metric-reviews">
-              <div class="stat-value"><span class="stat-main" data-target="${s.totalReviews}">0</span></div>
-              <div class="stat-label"><i data-lucide="file-search"></i> ${t('stats.reviews')}</div>
-            </div>
-            <div class="stat-card metric-score">
-              <div class="stat-value"><span class="stat-main" ${isScoreNumeric ? `data-target="${numericScore}" data-suffix="/10"` : ''}>${isScoreNumeric ? '0' : s.averageScore}</span>${!isScoreNumeric ? '<span class="stat-denominator">/10</span>' : ''}${trendIcon(s.trend.score)}</div>
-              <div class="stat-label"><i data-lucide="star"></i> ${t('stats.averageScore')}</div>
-            </div>
-            <div class="stat-card metric-time">
-              <div class="stat-value"><span class="stat-main">${s.totalTime}</span></div>
-              <div class="stat-label"><i data-lucide="timer"></i> ${t('stats.totalTime')}</div>
-            </div>
-            <div class="stat-card metric-average-time">
-              <div class="stat-value"><span class="stat-main">${s.averageTime}</span></div>
-              <div class="stat-label"><i data-lucide="clock"></i> ${t('stats.averageTime')}</div>
-            </div>
-            <div class="stat-card warning metric-blocking">
-              <div class="stat-value"><span class="stat-main" data-target="${s.totalBlocking}">0</span>${trendIcon(s.trend.blocking)}</div>
-              <div class="stat-label"><i data-lucide="octagon-alert"></i> ${t('stats.blocking')}</div>
-            </div>
-            <div class="stat-card metric-warnings">
-              <div class="stat-value"><span class="stat-main" data-target="${s.totalWarnings}">0</span></div>
-              <div class="stat-label"><i data-lucide="alert-triangle"></i> ${t('stats.warnings')}</div>
-            </div>
-            <div class="stat-card metric-commits">
-              <div class="stat-value"><span class="stat-main" data-target="${s.totalCommits}">0</span></div>
-              <div class="stat-label"><i data-lucide="git-commit-horizontal"></i> ${t('stats.commits')}</div>
-            </div>
-            <div class="stat-card metric-additions">
-              <div class="stat-value"><span class="stat-main" data-target="${s.totalAdditions}">0</span></div>
-              <div class="stat-label"><i data-lucide="plus"></i> ${t('stats.linesAdded')}</div>
-            </div>
-            <div class="stat-card metric-deletions">
-              <div class="stat-value"><span class="stat-main" data-target="${s.totalDeletions}">0</span></div>
-              <div class="stat-label"><i data-lucide="minus"></i> ${t('stats.linesDeleted')}</div>
-            </div>
-            <div class="stats-charts-row">
-              <div class="stats-chart-card">
-                <div class="stats-chart-title"><i data-lucide="trending-up"></i> ${t('stats.scoreTrend')}</div>
-                <div class="dev-filter" id="dev-filter-container">
-                  <button class="dev-filter-btn ${currentDevFilter === 'all' ? 'active' : ''}" data-dev="all" onclick="filterScoreTrend('all')">${t('stats.allDevs')}</button>
-                  ${[...new Set(reviews.map(r => r.assignedBy).filter(Boolean))].map(dev =>
-                    '<button class="dev-filter-btn ' + (currentDevFilter === dev ? 'active' : '') + '" data-dev="' + dev + '" onclick="filterScoreTrend(\'' + dev + '\')">' + dev + '</button>'
-                  ).join('')}
-                </div>
-                <canvas id="stats-score-trend" class="stats-canvas"></canvas>
-              </div>
-              <div class="stats-chart-card">
-                <div class="stats-chart-title"><i data-lucide="bar-chart-3"></i> ${t('stats.reviewActivity')}</div>
-                <canvas id="stats-activity" class="stats-canvas"></canvas>
-              </div>
-            </div>
-            <div class="stats-charts-row">
-              <div class="stats-chart-card full-width">
-                <div class="stats-chart-title"><i data-lucide="pie-chart"></i> ${t('stats.scoreDistribution')}</div>
-                <canvas id="stats-distribution" class="stats-canvas-wide"></canvas>
-              </div>
-            </div>
-            <div class="stats-charts-row">
-              <div class="stats-chart-card full-width">
-                <div class="stats-chart-title"><i data-lucide="bug"></i> ${t('stats.bugsByCategory')}</div>
-                <canvas id="stats-bugs-category" class="stats-canvas-wide"></canvas>
-              </div>
-            </div>
-            ${keyInsightsMarkup}
-          `;
-          refreshIcons();
-
-          statsEl.querySelectorAll('.stat-main[data-target]').forEach(element => {
-            const target = parseFloat(element.dataset.target);
-            if (!isNaN(target)) {
-              animateCounter(element, target, 800, element.dataset.suffix || '');
-            }
-          });
-
-          currentStatsReviews = reviews;
-
-          requestAnimationFrame(() => {
-            if (reviews.length) {
-              const trendReviews = currentDevFilter === 'all'
-                ? reviews
-                : reviews.filter(r => r.assignedBy === currentDevFilter);
-              drawScoreTrendChart('stats-score-trend', trendReviews);
-              drawReviewActivityChart('stats-activity', reviews);
-              drawScoreDistributionChart('stats-distribution', reviews);
-            }
-            if (data.bugsByCategory) {
-              drawBugsByCategoryChart('stats-bugs-category', data.bugsByCategory);
-            }
-            if (data.analyticsHeader && !data.analyticsHeader.isEmpty) {
-              drawReviewsPerMonthChart('stats-reviews-per-month', data.analyticsHeader.reviewsPerMonth);
-            }
-          });
-        } else {
-          statsEl.innerHTML = `<div class="empty-state">${t('empty.statsNoData')}</div>`;
+          currentStatsReviews = data.stats?.reviews || [];
         }
       } catch (error) {
         console.error('Error fetching stats:', error);
-        statsEl.innerHTML = `<div class="empty-state">${t('error.loadingStats')}</div>`;
       } finally {
         setLoadingFlag('stats', false);
       }
@@ -1683,12 +1520,6 @@
       window.location.href = `/stats?path=${encodeURIComponent(currentProjectPath)}`;
     }
 
-    function closeStatsSheet() {
-      document.getElementById('stats-sheet-overlay').classList.remove('open');
-      document.getElementById('stats-sheet').classList.remove('open');
-      document.body.style.overflow = '';
-    }
-
     function exportInsightsPdf() {
       if (!currentInsightsData || currentInsightsData.isEmpty) return;
 
@@ -1719,49 +1550,6 @@
         }, 60000);
       }, 250);
     }
-
-    async function recalculateStats() {
-      if (!currentProjectPath) return;
-      const button = document.getElementById('recalculate-btn');
-      const progressBadge = document.getElementById('backfill-progress');
-      if (button) button.disabled = true;
-
-      try {
-        const response = await fetch(`${API_URL}/api/stats/recalculate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: currentProjectPath, backfill: true }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Recalculation failed');
-        }
-
-        if (progressBadge) {
-          progressBadge.textContent = '...';
-          progressBadge.classList.remove('hidden');
-        }
-      } catch (error) {
-        console.error('Error recalculating stats:', error);
-        if (button) button.disabled = false;
-        if (progressBadge) progressBadge.classList.add('hidden');
-      }
-    }
-    window.recalculateStats = recalculateStats;
-
-    function filterScoreTrend(selectedDev) {
-      currentDevFilter = selectedDev;
-      document.querySelectorAll('.dev-filter-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.dev === selectedDev);
-      });
-
-      const filtered = selectedDev === 'all'
-        ? currentStatsReviews
-        : currentStatsReviews.filter(r => r.assignedBy === selectedDev);
-
-      drawScoreTrendChart('stats-score-trend', filtered);
-    }
-    window.filterScoreTrend = filterScoreTrend;
 
     function renderMrItem(mr, type) {
       const mrPrefix = mr.platform === 'github' ? '#' : '!';
@@ -3616,7 +3404,6 @@
     window.openEconomicsSheet = openEconomicsSheet;
     window.closeEconomicsSheet = closeEconomicsSheet;
     window.openStatsSheet = openStatsSheet;
-    window.closeStatsSheet = closeStatsSheet;
     window.generateAiInsights = generateAiInsights;
     window.exportInsightsPdf = exportInsightsPdf;
     window.toggleTeamAnalysis = toggleTeamAnalysis;

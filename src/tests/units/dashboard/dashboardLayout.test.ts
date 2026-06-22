@@ -194,30 +194,22 @@ describe('SPEC-181 — Dashboard Empty-State Restructure & Team-First Layout', (
     });
   });
 
-  describe('stats sheet markup', () => {
-    it('declares #stats-sheet-overlay, #stats-sheet, #stats-sheet-content', () => {
-      expect(indexHtml).toMatch(/id="stats-sheet-overlay"/);
-      expect(indexHtml).toMatch(/id="stats-sheet"/);
-      expect(indexHtml).toMatch(/id="stats-sheet-content"/);
+  describe('stats moved to dedicated /stats page (sheet removed)', () => {
+    it('no longer declares the stats sheet markup', () => {
+      expect(indexHtml).not.toMatch(/id="stats-sheet-overlay"/);
+      expect(indexHtml).not.toMatch(/id="stats-sheet"/);
+      expect(indexHtml).not.toMatch(/id="project-stats"/);
     });
 
-    it('preserves inner DOM ids needed by existing fetchers/renderers', () => {
-      const sheetBlock = extractElementSubtree(indexHtml, '<div id="stats-sheet"');
-      expect(sheetBlock).not.toBe('');
-      expect(sheetBlock).toMatch(/id="project-stats"/);
-      expect(sheetBlock).toMatch(/id="recalculate-btn"/);
-      expect(sheetBlock).toMatch(/id="recalculate-label"/);
-      expect(sheetBlock).toMatch(/id="backfill-progress"/);
-    });
-
-    it('wires open and close handlers via onclick attributes', () => {
+    it('the stats sidebar button navigates to the dedicated /stats page', () => {
       expect(indexHtml).toMatch(/id="open-stats-sheet-btn"[^>]*onclick="openStatsSheet\(\)"/);
-      expect(indexHtml).toMatch(/id="stats-sheet-overlay"[^>]*onclick="closeStatsSheet\(\)"/);
+      expect(indexHtml).toMatch(/\/stats\?path=\$\{encodeURIComponent\(currentProjectPath\)\}/);
     });
 
-    it('contains a sheet-close button inside the stats sheet', () => {
-      const sheetBlock = extractElementSubtree(indexHtml, '<div id="stats-sheet"');
-      expect(sheetBlock).toMatch(/class="sheet-close"/);
+    it('no longer defines the removed sheet handlers', () => {
+      expect(indexHtml).not.toMatch(/function closeStatsSheet/);
+      expect(indexHtml).not.toMatch(/function filterScoreTrend/);
+      expect(indexHtml).not.toMatch(/async function recalculateStats/);
     });
   });
 
