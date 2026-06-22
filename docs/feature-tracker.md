@@ -71,3 +71,4 @@
 | Fix the GitLab change-size source | [206-fix-gitlab-diff-stats-source](specs/206-fix-gitlab-diff-stats-source.md) — [plan](plans/206-fix-gitlab-diff-stats-source.plan.md) — [report](reports/206-fix-gitlab-diff-stats-source.report.md) | implemented | 2026-06-20 |
 | Backfill change-size data for past reviews | [207-backfill-historical-diff-stats](specs/207-backfill-historical-diff-stats.md) | implemented | 2026-06-20 |
 | Make the Recalculate button backfill change-size data | [208-self-service-backfill-button](specs/208-self-service-backfill-button.md) — [plan](plans/208-self-service-backfill-button.plan.md) — [report](reports/208-self-service-backfill-button.report.md) | implemented | 2026-06-20 |
+| Guard oversized merge requests | [209-mr-size-guard](specs/209-mr-size-guard.md) — [plan](plans/209-mr-size-guard.plan.md) — [report](reports/209-mr-size-guard.report.md) | implemented | 2026-06-22 |

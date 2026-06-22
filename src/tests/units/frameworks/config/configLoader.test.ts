@@ -158,6 +158,40 @@ describe('validateAndEnrichConfig', () => {
     });
   });
 
+  describe('maxDiffLines validation (SPEC-209)', () => {
+    it('leaves maxDiffLines undefined when the field is missing', () => {
+      const config = createValidConfig();
+
+      const result = validateAndEnrichConfig(config);
+
+      expect(result.maxDiffLines).toBeUndefined();
+    });
+
+    it('accepts a positive integer maxDiffLines', () => {
+      const config = { ...createValidConfig(), maxDiffLines: 1000 };
+
+      const result = validateAndEnrichConfig(config);
+
+      expect(result.maxDiffLines).toBe(1000);
+    });
+
+    it('rejects a non-integer maxDiffLines with the French message', () => {
+      const config = { ...createValidConfig(), maxDiffLines: 1000.5 };
+
+      expect(() => validateAndEnrichConfig(config)).toThrow(
+        'Configuration invalide : maxDiffLines invalide',
+      );
+    });
+
+    it('rejects a maxDiffLines below 1 with the French message', () => {
+      const config = { ...createValidConfig(), maxDiffLines: 0 };
+
+      expect(() => validateAndEnrichConfig(config)).toThrow(
+        'Configuration invalide : maxDiffLines invalide',
+      );
+    });
+  });
+
   describe('triggerMode validation (SPEC-174)', () => {
     it('default mode when missing: falls back to full-auto', () => {
       const config = createValidConfig();

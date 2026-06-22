@@ -52,6 +52,7 @@ export interface Config {
   queue: QueueConfig;
   repositories: RepositoryConfig[];
   triggerMode: TriggerMode;
+  maxDiffLines?: number;
 }
 
 export interface EnvSecrets {
@@ -242,6 +243,19 @@ export function validateAndEnrichConfig(data: unknown): Config {
     triggerMode = config.triggerMode;
   }
 
+  // Validate maxDiffLines (optional, falls back to the per-call default when absent)
+  let maxDiffLines: number | undefined;
+  if (config.maxDiffLines !== undefined && config.maxDiffLines !== null) {
+    if (
+      typeof config.maxDiffLines !== 'number' ||
+      !Number.isInteger(config.maxDiffLines) ||
+      config.maxDiffLines < 1
+    ) {
+      throw new Error('Configuration invalide : maxDiffLines invalide');
+    }
+    maxDiffLines = config.maxDiffLines;
+  }
+
   // Validate and enrich repositories
   if (!Array.isArray(config.repositories)) {
     throw new Error('Configuration invalide : repositories doit être un tableau');
@@ -276,7 +290,7 @@ export function validateAndEnrichConfig(data: unknown): Config {
     }
   }
 
-  return {
+  const result: Config = {
     server: { port },
     user: { gitlabUsername, githubUsername },
     queue: {
@@ -287,6 +301,12 @@ export function validateAndEnrichConfig(data: unknown): Config {
     repositories: enrichedRepositories,
     triggerMode,
   };
+
+  if (maxDiffLines !== undefined) {
+    result.maxDiffLines = maxDiffLines;
+  }
+
+  return result;
 }
 
 function loadSecrets(): EnvSecrets {

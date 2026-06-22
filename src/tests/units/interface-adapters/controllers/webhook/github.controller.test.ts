@@ -181,6 +181,8 @@ function createMockDeps(): GitHubWebhookDependencies {
     handlePlatformApproval: { execute: vi.fn(() => ({ kind: 'allowed' })) },
     approvalRevocationGateway: { revoke: vi.fn(async () => undefined) },
     getQualityThreshold: vi.fn(() => null),
+    guardDiffSize: { execute: vi.fn(() => ({ kind: 'allowed' })) },
+    getMaxDiffLines: vi.fn(() => 2000),
     now: (): string => '2026-05-26T12:00:00.000Z',
   } as unknown as GitHubWebhookDependencies;
 }

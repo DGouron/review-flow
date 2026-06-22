@@ -181,6 +181,8 @@ function createDefaultDeps(
     enforceBudget: { execute: enforceBudgetExecute },
     broadcastBudgetExceeded: vi.fn(),
     getRepositories: vi.fn(() => []),
+    guardDiffSize: { execute: vi.fn(() => ({ kind: 'allowed' })) },
+    getMaxDiffLines: vi.fn(() => 2000),
   } as unknown as GitHubWebhookDependencies;
 }
 
