@@ -1,3 +1,4 @@
+import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
 import type {
   DeveloperInsight,
   CategoryLevels,
@@ -45,6 +46,7 @@ export function computeInsightsWithPersistence(
   const newReviews = reviews.filter((review) => !processedIds.has(review.id));
 
   const updatedDevelopers = updateDeveloperMetrics(currentPersistedData.developers, newReviews);
+  reconcileDiffStatsFromWindow(updatedDevelopers, reviews);
 
   const allProcessedIds = [
     ...currentPersistedData.processedReviewIds,
@@ -122,12 +124,6 @@ function updateExistingDeveloper(developer: PersistedDeveloperMetrics, review: R
     developer.scoredReviewCount += 1;
   }
 
-  if (review.diffStats !== null && review.diffStats !== undefined) {
-    developer.totalAdditions += review.diffStats.additions;
-    developer.totalDeletions += review.diffStats.deletions;
-    developer.diffStatsReviewCount += 1;
-  }
-
   developer.recentReviews.push(review);
   if (developer.recentReviews.length > RECENT_REVIEWS_WINDOW) {
     developer.recentReviews = developer.recentReviews.slice(-RECENT_REVIEWS_WINDOW);
@@ -144,11 +140,56 @@ function createDeveloperFromReview(review: ReviewStats): PersistedDeveloperMetri
     totalWarnings: review.warnings,
     totalSuggestions: review.suggestions ?? 0,
     totalDuration: review.duration,
-    totalAdditions: review.diffStats?.additions ?? 0,
-    totalDeletions: review.diffStats?.deletions ?? 0,
-    diffStatsReviewCount: review.diffStats !== null && review.diffStats !== undefined ? 1 : 0,
+    totalAdditions: 0,
+    totalDeletions: 0,
+    diffStatsReviewCount: 0,
     recentReviews: [review],
   };
+}
+
+/**
+ * Diff stats are only retained for the rolling window of recent reviews kept in
+ * project stats. Recompute each developer's diff-stat aggregates from that window
+ * so backfilled diff stats on already-processed reviews are picked up, and refresh
+ * the per-developer recentReviews so volume/score correlation can be computed.
+ * Developers with no review in the window keep their previously persisted values.
+ */
+function reconcileDiffStatsFromWindow(
+  developers: PersistedDeveloperMetrics[],
+  windowReviews: ReviewStats[],
+): void {
+  if (windowReviews.length === 0) return;
+
+  const windowReviewsByDeveloper = new Map<string, ReviewStats[]>();
+  const diffStatsByReviewId = new Map<string, DiffStats>();
+  for (const review of windowReviews) {
+    if (review.diffStats) {
+      diffStatsByReviewId.set(review.id, review.diffStats);
+    }
+    if (!review.assignedBy) continue;
+    const reviewsForDeveloper = windowReviewsByDeveloper.get(review.assignedBy) ?? [];
+    reviewsForDeveloper.push(review);
+    windowReviewsByDeveloper.set(review.assignedBy, reviewsForDeveloper);
+  }
+
+  for (const developer of developers) {
+    const reviewsForDeveloper = windowReviewsByDeveloper.get(developer.developerName);
+    if (reviewsForDeveloper) {
+      developer.totalAdditions = 0;
+      developer.totalDeletions = 0;
+      developer.diffStatsReviewCount = 0;
+      for (const review of reviewsForDeveloper) {
+        if (!review.diffStats) continue;
+        developer.totalAdditions += review.diffStats.additions;
+        developer.totalDeletions += review.diffStats.deletions;
+        developer.diffStatsReviewCount += 1;
+      }
+    }
+    developer.recentReviews = developer.recentReviews.map((review) => {
+      const diffStats = diffStatsByReviewId.get(review.id);
+      return diffStats ? { ...review, diffStats } : review;
+    });
+  }
 }
 
 function computeInsightsFromPersistedMetrics(
