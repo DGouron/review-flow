@@ -85,6 +85,8 @@ import {
   buildGitLabReviewProcessor,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
 import { transportGuardMiddleware } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
+import { GitHubChangedFilesFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/changedFilesFetch.github.gateway.js';
+import { GitLabChangedFilesFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/changedFilesFetch.gitlab.gateway.js';
 import { GitHubApprovalRevocationCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/approvalRevocation.github.cli.gateway.js';
 import { GitLabApprovalRevocationCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/approvalRevocation.gitlab.cli.gateway.js';
 import { GitHubNoteCommentPostCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/noteCommentPost.github.cli.gateway.js';
@@ -104,6 +106,7 @@ import {
   defaultGitLabExecutor,
 } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
 import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
+import { GuardDiffSizeUseCase } from '@/modules/platform-integration/usecases/guardDiffSize.usecase.js';
 import { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
 import { processWebhook } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import { pendingReviewsRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/pendingReviews.routes.js';
@@ -616,6 +619,11 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
       idempotencyStore,
       getQualityThreshold: (projectPath: string) =>
         loadProjectConfig(projectPath)?.qualityThreshold ?? null,
+      guardDiffSize: new GuardDiffSizeUseCase({
+        changedFilesFetchGateway: new GitLabChangedFilesFetchGateway(defaultGitLabExecutor),
+      }),
+      getMaxDiffLines: (localPath: string) =>
+        loadProjectConfig(localPath)?.maxDiffLines ?? deps.config.maxDiffLines ?? 2000,
       now: () => new Date().toISOString(),
     });
   });
@@ -688,6 +696,11 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
       approvalRevocationGateway: new GitHubApprovalRevocationCliGateway(defaultGitHubExecutor),
       getQualityThreshold: (projectPath: string) =>
         loadProjectConfig(projectPath)?.qualityThreshold ?? null,
+      guardDiffSize: new GuardDiffSizeUseCase({
+        changedFilesFetchGateway: new GitHubChangedFilesFetchGateway(defaultGitHubExecutor),
+      }),
+      getMaxDiffLines: (localPath: string) =>
+        loadProjectConfig(localPath)?.maxDiffLines ?? deps.config.maxDiffLines ?? 2000,
       now: () => new Date().toISOString(),
     });
   });

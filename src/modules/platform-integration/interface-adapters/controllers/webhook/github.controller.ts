@@ -18,6 +18,7 @@ import { gitHubPullRequestEventGuard } from '@/modules/platform-integration/enti
 import { gitHubPullRequestReviewEventGuard } from '@/modules/platform-integration/entities/github/githubPullRequestReviewEvent.guard.js';
 import type { NoteCommentPostGateway } from '@/modules/platform-integration/entities/noteComment/noteCommentPost.gateway.js';
 import type { ThreadFetchGateway } from '@/modules/platform-integration/entities/threadFetch/threadFetch.gateway.js';
+import { applyDiffSizeGuard } from '@/modules/platform-integration/interface-adapters/controllers/webhook/diffSizeGuard.helper.js';
 import {
   filterGitHubEvent,
   filterGitHubLabelEvent,
@@ -26,6 +27,7 @@ import {
   filterGitHubIssueCommentEvent,
   filterGitHubPullRequestReviewEvent,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
+import type { GuardDiffSizeUseCase } from '@/modules/platform-integration/usecases/guardDiffSize.usecase.js';
 import type { ProcessWebhook } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import {
@@ -80,6 +82,8 @@ export interface GitHubWebhookDependencies {
   handlePlatformApproval: HandlePlatformApprovalUseCase;
   approvalRevocationGateway: ApprovalRevocationGateway;
   getQualityThreshold: (projectPath: string) => number | null;
+  guardDiffSize: GuardDiffSizeUseCase;
+  getMaxDiffLines: (localPath: string) => number;
   now: () => string;
 }
 
@@ -150,6 +154,29 @@ async function handleGitHubPullRequestReviewHook(
       'Pull request review for unconfigured repository (ignored)',
     );
     reply.status(200).send({ status: 'ignored', reason: 'Repository not configured' });
+    return;
+  }
+
+  const sizeGuard = await applyDiffSizeGuard({
+    projectIdentifier: filterResult.projectPath,
+    localPath: repoConfig.localPath,
+    mergeRequestNumber: filterResult.mergeRequestNumber,
+    mode: 'approve',
+    revokeArgs: { reviewId: filterResult.reviewId, dismissalMessage: 'oversized' },
+    deps: {
+      guardDiffSize: deps.guardDiffSize,
+      getMaxDiffLines: deps.getMaxDiffLines,
+      noteCommentPostGateway: deps.noteCommentPostGateway,
+      approvalRevocationGateway: deps.approvalRevocationGateway,
+    },
+    logger,
+  });
+  if (sizeGuard.blocked) {
+    reply.status(200).send({
+      status: 'unapproved',
+      prNumber: filterResult.mergeRequestNumber,
+      reason: 'oversized',
+    });
     return;
   }
 
@@ -483,6 +510,24 @@ export async function handleGitHubWebhook(
             return;
           }
 
+          const followupSizeGuard = await applyDiffSizeGuard({
+            projectIdentifier: updateResult.projectPath,
+            localPath: updateRepoConfig.localPath,
+            mergeRequestNumber: updateResult.mergeRequestNumber,
+            mode: 'followup',
+            deps: {
+              guardDiffSize: deps.guardDiffSize,
+              getMaxDiffLines: deps.getMaxDiffLines,
+              noteCommentPostGateway: deps.noteCommentPostGateway,
+              approvalRevocationGateway: deps.approvalRevocationGateway,
+            },
+            logger,
+          });
+          if (followupSizeGuard.blocked) {
+            reply.status(200).send({ status: 'rejected', reason: 'oversized' });
+            return;
+          }
+
           const followupProcessor = async (j: ReviewJob, signal: AbortSignal): Promise<void> => {
             await runGitHubReview(deps.executeReview, {
               job: j,
@@ -621,6 +666,24 @@ export async function handleGitHubWebhook(
       consumedUsd: budgetDecision.status.consumedUsd,
     });
     reply.status(200).send({ status: 'rejected', reason: 'budget-exceeded' });
+    return;
+  }
+
+  const reviewSizeGuard = await applyDiffSizeGuard({
+    projectIdentifier: filterResult.projectPath,
+    localPath: repoConfig.localPath,
+    mergeRequestNumber: filterResult.mergeRequestNumber,
+    mode: 'review',
+    deps: {
+      guardDiffSize: deps.guardDiffSize,
+      getMaxDiffLines: deps.getMaxDiffLines,
+      noteCommentPostGateway: deps.noteCommentPostGateway,
+      approvalRevocationGateway: deps.approvalRevocationGateway,
+    },
+    logger,
+  });
+  if (reviewSizeGuard.blocked) {
+    reply.status(200).send({ status: 'rejected', reason: 'oversized' });
     return;
   }
 
