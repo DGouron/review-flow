@@ -139,6 +139,21 @@ describe('i18n', () => {
     expect(t('stats.linesDeleted')).toBe('Lignes supprimées');
   });
 
+  it('should translate stats page labels in English', () => {
+    expect(t('stats.backToDashboard')).toBe('Back to dashboard');
+    expect(t('stats.netLines')).toBe('Net lines');
+    expect(t('stats.project')).toBe('Project');
+    expect(t('stats.volume')).toBe('Volume');
+  });
+
+  it('should translate stats page labels in French', () => {
+    setLanguage('fr');
+    expect(t('stats.backToDashboard')).toBe('Retour au dashboard');
+    expect(t('stats.netLines')).toBe('Lignes nettes');
+    expect(t('stats.project')).toBe('Projet');
+    expect(t('stats.volume')).toBe('Volume');
+  });
+
   it('should translate export PDF labels in English', () => {
     expect(t('export.pdf')).toBe('Export PDF');
     expect(t('export.title')).toBe('Team Insights Report');

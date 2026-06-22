@@ -1680,11 +1680,7 @@
 
     function openStatsSheet() {
       if (!currentProjectPath) return;
-      document.getElementById('stats-sheet-overlay').classList.add('open');
-      document.getElementById('stats-sheet').classList.add('open');
-      document.body.style.overflow = 'hidden';
-      fetchProjectStats();
-      refreshIcons();
+      window.location.href = `/stats?path=${encodeURIComponent(currentProjectPath)}`;
     }
 
     function closeStatsSheet() {
