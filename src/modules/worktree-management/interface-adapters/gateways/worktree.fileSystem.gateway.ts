@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import type { GitCommandExecutor } from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
@@ -50,6 +50,7 @@ export class WorktreeFileSystemGateway implements WorktreeGateway {
       {
         executor: this.executor,
         worktreeExists: async (path) => existsSync(path),
+        removeDirectory: async (path) => rmSync(path, { recursive: true, force: true }),
         writeWorktreeSettings,
       },
     );

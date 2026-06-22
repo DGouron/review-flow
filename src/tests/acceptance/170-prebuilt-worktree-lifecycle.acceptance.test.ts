@@ -62,6 +62,7 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
         {
           executor,
           worktreeExists: async () => false,
+          removeDirectory: async () => {},
           writeWorktreeSettings: async (path) => {
             writeSettingsCalls.push(path);
             return { status: 'ok' };
@@ -109,6 +110,7 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
         {
           executor,
           worktreeExists: async () => true,
+          removeDirectory: async () => {},
           writeWorktreeSettings: async (path) => {
             writeSettingsCalls.push(path);
             return { status: 'ok' };
@@ -385,6 +387,7 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
         {
           executor,
           worktreeExists: async () => false,
+          removeDirectory: async () => {},
           writeWorktreeSettings: async () => ({ status: 'ok' }),
         },
       );

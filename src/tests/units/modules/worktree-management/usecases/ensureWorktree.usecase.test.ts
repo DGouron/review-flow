@@ -2,16 +2,40 @@ import { describe, it, expect, beforeEach } from 'vitest';
 
 import { deriveWorktreePath } from '@/modules/worktree-management/entities/worktree/worktree.js';
 import type { WorktreeIdentity } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
-import { ensureWorktree } from '@/modules/worktree-management/usecases/ensureWorktree.usecase.js';
+import {
+  ensureWorktree,
+  type EnsureWorktreeDependencies,
+} from '@/modules/worktree-management/usecases/ensureWorktree.usecase.js';
 import { StubGitCommandExecutor } from '@/tests/stubs/gitCommandExecutor.stub.js';
 
 interface StubFileSystem {
   existingPaths: Set<string>;
   settingsWrites: { path: string; content: string }[];
+  removedDirectories: string[];
 }
 
 function buildStubFileSystem(): StubFileSystem {
-  return { existingPaths: new Set(), settingsWrites: [] };
+  return { existingPaths: new Set(), settingsWrites: [], removedDirectories: [] };
+}
+
+function buildDeps(
+  executor: StubGitCommandExecutor,
+  fileSystem: StubFileSystem,
+  overrides: Partial<EnsureWorktreeDependencies> = {},
+): EnsureWorktreeDependencies {
+  return {
+    executor,
+    worktreeExists: async (path) => fileSystem.existingPaths.has(path),
+    removeDirectory: async (path) => {
+      fileSystem.removedDirectories.push(path);
+      fileSystem.existingPaths.delete(path);
+    },
+    writeWorktreeSettings: async (path) => {
+      fileSystem.settingsWrites.push({ path, content: 'settings' });
+      return { status: 'ok' };
+    },
+    ...overrides,
+  };
 }
 
 const identity: WorktreeIdentity = {
@@ -38,14 +62,7 @@ describe('ensureWorktree use case', () => {
         source: { kind: 'origin' },
         sourceCheckoutPath: '/repo',
       },
-      {
-        executor,
-        worktreeExists: async (path) => fileSystem.existingPaths.has(path),
-        writeWorktreeSettings: async (path) => {
-          fileSystem.settingsWrites.push({ path, content: 'settings' });
-          return { status: 'ok' };
-        },
-      },
+      buildDeps(executor, fileSystem),
     );
 
     expect(result).toEqual({ status: 'created', path: expectedPath, settingsWarning: null });
@@ -55,7 +72,7 @@ describe('ensureWorktree use case', () => {
     expect(fileSystem.settingsWrites).toEqual([{ path: expectedPath, content: 'settings' }]);
   });
 
-  it('reuses an existing worktree by fast-forwarding it', async () => {
+  it('reuses a healthy existing worktree by fast-forwarding it', async () => {
     fileSystem.existingPaths.add(expectedPath);
 
     const result = await ensureWorktree(
@@ -65,20 +82,45 @@ describe('ensureWorktree use case', () => {
         source: { kind: 'origin' },
         sourceCheckoutPath: '/repo',
       },
-      {
-        executor,
-        worktreeExists: async (path) => fileSystem.existingPaths.has(path),
-        writeWorktreeSettings: async (path) => {
-          fileSystem.settingsWrites.push({ path, content: 'settings' });
-          return { status: 'ok' };
-        },
-      },
+      buildDeps(executor, fileSystem),
     );
 
     expect(result).toEqual({ status: 'reused', path: expectedPath });
     const kinds = executor.calls.map((c) => c.kind);
-    expect(kinds).toEqual(['worktree-prune', 'fetch', 'reset-hard']);
+    expect(kinds).toEqual(['worktree-prune', 'rev-parse-toplevel', 'fetch', 'reset-hard']);
     expect(executor.callsOfKind('worktree-add')).toHaveLength(0);
+    expect(fileSystem.removedDirectories).toEqual([]);
+  });
+
+  it('self-heals a broken worktree directory by removing it and recreating', async () => {
+    fileSystem.existingPaths.add(expectedPath);
+    executor.programResponse('rev-parse-toplevel', {
+      exitCode: 128,
+      stdout: '',
+      stderr: 'fatal: not a git repository',
+    });
+
+    const result = await ensureWorktree(
+      {
+        identity,
+        sourceBranch: 'feat/x',
+        source: { kind: 'origin' },
+        sourceCheckoutPath: '/repo',
+      },
+      buildDeps(executor, fileSystem),
+    );
+
+    expect(result).toEqual({ status: 'created', path: expectedPath, settingsWarning: null });
+    expect(fileSystem.removedDirectories).toEqual([expectedPath]);
+    const kinds = executor.calls.map((c) => c.kind);
+    expect(kinds).toEqual([
+      'worktree-prune',
+      'rev-parse-toplevel',
+      'worktree-prune',
+      'fetch',
+      'worktree-add',
+    ]);
+    expect(executor.callsOfKind('worktree-add')[0]?.cwd).toBe('/repo');
   });
 
   it('uses the fork URL as remote when the source is a fork', async () => {
@@ -89,11 +131,7 @@ describe('ensureWorktree use case', () => {
         source: { kind: 'fork', cloneUrl: 'https://github.com/contributor/fork.git' },
         sourceCheckoutPath: '/repo',
       },
-      {
-        executor,
-        worktreeExists: async (path) => fileSystem.existingPaths.has(path),
-        writeWorktreeSettings: async () => ({ status: 'ok' }),
-      },
+      buildDeps(executor, fileSystem),
     );
 
     const fetchCall = executor.callsOfKind('fetch')[0];
@@ -103,7 +141,7 @@ describe('ensureWorktree use case', () => {
     expect(addCall?.args).toContain(`refs/remotes/pr-${identity.mrNumber}/head`);
   });
 
-  it('returns branch-not-found when the fetch fails', async () => {
+  it('returns branch-not-found when the fetch fails on a fresh create', async () => {
     executor.programResponse('fetch', {
       exitCode: 128,
       stdout: '',
@@ -117,17 +155,39 @@ describe('ensureWorktree use case', () => {
         source: { kind: 'origin' },
         sourceCheckoutPath: '/repo',
       },
-      {
-        executor,
-        worktreeExists: async () => false,
-        writeWorktreeSettings: async () => ({ status: 'ok' }),
-      },
+      buildDeps(executor, fileSystem),
     );
 
     expect(result.status).toBe('failed');
     if (result.status === 'failed') {
       expect(result.reason).toBe('branch-not-found');
     }
+    expect(executor.callsOfKind('worktree-add')).toHaveLength(0);
+  });
+
+  it('returns branch-not-found when a healthy worktree branch was deleted on the remote', async () => {
+    fileSystem.existingPaths.add(expectedPath);
+    executor.programResponse('fetch', {
+      exitCode: 128,
+      stdout: '',
+      stderr: "fatal: couldn't find remote ref feat/x",
+    });
+
+    const result = await ensureWorktree(
+      {
+        identity,
+        sourceBranch: 'feat/x',
+        source: { kind: 'origin' },
+        sourceCheckoutPath: '/repo',
+      },
+      buildDeps(executor, fileSystem),
+    );
+
+    expect(result.status).toBe('failed');
+    if (result.status === 'failed') {
+      expect(result.reason).toBe('branch-not-found');
+    }
+    expect(fileSystem.removedDirectories).toEqual([]);
     expect(executor.callsOfKind('worktree-add')).toHaveLength(0);
   });
 
@@ -139,11 +199,9 @@ describe('ensureWorktree use case', () => {
         source: { kind: 'origin' },
         sourceCheckoutPath: '/repo',
       },
-      {
-        executor,
-        worktreeExists: async () => false,
+      buildDeps(executor, fileSystem, {
         writeWorktreeSettings: async () => ({ status: 'failed', reason: 'disk-full' }),
-      },
+      }),
     );
 
     expect(result.status).toBe('created');

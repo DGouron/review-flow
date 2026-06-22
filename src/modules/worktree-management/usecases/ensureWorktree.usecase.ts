@@ -28,11 +28,24 @@ export interface WorktreeSettingsWriteResult {
 export interface EnsureWorktreeDependencies {
   executor: GitCommandExecutor;
   worktreeExists: (path: WorktreePath) => Promise<boolean>;
+  removeDirectory: (path: WorktreePath) => Promise<void>;
   writeWorktreeSettings: (path: WorktreePath) => Promise<WorktreeSettingsWriteResult>;
 }
 
 function isFetchFailure(result: GitCommandResult): boolean {
   return result.exitCode !== 0;
+}
+
+async function isHealthyWorktree(
+  executor: GitCommandExecutor,
+  targetPath: WorktreePath,
+): Promise<boolean> {
+  const result = await executor.execute({
+    kind: 'rev-parse-toplevel',
+    args: ['rev-parse', '--show-toplevel'],
+    cwd: targetPath,
+  });
+  return result.exitCode === 0;
 }
 
 export async function ensureWorktree(
@@ -50,7 +63,7 @@ export async function ensureWorktree(
 
   const alreadyExists = await deps.worktreeExists(targetPath);
 
-  if (alreadyExists) {
+  if (alreadyExists && (await isHealthyWorktree(deps.executor, targetPath))) {
     const fetchInsideResult = await deps.executor.execute({
       kind: 'fetch',
       args: ['fetch', fetchRef.remote, fetchRef.refspec],
@@ -70,6 +83,15 @@ export async function ensureWorktree(
     }
 
     return { status: 'reused', path: targetPath };
+  }
+
+  if (alreadyExists) {
+    await deps.removeDirectory(targetPath);
+    await deps.executor.execute({
+      kind: 'worktree-prune',
+      args: ['worktree', 'prune'],
+      cwd: input.sourceCheckoutPath,
+    });
   }
 
   const fetchResult = await deps.executor.execute({
