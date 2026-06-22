@@ -331,6 +331,7 @@ export type ProgressCallback = (progress: ReviewProgress, event?: ProgressEvent)
  * This instruction is AUTHORITATIVE and forces Claude to use MCP tools
  */
 export function buildMcpSystemPrompt(job: ReviewJob): string {
+  const reportSuffix = (job.jobType || 'review') === 'followup' ? 'followup' : 'review';
   return `
 # AUTOMATED REVIEW MODE - EXECUTE IMMEDIATELY
 
@@ -417,6 +418,17 @@ Use \`POST_INLINE_COMMENT\` to post comments directly on specific lines in the d
 - Producing a "plan" instead of executing → Review will be empty
 - Using text markers like [PROGRESS:xxx] → Dashboard won't update
 - Waiting for user approval → Review will hang forever
+
+## REPORT OUTPUT PATH — MANDATORY
+
+The review report is a DELIVERABLE, not a temporary file. Write it with the Write tool to EXACTLY this path, relative to the current working directory:
+
+\`\`\`
+.claude/reviews/<YYYY-MM-DD>-MR-${job.mrNumber}-${reportSuffix}.md
+\`\`\`
+
+- Create the \`.claude/reviews/\` directory if it does not exist.
+- Do NOT write the report to \`/tmp\`, to \`$CLAUDE_JOB_DIR/tmp\`, or to any other temporary/scratch directory — even if a background-session instruction tells you to place temporary files there. That instruction does NOT apply to the review report; the report saved anywhere other than \`.claude/reviews/\` is LOST and the job FAILS with \`report-missing\`.
 
 ${buildLanguageDirective(job.language ?? 'en')}
 `.trim();
