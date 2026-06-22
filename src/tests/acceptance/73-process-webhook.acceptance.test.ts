@@ -60,6 +60,8 @@ function buildHarness(overrides?: Partial<ProcessWebhookDependencies>): Harness 
       removeWorktreeCalls.push({ platform: identity.platform });
       return { status: 'removed' };
     },
+    handlePlatformApproval: { execute: () => ({ kind: 'allowed' }) },
+    getQualityThreshold: () => null,
     logger: createStubLogger(),
     ...overrides,
   };

@@ -579,7 +579,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
         removeWorktree: removeWorktreeAction,
         logger: deps.logger,
       });
-    await handleGitLabWebhook(request, reply, deps.logger, trackingGw, {
+    await handleGitLabWebhook(request, reply, deps.logger, {
       reviewContextGateway: deps.reviewContextGateway,
       threadFetchGateway: threadFetchGw,
       diffMetadataFetchGateway: new GitLabDiffMetadataFetchGateway(defaultGitLabExecutor),
@@ -599,6 +599,9 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
           recordPush: new RecordPushUseCase(trackingGw),
           checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGw),
           removeWorktree: removeWorktreeAction,
+          handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGw),
+          getQualityThreshold: (projectPath: string) =>
+            loadProjectConfig(projectPath)?.qualityThreshold ?? null,
           logger: deps.logger,
         }),
       enforceBudget,
@@ -658,7 +661,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
         removeWorktree: removeWorktreeAction,
         logger: deps.logger,
       });
-    await handleGitHubWebhook(request, reply, deps.logger, trackingGw, {
+    await handleGitHubWebhook(request, reply, deps.logger, {
       reviewContextGateway: deps.reviewContextGateway,
       threadFetchGateway: gitHubThreadFetchGw,
       diffMetadataFetchGateway: new GitHubDiffMetadataFetchGateway(defaultGitHubExecutor),
@@ -678,6 +681,9 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
           recordPush: new RecordPushUseCase(trackingGw),
           checkFollowupNeeded: new CheckFollowupNeededUseCase(trackingGw),
           removeWorktree: removeWorktreeAction,
+          handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGw),
+          getQualityThreshold: (projectPath: string) =>
+            loadProjectConfig(projectPath)?.qualityThreshold ?? null,
           logger: deps.logger,
         }),
       enforceBudget,

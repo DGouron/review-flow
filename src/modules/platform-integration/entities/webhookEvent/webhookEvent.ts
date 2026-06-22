@@ -33,5 +33,5 @@ export type WebhookEvent =
     } & WebhookEventBase)
   | ({ type: 'close' } & WebhookEventBase)
   | ({ type: 'merge' } & WebhookEventBase)
-  | ({ type: 'approve' } & WebhookEventBase)
+  | ({ type: 'approve'; reviewId: number | null } & WebhookEventBase)
   | { type: 'ignored'; reason: string };

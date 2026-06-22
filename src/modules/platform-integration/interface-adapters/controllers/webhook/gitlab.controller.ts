@@ -27,8 +27,13 @@ import {
   filterGitLabMrApprove,
   filterGitLabNoteEvent,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/eventFilter.js';
+import {
+  sendWebhookReply,
+  sendReviewRequestReply,
+} from '@/modules/platform-integration/interface-adapters/controllers/webhook/webhookReply.js';
 import type { GuardDiffSizeUseCase } from '@/modules/platform-integration/usecases/guardDiffSize.usecase.js';
 import type { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
+import { processReviewRequest } from '@/modules/platform-integration/usecases/processReviewRequest.usecase.js';
 import type { ProcessWebhook } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import {
@@ -45,8 +50,6 @@ import type { GateClaudeInvocationUseCase } from '@/modules/review-execution/use
 import type { HandleClose } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
 import type { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
-import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
-import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import type { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import type { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
 import type { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
@@ -158,13 +161,21 @@ async function handleGitLabNoteHook(
   const parseResult = gitLabNoteEventGuard.safeParse(request.body);
   if (!parseResult.success) {
     logger.debug({ errors: parseResult.error }, 'Invalid GitLab note payload (ignored)');
-    reply.status(200).send({ status: 'ignored', reason: 'Note payload not parseable' });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'Note payload not parseable' },
+      { numberKey: 'mrNumber' },
+    );
     return;
   }
 
   const filterResult = filterGitLabNoteEvent(parseResult.data);
   if (!filterResult.shouldProcess) {
-    reply.status(200).send({ status: 'ignored', reason: filterResult.reason });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: filterResult.reason },
+      { numberKey: 'mrNumber' },
+    );
     return;
   }
 
@@ -190,7 +201,11 @@ async function handleGitLabNoteHook(
       { projectPath: filterResult.projectPath },
       'Note for unconfigured project (ignored)',
     );
-    reply.status(200).send({ status: 'ignored', reason: 'Repository not configured' });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'Repository not configured' },
+      { numberKey: 'mrNumber' },
+    );
     return;
   }
 
@@ -227,18 +242,25 @@ async function handleGitLabNoteHook(
   }
 
   if (result.kind === 'mr-not-found') {
-    reply.status(200).send({ status: 'ignored', reason: 'MR not tracked' });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'MR not tracked' },
+      { numberKey: 'mrNumber' },
+    );
     return;
   }
 
-  reply.status(200).send({ status: 'ignored', reason: 'No bypass marker' });
+  sendWebhookReply(
+    reply,
+    { kind: 'ignored', reason: 'No bypass marker' },
+    { numberKey: 'mrNumber' },
+  );
 }
 
 export async function handleGitLabWebhook(
   request: FastifyRequest,
   reply: FastifyReply,
   logger: Logger,
-  _trackingGateway: ReviewRequestTrackingGateway,
   deps: GitLabWebhookDependencies,
 ): Promise<void> {
   const { trackAssignment } = deps;
@@ -259,7 +281,11 @@ export async function handleGitLabWebhook(
       const accepted = await deps.idempotencyStore.recordIfAbsent(eventUuid);
       if (!accepted) {
         logger.info({ eventUuid }, 'Duplicate GitLab event UUID, no-op');
-        reply.status(200).send({ status: 'ignored', reason: 'Duplicate event' });
+        sendWebhookReply(
+          reply,
+          { kind: 'ignored', reason: 'Duplicate event' },
+          { numberKey: 'mrNumber' },
+        );
         return;
       }
     } else {
@@ -277,7 +303,11 @@ export async function handleGitLabWebhook(
 
   if (eventType !== 'Merge Request Hook') {
     logger.debug({ eventType }, 'Ignoring non-MR event');
-    reply.status(200).send({ status: 'ignored', reason: 'Not a MR event' });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'Not a MR event' },
+      { numberKey: 'mrNumber' },
+    );
     return;
   }
 
@@ -307,19 +337,27 @@ export async function handleGitLabWebhook(
       });
 
       if (result.type === 'closed') {
-        reply.status(200).send({
-          status: 'cleaned',
-          mrNumber,
-          jobCancelled: result.jobCancelled,
-          trackingArchived: result.trackingArchived,
-        });
+        sendWebhookReply(
+          reply,
+          {
+            kind: 'cleaned',
+            mergeRequestNumber: mrNumber,
+            jobCancelled: result.jobCancelled,
+            trackingArchived: result.trackingArchived,
+          },
+          { numberKey: 'mrNumber' },
+        );
         return;
       }
     }
 
     // No repo config, just acknowledge
     logger.info({ mrNumber, project: projectPath }, 'MR closed but repo not configured');
-    reply.status(200).send({ status: 'ignored', reason: 'MR closed, repo not configured' });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'MR closed, repo not configured' },
+      { numberKey: 'mrNumber' },
+    );
     return;
   }
 
@@ -338,7 +376,11 @@ export async function handleGitLabWebhook(
 
       if (result.type === 'merged') {
         logger.info({ mrNumber: mergeResult.mergeRequestNumber }, 'MR marked as merged');
-        reply.status(200).send({ status: 'merged', mrNumber: mergeResult.mergeRequestNumber });
+        sendWebhookReply(
+          reply,
+          { kind: 'merged', mergeRequestNumber: mergeResult.mergeRequestNumber },
+          { numberKey: 'mrNumber' },
+        );
         return;
       }
     }
@@ -371,95 +413,89 @@ export async function handleGitLabWebhook(
         return;
       }
 
-      const mrId = `gitlab-${approveResult.projectPath}-${approveResult.mergeRequestNumber}`;
-      const threshold = deps.getQualityThreshold(repoConfig.localPath);
-      const transitionResult = deps.transitionState.execute({
-        projectPath: repoConfig.localPath,
-        mrId,
-        targetState: 'approved',
-        qualityCheck: (mr) =>
-          evaluateQualityGate({
-            latestScore: mr.latestScore,
-            blockingIssues: mr.openThreads,
-            threshold,
-          }),
+      const result = await deps.processWebhook({
+        type: 'approve',
+        platform: 'gitlab',
+        projectPath: approveResult.projectPath,
+        localPath: repoConfig.localPath,
+        mergeRequestNumber: approveResult.mergeRequestNumber,
+        reviewId: null,
       });
 
-      if (transitionResult.ok) {
+      if (result.type === 'approved') {
         logger.info({ mrNumber: approveResult.mergeRequestNumber }, 'MR marked as approved');
-        reply.status(200).send({ status: 'approved', mrNumber: approveResult.mergeRequestNumber });
+        sendWebhookReply(
+          reply,
+          { kind: 'approved', mergeRequestNumber: approveResult.mergeRequestNumber },
+          { numberKey: 'mrNumber' },
+        );
         return;
       }
 
-      if (transitionResult.reason === 'quality-gate') {
-        const verdict = deps.handlePlatformApproval.execute({
-          projectPath: repoConfig.localPath,
-          mrId,
-          qualityThreshold: threshold,
-        });
-
-        if (verdict.kind === 'reverted') {
-          try {
-            await deps.approvalRevocationGateway.revoke({
-              projectPath: approveResult.projectPath,
-              mrNumber: approveResult.mergeRequestNumber,
-            });
-          } catch (error) {
-            logger.warn(
-              {
-                mrNumber: approveResult.mergeRequestNumber,
-                error: error instanceof Error ? error.message : String(error),
-              },
-              'Failed to revoke GitLab approval; continuing with FR comment',
-            );
-          }
-
-          try {
-            await deps.noteCommentPostGateway.postComment({
-              projectPath: approveResult.projectPath,
-              mrNumber: approveResult.mergeRequestNumber,
-              body: verdict.message,
-            });
-          } catch (error) {
-            logger.warn(
-              {
-                mrNumber: approveResult.mergeRequestNumber,
-                error: error instanceof Error ? error.message : String(error),
-              },
-              'Failed to post FR explanation comment after revoking GitLab approval',
-            );
-          }
-
-          logger.info(
-            { mrNumber: approveResult.mergeRequestNumber, reason: verdict.reason },
-            'Platform approval revoked on non-qualified MR',
-          );
-          reply.status(200).send({
-            status: 'unapproved',
+      if (result.type === 'approval-revoked') {
+        try {
+          await deps.approvalRevocationGateway.revoke({
+            projectPath: approveResult.projectPath,
             mrNumber: approveResult.mergeRequestNumber,
-            reason: verdict.reason,
           });
-          return;
+        } catch (error) {
+          logger.warn(
+            {
+              mrNumber: approveResult.mergeRequestNumber,
+              error: error instanceof Error ? error.message : String(error),
+            },
+            'Failed to revoke GitLab approval; continuing with FR comment',
+          );
         }
 
-        reply.status(200).send({
-          status: 'ignored',
-          mrNumber: approveResult.mergeRequestNumber,
-          reason: verdict.kind,
-        });
+        try {
+          await deps.noteCommentPostGateway.postComment({
+            projectPath: approveResult.projectPath,
+            mrNumber: approveResult.mergeRequestNumber,
+            body: result.revokeMessage,
+          });
+        } catch (error) {
+          logger.warn(
+            {
+              mrNumber: approveResult.mergeRequestNumber,
+              error: error instanceof Error ? error.message : String(error),
+            },
+            'Failed to post FR explanation comment after revoking GitLab approval',
+          );
+        }
+
+        logger.info(
+          { mrNumber: approveResult.mergeRequestNumber, reason: result.reason },
+          'Platform approval revoked on non-qualified MR',
+        );
+        sendWebhookReply(
+          reply,
+          {
+            kind: 'unapproved',
+            mergeRequestNumber: approveResult.mergeRequestNumber,
+            reason: result.reason,
+          },
+          { numberKey: 'mrNumber' },
+        );
         return;
       }
 
-      logger.info(
-        { mrNumber: approveResult.mergeRequestNumber, reason: transitionResult.reason },
-        'GitLab approval ignored (MR not tracked)',
-      );
-      reply.status(200).send({
-        status: 'ignored',
-        mrNumber: approveResult.mergeRequestNumber,
-        reason: transitionResult.reason,
-      });
-      return;
+      if (result.type === 'approval-ignored') {
+        logger.info(
+          { mrNumber: approveResult.mergeRequestNumber, reason: result.reason },
+          'GitLab approval ignored',
+        );
+        sendWebhookReply(
+          reply,
+          {
+            kind: 'ignored-with-number',
+            mergeRequestNumber: approveResult.mergeRequestNumber,
+            reason: result.reason,
+          },
+          { numberKey: 'mrNumber' },
+        );
+        return;
+      }
     }
   }
 
@@ -507,7 +543,11 @@ export async function handleGitLabWebhook(
           eligibility.type === 'followup-skipped' &&
           eligibility.reason === 'Auto-followup disabled'
         ) {
-          reply.status(200).send({ status: 'ignored', reason: 'Auto-followup disabled' });
+          sendWebhookReply(
+            reply,
+            { kind: 'ignored', reason: 'Auto-followup disabled' },
+            { numberKey: 'mrNumber' },
+          );
           return;
         }
 
@@ -538,29 +578,6 @@ export async function handleGitLabWebhook(
             jobType: 'followup',
           };
 
-          const followupBudgetDecision = await deps.enforceBudget.execute({
-            localPaths: listEnabledLocalPaths(deps.getRepositories),
-          });
-          if (!followupBudgetDecision.accepted) {
-            logger.warn(
-              {
-                mrNumber: followupJob.mrNumber,
-                limitUsd: followupBudgetDecision.status.limitUsd,
-                consumedUsd: followupBudgetDecision.status.consumedUsd,
-              },
-              'Budget exceeded, followup not enqueued',
-            );
-            deps.broadcastBudgetExceeded({
-              mrNumber: followupJob.mrNumber,
-              platform: 'gitlab',
-              projectPath: followupJob.projectPath,
-              limitUsd: followupBudgetDecision.status.limitUsd,
-              consumedUsd: followupBudgetDecision.status.consumedUsd,
-            });
-            reply.status(200).send({ status: 'rejected', reason: 'budget-exceeded' });
-            return;
-          }
-
           const followupSizeGuard = await applyDiffSizeGuard({
             projectIdentifier: updateResult.projectPath,
             localPath: updateRepoConfig.localPath,
@@ -590,54 +607,58 @@ export async function handleGitLabWebhook(
             });
           };
 
-          // SPEC-197 AC2: gate the followup trigger on actor provenance.
-          const followupActorTrusted = await resolveActorTrust(
-            deps,
-            updateResult.projectPath,
-            event.user.username,
+          const followupVerdict = await processReviewRequest(
+            {
+              job: followupJob,
+              processor: followupProcessor,
+              triggerSource: 'webhook-followup',
+              localPaths: listEnabledLocalPaths(deps.getRepositories),
+              actorUsername: event.user.username,
+              projectPath: updateResult.projectPath,
+              gateActorTrust: true,
+            },
+            {
+              enforceBudget: deps.enforceBudget,
+              gateClaudeInvocation: deps.gateClaudeInvocation,
+              isTrustedActor: deps.isTrustedActor,
+              enqueue: enqueueReview,
+              logger,
+            },
           );
 
-          if (deps.gateClaudeInvocation) {
-            const gateResult = await deps.gateClaudeInvocation.execute({
-              job: followupJob,
-              triggerSource: 'webhook-followup',
-              processor: followupProcessor,
-              actorTrusted: followupActorTrusted,
-            });
-            if (gateResult.status === 'pending') {
-              reply.status(202).send({
-                status: 'pending-confirmation',
-                pendingId: gateResult.pendingId,
-                mrNumber: updateResult.mergeRequestNumber,
-              });
-              return;
-            }
-          } else if (followupActorTrusted) {
-            enqueueReview(followupJob, followupProcessor);
-          } else {
-            logger.info(
-              { mrNumber: updateResult.mergeRequestNumber, actor: event.user.username },
-              'Followup trigger from non-trusted actor parked (provenance gate)',
-            );
-            reply.status(202).send({
-              status: 'pending-confirmation',
-              reason: 'untrusted-actor',
-              mrNumber: updateResult.mergeRequestNumber,
-            });
-            return;
-          }
-
-          reply.status(202).send({
-            status: 'followup-queued',
+          sendReviewRequestReply(reply, followupVerdict, {
+            numberKey: 'mrNumber',
+            mergeRequestNumber: updateResult.mergeRequestNumber,
             jobId: followupJobId,
-            mrNumber: updateResult.mergeRequestNumber,
+            flow: 'followup',
+            onBudgetExceeded: (status) => {
+              logger.warn(
+                {
+                  mrNumber: followupJob.mrNumber,
+                  limitUsd: status.limitUsd,
+                  consumedUsd: status.consumedUsd,
+                },
+                'Budget exceeded, followup not enqueued',
+              );
+              deps.broadcastBudgetExceeded({
+                mrNumber: followupJob.mrNumber,
+                platform: 'gitlab',
+                projectPath: followupJob.projectPath,
+                limitUsd: status.limitUsd,
+                consumedUsd: status.consumedUsd,
+              });
+            },
           });
           return;
         }
       }
     }
 
-    reply.status(200).send({ status: 'ignored', reason: filterResult.reason });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: filterResult.reason },
+      { numberKey: 'mrNumber' },
+    );
     return;
   }
 
@@ -645,10 +666,11 @@ export async function handleGitLabWebhook(
   const repoConfig = findRepositoryByProjectPath(filterResult.projectPath);
   if (!repoConfig) {
     logger.warn({ projectPath: filterResult.projectPath }, 'Projet non configuré');
-    reply.status(200).send({
-      status: 'ignored',
-      reason: 'Repository not configured',
-    });
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'Repository not configured' },
+      { numberKey: 'mrNumber' },
+    );
     return;
   }
 
@@ -706,29 +728,6 @@ export async function handleGitLabWebhook(
     author,
   };
 
-  const budgetDecision = await deps.enforceBudget.execute({
-    localPaths: listEnabledLocalPaths(deps.getRepositories),
-  });
-  if (!budgetDecision.accepted) {
-    logger.warn(
-      {
-        mrNumber: job.mrNumber,
-        limitUsd: budgetDecision.status.limitUsd,
-        consumedUsd: budgetDecision.status.consumedUsd,
-      },
-      'Budget exceeded, review not enqueued',
-    );
-    deps.broadcastBudgetExceeded({
-      mrNumber: job.mrNumber,
-      platform: 'gitlab',
-      projectPath: job.projectPath,
-      limitUsd: budgetDecision.status.limitUsd,
-      consumedUsd: budgetDecision.status.consumedUsd,
-    });
-    reply.status(200).send({ status: 'rejected', reason: 'budget-exceeded' });
-    return;
-  }
-
   const reviewSizeGuard = await applyDiffSizeGuard({
     projectIdentifier: filterResult.projectPath,
     localPath: repoConfig.localPath,
@@ -749,72 +748,44 @@ export async function handleGitLabWebhook(
 
   const reviewProcessor = buildGitLabReviewProcessor(deps, logger)(job);
 
-  // SPEC-197 AC1: gate the reviewer-added trigger on actor provenance.
-  const reviewerActorTrusted = await resolveActorTrust(
-    deps,
-    filterResult.projectPath,
-    event.user.username,
+  const verdict = await processReviewRequest(
+    {
+      job,
+      processor: reviewProcessor,
+      triggerSource: 'webhook-initial',
+      localPaths: listEnabledLocalPaths(deps.getRepositories),
+      actorUsername: event.user.username,
+      projectPath: filterResult.projectPath,
+      gateActorTrust: true,
+    },
+    {
+      enforceBudget: deps.enforceBudget,
+      gateClaudeInvocation: deps.gateClaudeInvocation,
+      isTrustedActor: deps.isTrustedActor,
+      enqueue: enqueueReview,
+      logger,
+    },
   );
 
-  if (deps.gateClaudeInvocation) {
-    const gateResult = await deps.gateClaudeInvocation.execute({
-      job,
-      triggerSource: 'webhook-initial',
-      processor: reviewProcessor,
-      actorTrusted: reviewerActorTrusted,
-    });
-    if (gateResult.status === 'pending') {
-      reply.status(202).send({
-        status: 'pending-confirmation',
-        pendingId: gateResult.pendingId,
-        mrNumber: filterResult.mergeRequestNumber,
+  sendReviewRequestReply(reply, verdict, {
+    numberKey: 'mrNumber',
+    mergeRequestNumber: filterResult.mergeRequestNumber,
+    jobId,
+    flow: 'initial',
+    onBudgetExceeded: (status) => {
+      logger.warn(
+        { mrNumber: job.mrNumber, limitUsd: status.limitUsd, consumedUsd: status.consumedUsd },
+        'Budget exceeded, review not enqueued',
+      );
+      deps.broadcastBudgetExceeded({
+        mrNumber: job.mrNumber,
+        platform: 'gitlab',
+        projectPath: job.projectPath,
+        limitUsd: status.limitUsd,
+        consumedUsd: status.consumedUsd,
       });
-      return;
-    }
-    if (gateResult.status === 'enqueued') {
-      reply.status(202).send({
-        status: 'queued',
-        jobId,
-        mrNumber: filterResult.mergeRequestNumber,
-      });
-      return;
-    }
-    reply.status(200).send({
-      status: 'deduplicated',
-      jobId,
-      reason: 'Review already in progress or recently completed',
-    });
-    return;
-  }
-
-  if (!reviewerActorTrusted) {
-    logger.info(
-      { mrNumber: filterResult.mergeRequestNumber, actor: event.user.username },
-      'Reviewer-added trigger from non-trusted actor parked (provenance gate)',
-    );
-    reply.status(202).send({
-      status: 'pending-confirmation',
-      reason: 'untrusted-actor',
-      mrNumber: filterResult.mergeRequestNumber,
-    });
-    return;
-  }
-
-  const enqueued = await enqueueReview(job, reviewProcessor);
-
-  if (enqueued) {
-    reply.status(202).send({
-      status: 'queued',
-      jobId,
-      mrNumber: filterResult.mergeRequestNumber,
-    });
-  } else {
-    reply.status(200).send({
-      status: 'deduplicated',
-      jobId,
-      reason: 'Review already in progress or recently completed',
-    });
-  }
+    },
+  });
 }
 
 type GitLabReviewProcessorDeps = Pick<

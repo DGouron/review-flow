@@ -176,6 +176,8 @@ function createDefaultDeps(
         recordPush: { execute: recordPushExecute },
         checkFollowupNeeded: { execute: checkFollowupNeededExecute },
         removeWorktree: async () => ({ status: 'removed' }),
+        handlePlatformApproval: { execute: vi.fn(() => ({ kind: 'allowed' as const })) },
+        getQualityThreshold: (): number | null => null,
         logger: createStubLogger(),
       }),
     enforceBudget: { execute: enforceBudgetExecute },
@@ -211,7 +213,7 @@ describe('Acceptance — Spec #46: GitHub Followup Review on Push', () => {
       const event = createSynchronizePr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitHubWebhook(request, mockReply, logger, defaultDeps);
 
       expect(defaultDeps.recordPush.execute).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -241,7 +243,7 @@ describe('Acceptance — Spec #46: GitHub Followup Review on Push', () => {
       const event = createSynchronizePr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitHubWebhook(request, mockReply, logger, defaultDeps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -259,7 +261,7 @@ describe('Acceptance — Spec #46: GitHub Followup Review on Push', () => {
       const event = createSynchronizePr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, noFollowupDeps);
+      await handleGitHubWebhook(request, mockReply, logger, noFollowupDeps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -274,7 +276,7 @@ describe('Acceptance — Spec #46: GitHub Followup Review on Push', () => {
       const event = createSynchronizePr();
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitHubWebhook(request, mockReply, logger, defaultDeps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -291,7 +293,7 @@ describe('Acceptance — Spec #46: GitHub Followup Review on Push', () => {
       });
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitHubWebhook(request, mockReply, logger, defaultDeps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(defaultDeps.recordPush.execute).not.toHaveBeenCalled();
@@ -308,7 +310,7 @@ describe('Acceptance — Spec #46: GitHub Followup Review on Push', () => {
       });
       const request = { body: event, headers: {} } as unknown as FastifyRequest;
 
-      await handleGitHubWebhook(request, mockReply, logger, mockGateway, defaultDeps);
+      await handleGitHubWebhook(request, mockReply, logger, defaultDeps);
 
       expect(enqueueReview).not.toHaveBeenCalled();
       expect(defaultDeps.recordPush.execute).not.toHaveBeenCalled();
