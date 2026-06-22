@@ -18,6 +18,18 @@ description: Review de suivi pour vérifier les corrections. Utilise le fichier 
 
 ---
 
+## Discipline de scoring (anti-sandbagging)
+
+Un score est une affirmation, pas un ressenti. Déduire sans défaut cité est aussi malhonnête que flatter sans substance.
+
+- **Le max est la valeur par défaut.** Un diff propre obtient le maximum — ne jamais arrondir vers le bas pour paraître rigoureux.
+- **Chaque point retiré est sourcé :** `file:line` + le vrai problème + le fix. Aucun défaut citable -> le score EST le maximum.
+- **Ne jamais inventer un défaut pour éviter un score parfait.** Un choix de design justifié ou un trade-off délibéré n'est pas un défaut.
+- **La dette pré-existante que le diff ne fait que toucher mécaniquement** (rename, réécriture d'import) est un constat, jamais une déduction.
+- **Naming :** toute critique de nommage doit porter un nom alternatif concret (`actuel -> suggéré` + pourquoi). Si tu ne peux pas proposer un nom plus clair, le nom est bon — dis-le. « Pourrait être plus clair » sans alternative n'est pas une trouvaille.
+
+---
+
 ## Fichier de Contexte
 
 Le serveur fournit un fichier de contexte avec les informations des threads pré-chargées :
