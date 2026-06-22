@@ -126,6 +126,19 @@ describe('i18n', () => {
     expect(t('stats.reviewsPerMonth')).toBe('Reviews par mois');
   });
 
+  it('should translate diff aggregate labels in English', () => {
+    expect(t('stats.commits')).toBe('Commits');
+    expect(t('stats.linesAdded')).toBe('Lines added');
+    expect(t('stats.linesDeleted')).toBe('Lines deleted');
+  });
+
+  it('should translate diff aggregate labels in French', () => {
+    setLanguage('fr');
+    expect(t('stats.commits')).toBe('Commits');
+    expect(t('stats.linesAdded')).toBe('Lignes ajoutées');
+    expect(t('stats.linesDeleted')).toBe('Lignes supprimées');
+  });
+
   it('should translate export PDF labels in English', () => {
     expect(t('export.pdf')).toBe('Export PDF');
     expect(t('export.title')).toBe('Team Insights Report');

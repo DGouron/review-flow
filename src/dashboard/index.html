@@ -1154,6 +1154,18 @@
               <div class="stat-value"><span class="stat-main" data-target="${s.totalWarnings}">0</span></div>
               <div class="stat-label"><i data-lucide="alert-triangle"></i> ${t('stats.warnings')}</div>
             </div>
+            <div class="stat-card metric-commits">
+              <div class="stat-value"><span class="stat-main" data-target="${s.totalCommits}">0</span></div>
+              <div class="stat-label"><i data-lucide="git-commit-horizontal"></i> ${t('stats.commits')}</div>
+            </div>
+            <div class="stat-card metric-additions">
+              <div class="stat-value"><span class="stat-main" data-target="${s.totalAdditions}">0</span></div>
+              <div class="stat-label"><i data-lucide="plus"></i> ${t('stats.linesAdded')}</div>
+            </div>
+            <div class="stat-card metric-deletions">
+              <div class="stat-value"><span class="stat-main" data-target="${s.totalDeletions}">0</span></div>
+              <div class="stat-label"><i data-lucide="minus"></i> ${t('stats.linesDeleted')}</div>
+            </div>
             <div class="stats-charts-row">
               <div class="stats-chart-card">
                 <div class="stats-chart-title"><i data-lucide="trending-up"></i> ${t('stats.scoreTrend')}</div>

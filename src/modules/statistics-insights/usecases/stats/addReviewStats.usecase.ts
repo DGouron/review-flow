@@ -106,12 +106,14 @@ function updateAggregatesForNewReview(stats: ProjectStats, review: ReviewStats):
   if (review.diffStats) {
     stats.totalAdditions += review.diffStats.additions;
     stats.totalDeletions += review.diffStats.deletions;
+    stats.totalCommits = (stats.totalCommits ?? 0) + review.diffStats.commitsCount;
     stats.diffStatsReviewCount = (stats.diffStatsReviewCount ?? 0) + 1;
   }
 
   if (stats.diffStatsReviewCount && stats.diffStatsReviewCount > 0) {
     stats.averageAdditions = stats.totalAdditions / stats.diffStatsReviewCount;
     stats.averageDeletions = stats.totalDeletions / stats.diffStatsReviewCount;
+    stats.averageCommits = (stats.totalCommits ?? 0) / stats.diffStatsReviewCount;
   }
 
   if (review.categoryBreakdown != null) {

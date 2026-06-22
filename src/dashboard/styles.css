@@ -1402,6 +1402,26 @@ body.is-quiet-refresh .refresh-info::after {
 .metric-blocking::before {
   background: rgba(255, 98, 105, 0.82);
 }
+
+.metric-commits::before {
+  background: rgba(140, 161, 194, 0.7);
+}
+
+.metric-additions .stat-main {
+  color: var(--nsc-success);
+}
+
+.metric-additions::before {
+  background: var(--nsc-success);
+}
+
+.metric-deletions .stat-main {
+  color: var(--nsc-danger);
+}
+
+.metric-deletions::before {
+  background: var(--nsc-danger);
+}
 .stat-label {
   font-size: 0.72rem;
   color: #8fa1c2;

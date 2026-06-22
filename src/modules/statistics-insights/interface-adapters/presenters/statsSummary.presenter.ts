@@ -16,8 +16,10 @@ export interface StatsSummaryViewModel {
   totalWarnings: number;
   totalAdditions: number;
   totalDeletions: number;
+  totalCommits: number;
   averageAdditions: string;
   averageDeletions: string;
+  averageCommits: string;
   totalLinesReviewed: number;
   trend: { score: Trend; blocking: Trend };
 }
@@ -65,8 +67,10 @@ export class StatsSummaryPresenter implements Presenter<ProjectStats, StatsSumma
       totalWarnings: stats.totalWarnings,
       totalAdditions: stats.totalAdditions,
       totalDeletions: stats.totalDeletions,
+      totalCommits: stats.totalCommits ?? 0,
       averageAdditions: stats.averageAdditions !== null ? stats.averageAdditions.toFixed(1) : '-',
       averageDeletions: stats.averageDeletions !== null ? stats.averageDeletions.toFixed(1) : '-',
+      averageCommits: stats.averageCommits != null ? stats.averageCommits.toFixed(1) : '-',
       totalLinesReviewed: stats.totalAdditions + stats.totalDeletions,
       trend: computeTrend(stats),
     };

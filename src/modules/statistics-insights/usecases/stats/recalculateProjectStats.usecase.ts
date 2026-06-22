@@ -27,6 +27,8 @@ export function recalculateProjectStats(
       totalDeletions: 0,
       averageAdditions: 0,
       averageDeletions: 0,
+      totalCommits: 0,
+      averageCommits: 0,
       diffStatsReviewCount: 0,
     };
     return emptyStats;
@@ -61,13 +63,20 @@ export function recalculateProjectStats(
       (sum, review) => sum + (review.diffStats?.deletions ?? 0),
       0,
     );
+    stats.totalCommits = reviewsWithDiffStats.reduce(
+      (sum, review) => sum + (review.diffStats?.commitsCount ?? 0),
+      0,
+    );
     stats.averageAdditions = stats.totalAdditions / reviewsWithDiffStats.length;
     stats.averageDeletions = stats.totalDeletions / reviewsWithDiffStats.length;
+    stats.averageCommits = stats.totalCommits / reviewsWithDiffStats.length;
   } else {
     stats.totalAdditions = 0;
     stats.totalDeletions = 0;
     stats.averageAdditions = 0;
     stats.averageDeletions = 0;
+    stats.totalCommits = 0;
+    stats.averageCommits = 0;
   }
 
   statsGateway.saveProjectStats(projectPath, stats);

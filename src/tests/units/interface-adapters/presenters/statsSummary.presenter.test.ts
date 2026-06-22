@@ -35,8 +35,10 @@ describe('StatsSummaryPresenter aggregates', () => {
 
     expect(summary.totalAdditions).toBe(150);
     expect(summary.totalDeletions).toBe(30);
+    expect(summary.totalCommits).toBe(6);
     expect(summary.averageAdditions).toBe('75.0');
     expect(summary.averageDeletions).toBe('15.0');
+    expect(summary.averageCommits).toBe('3.0');
     expect(summary.totalLinesReviewed).toBe(180);
   });
 
@@ -45,6 +47,8 @@ describe('StatsSummaryPresenter aggregates', () => {
 
     expect(summary.averageAdditions).toBe('-');
     expect(summary.averageDeletions).toBe('-');
+    expect(summary.averageCommits).toBe('-');
+    expect(summary.totalCommits).toBe(0);
     expect(summary.totalLinesReviewed).toBe(0);
   });
 

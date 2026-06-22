@@ -65,8 +65,10 @@ describe('recalculateProjectStats', () => {
 
     expect(result.totalAdditions).toBe(150);
     expect(result.totalDeletions).toBe(30);
+    expect(result.totalCommits).toBe(3);
     expect(result.averageAdditions).toBe(75);
     expect(result.averageDeletions).toBe(15);
+    expect(result.averageCommits).toBe(1.5);
     expect(result.diffStatsReviewCount).toBe(2);
   });
 
@@ -92,8 +94,10 @@ describe('recalculateProjectStats', () => {
 
     expect(result.totalAdditions).toBe(150);
     expect(result.totalDeletions).toBe(30);
+    expect(result.totalCommits).toBe(3);
     expect(result.averageAdditions).toBe(75);
     expect(result.averageDeletions).toBe(15);
+    expect(result.averageCommits).toBe(1.5);
     expect(result.diffStatsReviewCount).toBe(2);
   });
 
@@ -114,8 +118,10 @@ describe('recalculateProjectStats', () => {
     expect(result.totalWarnings).toBe(0);
     expect(result.totalAdditions).toBe(0);
     expect(result.totalDeletions).toBe(0);
+    expect(result.totalCommits).toBe(0);
     expect(result.averageAdditions).toBe(0);
     expect(result.averageDeletions).toBe(0);
+    expect(result.averageCommits).toBe(0);
     expect(result.diffStatsReviewCount).toBe(0);
   });
 
