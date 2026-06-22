@@ -61,6 +61,10 @@ export class ProjectStatsFactory {
       (sum, r) => sum + (r.diffStats?.deletions ?? 0),
       0,
     );
+    const totalCommits = reviewsWithDiffStats.reduce(
+      (sum, r) => sum + (r.diffStats?.commitsCount ?? 0),
+      0,
+    );
 
     return this.create({
       totalReviews: reviews.length,
@@ -71,10 +75,13 @@ export class ProjectStatsFactory {
       totalWarnings: reviews.reduce((sum, r) => sum + r.warnings, 0),
       totalAdditions,
       totalDeletions,
+      totalCommits,
       averageAdditions:
         reviewsWithDiffStats.length > 0 ? totalAdditions / reviewsWithDiffStats.length : null,
       averageDeletions:
         reviewsWithDiffStats.length > 0 ? totalDeletions / reviewsWithDiffStats.length : null,
+      averageCommits:
+        reviewsWithDiffStats.length > 0 ? totalCommits / reviewsWithDiffStats.length : null,
       reviews,
     });
   }

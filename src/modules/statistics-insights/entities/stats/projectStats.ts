@@ -34,6 +34,8 @@ export function createEmptyStats(): ProjectStats {
     totalDeletions: 0,
     averageAdditions: null,
     averageDeletions: null,
+    totalCommits: 0,
+    averageCommits: null,
     reviews: [],
     lastUpdated: new Date().toISOString(),
   };

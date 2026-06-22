@@ -123,7 +123,9 @@ describe('AddReviewStatsUseCase', () => {
     const stats = statsGateway.loadProjectStats(PROJECT);
     expect(stats?.totalAdditions).toBe(80);
     expect(stats?.totalDeletions).toBe(12);
+    expect(stats?.totalCommits).toBe(3);
     expect(stats?.averageAdditions).toBe(80);
+    expect(stats?.averageCommits).toBe(3);
     expect(stats?.diffStatsReviewCount).toBe(1);
   });
 
@@ -309,7 +311,9 @@ describe('AddReviewStatsUseCase', () => {
     const stats = statsGateway.loadProjectStats(PROJECT);
     expect(stats?.totalAdditions).toBe(0);
     expect(stats?.totalDeletions).toBe(0);
+    expect(stats?.totalCommits).toBe(0);
     expect(stats?.averageAdditions).toBeNull();
     expect(stats?.averageDeletions).toBeNull();
+    expect(stats?.averageCommits).toBeNull();
   });
 });

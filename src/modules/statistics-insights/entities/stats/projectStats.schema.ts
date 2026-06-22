@@ -35,6 +35,8 @@ export const projectStatsSchema = z.object({
   totalDeletions: z.number(),
   averageAdditions: z.number().nullable(),
   averageDeletions: z.number().nullable(),
+  totalCommits: z.number().optional(),
+  averageCommits: z.number().nullable().optional(),
   totalScoreSum: z.number().optional(),
   scoredReviewCount: z.number().optional(),
   diffStatsReviewCount: z.number().optional(),
