@@ -12,7 +12,10 @@ describe('StatsSummaryPresenter aggregates', () => {
       totalReviews: 5,
       totalDuration: 5 * 60_000,
       averageDuration: 60_000,
-      averageScore: 7.5,
+      reviews: [
+        ReviewStatsFactory.create({ id: 'a', score: 7 }),
+        ReviewStatsFactory.create({ id: 'b', score: 8 }),
+      ],
       totalBlocking: 3,
       totalWarnings: 4,
     });
@@ -23,6 +26,7 @@ describe('StatsSummaryPresenter aggregates', () => {
     expect(summary.averageScore).toBe('7.5');
     expect(summary.totalBlocking).toBe(3);
     expect(summary.totalWarnings).toBe(4);
+    expect(summary.bugsDetected).toBe(7);
   });
 
   it('includes diff aggregates when reviews carry diffStats', () => {
@@ -54,6 +58,48 @@ describe('StatsSummaryPresenter aggregates', () => {
 
   it('renders averageScore as "-" when it is null', () => {
     const summary = presenter.present(ProjectStatsFactory.create({ averageScore: null }));
+
+    expect(summary.averageScore).toBe('-');
+  });
+
+  it('derives averageScore from reviews[] rather than the stored aggregate', () => {
+    const stats = ProjectStatsFactory.create({
+      averageScore: 7.0,
+      reviews: [
+        ReviewStatsFactory.create({ id: 'a', score: 8 }),
+        ReviewStatsFactory.create({ id: 'b', score: 9 }),
+      ],
+    });
+
+    const summary = presenter.present(stats);
+
+    expect(summary.averageScore).toBe('8.5');
+  });
+
+  it('ignores reviews with a null score when deriving averageScore', () => {
+    const stats = ProjectStatsFactory.create({
+      averageScore: 7.0,
+      reviews: [
+        ReviewStatsFactory.create({ id: 'a', score: 8 }),
+        ReviewStatsFactory.create({ id: 'b', score: null }),
+      ],
+    });
+
+    const summary = presenter.present(stats);
+
+    expect(summary.averageScore).toBe('8.0');
+  });
+
+  it('renders averageScore as "-" when no review carries a score', () => {
+    const stats = ProjectStatsFactory.create({
+      averageScore: 7.0,
+      reviews: [
+        ReviewStatsFactory.create({ id: 'a', score: null }),
+        ReviewStatsFactory.create({ id: 'b', score: null }),
+      ],
+    });
+
+    const summary = presenter.present(stats);
 
     expect(summary.averageScore).toBe('-');
   });
@@ -145,5 +191,36 @@ describe('StatsSummaryPresenter trends', () => {
 
     expect(summary.trend.score).toBe('stable');
     expect(summary.trend.blocking).toBe('stable');
+  });
+});
+
+describe('StatsSummaryPresenter review period', () => {
+  it('reports the first and last review dates with the day span', () => {
+    const stats = ProjectStatsFactory.withReviews([
+      ReviewStatsFactory.create({ id: 'a', timestamp: '2024-02-12T10:00:00Z' }),
+      ReviewStatsFactory.create({ id: 'b', timestamp: '2024-06-23T10:00:00Z' }),
+    ]);
+
+    const summary = presenter.present(stats);
+
+    expect(summary.period).toEqual({ from: '12 Feb 2024', to: '23 Jun 2024', days: 132 });
+  });
+
+  it('orders the period from earliest to latest regardless of review order', () => {
+    const stats = ProjectStatsFactory.withReviews([
+      ReviewStatsFactory.create({ id: 'late', timestamp: '2024-06-23T10:00:00Z' }),
+      ReviewStatsFactory.create({ id: 'early', timestamp: '2024-02-12T10:00:00Z' }),
+    ]);
+
+    const summary = presenter.present(stats);
+
+    expect(summary.period?.from).toBe('12 Feb 2024');
+    expect(summary.period?.to).toBe('23 Jun 2024');
+  });
+
+  it('has no period when the project has no reviews', () => {
+    const summary = presenter.present(ProjectStatsFactory.create());
+
+    expect(summary.period).toBeNull();
   });
 });

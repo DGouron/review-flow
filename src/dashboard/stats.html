@@ -101,6 +101,22 @@
       color: var(--ink-2);
       margin-bottom: var(--space-3);
     }
+    .stats-section-eyebrow--loud {
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .stats-period {
+      font-family: var(--font-mono);
+      font-size: var(--type-base);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      padding: var(--space-3) var(--space-4);
+      margin-bottom: var(--space-6);
+      border-left: 4px solid var(--accent);
+      border-bottom: 1px solid var(--ink-4);
+      background: rgba(244, 169, 61, 0.05);
+    }
     .stats-volume { margin-bottom: var(--space-6); }
     .stats-hero-grid {
       display: grid;
@@ -122,6 +138,8 @@
       width: 100%; height: 2px;
       background: var(--ink-3);
     }
+    .hero-reviews::before { background: var(--accent); }
+    .hero-reviews .stats-hero-value { font-size: 2.5rem; }
     .hero-commits::before { background: var(--info); }
     .hero-additions::before { background: var(--success); }
     .hero-deletions::before { background: var(--danger); }
@@ -139,6 +157,7 @@
     .hero-deletions .stats-hero-value { color: var(--danger); }
     .hero-net .stats-hero-value { color: var(--accent); }
     .stats-hero-label {
+      font-family: var(--font-mono);
       font-size: var(--type-sm);
       color: var(--ink-1);
       margin-top: var(--space-2);
@@ -161,6 +180,17 @@
     .stats-ratio-del { background: var(--danger); }
     .stats-quality { margin-bottom: var(--space-6); }
     .stats-insights { margin-top: var(--space-6); }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
   </style>
 </head>
 <body class="stats-page-body">
@@ -176,11 +206,11 @@
           <select id="stats-project-select" class="stats-project-select"></select>
         </div>
         <button type="button" id="recalculate-btn" class="btn btn-sm btn-secondary" onclick="recalculateStats()">
-          <i data-lucide="refresh-cw" style="width: 13px; height: 13px;"></i>
+          <i data-lucide="refresh-cw" style="width: 13px; height: 13px;" aria-hidden="true"></i>
           <span id="recalculate-label"></span>
         </button>
         <a href="/dashboard/" class="stats-back">
-          <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
+          <i data-lucide="arrow-left" style="width: 14px; height: 14px;" aria-hidden="true"></i>
           <span id="stats-back-label"></span>
         </a>
       </div>
@@ -298,7 +328,9 @@
     window.filterScoreTrend = function filterScoreTrend(selectedDev) {
       currentDevFilter = selectedDev;
       document.querySelectorAll('.dev-filter-btn').forEach((button) => {
-        button.classList.toggle('active', button.dataset.dev === selectedDev);
+        const isActive = button.dataset.dev === selectedDev;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', String(isActive));
       });
       const filtered =
         selectedDev === 'all'

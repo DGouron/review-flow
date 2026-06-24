@@ -7,6 +7,14 @@ import type { Presenter } from '@/shared/foundation/presenter.base.js';
 
 type Trend = 'up' | 'down' | 'stable';
 
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export interface StatsPeriod {
+  from: string;
+  to: string;
+  days: number;
+}
+
 export interface StatsSummaryViewModel {
   totalReviews: number;
   totalTime: string;
@@ -14,6 +22,7 @@ export interface StatsSummaryViewModel {
   averageScore: string;
   totalBlocking: number;
   totalWarnings: number;
+  bugsDetected: number;
   totalAdditions: number;
   totalDeletions: number;
   totalCommits: number;
@@ -21,7 +30,28 @@ export interface StatsSummaryViewModel {
   averageDeletions: string;
   averageCommits: string;
   totalLinesReviewed: number;
+  period: StatsPeriod | null;
   trend: { score: Trend; blocking: Trend };
+}
+
+function formatPeriodDate(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function periodOf(reviews: ReviewStats[]): StatsPeriod | null {
+  if (reviews.length === 0) return null;
+  const times = reviews.map((review) => new Date(review.timestamp).getTime());
+  const from = Math.min(...times);
+  const to = Math.max(...times);
+  return {
+    from: formatPeriodDate(from),
+    to: formatPeriodDate(to),
+    days: Math.round((to - from) / MILLISECONDS_PER_DAY),
+  };
 }
 
 function averageScoreOf(reviews: ReviewStats[]): number | null {
@@ -58,13 +88,15 @@ function computeTrend(stats: ProjectStats): { score: Trend; blocking: Trend } {
 
 export class StatsSummaryPresenter implements Presenter<ProjectStats, StatsSummaryViewModel> {
   present(stats: ProjectStats): StatsSummaryViewModel {
+    const averageScore = averageScoreOf(stats.reviews);
     return {
       totalReviews: stats.totalReviews,
       totalTime: formatReviewDuration(stats.totalDuration),
       averageTime: formatReviewDuration(stats.averageDuration),
-      averageScore: stats.averageScore !== null ? stats.averageScore.toFixed(1) : '-',
+      averageScore: averageScore !== null ? averageScore.toFixed(1) : '-',
       totalBlocking: stats.totalBlocking,
       totalWarnings: stats.totalWarnings,
+      bugsDetected: stats.totalBlocking + stats.totalWarnings,
       totalAdditions: stats.totalAdditions,
       totalDeletions: stats.totalDeletions,
       totalCommits: stats.totalCommits ?? 0,
@@ -72,6 +104,7 @@ export class StatsSummaryPresenter implements Presenter<ProjectStats, StatsSumma
       averageDeletions: stats.averageDeletions !== null ? stats.averageDeletions.toFixed(1) : '-',
       averageCommits: stats.averageCommits != null ? stats.averageCommits.toFixed(1) : '-',
       totalLinesReviewed: stats.totalAdditions + stats.totalDeletions,
+      period: periodOf(stats.reviews),
       trend: computeTrend(stats),
     };
   }
