@@ -99,7 +99,7 @@ DESIGN NOTE — keep budget resolution OUT of these files. Resolution (per-proje
     4. if oversized → `{ kind: 'blocked', countedLines, budget, message: buildSplitMessage(countedLines, budget) }`
   `buildSplitMessage(countedLines, budget)` — free function in the usecase file (mirrors `buildRevertMessage`):
     concise FR comment stating `countedLines` vs `budget` + 2-3 split tips. NOT verbose. Draft:
-    > « Revue refusée : cette MR fait <countedLines> lignes comptées (budget <budget>). Pour faciliter la revue, découpez-la : 1) séparez refactorings et nouvelles fonctionnalités, 2) extrayez les changements indépendants dans des MR dédiées, 3) limitez chaque MR à une seule intention. »
+    > « Revue refusée : cette MR fait &lt;countedLines&gt; lignes comptées (budget &lt;budget&gt;). Pour faciliter la revue, découpez-la : 1) séparez refactorings et nouvelles fonctionnalités, 2) extrayez les changements indépendants dans des MR dédiées, 3) limitez chaque MR à une seule intention. »
     (tips wording left negotiable per spec.)
 
 ## SHARED HELPER (controller-level, DRY across 6 sites)
