@@ -48,6 +48,50 @@ describe('animateCounter', () => {
     animateCounter(element as unknown as { textContent: string }, 0, 50, '');
     expect(element.textContent).toBe('0');
   });
+
+  it('short-circuits to the final value when prefers-reduced-motion matches', () => {
+    const savedWindow = globalRecord.window;
+    globalRecord.window = {
+      matchMedia: (query: string) => ({ matches: query.includes('reduce') }),
+    };
+    const element = { textContent: '' };
+    animateCounter(element as unknown as { textContent: string }, 42, 800, '/10');
+    expect(element.textContent).toBe('42/10');
+    globalRecord.window = savedWindow;
+  });
+
+  it('renders a negative target directly without counting down', () => {
+    const element = { textContent: '' };
+    animateCounter(element as unknown as { textContent: string }, -150, 800, '');
+    expect(element.textContent).toBe('-150');
+  });
+
+  it('appends the suffix only on the final frame, not mid-animation', () => {
+    const savedWindow = globalRecord.window;
+    globalRecord.window = {
+      matchMedia: (_query: string) => ({ matches: false }),
+    };
+
+    const frames: string[] = [];
+    const element = {
+      get textContent() {
+        return frames[frames.length - 1] ?? '';
+      },
+      set textContent(value: string) {
+        frames.push(value);
+      },
+    };
+
+    animateCounter(element as unknown as { textContent: string }, 10, 50, '/10');
+
+    const midFrames = frames.slice(0, -1);
+    for (const frame of midFrames) {
+      expect(frame).not.toContain('/10');
+    }
+    expect(frames[frames.length - 1]).toBe('10/10');
+
+    globalRecord.window = savedWindow;
+  });
 });
 
 interface RecordingContext {

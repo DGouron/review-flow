@@ -9,7 +9,7 @@ import type {
 } from '@/modules/statistics-insights/entities/stats/projectStats.js';
 import { formatReviewDuration } from '@/modules/statistics-insights/entities/stats/reviewDuration.format.js';
 
-export type KeyInsightKey = 'reviewVolume' | 'dominantCategory' | 'reviewTime';
+export type KeyInsightKey = 'codeVolume' | 'reviewVolume' | 'dominantCategory' | 'reviewTime';
 
 const TREND_WINDOW = 5;
 const MIN_WINDOW_SAMPLES = 3;
@@ -17,6 +17,8 @@ const TIME_MIN_RELATIVE_CHANGE = 0.1;
 const VOLUME_MIN_RELATIVE_CHANGE = 0.1;
 const VOLUME_PERIOD_DAYS = 30;
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+const SUBSTANTIAL_AVERAGE_LINES = 200;
+const PINNED_STRENGTH = Number.POSITIVE_INFINITY;
 
 /**
  * A single key insight derived from recorded stats. `title` and `body` are
@@ -119,23 +121,48 @@ function reviewTimeInsight(reviews: ReviewStats[]): KeyInsight | null {
   };
 }
 
+function codeVolumeInsight(stats: ProjectStats): KeyInsight | null {
+  const totalLines = stats.totalAdditions + stats.totalDeletions;
+  const totalCommits = stats.totalCommits ?? 0;
+  if (totalLines === 0 && totalCommits === 0) return null;
+
+  const averageLines = Math.round((stats.averageAdditions ?? 0) + (stats.averageDeletions ?? 0));
+  const averageCommits = stats.averageCommits ?? 0;
+  const substantial = averageLines >= SUBSTANTIAL_AVERAGE_LINES;
+
+  return {
+    key: 'codeVolume',
+    title: substantial ? 'Substantial code volume' : 'Lean changesets',
+    body: `${totalLines.toLocaleString('en-US')} lines across ${totalCommits.toLocaleString(
+      'en-US',
+    )} commits (avg ${averageLines.toLocaleString('en-US')} lines, ${averageCommits.toFixed(
+      1,
+    )} commits/MR)`,
+    strength: PINNED_STRENGTH,
+  };
+}
+
 /**
  * Derive the ranked key insights from already-recorded project stats. Pure and
  * deterministic — `now` is injected so the helper never reads the wall clock.
- * Candidates that fail their data/threshold gate are omitted. The result is
- * sorted by `strength` descending and is empty when no candidate qualifies.
+ * Candidates that fail their data/threshold gate are omitted. Trend candidates
+ * are sorted by `strength` descending; the code-volume assessment is always
+ * pinned first when diff data exists. Empty when no candidate qualifies.
  */
 export function deriveKeyInsights(stats: ProjectStats, now: Date): KeyInsight[] {
-  const insights: KeyInsight[] = [];
+  const trends: KeyInsight[] = [];
 
   const reviewVolume = reviewVolumeInsight(stats.reviews, now);
-  if (reviewVolume !== null) insights.push(reviewVolume);
+  if (reviewVolume !== null) trends.push(reviewVolume);
 
   const category = dominantCategoryInsight(stats.categoryBreakdown ?? null);
-  if (category !== null) insights.push(category);
+  if (category !== null) trends.push(category);
 
   const reviewTime = reviewTimeInsight(stats.reviews);
-  if (reviewTime !== null) insights.push(reviewTime);
+  if (reviewTime !== null) trends.push(reviewTime);
 
-  return insights.toSorted((left, right) => right.strength - left.strength);
+  const ranked = trends.toSorted((left, right) => right.strength - left.strength);
+
+  const codeVolume = codeVolumeInsight(stats);
+  return codeVolume !== null ? [codeVolume, ...ranked] : ranked;
 }

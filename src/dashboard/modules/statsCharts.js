@@ -52,7 +52,7 @@ function getCanvasContext(canvasId) {
  */
 function drawNoDataMessage(ctx, message, cssWidth, cssHeight) {
   ctx.fillStyle = COLORS.textMuted;
-  ctx.font = '13px system-ui, -apple-system, sans-serif';
+  ctx.font = '13px "JetBrains Mono", monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(message, cssWidth / 2, cssHeight / 2);
@@ -125,7 +125,7 @@ export function drawScoreTrendChart(canvasId, reviews) {
     return;
   }
 
-  ctx.font = '10px system-ui, -apple-system, sans-serif';
+  ctx.font = '10px "JetBrains Mono", monospace';
   ctx.textAlign = 'right';
   for (let score = 2; score <= 10; score += 2) {
     const y = padding.top + chartHeight - (score / 10) * chartHeight;
@@ -222,7 +222,7 @@ export function drawScoreTrendChart(canvasId, reviews) {
   }
 
   ctx.fillStyle = COLORS.textMuted;
-  ctx.font = '9px system-ui, -apple-system, sans-serif';
+  ctx.font = '9px "JetBrains Mono", monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   const maxLabels = Math.min(points.length, 6);
@@ -270,7 +270,7 @@ export function drawReviewsPerMonthChart(canvasId, monthlyVolume) {
   const maxCount = Math.max(...series.map((point) => point.count));
   const yScale = maxCount > 0 ? chartHeight / (maxCount * 1.15) : 1;
 
-  ctx.font = '10px system-ui, -apple-system, sans-serif';
+  ctx.font = '10px "JetBrains Mono", monospace';
   ctx.textAlign = 'right';
   ctx.fillStyle = COLORS.textMuted;
   const yTicks = Math.min(maxCount, 5);
@@ -328,7 +328,7 @@ export function drawReviewsPerMonthChart(canvasId, monthlyVolume) {
   }
 
   ctx.fillStyle = COLORS.textMuted;
-  ctx.font = '9px system-ui, -apple-system, sans-serif';
+  ctx.font = '9px "JetBrains Mono", monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   for (const entry of points) {
@@ -396,7 +396,7 @@ export function drawReviewActivityChart(canvasId, reviews) {
   const maxCount = Math.max(...sortedWeeks.map(([, count]) => count));
   const yScale = maxCount > 0 ? chartHeight / (maxCount * 1.15) : 1;
 
-  ctx.font = '10px system-ui, -apple-system, sans-serif';
+  ctx.font = '10px "JetBrains Mono", monospace';
   ctx.textAlign = 'right';
   ctx.fillStyle = COLORS.textMuted;
   const yTicks = Math.min(maxCount, 5);
@@ -439,7 +439,7 @@ export function drawReviewActivityChart(canvasId, reviews) {
 
     if (count > 0 && barHeight > 16) {
       ctx.fillStyle = COLORS.textPrimary;
-      ctx.font = '10px system-ui, -apple-system, sans-serif';
+      ctx.font = '10px "JetBrains Mono", monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
       ctx.fillText(String(count), x + barWidth / 2, y - 3);
@@ -447,7 +447,7 @@ export function drawReviewActivityChart(canvasId, reviews) {
 
     const shortLabel = weekLabel.split('-')[1];
     ctx.fillStyle = COLORS.textMuted;
-    ctx.font = '9px system-ui, -apple-system, sans-serif';
+    ctx.font = '9px "JetBrains Mono", monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText(shortLabel, x + barWidth / 2, cssHeight - padding.bottom + 6);
@@ -476,11 +476,11 @@ export function drawScoreDistributionChart(canvasId, reviews) {
   }
 
   const ranges = [
-    { label: '0-2', min: 0, max: 2, color: COLORS.danger, count: 0 },
-    { label: '2-4', min: 2, max: 4, color: '#e8946a', count: 0 },
-    { label: '4-6', min: 4, max: 6, color: COLORS.warning, count: 0 },
-    { label: '6-8', min: 6, max: 8, color: '#a5d88e', count: 0 },
     { label: '8-10', min: 8, max: 10, color: COLORS.success, count: 0 },
+    { label: '6-8', min: 6, max: 8, color: '#a5d88e', count: 0 },
+    { label: '4-6', min: 4, max: 6, color: COLORS.warning, count: 0 },
+    { label: '2-4', min: 2, max: 4, color: '#e8946a', count: 0 },
+    { label: '0-2', min: 0, max: 2, color: COLORS.danger, count: 0 },
   ];
 
   for (const review of scoredReviews) {
@@ -511,7 +511,7 @@ export function drawScoreDistributionChart(canvasId, reviews) {
     const actualBarWidth = Math.max(barWidth, range.count > 0 ? 6 : 0);
 
     ctx.fillStyle = COLORS.textMuted;
-    ctx.font = '10px system-ui, -apple-system, sans-serif';
+    ctx.font = '10px "JetBrains Mono", monospace';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     ctx.fillText(range.label, padding.left - 8, y + barHeight / 2);
@@ -524,7 +524,7 @@ export function drawScoreDistributionChart(canvasId, reviews) {
     }
 
     ctx.fillStyle = COLORS.textPrimary;
-    ctx.font = '10px system-ui, -apple-system, sans-serif';
+    ctx.font = '10px "JetBrains Mono", monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(range.count), padding.left + actualBarWidth + 6, y + barHeight / 2);
@@ -558,7 +558,7 @@ export function drawBugsByCategoryChart(canvasId, bugsByCategory) {
   const maxCount = Math.max(...bars.map((bar) => bar.count));
   const yScale = maxCount > 0 ? chartHeight / (maxCount * 1.15) : 1;
 
-  ctx.font = '10px system-ui, -apple-system, sans-serif';
+  ctx.font = '10px "JetBrains Mono", monospace';
   ctx.textAlign = 'right';
   ctx.fillStyle = COLORS.textMuted;
   const yTicks = Math.min(maxCount, 5);
@@ -601,14 +601,14 @@ export function drawBugsByCategoryChart(canvasId, bugsByCategory) {
 
     if (bar.count > 0 && barHeight > 16) {
       ctx.fillStyle = COLORS.textPrimary;
-      ctx.font = '10px system-ui, -apple-system, sans-serif';
+      ctx.font = '10px "JetBrains Mono", monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
       ctx.fillText(String(bar.count), x + barWidth / 2, y - 3);
     }
 
     ctx.fillStyle = COLORS.textMuted;
-    ctx.font = '9px system-ui, -apple-system, sans-serif';
+    ctx.font = '9px "JetBrains Mono", monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText(
@@ -627,9 +627,29 @@ export function drawBugsByCategoryChart(canvasId, bugsByCategory) {
  * @param {string} [suffix]
  */
 export function animateCounter(element, targetValue, duration, suffix) {
+  const displaySuffix = suffix || '';
+
+  function renderFinal() {
+    const isDecimal = !Number.isInteger(targetValue);
+    if (isDecimal) {
+      element.textContent = targetValue.toFixed(1) + displaySuffix;
+    } else {
+      element.textContent = String(targetValue) + displaySuffix;
+    }
+  }
+
+  const reducedMotion =
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : true;
+
+  if (reducedMotion || targetValue < 0) {
+    renderFinal();
+    return;
+  }
+
   const startTime = performance.now();
   const isDecimal = !Number.isInteger(targetValue);
-  const displaySuffix = suffix || '';
 
   function easeOutExpo(progress) {
     return progress === 1 ? 1 : 1 - 2 ** (-10 * progress);
@@ -641,20 +661,15 @@ export function animateCounter(element, targetValue, duration, suffix) {
     const easedProgress = easeOutExpo(progress);
     const currentValue = targetValue * easedProgress;
 
-    if (isDecimal) {
-      element.textContent = currentValue.toFixed(1) + displaySuffix;
-    } else {
-      element.textContent = Math.round(currentValue) + displaySuffix;
-    }
-
     if (progress < 1) {
+      if (isDecimal) {
+        element.textContent = currentValue.toFixed(1);
+      } else {
+        element.textContent = String(Math.round(currentValue));
+      }
       requestAnimationFrame(update);
     } else {
-      if (isDecimal) {
-        element.textContent = targetValue.toFixed(1) + displaySuffix;
-      } else {
-        element.textContent = String(targetValue) + displaySuffix;
-      }
+      renderFinal();
     }
   }
 

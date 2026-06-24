@@ -345,7 +345,7 @@ At the end of the followup:
 ✅ Threads resolved: X (via add_action MCP)
 🆕 New problems: X
 
-[REVIEW_STATS:blocking=X:warnings=X:suggestions=X:score=X]
+[REVIEW_STATS:blocking=X:warnings=X:suggestions=X:score=X:categories=security=N,logic=N,performance=N,typeSafety=N,style=N,dependencies=N]
 
 ✅ READY TO MERGE
 or
@@ -358,6 +358,21 @@ or
 - The `[REVIEW_STATS:...]` line is **MANDATORY** for automated tracking.
 - The "Threads resolved" count corresponds to the number of `add_action(jobId, "THREAD_RESOLVE", ...)` calls.
 - **YOU MUST** use MCP tools to manage threads.
+
+### Category breakdown (`categories=` segment)
+
+Classify every finding still open or newly raised (blocking + important + suggestion) into exactly one of the six dashboard categories, then emit the count per category in the marker. The six counts must sum to `blocking + warnings + suggestions`. Map by the nature of the finding:
+
+| Finding nature | Category |
+|----------------|----------|
+| Security / credential / auth issue | `security` |
+| Business rule, architecture or SOLID violation | `logic` |
+| Performance / inefficiency | `performance` |
+| Type safety (`any`, unsafe assertion, weak typing) | `typeSafety` |
+| Readability, naming, testing, code quality | `style` |
+| Outdated / vulnerable / misused dependency | `dependencies` |
+
+Use the internal keys exactly: `security`, `logic`, `performance`, `typeSafety`, `style`, `dependencies`. Set any unused key to `0`. Unknown keys are ignored by the tracker.
 
 ---
 

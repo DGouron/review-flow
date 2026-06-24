@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
 import { KeyInsightsPresenter } from '@/modules/statistics-insights/interface-adapters/presenters/keyInsights.presenter.js';
+import { DiffStatsFactory } from '@/tests/factories/diffStats.factory.js';
 import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 
 const NOW = new Date('2024-12-15T12:00:00Z');
@@ -77,5 +78,37 @@ describe('KeyInsightsPresenter', () => {
     expect(viewModel.isEmpty).toBe(true);
     expect(viewModel.cards).toEqual([]);
     expect(viewModel.emptyMessage).toBe('Aucun insight disponible pour le moment');
+  });
+
+  it('pins the code-volume assessment as the first card when diff data is present', () => {
+    const stats = {
+      ...ProjectStatsFactory.withReviews([
+        ReviewStatsFactory.withDiffStats(
+          DiffStatsFactory.create({ additions: 150, deletions: 60 }),
+          {
+            id: 'a',
+          },
+        ),
+        ReviewStatsFactory.withDiffStats(
+          DiffStatsFactory.create({ additions: 150, deletions: 60 }),
+          {
+            id: 'b',
+          },
+        ),
+      ]),
+      categoryBreakdown: {
+        security: 0,
+        logic: 5,
+        performance: 0,
+        typeSafety: 0,
+        style: 0,
+        dependencies: 0,
+      },
+    };
+
+    const viewModel = new KeyInsightsPresenter().present(stats, NOW);
+
+    expect(viewModel.cards.length).toBeGreaterThan(1);
+    expect(viewModel.cards[0].title).toMatch(/code volume|changesets/i);
   });
 });

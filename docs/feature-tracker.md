@@ -72,3 +72,8 @@
 | Backfill change-size data for past reviews | [207-backfill-historical-diff-stats](specs/207-backfill-historical-diff-stats.md) | implemented | 2026-06-20 |
 | Make the Recalculate button backfill change-size data | [208-self-service-backfill-button](specs/208-self-service-backfill-button.md) — [plan](plans/208-self-service-backfill-button.plan.md) — [report](reports/208-self-service-backfill-button.report.md) | implemented | 2026-06-20 |
 | Guard oversized merge requests | [209-mr-size-guard](specs/209-mr-size-guard.md) — [plan](plans/209-mr-size-guard.plan.md) — [report](reports/209-mr-size-guard.report.md) | implemented | 2026-06-22 |
+| Show score by commit count on the stats page | [210-score-by-commit-count-chart](specs/210-score-by-commit-count-chart.md) | drafted | 2026-06-24 |
+| Show a per-developer quality panel on the stats page | [211-per-developer-quality-panel](specs/211-per-developer-quality-panel.md) | drafted | 2026-06-24 |
+| Show scoring coverage and alert on silent scoring failures | [212-scoring-coverage-kpi-and-alert](specs/212-scoring-coverage-kpi-and-alert.md) | drafted | 2026-06-24 |
+| Show a loading skeleton while the stats page fetches | [213-stats-page-loading-skeleton](specs/213-stats-page-loading-skeleton.md) | drafted | 2026-06-24 |
+| Add directional visual cues to stats trends and key insights | [214-stats-directional-visual-cues](specs/214-stats-directional-visual-cues.md) | drafted | 2026-06-24 |

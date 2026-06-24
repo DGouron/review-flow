@@ -290,7 +290,14 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
       const statsGateway = new InMemoryStatsGateway();
       statsGateway.saveProjectStats(
         '/known/project',
-        ProjectStatsFactory.create({ totalReviews: 5, averageScore: 7.5 }),
+        ProjectStatsFactory.create({
+          totalReviews: 5,
+          averageScore: 7.5,
+          reviews: [
+            ReviewStatsFactory.create({ id: 'a', score: 7 }),
+            ReviewStatsFactory.create({ id: 'b', score: 8 }),
+          ],
+        }),
       );
 
       app = Fastify();

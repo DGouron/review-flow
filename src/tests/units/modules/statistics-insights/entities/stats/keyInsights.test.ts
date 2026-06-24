@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { deriveKeyInsights } from '@/modules/statistics-insights/entities/stats/keyInsights.js';
 import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
+import { DiffStatsFactory } from '@/tests/factories/diffStats.factory.js';
 import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 
 const NOW = new Date('2024-12-15T12:00:00Z');
@@ -231,6 +232,77 @@ describe('deriveKeyInsights', () => {
 
       expect(insights.length).toBeGreaterThan(1);
       expect(strengths).toEqual([...strengths].toSorted((left, right) => right - left));
+    });
+  });
+
+  describe('code-volume always-on candidate', () => {
+    const diffReview = (id: string, additions: number, deletions: number, commitsCount: number) =>
+      ReviewStatsFactory.withDiffStats(
+        DiffStatsFactory.create({ additions, deletions, commitsCount }),
+        { id },
+      );
+
+    it('reports a substantial-volume assessment when the average changeset is large', () => {
+      const stats = ProjectStatsFactory.withReviews([
+        diffReview('a', 150, 60, 4),
+        diffReview('b', 150, 60, 2),
+      ]);
+
+      const codeVolume = deriveKeyInsights(stats, NOW).find(
+        (insight) => insight.key === 'codeVolume',
+      );
+
+      expect(codeVolume).toBeDefined();
+      expect(codeVolume?.title).toBe('Substantial code volume');
+      expect(codeVolume?.body).toContain('420 lines');
+      expect(codeVolume?.body).toContain('6 commits');
+      expect(codeVolume?.body).toContain('avg 210 lines');
+      expect(codeVolume?.body).toContain('3.0 commits/MR');
+    });
+
+    it('reports a lean assessment when the average changeset is small', () => {
+      const stats = ProjectStatsFactory.withReviews([
+        diffReview('a', 50, 20, 1),
+        diffReview('b', 50, 20, 1),
+      ]);
+
+      const codeVolume = deriveKeyInsights(stats, NOW).find(
+        (insight) => insight.key === 'codeVolume',
+      );
+
+      expect(codeVolume?.title).toBe('Lean changesets');
+    });
+
+    it('pins the code-volume card first, ahead of ranked trend candidates', () => {
+      const stats = {
+        ...ProjectStatsFactory.withReviews([
+          diffReview('a', 150, 60, 3),
+          diffReview('b', 150, 60, 3),
+        ]),
+        categoryBreakdown: {
+          security: 0,
+          logic: 5,
+          performance: 0,
+          typeSafety: 0,
+          style: 0,
+          dependencies: 0,
+        },
+      };
+
+      const insights = deriveKeyInsights(stats, NOW);
+
+      expect(insights.length).toBeGreaterThan(1);
+      expect(insights[0].key).toBe('codeVolume');
+    });
+
+    it('omits the candidate when no review carries diff data', () => {
+      const stats = ProjectStatsFactory.withReviews([reviewAt('a', 5), reviewAt('b', 6)]);
+
+      const codeVolume = deriveKeyInsights(stats, NOW).find(
+        (insight) => insight.key === 'codeVolume',
+      );
+
+      expect(codeVolume).toBeUndefined();
     });
   });
 });
