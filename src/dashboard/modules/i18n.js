@@ -281,9 +281,11 @@ const translations = {
     'modal.confirm': 'Confirm',
     'modal.markMerged.title': 'Mark {{label}} !{{number}} as merged?',
     'modal.markMerged.message':
-      'This manually marks the MR as merged. The card will leave "Corrections requises".',
+      'This manually marks the review as merged and closes its review process.',
     'modal.markMerged.back': 'Go back',
     'modal.markMerged.confirm': 'Mark as merged',
+    'badge.merged': 'Merged',
+    'section.mergedReviews': 'Merged',
 
     // Confirm dialogs
     'confirm.deleteReview': 'Delete {{filename}}?',
@@ -753,9 +755,11 @@ const translations = {
     'modal.confirm': 'Confirmer',
     'modal.markMerged.title': 'Marquer la {{label}} !{{number}} comme mergée ?',
     'modal.markMerged.message':
-      'Marque manuellement la MR comme mergée. La carte quittera "Corrections requises".',
+      'Marque manuellement la review comme mergée et clôt son processus de review.',
     'modal.markMerged.back': 'Revenir',
     'modal.markMerged.confirm': 'Marquer comme mergée',
+    'badge.merged': 'Mergée',
+    'section.mergedReviews': 'Mergées',
 
     // Confirm dialogs
     'confirm.deleteReview': 'Supprimer {{filename}} ?',

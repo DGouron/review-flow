@@ -267,6 +267,7 @@
             <i data-lucide="file-check"></i> <span id="i18n-section-completed-reviews"></span>
             <span class="section-toggle collapsed"><i data-lucide="chevron-down"></i></span>
           </div>
+          <div id="merged-reviews" class="section-content"></div>
           <div id="recent-reviews" class="section-content">
             <div class="empty-state" id="i18n-empty-loading"></div>
           </div>
@@ -450,7 +451,7 @@
     let reconnectAttempts = 0;
     let logsVisible = false;
 
-    let currentData = { activeReviews: [], recentReviews: [], logs: [], reviewFiles: [], pendingFix: [], pendingApproval: [], pendingReviews: [] };
+    let currentData = { activeReviews: [], recentReviews: [], logs: [], reviewFiles: [], pendingFix: [], pendingApproval: [], merged: [], pendingReviews: [] };
     const mrDataStore = new Map();
     let loadedReviews = {};
     let currentStatsReviews = [];
@@ -1564,7 +1565,7 @@
       const autoFollowupChecked = mr.autoFollowup !== false ? 'checked' : '';
       const showFollowupActions = type === 'pending-fix' ||
         (type === 'pending-approval' && mr.totalWarnings > 0);
-      const markMergedBtn = type === 'pending-fix'
+      const markMergedBtn = (type === 'pending-fix' || type === 'pending-approval')
         ? `<button class="btn-action" onclick="showMarkMergedModal('${encodedMrId}', ${mr.mrNumber})"><i data-lucide="git-merge"></i> ${t('button.markAsMerged')}</button>`
         : '';
 
@@ -1574,7 +1575,7 @@
              ${t('button.autoFollowup')}
            </label>
            <button class="btn-action" onclick="triggerFollowup('${encodedMrId}')"><i data-lucide="refresh-cw"></i> ${t('button.followup')}</button>${markMergedBtn}${openBtn}`
-        : openBtn;
+        : `${markMergedBtn}${openBtn}`;
 
       const statsBadges = [];
       if (mr.totalBlocking > 0) statsBadges.push(`<span class="stat-badge blocking"><i data-lucide="octagon-alert"></i> ${mr.totalBlocking}</span>`);
@@ -1729,6 +1730,7 @@
             </div>
             <div class="now-lane-actions">
               <button class="btn-action" onclick="triggerFollowup('${encodeURIComponent(String(mr.id ?? ''))}')"><i data-lucide="refresh-cw"></i> ${t('button.followup')}</button>
+              <button class="btn-action" onclick="showMarkMergedModal('${encodeURIComponent(String(mr.id ?? ''))}', ${mr.mrNumber})"><i data-lucide="git-merge"></i> ${t('button.markAsMerged')}</button>
               <a href="${sanitizeHttpUrl(mr.url)}" target="_blank" rel="noopener noreferrer" class="btn-action open" onclick="return onUsefulLinkAction()"><i data-lucide="external-link"></i> ${t('button.open')}</a>
             </div>
           </div>
@@ -1805,6 +1807,23 @@
       }
     }
 
+    function renderMergedReviews(mergedList) {
+      const container = document.getElementById('merged-reviews');
+      if (!container) return;
+      if (!mergedList || mergedList.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+      container.innerHTML = mergedList.map((mr) => {
+        const mrPrefix = mr.platform === 'github' ? '#' : '!';
+        return `
+          <div class="merged-review-row">
+            <span class="badge merged"><i data-lucide="git-merge"></i> ${t('badge.merged')}</span>
+            <a href="${sanitizeHttpUrl(mr.url)}" target="_blank" rel="noopener noreferrer" class="merged-review-link">${mrPrefix}${mr.mrNumber} ${escapeHtml(String(mr.title ?? ''))}</a>
+          </div>`;
+      }).join('');
+    }
+
     function updateMrTrackingUI() {
       const pendingFixSection = document.getElementById('pending-fix-section');
       const pendingFixEl = document.getElementById('pending-fix-reviews');
@@ -1838,6 +1857,8 @@
 
       pendingApprovalSection.classList.add('hidden');
       pendingApprovalCount.classList.add('hidden');
+
+      renderMergedReviews(currentData.merged);
 
       refreshIcons();
     }
@@ -1954,6 +1975,7 @@
       if (!currentProjectPath) {
         currentData.pendingFix = [];
         currentData.pendingApproval = [];
+        currentData.merged = [];
         document.getElementById('pending-fix-section').classList.add('hidden');
         document.getElementById('pending-approval-section').classList.add('hidden');
         setLoadingFlag('mrTracking', false);
@@ -1966,6 +1988,7 @@
         if (data.success) {
           currentData.pendingFix = data.pendingFix || [];
           currentData.pendingApproval = data.pendingApproval || [];
+          currentData.merged = data.merged || [];
         }
         updateMrTrackingUI();
       } catch (error) {

@@ -248,11 +248,25 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     getCapacity: () => ({ running: getRunningCount(), max: getTotalCapacity() }),
   });
 
+  const removeWorktreeAction = (input: {
+    identity: WorktreeIdentity;
+    sourceCheckoutPath: string;
+  }): Promise<RemoveResult> =>
+    deps.worktreeGateway.remove({
+      identity: input.identity,
+      sourceCheckoutPath: input.sourceCheckoutPath,
+    });
+
   await app.register(mrTrackingRoutes, {
     reviewRequestTrackingGateway: deps.reviewRequestTrackingGateway,
     getQualityThreshold: (projectPath: string) =>
       loadProjectConfig(projectPath)?.qualityThreshold ?? null,
     statsGateway: deps.statsGateway,
+    reviewContextGateway: deps.reviewContextGateway,
+    cancelJob,
+    buildJobId: createJobId,
+    removeWorktree: removeWorktreeAction,
+    logger: deps.logger,
   });
 
   const tokenUsageGateway = new FilesystemTokenUsageGateway();
@@ -538,15 +552,6 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
   // bound for GitLab's redelivery window.
   const WEBHOOK_IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
   const idempotencyStore = new InMemoryIdempotencyStore({ ttlMs: WEBHOOK_IDEMPOTENCY_TTL_MS });
-
-  const removeWorktreeAction = (input: {
-    identity: WorktreeIdentity;
-    sourceCheckoutPath: string;
-  }): Promise<RemoveResult> =>
-    deps.worktreeGateway.remove({
-      identity: input.identity,
-      sourceCheckoutPath: input.sourceCheckoutPath,
-    });
 
   const transportGuardConfig = resolveTransportGuardConfig();
   const clientIpResolver = new ForwardedForClientIpResolver();

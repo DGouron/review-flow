@@ -22,7 +22,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import { mrTrackingRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTracking.routes.js';
+import type { RemoveResult } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
+import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
+import { StubReviewContextGateway } from '@/tests/stubs/reviewContextGateway.stub.js';
 import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 
 interface BuildAppOptions {
@@ -35,6 +38,12 @@ async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
   await app.register(mrTrackingRoutes, {
     reviewRequestTrackingGateway: options.gateway,
     getQualityThreshold: () => options.qualityThreshold,
+    reviewContextGateway: new StubReviewContextGateway(),
+    cancelJob: () => false,
+    buildJobId: (platform: string, path: string, mrNumber: number): string =>
+      `${platform}:${path}:${mrNumber}`,
+    removeWorktree: async (): Promise<RemoveResult> => ({ status: 'removed' }),
+    logger: createCapturingLogger().logger,
   });
   return app;
 }
