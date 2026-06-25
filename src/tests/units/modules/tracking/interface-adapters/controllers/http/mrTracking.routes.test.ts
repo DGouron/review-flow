@@ -3,8 +3,11 @@ import { describe, it, expect, beforeEach } from 'vitest';
 
 import type { ReviewEvent } from '@/modules/tracking/entities/tracking/reviewEvent.js';
 import { mrTrackingRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTracking.routes.js';
+import type { RemoveResult } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
+import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
+import { StubReviewContextGateway } from '@/tests/stubs/reviewContextGateway.stub.js';
 import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 
@@ -20,6 +23,12 @@ async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
     reviewRequestTrackingGateway: options.gateway,
     getQualityThreshold: () => options.qualityThreshold,
     statsGateway: options.statsGateway,
+    reviewContextGateway: new StubReviewContextGateway(),
+    cancelJob: () => false,
+    buildJobId: (platform: string, path: string, mrNumber: number): string =>
+      `${platform}:${path}:${mrNumber}`,
+    removeWorktree: async (): Promise<RemoveResult> => ({ status: 'removed' }),
+    logger: createCapturingLogger().logger,
   });
   return app;
 }
@@ -194,7 +203,7 @@ describe('mrTrackingRoutes — POST /api/mr-tracking/mark-as-merged', () => {
     expect(updated?.mergedAt).not.toBeNull();
   });
 
-  it('returns 409 when the MR is not in pending-fix state', async () => {
+  it('returns 200 and transitions an approved MR to merged (SPEC-215: any state)', async () => {
     gateway.create(projectPath, TrackedMrFactory.create({ id: 'mr-1', state: 'approved' }));
     const app = await buildApp({ gateway, qualityThreshold: null });
 
@@ -204,11 +213,10 @@ describe('mrTrackingRoutes — POST /api/mr-tracking/mark-as-merged', () => {
       payload: { mrId: 'mr-1', projectPath },
     });
 
-    expect(response.statusCode).toBe(409);
-    const body = response.json() as { success: boolean; error: string };
-    expect(body.success).toBe(false);
-    expect(body.error).toBe('Seules les MR en correction peuvent être marquées comme mergées');
-    expect(gateway.getById(projectPath, 'mr-1')?.state).toBe('approved');
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as { success: boolean };
+    expect(body.success).toBe(true);
+    expect(gateway.getById(projectPath, 'mr-1')?.state).toBe('merged');
   });
 });
 
