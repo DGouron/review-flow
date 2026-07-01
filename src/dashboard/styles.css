@@ -4875,7 +4875,7 @@ input:focus-visible,
 
 .dashboard-tab-bar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
   padding: 0;
   margin: 0;
@@ -5521,7 +5521,7 @@ body.overview-tab-active .dashboard-main > *:not(#overview-section) {
   align-items: flex-start;
   gap: 1rem;
   margin-bottom: 1rem;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   animation: project-bar-enter 250ms ease-out;
 }
 
@@ -5539,9 +5539,11 @@ body.overview-tab-active .dashboard-main > *:not(#overview-section) {
 }
 
 .project-bar > #dashboard-tabs {
-  flex: 1 1 auto;
+  flex: 0 0 100%;
+  order: 10;
   min-width: 0;
   overflow-x: auto;
+  margin-top: 0.75rem;
 }
 
 /* SPEC-178 — Scope marker label above cards */
