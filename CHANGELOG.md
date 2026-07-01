@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.42.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.41.0...reviewflow-v3.42.0) (2026-07-01)
+
+
+### Added
+
+* **dashboard:** dedicated /stats page with volume hero and back nav ([2a10490](https://github.com/DGouron/review-flow/commit/2a1049099327158200602adf513543a4e2caa98c))
+* **dashboard:** dedicated /stats page with volume hero and back nav ([20aa61f](https://github.com/DGouron/review-flow/commit/20aa61fa36033c98a09e277a9de7a1421b28e1b9))
+* **dashboard:** stats analytics upgrade — date range, code-volume, a11y/DNA, data fixes ([26827d8](https://github.com/DGouron/review-flow/commit/26827d8fdc41fc6d0bfbc5983832580688d15d57))
+* **dashboard:** stats analytics upgrade (date range, code-volume, a11y/DNA, data fixes) ([b22a588](https://github.com/DGouron/review-flow/commit/b22a588afda31c449762c2fa25a27f65840ea7c7))
+* **tracking:** mark any review as merged regardless of status ([6fb0508](https://github.com/DGouron/review-flow/commit/6fb050800c896558a6e48aba70369a65d9d34ec1))
+* **tracking:** mark any review as merged regardless of status (spec-215) ([2ca0695](https://github.com/DGouron/review-flow/commit/2ca0695f2aa9ca08da11ac7297d177e9e48419aa))
+
+
+### Fixed
+
+* **dashboard:** move project tabs to dedicated full-width line ([#330](https://github.com/DGouron/review-flow/issues/330)) ([43d5bac](https://github.com/DGouron/review-flow/commit/43d5bac11c42471e1944c2f81b42b2a21b326901))
+* **docs:** escape angle brackets in spec-209 plan so VitePress builds ([ea447c3](https://github.com/DGouron/review-flow/commit/ea447c32c094421f90e427e93255a99f82d965e0))
+* **docs:** unbreak VitePress build (spec-209 plan unclosed tag) ([d6f439d](https://github.com/DGouron/review-flow/commit/d6f439d415f992c07e2eaef5816749879e9e09d6))
+* **worktree:** self-heal orphaned dirs flagged as branch-not-found ([#323](https://github.com/DGouron/review-flow/issues/323)) ([1be2fc0](https://github.com/DGouron/review-flow/commit/1be2fc09c87d11e2cf51f530c533efff8bfc1de9))
+
+
+### Changed
+
+* **dashboard:** retire stats sheet now that /stats page exists ([46c64e7](https://github.com/DGouron/review-flow/commit/46c64e725f3850a5a5d621bea14f5f9503aafef3))
+* **dashboard:** retire stats sheet now that /stats page exists ([c36848b](https://github.com/DGouron/review-flow/commit/c36848b5b35ca6f12c4461f0b59ae828c041459f))
+
 ## [3.41.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.40.2...reviewflow-v3.41.0) (2026-06-22)
 
 
