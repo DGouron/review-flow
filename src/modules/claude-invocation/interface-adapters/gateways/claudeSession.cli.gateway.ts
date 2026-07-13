@@ -41,10 +41,15 @@ export const RATE_LIMIT_DETECTION_REGEX = /\b(rate[\s-]?limit|429|throttl)/i;
 // Claude CLI (>= 2.1.x) outputs the new background session in the form:
 //   "backgrounded · <hexSessionId>"
 // followed by a multi-line "claude agents" hint block. The middle dot is
-// U+00B7 (·). The daemon spawns the CLI with a piped stdout, so no ANSI
-// colour codes wrap the id — interactive TTY output is not the dispatcher
-// path and is not handled here.
+// U+00B7 (·). Some CLI versions wrap the id in ANSI colour codes even with
+// piped, non-TTY stdout, so escape sequences are stripped before matching.
 const SESSION_ID_REGEX = /^backgrounded\s*[·]\s*([0-9a-f]+)/m;
+const ANSI_ESCAPE_SEQUENCE = String.fromCharCode(27);
+const ANSI_ESCAPE_REGEX = new RegExp(`${ANSI_ESCAPE_SEQUENCE}\\[[0-9;]*m`, 'g');
+
+function stripAnsi(value: string): string {
+  return value.replace(ANSI_ESCAPE_REGEX, '');
+}
 
 const agentEntrySchema = z.object({
   id: z.string().min(1),
@@ -128,7 +133,7 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
       return { status: 'failed', rawStderr: result.stderr };
     }
 
-    const match = result.stdout.match(SESSION_ID_REGEX);
+    const match = stripAnsi(result.stdout).match(SESSION_ID_REGEX);
     if (!match) {
       return {
         status: 'failed',
