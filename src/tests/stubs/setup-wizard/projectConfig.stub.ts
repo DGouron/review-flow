@@ -33,6 +33,14 @@ export class StubProjectConfigGateway implements ProjectConfigGateway {
   }
 
   seedExisting(projectPath: string): void {
-    this.store.set(projectPath, { preset: 'backend', language: 'en', agents: ['architecture'] });
+    this.store.set(projectPath, {
+      github: true,
+      gitlab: false,
+      defaultModel: 'sonnet',
+      reviewSkill: 'review-code',
+      reviewFollowupSkill: 'review-followup',
+      language: 'en',
+      agents: [{ name: 'clean-architecture', displayName: 'Clean Archi' }],
+    });
   }
 }

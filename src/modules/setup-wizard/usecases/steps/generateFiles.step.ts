@@ -8,6 +8,10 @@ import type { StepOutcome } from '@/modules/setup-wizard/entities/stepOutcome/st
 import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContext/wizardContext.js';
 import { getAgentsForPreset } from '@/modules/setup-wizard/services/agentPresetCatalog.js';
 
+const DEFAULT_MODEL = 'sonnet';
+const REVIEW_SKILL = 'review-code';
+const REVIEW_FOLLOWUP_SKILL = 'review-followup';
+
 export class GenerateFilesStep implements SetupStep {
   readonly id = 'generate-files' as const;
   readonly title = 'Génération des fichiers projet';
@@ -29,7 +33,11 @@ export class GenerateFilesStep implements SetupStep {
     }
     const preset = context.project.preset ?? 'backend';
     const language = context.project.language ?? 'en';
-    const agents = getAgentsForPreset(preset);
+    // Prefer the selection ConfigurePipelineStep resolved (honors a custom
+    // pick); fall back to the preset default when resuming a run where that
+    // step's context was not carried over.
+    const agents = context.project.agents ?? getAgentsForPreset(preset);
+    const platform = context.project.platform;
 
     const projectConfig = context.gateways.projectConfig;
     const alreadyExists = projectConfig.exists(path);
@@ -47,9 +55,17 @@ export class GenerateFilesStep implements SetupStep {
     }
 
     try {
-      projectConfig.write(path, { preset, language, agents });
-      context.gateways.skillTemplate.writeSkill(path, 'review-code', language);
-      context.gateways.skillTemplate.writeSkill(path, 'review-followup', language);
+      projectConfig.write(path, {
+        github: platform === 'github',
+        gitlab: platform === 'gitlab',
+        defaultModel: DEFAULT_MODEL,
+        reviewSkill: REVIEW_SKILL,
+        reviewFollowupSkill: REVIEW_FOLLOWUP_SKILL,
+        language,
+        ...(agents.length > 0 ? { agents } : {}),
+      });
+      context.gateways.skillTemplate.writeSkill(path, REVIEW_SKILL, language);
+      context.gateways.skillTemplate.writeSkill(path, REVIEW_FOLLOWUP_SKILL, language);
       context.gateways.skillTemplate.writeMcpJson(path);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -62,14 +78,15 @@ export class GenerateFilesStep implements SetupStep {
       return blocked(`Échec d'écriture: ${message}`, 'Vérifiez les permissions du dossier');
     }
 
+    const agentNames = agents.map((agent) => agent.name);
     if (backupPath) {
       return succeeded(`Fichiers projet régénérés (sauvegarde: ${backupPath})`, {
         preset,
         language,
-        agents,
+        agents: agentNames,
         backupPath,
       });
     }
-    return succeeded('Fichiers projet générés', { preset, language, agents });
+    return succeeded('Fichiers projet générés', { preset, language, agents: agentNames });
   }
 }
