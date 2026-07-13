@@ -76,6 +76,25 @@ describe('ClaudeSessionCliGateway.dispatch', () => {
     expect(calls[0]?.args).not.toContain('--dangerously-skip-permissions');
   });
 
+  it('extracts the session id when the CLI wraps it in ANSI colour codes despite piped stdout', async () => {
+    const { runner } = createRunner([
+      {
+        stdout:
+          'backgrounded · [36mb252a492[39m\n[2m claude agents list sessions[22m\n[2m claude attach b252a492 open in this terminal[22m\n[2m claude logs b252a492 show recent output[22m\n[2m claude stop b252a492 stop this session[22m',
+        stderr: '',
+        exitCode: 0,
+      },
+    ]);
+    const gateway = new ClaudeSessionCliGateway(runner);
+
+    const result = await gateway.dispatch(baseDispatchInput);
+
+    expect(result.status).toBe('dispatched');
+    if (result.status === 'dispatched') {
+      expect(result.sessionId).toBe('b252a492');
+    }
+  });
+
   it('returns "rate-limited" when stderr matches a rate-limit pattern', async () => {
     const { runner } = createRunner([
       { stdout: '', stderr: 'HTTP 429 Too Many Requests', exitCode: 1 },
