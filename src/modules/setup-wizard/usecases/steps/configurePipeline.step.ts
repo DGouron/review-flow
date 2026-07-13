@@ -9,6 +9,7 @@ import type { WizardContext } from '@/modules/setup-wizard/entities/wizardContex
 import {
   getAgentsForPreset,
   getFullAgentCatalog,
+  buildCustomAgents,
 } from '@/modules/setup-wizard/services/agentPresetCatalog.js';
 
 function isPreset(value: string): value is Preset {
@@ -55,7 +56,7 @@ export class ConfigurePipelineStep implements SetupStep {
       const catalog = getFullAgentCatalog();
       const selected = await context.gateways.prompt.askMultiSelect(
         'Sélectionnez les agents:',
-        catalog.map((agent) => ({ label: agent, value: agent })),
+        catalog.map((agent) => ({ label: agent.displayName, value: agent.name })),
       );
       if (selected.length === 0) {
         return blocked(
@@ -63,7 +64,7 @@ export class ConfigurePipelineStep implements SetupStep {
           'Relancez et cochez un ou plusieurs agents',
         );
       }
-      agents = selected;
+      agents = buildCustomAgents(selected);
     }
 
     const languageChoice = context.flags.yes
@@ -76,11 +77,12 @@ export class ConfigurePipelineStep implements SetupStep {
 
     context.project.preset = presetChoice;
     context.project.language = language;
+    context.project.agents = agents;
 
     return succeeded(`Pipeline configuré: ${presetChoice} / ${language}`, {
       preset: presetChoice,
       language,
-      agents,
+      agents: agents.map((agent) => agent.name),
     });
   }
 }

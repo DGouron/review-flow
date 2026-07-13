@@ -15,10 +15,19 @@ import type {
   ProjectConfigContents,
 } from '@/modules/setup-wizard/entities/projectConfig/projectConfig.gateway.js';
 
+const projectConfigAgentSchema = z.object({
+  name: z.string().min(1),
+  displayName: z.string().min(1),
+});
+
 const projectConfigSchema = z.object({
-  preset: z.enum(['backend', 'frontend', 'fullstack', 'basic', 'custom']),
+  github: z.boolean(),
+  gitlab: z.boolean(),
+  defaultModel: z.enum(['sonnet', 'opus', 'haiku']),
+  reviewSkill: z.string().min(1),
+  reviewFollowupSkill: z.string().min(1),
   language: z.enum(['en', 'fr']),
-  agents: z.array(z.string()),
+  agents: z.array(projectConfigAgentSchema).optional(),
 });
 
 function resolveConfigPath(projectPath: string): string {
