@@ -2461,6 +2461,13 @@
 
     function syncAvailableRepositoriesFromResponse(payload) {
       availableRepositories = Array.isArray(payload?.repositories) ? payload.repositories : [];
+      updateSetupCtaVisibility();
+    }
+
+    function updateSetupCtaVisibility() {
+      const cta = document.getElementById('setup-cta');
+      if (!cta) return;
+      cta.classList.toggle('hidden', availableRepositories.length > 0);
     }
 
     function renderCardCounters() {
@@ -2734,6 +2741,7 @@
 
     async function initOverviewAndTabs() {
       await fetchAvailableRepositories();
+      updateSetupCtaVisibility();
       renderManagePanel();
       bindManagePanelToggle();
       bindSettingsModalTrigger();

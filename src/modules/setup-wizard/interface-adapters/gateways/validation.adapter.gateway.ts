@@ -1,5 +1,4 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 
 import { ValidateConfigUseCase } from '@/modules/cli-configuration/usecases/cli/validateConfig.usecase.js';
 import type {
@@ -15,11 +14,17 @@ interface ValidationAdapterGatewayDependencies {
 export class ValidationAdapterGateway implements ValidationGateway {
   constructor(private readonly deps: ValidationAdapterGatewayDependencies) {}
 
-  validate(projectPath: string): ValidationReport {
+  // `projectPath` is part of the ValidationGateway contract but unused here: this
+  // gateway validates the global CLI config (server/user/queue), never the
+  // per-project `.claude/reviews/config.json` (github/gitlab/reviewSkill schema).
+  // Swapping in the project file used to make this check fail for every
+  // already-configured project, since that file never has a server/user/queue section.
+  validate(_projectPath: string): ValidationReport {
     const useCase = new ValidateConfigUseCase({ existsSync, readFileSync });
-    const projectConfigPath = join(projectPath, '.claude', 'reviews', 'config.json');
-    const cliConfigPath = existsSync(projectConfigPath) ? projectConfigPath : this.deps.configPath;
-    const result = useCase.execute({ configPath: cliConfigPath, envPath: this.deps.envPath });
+    const result = useCase.execute({
+      configPath: this.deps.configPath,
+      envPath: this.deps.envPath,
+    });
     return {
       status: result.status,
       issues: result.issues.map((issue) => ({

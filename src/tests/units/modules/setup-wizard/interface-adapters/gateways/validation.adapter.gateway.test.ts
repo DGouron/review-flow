@@ -12,6 +12,16 @@ const VALID_CONFIG = {
   queue: { concurrency: 1 },
 };
 
+// Shape written by GenerateFilesStep into every configured project's
+// .claude/reviews/config.json — deliberately has no server/user/queue section.
+const REAL_PROJECT_REVIEW_CONFIG = {
+  github: true,
+  gitlab: false,
+  defaultModel: 'sonnet',
+  reviewSkill: 'review-code',
+  reviewFollowupSkill: 'review-followup',
+};
+
 function writeJson(path: string, value: unknown): void {
   writeFileSync(path, JSON.stringify(value));
 }
@@ -19,14 +29,14 @@ function writeJson(path: string, value: unknown): void {
 describe('ValidationAdapterGateway (integration with real filesystem)', () => {
   let rootDir: string;
   let projectPath: string;
-  let fallbackConfigPath: string;
+  let configPath: string;
   let envPath: string;
 
   beforeEach(() => {
     rootDir = mkdtempSync(join(tmpdir(), 'reviewflow-validation-adapter-'));
     projectPath = join(rootDir, 'project');
     mkdirSync(projectPath, { recursive: true });
-    fallbackConfigPath = join(rootDir, 'fallback-config.json');
+    configPath = join(rootDir, 'config.json');
     envPath = join(rootDir, '.env');
   });
 
@@ -34,32 +44,32 @@ describe('ValidationAdapterGateway (integration with real filesystem)', () => {
     rmSync(rootDir, { recursive: true, force: true });
   });
 
-  it('reports valid when the project config and env file are present and correct', () => {
-    const projectConfigPath = join(projectPath, '.claude', 'reviews', 'config.json');
+  it('validates the global CLI config regardless of the project path', () => {
+    writeJson(configPath, VALID_CONFIG);
+    writeFileSync(envPath, 'TOKEN=value\n');
+
+    const gateway = new ValidationAdapterGateway({ configPath, envPath });
+    const report = gateway.validate(projectPath);
+
+    expect(report.status).toBe('valid');
+    expect(report.issues).toEqual([]);
+  });
+
+  it('does not mistake a per-project .claude/reviews/config.json for the global config', () => {
     mkdirSync(join(projectPath, '.claude', 'reviews'), { recursive: true });
-    writeJson(projectConfigPath, VALID_CONFIG);
+    writeJson(join(projectPath, '.claude', 'reviews', 'config.json'), REAL_PROJECT_REVIEW_CONFIG);
+    writeJson(configPath, VALID_CONFIG);
     writeFileSync(envPath, 'TOKEN=value\n');
 
-    const gateway = new ValidationAdapterGateway({ configPath: fallbackConfigPath, envPath });
+    const gateway = new ValidationAdapterGateway({ configPath, envPath });
     const report = gateway.validate(projectPath);
 
     expect(report.status).toBe('valid');
     expect(report.issues).toEqual([]);
   });
 
-  it('falls back to the dependency config path when the project config is absent', () => {
-    writeJson(fallbackConfigPath, VALID_CONFIG);
-    writeFileSync(envPath, 'TOKEN=value\n');
-
-    const gateway = new ValidationAdapterGateway({ configPath: fallbackConfigPath, envPath });
-    const report = gateway.validate(projectPath);
-
-    expect(report.status).toBe('valid');
-    expect(report.issues).toEqual([]);
-  });
-
-  it('reports not-found when neither project nor fallback config exists', () => {
-    const gateway = new ValidationAdapterGateway({ configPath: fallbackConfigPath, envPath });
+  it('reports not-found when the global config does not exist', () => {
+    const gateway = new ValidationAdapterGateway({ configPath, envPath });
     const report = gateway.validate(projectPath);
 
     expect(report.status).toBe('not-found');
@@ -67,9 +77,9 @@ describe('ValidationAdapterGateway (integration with real filesystem)', () => {
   });
 
   it('maps each validation issue field, message and severity', () => {
-    writeJson(fallbackConfigPath, { server: { port: 70000 } });
+    writeJson(configPath, { server: { port: 70000 } });
 
-    const gateway = new ValidationAdapterGateway({ configPath: fallbackConfigPath, envPath });
+    const gateway = new ValidationAdapterGateway({ configPath, envPath });
     const report = gateway.validate(projectPath);
 
     expect(report.status).toBe('invalid');
