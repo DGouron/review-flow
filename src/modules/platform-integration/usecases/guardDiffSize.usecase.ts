@@ -18,11 +18,14 @@ interface GuardDiffSizeDependencies {
 
 function buildSplitMessage(countedLines: number, budget: number): string {
   return (
-    `Revue refusée : cette merge request fait ${countedLines} lignes comptées ` +
-    `(budget ${budget}). Pour faciliter la revue, découpez-la : ` +
+    `Petite pause avant la revue : cette merge request compte ${countedLines} lignes ` +
+    `(budget ${budget}), un peu trop pour une revue de qualité en une seule fois. ` +
+    'Découpée en plus petits morceaux, elle sera revue plus vite, plus finement, ' +
+    'et bien plus simple à corriger si besoin. Une piste pour la découper : ' +
     '1) séparez les refactorings des nouvelles fonctionnalités, ' +
     '2) extrayez les changements indépendants dans des MR dédiées, ' +
-    '3) limitez chaque MR à une seule intention.'
+    '3) limitez chaque MR à une seule intention. ' +
+    'Merci pour le travail, hâte de la relire découpée !'
   );
 }
 
