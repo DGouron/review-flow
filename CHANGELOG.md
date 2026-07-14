@@ -12,12 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * **templates:** add review-advanced and followup-advanced skill templates ([#337](https://github.com/DGouron/review-flow/issues/337)) ([f4aa52e](https://github.com/DGouron/review-flow/commit/f4aa52e77555a13e93492010a8bd165a3bfc6bbd))
 
+
+### Fixed
+
+* [#339](https://github.com/DGouron/review-flow/issues/339) dashboard loading state stuck after successful fetch ([#340](https://github.com/DGouron/review-flow/issues/340)) ([45bce47](https://github.com/DGouron/review-flow/commit/45bce4789215cb24dd556800932734e3fa6dc0e8))
+
 ## [3.42.2](https://github.com/DGouron/review-flow/compare/reviewflow-v3.42.1...reviewflow-v3.42.2) (2026-07-13)
 
 
 ### Fixed
 
 * **claude-invocation:** strip ANSI codes before parsing --bg session id ([#334](https://github.com/DGouron/review-flow/issues/334)) ([88c66e3](https://github.com/DGouron/review-flow/commit/88c66e31b07988b3f275c803722474048e4e82a9))
+* **setup:** write the project review-config shape the review engine actually expects ([#333](https://github.com/DGouron/review-flow/issues/333)) ([34c6c8b](https://github.com/DGouron/review-flow/commit/34c6c8b7cd6478f7aa036aca3a8c750ea8865716))
 
 ## [3.42.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.42.0...reviewflow-v3.42.1) (2026-07-13)
 
