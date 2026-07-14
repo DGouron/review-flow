@@ -1046,11 +1046,11 @@
         const response = await fetch(url);
         const data = await response.json();
         currentData.reviewFiles = data.reviews || [];
-        updateReviewFilesUI();
       } catch (error) {
         console.error('Error fetching review files:', error);
       } finally {
         setLoadingFlag('reviewFiles', false);
+        updateReviewFilesUI();
       }
     }
 
@@ -1990,11 +1990,11 @@
           currentData.pendingApproval = data.pendingApproval || [];
           currentData.merged = data.merged || [];
         }
-        updateMrTrackingUI();
       } catch (error) {
         console.error('Error fetching MR tracking:', error);
       } finally {
         setLoadingFlag('mrTracking', false);
+        updateMrTrackingUI();
       }
     }
 
