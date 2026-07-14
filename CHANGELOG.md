@@ -5,13 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.43.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.42.2...reviewflow-v3.43.0) (2026-07-14)
+
+
+### Added
+
+* **templates:** add review-advanced and followup-advanced skill templates ([#337](https://github.com/DGouron/review-flow/issues/337)) ([f4aa52e](https://github.com/DGouron/review-flow/commit/f4aa52e77555a13e93492010a8bd165a3bfc6bbd))
+
 ## [3.42.2](https://github.com/DGouron/review-flow/compare/reviewflow-v3.42.1...reviewflow-v3.42.2) (2026-07-13)
 
 
 ### Fixed
 
 * **claude-invocation:** strip ANSI codes before parsing --bg session id ([#334](https://github.com/DGouron/review-flow/issues/334)) ([88c66e3](https://github.com/DGouron/review-flow/commit/88c66e31b07988b3f275c803722474048e4e82a9))
-* **setup:** write the project review-config shape the review engine actually expects ([#333](https://github.com/DGouron/review-flow/issues/333)) ([34c6c8b](https://github.com/DGouron/review-flow/commit/34c6c8b7cd6478f7aa036aca3a8c750ea8865716))
 
 ## [3.42.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.42.0...reviewflow-v3.42.1) (2026-07-13)
 
