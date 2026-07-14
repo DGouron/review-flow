@@ -78,3 +78,5 @@
 | Show a loading skeleton while the stats page fetches | [213-stats-page-loading-skeleton](specs/213-stats-page-loading-skeleton.md) | drafted | 2026-06-24 |
 | Add directional visual cues to stats trends and key insights | [214-stats-directional-visual-cues](specs/214-stats-directional-visual-cues.md) | drafted | 2026-06-24 |
 | Mark any review as merged | [215-mark-any-review-as-merged](specs/215-mark-any-review-as-merged.md) — [plan](plans/215-mark-any-review-as-merged.plan.md) — [report](reports/215-mark-any-review-as-merged.report.md) | implemented | 2026-06-25 |
+| Add a review-advanced template with sequential audits, security block, cited lessons | [216-review-advanced-template](specs/216-review-advanced-template.md) — [report](reports/216-review-advanced-template.report.md) | implemented | 2026-07-14 |
+| Add a followup-advanced template that never trusts commit messages | [217-followup-advanced-template](specs/217-followup-advanced-template.md) — [report](reports/217-followup-advanced-template.report.md) | implemented | 2026-07-14 |
