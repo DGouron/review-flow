@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.43.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.43.0...reviewflow-v3.43.1) (2026-07-15)
+
+
+### Fixed
+
+* **webhook:** soften the oversized-MR split message tone ([#342](https://github.com/DGouron/review-flow/issues/342)) ([27a967f](https://github.com/DGouron/review-flow/commit/27a967f6e129998e3d6049269770a221ebf0c68f))
+
 ## [3.43.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.42.2...reviewflow-v3.43.0) (2026-07-14)
 
 
