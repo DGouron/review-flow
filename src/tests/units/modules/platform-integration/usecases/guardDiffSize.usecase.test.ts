@@ -51,7 +51,7 @@ describe('GuardDiffSizeUseCase', () => {
     expect(verdict).toEqual({ kind: 'allowed' });
   });
 
-  it('posts a French split message mentioning actionable tips', () => {
+  it('posts a kind French split message mentioning actionable tips, not a harsh rejection', () => {
     const { gateway, useCase } = buildUseCase();
     gateway.setResponse(
       42,
@@ -66,8 +66,9 @@ describe('GuardDiffSizeUseCase', () => {
 
     expect(verdict.kind).toBe('blocked');
     if (verdict.kind === 'blocked') {
-      expect(verdict.message).toContain('Revue refusée');
-      expect(verdict.message).toContain('découpez');
+      expect(verdict.message).not.toContain('Revue refusée');
+      expect(verdict.message).toContain('découp');
+      expect(verdict.message).toContain('Merci');
     }
   });
 
