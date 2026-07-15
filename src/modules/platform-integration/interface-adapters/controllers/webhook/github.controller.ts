@@ -31,8 +31,8 @@ import {
   sendWebhookReply,
   sendReviewRequestReply,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/webhookReply.js';
-import { processReviewRequest } from '@/modules/platform-integration/usecases/processReviewRequest.usecase.js';
 import type { GuardDiffSizeUseCase } from '@/modules/platform-integration/usecases/guardDiffSize.usecase.js';
+import { processReviewRequest } from '@/modules/platform-integration/usecases/processReviewRequest.usecase.js';
 import type { ProcessWebhook } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import {
