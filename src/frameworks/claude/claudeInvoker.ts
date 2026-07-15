@@ -606,7 +606,7 @@ async function invokeViaBackgroundSession(
     };
   }
 
-  if (ensureResult.status === 'created' && ensureResult.settingsWarning !== null) {
+  if (ensureResult.settingsWarning !== null) {
     logger.warn(
       { jobId: job.id, warning: ensureResult.settingsWarning },
       'Worktree created but settings write produced a warning (FR-4 bgIsolation may not be applied)',

@@ -30,6 +30,10 @@ export interface EnsureWorktreeDependencies {
   worktreeExists: (path: WorktreePath) => Promise<boolean>;
   removeDirectory: (path: WorktreePath) => Promise<void>;
   writeWorktreeSettings: (path: WorktreePath) => Promise<WorktreeSettingsWriteResult>;
+  syncTrustedClaudeAssets: (
+    path: WorktreePath,
+    sourceCheckoutPath: string,
+  ) => Promise<WorktreeSettingsWriteResult>;
 }
 
 function isFetchFailure(result: GitCommandResult): boolean {
@@ -82,7 +86,19 @@ export async function ensureWorktree(
       return { status: 'failed', reason: 'reset-failed' };
     }
 
-    return { status: 'reused', path: targetPath };
+    const reusedSyncResult = await deps.syncTrustedClaudeAssets(
+      targetPath,
+      input.sourceCheckoutPath,
+    );
+    if (reusedSyncResult.status === 'failed') {
+      return { status: 'failed', reason: 'claude-assets-sync-failed' };
+    }
+
+    const reusedSettingsResult = await deps.writeWorktreeSettings(targetPath);
+    const reusedSettingsWarning =
+      reusedSettingsResult.status === 'failed' ? (reusedSettingsResult.reason ?? 'unknown') : null;
+
+    return { status: 'reused', path: targetPath, settingsWarning: reusedSettingsWarning };
   }
 
   if (alreadyExists) {
@@ -110,6 +126,11 @@ export async function ensureWorktree(
   });
   if (addResult.exitCode !== 0) {
     return { status: 'failed', reason: 'worktree-add-failed' };
+  }
+
+  const syncResult = await deps.syncTrustedClaudeAssets(targetPath, input.sourceCheckoutPath);
+  if (syncResult.status === 'failed') {
+    return { status: 'failed', reason: 'claude-assets-sync-failed' };
   }
 
   const settingsResult = await deps.writeWorktreeSettings(targetPath);

@@ -19,6 +19,7 @@ import type {
   WorktreeEntry,
   WorktreeIdentity,
 } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+import { syncTrustedClaudeAssets } from '@/modules/worktree-management/services/trustedClaudeAssetsSync.js';
 import { writeWorktreeSettings } from '@/modules/worktree-management/services/worktreeSettingsWriter.js';
 import { ensureWorktree } from '@/modules/worktree-management/usecases/ensureWorktree.usecase.js';
 import { removeWorktree } from '@/modules/worktree-management/usecases/removeWorktree.usecase.js';
@@ -52,6 +53,7 @@ export class WorktreeFileSystemGateway implements WorktreeGateway {
         worktreeExists: async (path) => existsSync(path),
         removeDirectory: async (path) => rmSync(path, { recursive: true, force: true }),
         writeWorktreeSettings,
+        syncTrustedClaudeAssets,
       },
     );
   }
