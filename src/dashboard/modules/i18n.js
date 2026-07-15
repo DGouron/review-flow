@@ -193,6 +193,10 @@ const translations = {
     'settings.maxConcurrentReviews': 'Max concurrent reviews (1-10)',
     'settings.maxConcurrentReviewsHint':
       'How many reviews of this project can run at the same time. The header capacity total is the sum across all projects.',
+    'settings.maxDiffLines': 'Max diff size (lines)',
+    'settings.maxDiffLinesPlaceholder': 'e.g. 2000',
+    'settings.maxDiffLinesHint':
+      'Merge requests larger than this line budget are blocked before review. Leave empty to use the default.',
     'settings.cancel': 'Cancel',
     'settings.save': 'Save',
     'empty.reviewsNoProject': 'Load a project to see reviews',
@@ -667,6 +671,10 @@ const translations = {
     'settings.maxConcurrentReviews': 'Reviews en parallèle max (1-10)',
     'settings.maxConcurrentReviewsHint':
       'Nombre de reviews de ce projet pouvant tourner simultanément. La capacité totale affichée dans le header est la somme inter-projets.',
+    'settings.maxDiffLines': 'Taille de diff max (lignes)',
+    'settings.maxDiffLinesPlaceholder': 'ex. 2000',
+    'settings.maxDiffLinesHint':
+      'Les merge requests dépassant ce budget de lignes sont bloquées avant la revue. Laisser vide pour utiliser la valeur par défaut.',
     'settings.cancel': 'Annuler',
     'settings.save': 'Enregistrer',
     'empty.reviewsNoProject': 'Charger un projet pour voir les reviews',

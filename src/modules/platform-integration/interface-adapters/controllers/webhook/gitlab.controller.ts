@@ -50,11 +50,13 @@ import type { GateClaudeInvocationUseCase } from '@/modules/review-execution/use
 import type { HandleClose } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
 import type { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
+import { createTrackedMrId } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import type { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import type { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
 import type { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
 import type { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
 import type { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
+import type { RecordSizeBlockUseCase } from '@/modules/tracking/usecases/tracking/recordSizeBlock.usecase.js';
 import type { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
 import type { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
 import type { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
@@ -119,6 +121,7 @@ export interface GitLabWebhookDependencies {
   isTrustedActor?: IsTrustedActorUseCase;
   removeWorktree: RemoveWorktreeAction;
   recordBypass: RecordBypassUseCase;
+  recordSizeBlock: RecordSizeBlockUseCase;
   noteCommentPostGateway: NoteCommentPostGateway;
   handlePlatformApproval: HandlePlatformApprovalUseCase;
   approvalRevocationGateway: ApprovalRevocationGateway;
@@ -742,6 +745,14 @@ export async function handleGitLabWebhook(
     logger,
   });
   if (reviewSizeGuard.blocked) {
+    deps.recordSizeBlock.execute({
+      projectPath: repoConfig.localPath,
+      mrId: createTrackedMrId('gitlab', filterResult.projectPath, filterResult.mergeRequestNumber),
+      countedLines: reviewSizeGuard.countedLines,
+      budget: reviewSizeGuard.budget,
+      message: reviewSizeGuard.message,
+      now: deps.now,
+    });
     reply.status(200).send({ status: 'rejected', reason: 'oversized' });
     return;
   }

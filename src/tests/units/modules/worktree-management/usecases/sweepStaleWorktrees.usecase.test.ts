@@ -50,6 +50,7 @@ function buildTrackedMr(overrides: Partial<TrackedMr>): TrackedMr {
     latestScore: null,
     autoFollowup: true,
     bypass: null,
+    sizeBlock: null,
   };
 }
 

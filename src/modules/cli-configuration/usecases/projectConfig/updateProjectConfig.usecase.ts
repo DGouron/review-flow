@@ -12,11 +12,13 @@ export const EDITABLE_PROJECT_CONFIG_KEYS = [
   'externalLink',
   'qualityThreshold',
   'maxConcurrentReviews',
+  'maxDiffLines',
 ] as const;
 
 export const EXTERNAL_LINK_PATTERN = /^https:\/\/.+/;
 const FORBIDDEN_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
 const QUALITY_THRESHOLD_INVALID_MESSAGE = 'qualityThreshold must be an integer between 0 and 10';
+const MAX_DIFF_LINES_INVALID_MESSAGE = 'maxDiffLines must be a positive integer';
 
 const SUPPORTED_LANGUAGES: readonly Language[] = ['en', 'fr'];
 const SUPPORTED_MODELS: readonly ProjectConfig['defaultModel'][] = ['haiku', 'sonnet', 'opus'];
@@ -29,6 +31,7 @@ export type ProjectConfigPatch = Partial<
 > & {
   qualityThreshold?: number | null;
   maxConcurrentReviews?: number | null;
+  maxDiffLines?: number | null;
 };
 
 export interface UpdateProjectConfigInput {
@@ -60,6 +63,13 @@ function validateExternalLink(value: string): { ok: true } | { ok: false; reason
 function validateQualityThreshold(value: number): { ok: true } | { ok: false; reason: string } {
   if (!Number.isInteger(value) || value < 0 || value > 10) {
     return { ok: false, reason: QUALITY_THRESHOLD_INVALID_MESSAGE };
+  }
+  return { ok: true };
+}
+
+function validateMaxDiffLines(value: number): { ok: true } | { ok: false; reason: string } {
+  if (!Number.isInteger(value) || value < 1) {
+    return { ok: false, reason: MAX_DIFF_LINES_INVALID_MESSAGE };
   }
   return { ok: true };
 }
@@ -126,6 +136,14 @@ function mergeConfig(current: ProjectConfig, patch: ProjectConfigPatch): Project
       merged.maxConcurrentReviews = patch.maxConcurrentReviews;
     }
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'maxDiffLines')) {
+    if (patch.maxDiffLines === null || patch.maxDiffLines === undefined) {
+      const { maxDiffLines: _omitted, ...withoutMaxDiffLines } = merged;
+      merged = withoutMaxDiffLines;
+    } else {
+      merged.maxDiffLines = patch.maxDiffLines;
+    }
+  }
   return merged;
 }
 
@@ -162,6 +180,13 @@ export class UpdateProjectConfigUseCase implements UseCase<
         if (!capValidation.ok) {
           return { status: 'invalid', reason: capValidation.reason };
         }
+      }
+    }
+
+    if (typeof sanitized.maxDiffLines === 'number') {
+      const maxDiffLinesValidation = validateMaxDiffLines(sanitized.maxDiffLines);
+      if (!maxDiffLinesValidation.ok) {
+        return { status: 'invalid', reason: maxDiffLinesValidation.reason };
       }
     }
 

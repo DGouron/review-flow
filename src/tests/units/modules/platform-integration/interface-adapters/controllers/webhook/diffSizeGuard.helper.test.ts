@@ -64,6 +64,11 @@ describe('applyDiffSizeGuard', () => {
     });
 
     expect(result.blocked).toBe(true);
+    if (result.blocked) {
+      expect(result.countedLines).toBe(2600);
+      expect(result.budget).toBe(2000);
+      expect(result.message).toContain('2600');
+    }
     expect(harness.noteCommentPostGateway.calls).toHaveLength(1);
     expect(harness.noteCommentPostGateway.calls[0]?.projectPath).toBe('group/project');
     expect(harness.noteCommentPostGateway.calls[0]?.mrNumber).toBe(42);

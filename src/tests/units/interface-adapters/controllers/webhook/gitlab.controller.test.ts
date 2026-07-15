@@ -115,10 +115,12 @@ import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/track
 import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
 import { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
 import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
+import { RecordSizeBlockUseCase } from '@/modules/tracking/usecases/tracking/recordSizeBlock.usecase.js';
 import { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
 import { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
 import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
 import { verifyGitLabSignature, getGitLabEventType } from '@/security/verifier.js';
+import { ChangedFilesFactory } from '@/tests/factories/changedFiles.factory.js';
 import { GitLabEventFactory } from '@/tests/factories/gitLabEvent.factory.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
 import { StubApprovalRevocationGateway } from '@/tests/stubs/approvalRevocation.stub.js';
@@ -245,6 +247,7 @@ function createDefaultDeps(
     getRepositories: vi.fn(() => []),
     removeWorktree,
     recordBypass: new RecordBypassUseCase(trackingGateway),
+    recordSizeBlock: new RecordSizeBlockUseCase(trackingGateway),
     noteCommentPostGateway: new StubNoteCommentPostGateway(),
     handlePlatformApproval,
     approvalRevocationGateway: new StubApprovalRevocationGateway(),
@@ -597,6 +600,33 @@ describe('handleGitLabWebhook', () => {
       expect(defaultDeps.enforceBudget.execute).toHaveBeenCalled();
       expect(enqueueReview).toHaveBeenCalled();
       expect(defaultDeps.broadcastBudgetExceeded).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('review-mode size guard', () => {
+    it('persists a sizeBlock on the tracked MR when the review is blocked for size', async () => {
+      const changedFilesFetchGateway = new StubChangedFilesFetchGateway();
+      changedFilesFetchGateway.setResponse(
+        42,
+        ChangedFilesFactory.list([{ path: 'src/big.ts', additions: 2400, deletions: 200 }]),
+      );
+      const deps = {
+        ...defaultDeps,
+        guardDiffSize: new GuardDiffSizeUseCase({ changedFilesFetchGateway }),
+      };
+      const event = GitLabEventFactory.createWithReviewerAdded('claude-bot');
+      const request = { body: event, headers: {} } as unknown as FastifyRequest;
+
+      await handleGitLabWebhook(request, mockReply, logger, deps);
+
+      expect(mockGateway.update).toHaveBeenCalledWith(
+        expect.any(String),
+        'gitlab-test-org/test-project-42',
+        expect.objectContaining({
+          sizeBlock: expect.objectContaining({ countedLines: 2600, budget: 2000 }),
+        }),
+      );
+      expect(enqueueReview).not.toHaveBeenCalled();
     });
   });
 

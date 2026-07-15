@@ -4,6 +4,7 @@ import {
   buildSettingsViewModel,
   renderSettingsModalHtml,
   validateExternalLink,
+  validateMaxDiffLines,
   validateQualityThreshold,
   extractFormPayload,
 } from '@/dashboard/modules/settingsModal.js';
@@ -76,6 +77,7 @@ describe('settingsModal — renderSettingsModalHtml', () => {
       externalLink: '',
       qualityThreshold: '',
       maxConcurrentReviews: '2',
+      maxDiffLines: '',
       projectName: 'A',
     });
 
@@ -92,6 +94,7 @@ describe('settingsModal — renderSettingsModalHtml', () => {
       externalLink: '',
       qualityThreshold: '',
       maxConcurrentReviews: '2',
+      maxDiffLines: '',
       projectName: 'A',
     });
 
@@ -109,6 +112,7 @@ describe('settingsModal — renderSettingsModalHtml', () => {
       externalLink: 'https://notion.so/x',
       qualityThreshold: '',
       maxConcurrentReviews: '2',
+      maxDiffLines: '',
       projectName: 'A',
     });
 
@@ -125,6 +129,7 @@ describe('settingsModal — renderSettingsModalHtml', () => {
       externalLink: '',
       qualityThreshold: '',
       maxConcurrentReviews: '2',
+      maxDiffLines: '',
       projectName: 'frontend',
     });
 
@@ -141,6 +146,7 @@ describe('settingsModal — renderSettingsModalHtml', () => {
       externalLink: '',
       qualityThreshold: '',
       maxConcurrentReviews: '2',
+      maxDiffLines: '',
       projectName: 'A',
     });
 
@@ -255,6 +261,7 @@ describe('settingsModal — renderSettingsModalHtml renders qualityThreshold inp
       externalLink: '',
       qualityThreshold: '7',
       maxConcurrentReviews: '2',
+      maxDiffLines: '',
       projectName: 'A',
     });
 
@@ -273,6 +280,7 @@ describe('settingsModal — renderSettingsModalHtml renders qualityThreshold inp
       externalLink: '',
       qualityThreshold: '',
       maxConcurrentReviews: '2',
+      maxDiffLines: '',
       projectName: 'A',
     });
 
@@ -317,5 +325,54 @@ describe('settingsModal — validateQualityThreshold', () => {
       ok: false,
       message: 'Le seuil doit être un entier entre 0 et 10',
     });
+  });
+});
+
+describe('settingsModal — validateMaxDiffLines', () => {
+  it('accepts an empty string (means clear)', () => {
+    expect(validateMaxDiffLines('')).toEqual({ ok: true });
+  });
+
+  it('accepts positive integer values', () => {
+    for (const value of ['1', '1500', '99999']) {
+      expect(validateMaxDiffLines(value)).toEqual({ ok: true });
+    }
+  });
+
+  it('rejects zero and negative values', () => {
+    expect(validateMaxDiffLines('0').ok).toBe(false);
+    expect(validateMaxDiffLines('-5').ok).toBe(false);
+  });
+
+  it('rejects non-integer values', () => {
+    expect(validateMaxDiffLines('12.5').ok).toBe(false);
+  });
+
+  it('rejects non-numeric strings', () => {
+    expect(validateMaxDiffLines('abc').ok).toBe(false);
+  });
+});
+
+describe('settingsModal — renderSettingsModalHtml renders maxDiffLines input', () => {
+  it('renders a number input pre-filled with the maxDiffLines value', () => {
+    const viewModel = buildSettingsViewModel({
+      config: {
+        github: false,
+        gitlab: true,
+        defaultModel: 'sonnet',
+        reviewSkill: 'review',
+        reviewFollowupSkill: 'review-followup',
+        language: 'fr',
+        retentionDays: 14,
+        maxDiffLines: 1500,
+      },
+      projectName: 'A',
+    });
+
+    const html = renderSettingsModalHtml(viewModel);
+
+    expect(viewModel.maxDiffLines).toBe('1500');
+    expect(html).toContain('name="maxDiffLines"');
+    expect(html).toContain('value="1500"');
   });
 });

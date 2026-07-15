@@ -180,6 +180,8 @@
           <button id="focus-strip-toggle" class="focus-toggle-btn" onclick="toggleFocusStripMode()"></button>
         </div>
 
+        <section id="size-block-section" class="size-block-section" aria-label="Merge requests blocked for size"></section>
+
         <section id="overview-section" class="overview-section" aria-label="Multi-project overview"></section>
 
         <div id="data-loading-state" class="data-loading hidden" role="status" aria-live="polite">
@@ -434,8 +436,15 @@
       validateExternalLink,
       validateQualityThreshold,
       validateMaxConcurrentReviews,
+      validateMaxDiffLines,
       extractFormPayload,
     } from './modules/settingsModal.js';
+    import {
+      buildSizeBlockPanelModel,
+      renderSizeBlockPanelHtml,
+      fetchSizeBlocks,
+      triggerForceLaunch,
+    } from './modules/sizeBlockPanel.js';
     import {
       buildHeaderCapacityViewModel,
       renderHeaderCapacityBadgeHtml,
@@ -2643,9 +2652,16 @@
           if (errorEl) errorEl.textContent = capValidation.message;
           return;
         }
+        const maxDiffLinesRaw = payload.maxDiffLines ?? '';
+        const maxDiffLinesValidation = validateMaxDiffLines(maxDiffLinesRaw);
+        if (!maxDiffLinesValidation.ok) {
+          if (errorEl) errorEl.textContent = maxDiffLinesValidation.message;
+          return;
+        }
         const requestBody = { ...payload };
         requestBody.qualityThreshold = thresholdRaw === '' ? null : Number(thresholdRaw);
         requestBody.maxConcurrentReviews = Number(capRaw);
+        requestBody.maxDiffLines = maxDiffLinesRaw === '' ? null : Number(maxDiffLinesRaw);
         try {
           const response = await fetch(
             `${API_URL}/api/project-config?path=${encodeURIComponent(activeTabId)}`,
@@ -3643,6 +3659,48 @@
 
     refreshWorktreeSection({ animate: true });
     setInterval(() => refreshWorktreeSection({ animate: false }), 5000);
+
+    const sizeBlockSection = document.getElementById('size-block-section');
+
+    function bindForceLaunchButtons() {
+      if (sizeBlockSection === null) return;
+      const buttons = sizeBlockSection.querySelectorAll('[data-action="force-launch"]');
+      buttons.forEach((button) => {
+        button.addEventListener('click', async () => {
+          if (button.dataset.busy === '1') return;
+          const mrId = button.dataset.mrId;
+          const projectPath = button.dataset.projectPath;
+          if (!mrId || !projectPath) return;
+
+          button.dataset.busy = '1';
+          try {
+            const result = await triggerForceLaunch({ mrId, projectPath });
+            if (!result.success) {
+              button.classList.add('size-block-force-failed');
+              window.setTimeout(() => button.classList.remove('size-block-force-failed'), 1200);
+            }
+          } finally {
+            button.dataset.busy = '0';
+            await refreshSizeBlockSection();
+          }
+        });
+      });
+    }
+
+    async function refreshSizeBlockSection() {
+      if (sizeBlockSection === null) return;
+      try {
+        const payload = await fetchSizeBlocks();
+        const viewModel = buildSizeBlockPanelModel(payload);
+        sizeBlockSection.innerHTML = renderSizeBlockPanelHtml(viewModel);
+        bindForceLaunchButtons();
+      } catch (error) {
+        sizeBlockSection.innerHTML = '';
+      }
+    }
+
+    refreshSizeBlockSection();
+    setInterval(() => refreshSizeBlockSection(), 5000);
 
     // === Operator's Console boot animations ===
 

@@ -96,6 +96,7 @@ export class TrackAssignmentUseCase implements UseCase<TrackAssignmentInput, Tra
       latestScore: null,
       autoFollowup: true,
       bypass: null,
+      sizeBlock: null,
     };
 
     this.trackingGateway.create(projectPath, trackedMr);

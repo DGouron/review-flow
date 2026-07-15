@@ -75,6 +75,7 @@ import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/track
 import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
 import { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
 import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
+import { RecordSizeBlockUseCase } from '@/modules/tracking/usecases/tracking/recordSizeBlock.usecase.js';
 import { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
 import { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
 import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
@@ -216,6 +217,7 @@ function createDeps(
     getRepositories: vi.fn(() => []),
     removeWorktree,
     recordBypass: new RecordBypassUseCase(trackingGateway),
+    recordSizeBlock: new RecordSizeBlockUseCase(trackingGateway),
     noteCommentPostGateway: new StubNoteCommentPostGateway(),
     handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGateway),
     approvalRevocationGateway: new StubApprovalRevocationGateway(),
