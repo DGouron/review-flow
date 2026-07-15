@@ -12,10 +12,16 @@ interface StubFileSystem {
   existingPaths: Set<string>;
   settingsWrites: { path: string; content: string }[];
   removedDirectories: string[];
+  assetSyncs: { path: string; sourceCheckoutPath: string }[];
 }
 
 function buildStubFileSystem(): StubFileSystem {
-  return { existingPaths: new Set(), settingsWrites: [], removedDirectories: [] };
+  return {
+    existingPaths: new Set(),
+    settingsWrites: [],
+    removedDirectories: [],
+    assetSyncs: [],
+  };
 }
 
 function buildDeps(
@@ -32,6 +38,10 @@ function buildDeps(
     },
     writeWorktreeSettings: async (path) => {
       fileSystem.settingsWrites.push({ path, content: 'settings' });
+      return { status: 'ok' };
+    },
+    syncTrustedClaudeAssets: async (path, sourceCheckoutPath) => {
+      fileSystem.assetSyncs.push({ path, sourceCheckoutPath });
       return { status: 'ok' };
     },
     ...overrides,
@@ -70,6 +80,7 @@ describe('ensureWorktree use case', () => {
     expect(kinds).toEqual(['worktree-prune', 'fetch', 'worktree-add']);
     expect(executor.callsOfKind('worktree-add')[0]?.args).toContain(expectedPath);
     expect(fileSystem.settingsWrites).toEqual([{ path: expectedPath, content: 'settings' }]);
+    expect(fileSystem.assetSyncs).toEqual([{ path: expectedPath, sourceCheckoutPath: '/repo' }]);
   });
 
   it('reuses a healthy existing worktree by fast-forwarding it', async () => {
@@ -85,11 +96,67 @@ describe('ensureWorktree use case', () => {
       buildDeps(executor, fileSystem),
     );
 
-    expect(result).toEqual({ status: 'reused', path: expectedPath });
+    expect(result).toEqual({ status: 'reused', path: expectedPath, settingsWarning: null });
     const kinds = executor.calls.map((c) => c.kind);
     expect(kinds).toEqual(['worktree-prune', 'rev-parse-toplevel', 'fetch', 'reset-hard']);
     expect(executor.callsOfKind('worktree-add')).toHaveLength(0);
     expect(fileSystem.removedDirectories).toEqual([]);
+    expect(fileSystem.assetSyncs).toEqual([{ path: expectedPath, sourceCheckoutPath: '/repo' }]);
+    expect(fileSystem.settingsWrites).toEqual([{ path: expectedPath, content: 'settings' }]);
+  });
+
+  it('fails the ensure when the trusted assets sync fails on a fresh create', async () => {
+    const result = await ensureWorktree(
+      {
+        identity,
+        sourceBranch: 'feat/x',
+        source: { kind: 'origin' },
+        sourceCheckoutPath: '/repo',
+      },
+      buildDeps(executor, fileSystem, {
+        syncTrustedClaudeAssets: async () => ({ status: 'failed', reason: 'EACCES' }),
+      }),
+    );
+
+    expect(result).toEqual({ status: 'failed', reason: 'claude-assets-sync-failed' });
+    expect(fileSystem.settingsWrites).toEqual([]);
+  });
+
+  it('fails the ensure when the trusted assets sync fails on a reused worktree', async () => {
+    fileSystem.existingPaths.add(expectedPath);
+
+    const result = await ensureWorktree(
+      {
+        identity,
+        sourceBranch: 'feat/x',
+        source: { kind: 'origin' },
+        sourceCheckoutPath: '/repo',
+      },
+      buildDeps(executor, fileSystem, {
+        syncTrustedClaudeAssets: async () => ({ status: 'failed', reason: 'EACCES' }),
+      }),
+    );
+
+    expect(result).toEqual({ status: 'failed', reason: 'claude-assets-sync-failed' });
+    expect(fileSystem.settingsWrites).toEqual([]);
+  });
+
+  it('surfaces a settings warning on a reused worktree without failing', async () => {
+    fileSystem.existingPaths.add(expectedPath);
+
+    const result = await ensureWorktree(
+      {
+        identity,
+        sourceBranch: 'feat/x',
+        source: { kind: 'origin' },
+        sourceCheckoutPath: '/repo',
+      },
+      buildDeps(executor, fileSystem, {
+        writeWorktreeSettings: async () => ({ status: 'failed', reason: 'disk-full' }),
+      }),
+    );
+
+    expect(result).toEqual({ status: 'reused', path: expectedPath, settingsWarning: 'disk-full' });
   });
 
   it('self-heals a broken worktree directory by removing it and recreating', async () => {

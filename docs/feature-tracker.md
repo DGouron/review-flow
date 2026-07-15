@@ -80,3 +80,4 @@
 | Mark any review as merged | [215-mark-any-review-as-merged](specs/215-mark-any-review-as-merged.md) — [plan](plans/215-mark-any-review-as-merged.plan.md) — [report](reports/215-mark-any-review-as-merged.report.md) | implemented | 2026-06-25 |
 | Add a review-advanced template with sequential audits, security block, cited lessons | [216-review-advanced-template](specs/216-review-advanced-template.md) — [report](reports/216-review-advanced-template.report.md) | implemented | 2026-07-14 |
 | Add a followup-advanced template that never trusts commit messages | [217-followup-advanced-template](specs/217-followup-advanced-template.md) — [report](reports/217-followup-advanced-template.report.md) | implemented | 2026-07-14 |
+| Sync trusted Claude assets into the review worktree | [218-worktree-trusted-claude-assets](specs/218-worktree-trusted-claude-assets.md) — [report](reports/218-worktree-trusted-claude-assets.report.md) | implemented | 2026-07-15 |

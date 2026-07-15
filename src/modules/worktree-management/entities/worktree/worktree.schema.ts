@@ -28,7 +28,7 @@ export interface WorktreeEntry {
 
 export type EnsureResult =
   | { status: 'created'; path: WorktreePath; settingsWarning: string | null }
-  | { status: 'reused'; path: WorktreePath }
+  | { status: 'reused'; path: WorktreePath; settingsWarning: string | null }
   | { status: 'failed'; reason: string };
 
 export type RemoveResult =

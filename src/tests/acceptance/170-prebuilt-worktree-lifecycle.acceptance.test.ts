@@ -67,6 +67,7 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
             writeSettingsCalls.push(path);
             return { status: 'ok' };
           },
+          syncTrustedClaudeAssets: async () => ({ status: 'ok' }),
         },
       );
 
@@ -96,7 +97,7 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
       expect(writeSettingsCalls).toEqual([expectedPath]);
     });
 
-    it('Scenario 2 — followup on existing MR: ensureWorktree prunes + fetches inside worktree + reset --hard (no worktree-add, no settings rewrite); returns reused', async () => {
+    it('Scenario 2 — followup on existing MR: ensureWorktree prunes + fetches inside worktree + reset --hard (no worktree-add) + rewrites settings; returns reused', async () => {
       const executor = new StubGitCommandExecutor();
       const writeSettingsCalls: WorktreePath[] = [];
 
@@ -115,12 +116,13 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
             writeSettingsCalls.push(path);
             return { status: 'ok' };
           },
+          syncTrustedClaudeAssets: async () => ({ status: 'ok' }),
         },
       );
 
       const expectedPath = deriveWorktreePath(baseIdentity);
 
-      expect(result).toEqual({ status: 'reused', path: expectedPath });
+      expect(result).toEqual({ status: 'reused', path: expectedPath, settingsWarning: null });
 
       const pruneCalls = executor.callsOfKind('worktree-prune');
       expect(pruneCalls).toHaveLength(1);
@@ -137,7 +139,7 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
       expect(resetCalls[0]?.cwd).toBe(expectedPath);
 
       expect(executor.callsOfKind('worktree-add')).toHaveLength(0);
-      expect(writeSettingsCalls).toEqual([]);
+      expect(writeSettingsCalls).toEqual([expectedPath]);
     });
   });
 
@@ -389,6 +391,7 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
           worktreeExists: async () => false,
           removeDirectory: async () => {},
           writeWorktreeSettings: async () => ({ status: 'ok' }),
+          syncTrustedClaudeAssets: async () => ({ status: 'ok' }),
         },
       );
 
