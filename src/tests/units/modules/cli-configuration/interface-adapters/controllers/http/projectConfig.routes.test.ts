@@ -413,6 +413,37 @@ describe('projectConfigRoutes — PATCH /api/project-config', () => {
     await app.close();
   });
 
+  it('round-trips a numeric maxDiffLines through the patch', async () => {
+    const gateway = new StubProjectConfigGateway();
+    gateway.set('/repo/A', baseConfig());
+    const app = await buildAppWithPatch(gateway);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/api/project-config?path=' + encodeURIComponent('/repo/A'),
+      payload: { maxDiffLines: 1500 },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().config.maxDiffLines).toBe(1500);
+    await app.close();
+  });
+
+  it('rejects a negative maxDiffLines with 400', async () => {
+    const gateway = new StubProjectConfigGateway();
+    gateway.set('/repo/A', baseConfig());
+    const app = await buildAppWithPatch(gateway);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/api/project-config?path=' + encodeURIComponent('/repo/A'),
+      payload: { maxDiffLines: -5 },
+    });
+
+    expect(response.statusCode).toBe(400);
+    await app.close();
+  });
+
   it('returns 400 + French message when externalLink is http://', async () => {
     const gateway = new StubProjectConfigGateway();
     gateway.set('/repo/A', baseConfig());

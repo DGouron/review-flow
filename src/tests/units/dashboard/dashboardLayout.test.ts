@@ -112,6 +112,7 @@ describe('SPEC-181 — Dashboard Empty-State Restructure & Team-First Layout', (
       expect(childIds).toEqual([
         '#team-section',
         '.focus-strip',
+        '#size-block-section',
         '#overview-section',
         '#data-loading-state',
         '#config-info',

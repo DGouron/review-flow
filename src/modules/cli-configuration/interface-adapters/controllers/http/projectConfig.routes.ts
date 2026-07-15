@@ -31,6 +31,7 @@ const patchBodySchema = z
     externalLink: z.unknown().optional(),
     qualityThreshold: z.unknown().optional(),
     maxConcurrentReviews: z.unknown().optional(),
+    maxDiffLines: z.unknown().optional(),
   })
   .passthrough();
 
@@ -109,6 +110,25 @@ function extractPatch(body: Record<string, unknown>): ProjectConfigPatch {
       }
     } else {
       Object.assign(patch, { maxConcurrentReviews: raw });
+    }
+  }
+  if ('maxDiffLines' in body) {
+    const raw = body.maxDiffLines;
+    if (raw === null) {
+      patch.maxDiffLines = null;
+    } else if (typeof raw === 'number') {
+      patch.maxDiffLines = raw;
+    } else if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      if (trimmed === '') {
+        patch.maxDiffLines = null;
+      } else if (/^-?\d+$/.test(trimmed)) {
+        patch.maxDiffLines = Number(trimmed);
+      } else {
+        Object.assign(patch, { maxDiffLines: raw });
+      }
+    } else {
+      Object.assign(patch, { maxDiffLines: raw });
     }
   }
   return patch;

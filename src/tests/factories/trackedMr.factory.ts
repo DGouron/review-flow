@@ -31,6 +31,7 @@ export class TrackedMrFactory {
       latestScore: null,
       autoFollowup: true,
       bypass: null,
+      sizeBlock: null,
       ...overrides,
     };
   }

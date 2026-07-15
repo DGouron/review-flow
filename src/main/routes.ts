@@ -148,11 +148,15 @@ import { SummarizeTokenUsageUseCase } from '@/modules/token-accounting/usecases/
 import { UpdateBudgetUseCase } from '@/modules/token-accounting/usecases/updateBudget/updateBudget.usecase.js';
 import { mrTrackingRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTracking.routes.js';
 import { mrTrackingAdvancedRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTrackingAdvanced.routes.js';
+import { sizeBlocksRoutes } from '@/modules/tracking/interface-adapters/controllers/http/sizeBlocks.routes.js';
+import { SizeBlockListPresenter } from '@/modules/tracking/interface-adapters/presenters/sizeBlockList.presenter.js';
 import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
+import { ForceLaunchBlockedReviewUseCase } from '@/modules/tracking/usecases/tracking/forceLaunchBlockedReview.usecase.js';
 import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
 import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
 import { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
 import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
+import { RecordSizeBlockUseCase } from '@/modules/tracking/usecases/tracking/recordSizeBlock.usecase.js';
 import { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
 import { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
 import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
@@ -546,6 +550,27 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     presenter: new PendingReviewPresenter(),
   });
 
+  await app.register(sizeBlocksRoutes, {
+    getRepositories: () => deps.config.repositories,
+    reviewRequestTrackingGateway: trackingGw,
+    sizeBlockListPresenter: new SizeBlockListPresenter(),
+    forceLaunchBlockedReview: new ForceLaunchBlockedReviewUseCase({
+      reviewRequestTrackingGateway: trackingGw,
+      enqueue: enqueueReview,
+      logger: deps.logger,
+    }),
+    resolveReviewProcessor: (job) =>
+      processorRegistry.resolve({
+        pendingReviewRequestId: job.id,
+        job,
+        triggerSource: 'dashboard-manual',
+        platform: job.platform,
+        jobType: 'review',
+        createdAt: new Date().toISOString(),
+      }),
+    logger: deps.logger,
+  });
+
   // TTL must be >= the platform's maximum webhook retry window so a
   // legitimately re-delivered event past that window is reprocessed, while any
   // redelivery/replay inside it is acted upon at most once. 24h is a safe upper
@@ -617,6 +642,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
       isTrustedActor,
       removeWorktree: removeWorktreeAction,
       recordBypass: new RecordBypassUseCase(trackingGw),
+      recordSizeBlock: new RecordSizeBlockUseCase(trackingGw),
       noteCommentPostGateway: new EgressScannedNoteCommentPostGateway(
         new GitLabNoteCommentPostCliGateway(defaultGitLabExecutor),
         egressScanner,
@@ -698,6 +724,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
       gateClaudeInvocation,
       removeWorktree: removeWorktreeAction,
       recordBypass: new RecordBypassUseCase(trackingGw),
+      recordSizeBlock: new RecordSizeBlockUseCase(trackingGw),
       noteCommentPostGateway: new EgressScannedNoteCommentPostGateway(
         new GitHubNoteCommentPostCliGateway(defaultGitHubExecutor),
         egressScanner,

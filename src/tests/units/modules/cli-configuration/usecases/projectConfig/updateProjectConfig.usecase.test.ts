@@ -90,6 +90,38 @@ describe('UpdateProjectConfigUseCase', () => {
     expect(persisted?.externalLink).toBeUndefined();
   });
 
+  it('persists a valid maxDiffLines value', () => {
+    const gateway = new StubProjectConfigGateway();
+    gateway.set('/repo/A', base());
+    const usecase = new UpdateProjectConfigUseCase(gateway);
+
+    const result = usecase.execute({ path: '/repo/A', patch: { maxDiffLines: 1500 } });
+
+    expect(result.status).toBe('success');
+    expect(gateway.get('/repo/A')?.maxDiffLines).toBe(1500);
+  });
+
+  it('removes maxDiffLines from the persisted config when set to null', () => {
+    const gateway = new StubProjectConfigGateway();
+    gateway.set('/repo/A', base({ maxDiffLines: 2000 }));
+    const usecase = new UpdateProjectConfigUseCase(gateway);
+
+    const result = usecase.execute({ path: '/repo/A', patch: { maxDiffLines: null } });
+
+    expect(result.status).toBe('success');
+    expect(gateway.get('/repo/A')?.maxDiffLines).toBeUndefined();
+  });
+
+  it('rejects a non-positive maxDiffLines value', () => {
+    const gateway = new StubProjectConfigGateway();
+    gateway.set('/repo/A', base());
+    const usecase = new UpdateProjectConfigUseCase(gateway);
+
+    const result = usecase.execute({ path: '/repo/A', patch: { maxDiffLines: -5 } });
+
+    expect(result.status).toBe('invalid');
+  });
+
   it('rejects http:// with "Le lien doit être en HTTPS"', () => {
     const gateway = new StubProjectConfigGateway();
     gateway.set('/repo/A', base());

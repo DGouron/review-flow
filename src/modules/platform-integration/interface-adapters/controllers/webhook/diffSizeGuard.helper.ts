@@ -63,9 +63,13 @@ async function postSplitComment(input: ApplyDiffSizeGuardInput, message: string)
   }
 }
 
+export type DiffSizeGuardResult =
+  | { blocked: false }
+  | { blocked: true; countedLines: number; budget: number; message: string };
+
 export async function applyDiffSizeGuard(
   input: ApplyDiffSizeGuardInput,
-): Promise<{ blocked: boolean }> {
+): Promise<DiffSizeGuardResult> {
   const budget = input.deps.getMaxDiffLines(input.localPath);
   const verdict = input.deps.guardDiffSize.execute({
     projectIdentifier: input.projectIdentifier,
@@ -94,5 +98,10 @@ export async function applyDiffSizeGuard(
     'Merge request blocked for oversized diff',
   );
 
-  return { blocked: true };
+  return {
+    blocked: true,
+    countedLines: verdict.countedLines,
+    budget: verdict.budget,
+    message: verdict.message,
+  };
 }

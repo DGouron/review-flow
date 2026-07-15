@@ -20,12 +20,14 @@ const EDITABLE_KEYS = [
   'externalLink',
   'qualityThreshold',
   'maxConcurrentReviews',
+  'maxDiffLines',
 ];
 
 const SUPPORTED_LANGUAGES = ['fr', 'en'];
 const SUPPORTED_MODELS = ['haiku', 'sonnet', 'opus'];
 
 const QUALITY_THRESHOLD_ERROR = 'Le seuil doit être un entier entre 0 et 10';
+const MAX_DIFF_LINES_ERROR = 'Le budget de lignes doit être un entier positif';
 
 const PROJECT_CAP_REQUIRED_MESSAGE = 'La valeur est obligatoire';
 const PROJECT_CAP_NOT_INTEGER_MESSAGE = 'La valeur doit être un nombre entier';
@@ -41,6 +43,7 @@ const DEFAULT_MAX_CONCURRENT_REVIEWS = 2;
  * @property {string} [externalLink]
  * @property {number} [qualityThreshold]
  * @property {number} [maxConcurrentReviews]
+ * @property {number} [maxDiffLines]
  * @property {boolean} [github]
  * @property {boolean} [gitlab]
  * @property {number} [retentionDays]
@@ -61,6 +64,7 @@ const DEFAULT_MAX_CONCURRENT_REVIEWS = 2;
  * @property {string} externalLink
  * @property {string} qualityThreshold
  * @property {string} maxConcurrentReviews
+ * @property {string} maxDiffLines
  * @property {string} projectName
  */
 
@@ -82,6 +86,7 @@ export function buildSettingsViewModel(input) {
       typeof config.maxConcurrentReviews === 'number'
         ? String(config.maxConcurrentReviews)
         : String(DEFAULT_MAX_CONCURRENT_REVIEWS),
+    maxDiffLines: typeof config.maxDiffLines === 'number' ? String(config.maxDiffLines) : '',
     projectName:
       typeof input.projectName === 'string' && input.projectName.length > 0
         ? input.projectName
@@ -184,6 +189,12 @@ export function renderSettingsModalHtml(viewModel) {
         <span class="settings-modal__hint">${escapeHtml(t('settings.maxConcurrentReviewsHint'))}</span>
       </label>
 
+      <label class="settings-modal__field">
+        <span class="settings-modal__label">${escapeHtml(t('settings.maxDiffLines'))}</span>
+        <input name="maxDiffLines" type="number" value="${escapeHtml(viewModel.maxDiffLines)}" min="1" step="1" placeholder="${escapeHtml(t('settings.maxDiffLinesPlaceholder'))}" class="settings-modal__input" />
+        <span class="settings-modal__hint">${escapeHtml(t('settings.maxDiffLinesHint'))}</span>
+      </label>
+
       <p class="settings-modal__error" aria-live="polite"></p>
 
       <div class="settings-modal__actions">
@@ -209,6 +220,25 @@ export function validateQualityThreshold(value) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0 || parsed > 10) {
     return { ok: false, message: QUALITY_THRESHOLD_ERROR };
+  }
+  return { ok: true };
+}
+
+/**
+ * Validates maxDiffLines input: empty string means "clear", otherwise must parse
+ * as a positive integer. Mirrors server-side validation in updateProjectConfig.usecase.ts.
+ *
+ * @param {string} value
+ * @returns {{ ok: true } | { ok: false; message: string }}
+ */
+export function validateMaxDiffLines(value) {
+  if (value === '') return { ok: true };
+  if (!/^-?\d+$/.test(value)) {
+    return { ok: false, message: MAX_DIFF_LINES_ERROR };
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return { ok: false, message: MAX_DIFF_LINES_ERROR };
   }
   return { ok: true };
 }

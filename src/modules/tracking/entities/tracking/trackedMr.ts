@@ -36,12 +36,21 @@ export interface TrackedMr {
   autoFollowup: boolean;
 
   bypass: BypassRecord | null;
+
+  sizeBlock: SizeBlockRecord | null;
 }
 
 export interface BypassRecord {
   author: string;
   reason: string;
   recordedAt: string;
+}
+
+export interface SizeBlockRecord {
+  countedLines: number;
+  budget: number;
+  message: string;
+  blockedAt: string;
 }
 
 export function createTrackedMrId(

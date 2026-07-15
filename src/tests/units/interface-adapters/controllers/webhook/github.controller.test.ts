@@ -180,6 +180,7 @@ function createMockDeps(): GitHubWebhookDependencies {
     getRepositories: vi.fn(() => []),
     removeWorktree,
     recordBypass: { execute: vi.fn(() => ({ kind: 'no-marker' })) },
+    recordSizeBlock: { execute: vi.fn(() => ({ kind: 'recorded' })) },
     noteCommentPostGateway: { postComment: vi.fn(async () => undefined) },
     handlePlatformApproval,
     approvalRevocationGateway: { revoke: vi.fn(async () => undefined) },
@@ -447,6 +448,28 @@ describe('handleGitHubWebhook', () => {
       expect(acceptedDeps.enforceBudget.execute).toHaveBeenCalled();
       expect(enqueueReview).toHaveBeenCalled();
       expect(acceptedDeps.broadcastBudgetExceeded).not.toHaveBeenCalled();
+    });
+
+    it('records a sizeBlock and skips enqueue when the review is blocked for size', async () => {
+      const blockedDeps = createMockDeps();
+      (blockedDeps.guardDiffSize.execute as ReturnType<typeof vi.fn>).mockReturnValue({
+        kind: 'blocked',
+        countedLines: 2600,
+        budget: 2000,
+        message: 'trop gros',
+      });
+      const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
+      const request = { body: event, headers: {} } as unknown as FastifyRequest;
+
+      await handleGitHubWebhook(request, mockReply, logger, blockedDeps);
+
+      const recordSizeBlock = (
+        blockedDeps as unknown as { recordSizeBlock: { execute: ReturnType<typeof vi.fn> } }
+      ).recordSizeBlock;
+      expect(recordSizeBlock.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ countedLines: 2600, budget: 2000, message: 'trop gros' }),
+      );
+      expect(enqueueReview).not.toHaveBeenCalled();
     });
   });
 
