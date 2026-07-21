@@ -4,7 +4,6 @@ import type { Logger } from 'pino';
 import { findRepositoryByProjectPath, type RepositoryConfig } from '@/config/loader.js';
 import {
   loadProjectConfig,
-  getProjectAgentsOrFocusDefaults,
   getFollowupAgents,
   getProjectLanguage,
 } from '@/config/projectConfig.js';
@@ -37,9 +36,10 @@ import { processReviewRequest } from '@/modules/platform-integration/usecases/pr
 import type { ProcessWebhook } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import {
-  DEFAULT_AGENTS,
   DEFAULT_FOLLOWUP_AGENTS,
+  withMetaSteps,
 } from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
+import type { ProjectPrinciplesGateway } from '@/modules/review-execution/entities/progress/projectPrinciples.gateway.js';
 import type { ReviewContextGateway } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js';
 import type { ProcessorBuilder } from '@/modules/review-execution/services/processorRegistry.js';
 import type {
@@ -48,6 +48,7 @@ import type {
 } from '@/modules/review-execution/usecases/executeReview.usecase.js';
 import type { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
 import type { HandleClose } from '@/modules/review-execution/usecases/handleClose.usecase.js';
+import type { ResolveAuditScopeUseCase } from '@/modules/review-execution/usecases/resolveAuditScope.usecase.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
 import type { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
 import { createTrackedMrId } from '@/modules/tracking/entities/tracking/trackedMr.js';
@@ -130,6 +131,8 @@ export interface GitLabWebhookDependencies {
   guardDiffSize: GuardDiffSizeUseCase;
   getMaxDiffLines: (localPath: string) => number;
   now: () => string;
+  projectPrinciplesGateway: ProjectPrinciplesGateway;
+  resolveAuditScope: ResolveAuditScopeUseCase;
 }
 
 function listEnabledLocalPaths(getRepositories: () => RepositoryConfig[]): string[] {
@@ -806,6 +809,8 @@ type GitLabReviewProcessorDeps = Pick<
   | 'recordCompletion'
   | 'noteCommentPostGateway'
   | 'executeReview'
+  | 'projectPrinciplesGateway'
+  | 'resolveAuditScope'
 >;
 
 export function buildGitLabReviewProcessor(
@@ -818,13 +823,22 @@ export function buildGitLabReviewProcessor(
       if (!repoConfig) {
         throw new Error(`No GitLab repository configured for projectPath "${j.projectPath}"`);
       }
+      const config = loadProjectConfig(j.localPath);
+      const signals = deps.projectPrinciplesGateway.readSignals(j.localPath);
+      const scope = deps.resolveAuditScope.execute({
+        audits: config?.audits ?? null,
+        agents: config?.agents ?? null,
+        focus: config?.reviewFocus ?? null,
+        signals,
+      });
+      j.auditScope = scope;
       await runGitLabReview(deps.executeReview, {
         job: j,
         signal,
         isFollowup: false,
-        agents: getProjectAgentsOrFocusDefaults(j.localPath) ?? DEFAULT_AGENTS,
+        agents: withMetaSteps(scope),
         baseUrl: extractBaseUrl(repoConfig.remoteUrl),
-        qualityThreshold: loadProjectConfig(j.localPath)?.qualityThreshold ?? null,
+        qualityThreshold: config?.qualityThreshold ?? null,
       });
     };
 }

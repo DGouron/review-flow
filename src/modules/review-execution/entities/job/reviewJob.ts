@@ -1,4 +1,5 @@
 import type { ClaudeModelName } from '@/modules/review-execution/entities/modelRouting/modelRouting.schema.js';
+import type { AgentDefinition } from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
 import type { ReviewProgress } from '@/modules/review-execution/entities/progress/progress.type.js';
 import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
 
@@ -32,6 +33,7 @@ export interface ReviewJob {
     filesChanged: number | null;
   };
   sourceForkCloneUrl?: string;
+  auditScope?: AgentDefinition[];
 }
 
 export interface JobStatus {

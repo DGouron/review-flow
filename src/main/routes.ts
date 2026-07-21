@@ -111,6 +111,7 @@ import { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/i
 import { processWebhook } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import { pendingReviewsRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/pendingReviews.routes.js';
 import { reviewRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/reviews.routes.js';
+import { ProjectPrinciplesFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/fileSystem/projectPrinciples.fileSystem.gateway.js';
 import { PendingReviewRequestFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/pendingReviewRequest.fileSystem.gateway.js';
 import { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
 import { GitLabThreadInventoryGateway } from '@/modules/review-execution/interface-adapters/gateways/threadInventory.gitlab.gateway.js';
@@ -124,6 +125,7 @@ import {
   type HandleClose,
 } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import { ListPendingReviewsUseCase } from '@/modules/review-execution/usecases/listPendingReviews.usecase.js';
+import { ResolveAuditScopeUseCase } from '@/modules/review-execution/usecases/resolveAuditScope.usecase.js';
 import { setupWizardRoutes } from '@/modules/setup-wizard/interface-adapters/controllers/http/setupWizard.routes.js';
 import { GitRemoteCliGateway } from '@/modules/setup-wizard/interface-adapters/gateways/gitRemote.cli.gateway.js';
 import { SetupProcessChildProcessGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupProcess.childProcess.gateway.js';
@@ -488,12 +490,16 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     claudeInvokerDeps,
   });
 
+  const projectPrinciplesGateway = new ProjectPrinciplesFileSystemGateway();
+  const resolveAuditScope = new ResolveAuditScopeUseCase();
   const gitLabReviewProcessorDeps = {
     reviewContextGateway: deps.reviewContextGateway,
     diffStatsFetchGateway: new GitLabDiffStatsFetchGateway(defaultGitLabExecutor),
     recordCompletion: new RecordReviewCompletionUseCase(trackingGw),
     noteCommentPostGateway: gitLabNoteCommentPostGateway,
     executeReview: gitLabExecuteReview,
+    projectPrinciplesGateway,
+    resolveAuditScope,
   };
   const gitHubReviewProcessorDeps = {
     reviewContextGateway: deps.reviewContextGateway,
@@ -501,6 +507,8 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     recordCompletion: new RecordReviewCompletionUseCase(trackingGw),
     noteCommentPostGateway: gitHubNoteCommentPostGateway,
     executeReview: gitHubExecuteReview,
+    projectPrinciplesGateway,
+    resolveAuditScope,
   };
   const gitLabReviewProcessorBuilder = buildGitLabReviewProcessor(
     gitLabReviewProcessorDeps,
@@ -658,6 +666,8 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
       }),
       getMaxDiffLines: (localPath: string) =>
         loadProjectConfig(localPath)?.maxDiffLines ?? deps.config.maxDiffLines ?? 2000,
+      projectPrinciplesGateway,
+      resolveAuditScope,
       now: () => new Date().toISOString(),
     });
   });
@@ -739,6 +749,8 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
       }),
       getMaxDiffLines: (localPath: string) =>
         loadProjectConfig(localPath)?.maxDiffLines ?? deps.config.maxDiffLines ?? 2000,
+      projectPrinciplesGateway,
+      resolveAuditScope,
       now: () => new Date().toISOString(),
     });
   });
