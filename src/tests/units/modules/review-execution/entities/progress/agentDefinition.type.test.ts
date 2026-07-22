@@ -6,6 +6,7 @@ import {
   DEFAULT_BACK_AGENTS,
   DEFAULT_FULLSTACK_AGENTS,
   DEFAULT_DOC_AGENTS,
+  withMetaSteps,
 } from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
 import { dedupAgents } from '@/modules/review-execution/entities/progress/reviewFocus.type.js';
 
@@ -98,6 +99,25 @@ describe('DEFAULT_FULLSTACK_AGENTS', () => {
   it('uses dedupAgents from the value object to enforce uniqueness on doubled inputs', () => {
     const result = dedupAgents([...DEFAULT_FULLSTACK_AGENTS, ...DEFAULT_FULLSTACK_AGENTS]);
     expect(result).toEqual(DEFAULT_FULLSTACK_AGENTS);
+  });
+});
+
+describe('withMetaSteps', () => {
+  it('appends threads and report to a principle-only scope', () => {
+    const result = withMetaSteps([{ name: 'solid', displayName: 'SOLID' }]);
+    expect(result.map((agent) => agent.name)).toEqual(['solid', 'threads', 'report']);
+  });
+
+  it('always includes threads and report even for an empty scope', () => {
+    expect(withMetaSteps([]).map((agent) => agent.name)).toEqual(['threads', 'report']);
+  });
+
+  it('does not duplicate meta steps already present in the scope', () => {
+    const result = withMetaSteps([
+      { name: 'solid', displayName: 'SOLID' },
+      { name: 'threads', displayName: 'Threads' },
+    ]);
+    expect(result.map((agent) => agent.name)).toEqual(['solid', 'threads', 'report']);
   });
 });
 

@@ -87,4 +87,27 @@ describe('buildMcpSystemPrompt', () => {
       expect(prompt).toContain('CLAUDE_JOB_DIR');
     });
   });
+
+  describe('SPEC-220 — audit scope injection', () => {
+    it('injects the authoritative audit-scope block when the job carries a scope', () => {
+      const prompt = buildMcpSystemPrompt(
+        buildJob({
+          auditScope: [
+            { name: 'solid', displayName: 'SOLID' },
+            { name: 'testing', displayName: 'Testing' },
+          ],
+        }),
+      );
+
+      expect(prompt).toContain('REVIEW AUDIT SCOPE');
+      expect(prompt).toContain('solid');
+      expect(prompt).toContain('testing');
+    });
+
+    it('omits the audit-scope block when the job has no scope', () => {
+      const prompt = buildMcpSystemPrompt(buildJob({}));
+
+      expect(prompt).not.toContain('REVIEW AUDIT SCOPE');
+    });
+  });
 });

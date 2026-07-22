@@ -99,6 +99,7 @@ import {
   type ProcessWebhookResult,
 } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import { GateClaudeInvocationUseCase } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
+import { ResolveAuditScopeUseCase } from '@/modules/review-execution/usecases/resolveAuditScope.usecase.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
@@ -118,6 +119,7 @@ import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { StubMemberAccessGateway } from '@/tests/stubs/memberAccess.stub.js';
 import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
 import { StubPendingReviewRequestGateway } from '@/tests/stubs/pendingReviewRequest.stub.js';
+import { StubProjectPrinciplesGateway } from '@/tests/stubs/projectPrinciples.stub.js';
 
 const logger = createStubLogger();
 
@@ -235,6 +237,8 @@ function buildBaseDeps(trackingGateway: ReturnType<typeof createMockTrackingGate
     }),
     getMaxDiffLines: (): number => 2000,
     now: (): string => '2026-05-26T12:00:00.000Z',
+    projectPrinciplesGateway: new StubProjectPrinciplesGateway(),
+    resolveAuditScope: new ResolveAuditScopeUseCase(),
   };
 }
 

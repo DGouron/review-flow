@@ -69,6 +69,7 @@ import type {
   GateClaudeInvocationInput,
   GateClaudeInvocationResult,
 } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
+import { ResolveAuditScopeUseCase } from '@/modules/review-execution/usecases/resolveAuditScope.usecase.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
@@ -86,6 +87,7 @@ import { StubChangedFilesFetchGateway } from '@/tests/stubs/changedFilesFetch.st
 import { StubIdempotencyStore } from '@/tests/stubs/idempotencyStore.stub.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
+import { StubProjectPrinciplesGateway } from '@/tests/stubs/projectPrinciples.stub.js';
 
 class StubGateClaudeInvocation {
   invocationCount = 0;
@@ -227,6 +229,8 @@ function createDeps(
     }),
     getMaxDiffLines: (): number => 2000,
     now: (): string => '2026-05-26T12:00:00.000Z',
+    projectPrinciplesGateway: new StubProjectPrinciplesGateway(),
+    resolveAuditScope: new ResolveAuditScopeUseCase(),
     ...overrides,
   };
 }

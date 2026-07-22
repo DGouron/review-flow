@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import type { Logger } from 'pino';
 
 import { getProjectAgents, getFollowupAgents, loadProjectConfig } from '@/config/projectConfig.js';
+import { buildAuditScopeDirective } from '@/frameworks/claude/auditScopeDirective.js';
 import { broadcastBudgetAfterUsage } from '@/frameworks/claude/broadcastBudgetAfterUsage.js';
 import { buildLanguageDirective } from '@/frameworks/claude/languageDirective.js';
 import { logInfo, logWarn, logError } from '@/frameworks/logging/logBuffer.js';
@@ -332,6 +333,7 @@ export type ProgressCallback = (progress: ReviewProgress, event?: ProgressEvent)
  */
 export function buildMcpSystemPrompt(job: ReviewJob): string {
   const reportSuffix = (job.jobType || 'review') === 'followup' ? 'followup' : 'review';
+  const auditScopeDirective = buildAuditScopeDirective(job.auditScope ?? []);
   return `
 # AUTOMATED REVIEW MODE - EXECUTE IMMEDIATELY
 
@@ -431,6 +433,8 @@ The review report is a DELIVERABLE, not a temporary file. Write it with the Writ
 - Do NOT write the report to \`/tmp\`, to \`$CLAUDE_JOB_DIR/tmp\`, or to any other temporary/scratch directory — even if a background-session instruction tells you to place temporary files there. That instruction does NOT apply to the review report; the report saved anywhere other than \`.claude/reviews/\` is LOST and the job FAILS with \`report-missing\`.
 
 ${buildLanguageDirective(job.language ?? 'en')}
+
+${auditScopeDirective}
 `.trim();
 }
 

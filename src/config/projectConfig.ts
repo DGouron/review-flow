@@ -10,6 +10,7 @@ import {
 } from '@/modules/cli-configuration/entities/projectConcurrencyCap/projectConcurrencyCap.valueObject.js';
 import type { RoutingPolicy } from '@/modules/review-execution/entities/modelRouting/modelRouting.schema.js';
 import type { AgentDefinition } from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
+import { isCatalogPrinciple } from '@/modules/review-execution/entities/progress/principleCatalog.type.js';
 import {
   type ReviewFocus,
   REVIEW_FOCUS_VALUES,
@@ -30,6 +31,7 @@ export interface ProjectConfig {
   retentionDays: number;
   agents?: AgentDefinition[];
   followupAgents?: AgentDefinition[];
+  audits?: string[];
   routingPolicy?: RoutingPolicy;
   externalLink?: string;
   qualityThreshold?: number;
@@ -140,6 +142,21 @@ function parseRoutingPolicy(value: unknown): RoutingPolicy | undefined {
 
 function formatReviewFocusValues(): string {
   return REVIEW_FOCUS_VALUES.map((value) => `'${value}'`).join(', ');
+}
+
+function parsePrincipleAudits(value: unknown): string[] | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    throw new Error('Invalid audits: must be an array of principle names');
+  }
+  for (const entry of value) {
+    if (!isCatalogPrinciple(entry)) {
+      throw new Error(`Invalid audit "${String(entry)}": not in principle catalog`);
+    }
+  }
+  return value;
 }
 
 function parseReviewFocus(value: unknown): ReviewFocus | undefined {
@@ -262,6 +279,11 @@ export function parseProjectConfig(parsed: Record<string, unknown>): ProjectConf
   const maxDiffLines = parseMaxDiffLines(parsed.maxDiffLines);
   if (maxDiffLines !== undefined) {
     config.maxDiffLines = maxDiffLines;
+  }
+
+  const audits = parsePrincipleAudits(parsed.audits);
+  if (audits !== undefined) {
+    config.audits = audits;
   }
 
   return config;

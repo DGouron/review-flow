@@ -7,6 +7,7 @@ import {
   getProjectLanguage,
   getProjectRetentionDays,
   getProjectAgentsOrFocusDefaults,
+  parseProjectConfig,
 } from '@/config/projectConfig.js';
 import { clearLogs, getLogs } from '@/frameworks/logging/logBuffer.js';
 import {
@@ -624,5 +625,37 @@ describe('getProjectAgentsOrFocusDefaults', () => {
     vi.mocked(fs.existsSync).mockReturnValue(false);
 
     expect(getProjectAgentsOrFocusDefaults('/nonexistent')).toBeUndefined();
+  });
+});
+
+describe('parseProjectConfig — audits', () => {
+  const baseConfig = {
+    github: true,
+    gitlab: false,
+    defaultModel: 'sonnet',
+    reviewSkill: 'review-back',
+    reviewFollowupSkill: 'review-followup',
+  };
+
+  it('parses a valid audits array of catalog principles', () => {
+    const config = parseProjectConfig({ ...baseConfig, audits: ['solid', 'testing'] });
+
+    expect(config.audits).toEqual(['solid', 'testing']);
+  });
+
+  it('leaves audits undefined when absent', () => {
+    const config = parseProjectConfig({ ...baseConfig });
+
+    expect(config.audits).toBeUndefined();
+  });
+
+  it('throws naming the invalid entry when an audit is not in the catalog', () => {
+    expect(() =>
+      parseProjectConfig({ ...baseConfig, audits: ['clean-architecture', 'made-up-principle'] }),
+    ).toThrow(/made-up-principle/);
+  });
+
+  it('throws when audits is not an array', () => {
+    expect(() => parseProjectConfig({ ...baseConfig, audits: 'solid' })).toThrow(/audits/);
   });
 });

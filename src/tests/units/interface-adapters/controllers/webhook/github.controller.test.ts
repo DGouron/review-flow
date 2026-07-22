@@ -89,6 +89,8 @@ import {
   type ProcessWebhookResult,
 } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { HandleCloseResult } from '@/modules/review-execution/usecases/handleClose.usecase.js';
+import { ResolveAuditScopeUseCase } from '@/modules/review-execution/usecases/resolveAuditScope.usecase.js';
+import { StubProjectPrinciplesGateway } from '@/tests/stubs/projectPrinciples.stub.js';
 
 import { findRepositoryByRemoteUrl } from '../../../../../config/loader.js';
 import { enqueueReview } from '../../../../../frameworks/queue/pQueueAdapter.js';
@@ -187,6 +189,8 @@ function createMockDeps(): GitHubWebhookDependencies {
     getQualityThreshold,
     guardDiffSize: { execute: vi.fn(() => ({ kind: 'allowed' })) },
     getMaxDiffLines: vi.fn(() => 2000),
+    projectPrinciplesGateway: new StubProjectPrinciplesGateway(),
+    resolveAuditScope: new ResolveAuditScopeUseCase(),
     now: (): string => '2026-05-26T12:00:00.000Z',
   } as unknown as GitHubWebhookDependencies;
 }
