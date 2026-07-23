@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.46.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.45.0...reviewflow-v3.46.0) (2026-07-22)
+
+
+### Added
+
+* **review:** implement spec-220 project-derived review audit scope ([#349](https://github.com/DGouron/review-flow/issues/349)) ([694224a](https://github.com/DGouron/review-flow/commit/694224a78386c557611bcea8ee604fa048c11098))
+
 ## [3.45.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.44.0...reviewflow-v3.45.0) (2026-07-15)
 
 
