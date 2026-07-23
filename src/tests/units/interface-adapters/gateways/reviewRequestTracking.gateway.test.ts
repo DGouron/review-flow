@@ -275,15 +275,16 @@ describe('ReviewRequestTrackingGateway', () => {
   });
 
   describe('archive', () => {
-    it('should remove MR from active list', () => {
+    it('should remove MR from active list while retaining it as closed', () => {
       const gateway = new InMemoryReviewRequestTrackingGateway();
-      const mr = TrackedMrFactory.create({ id: 'mr-to-archive' });
+      const mr = TrackedMrFactory.create({ id: 'mr-to-archive', state: 'pending-fix' });
       gateway.create('/my/project', mr);
 
       const archived = gateway.archive('/my/project', 'mr-to-archive');
 
       expect(archived).toBe(true);
-      expect(gateway.getById('/my/project', 'mr-to-archive')).toBeNull();
+      expect(gateway.getActiveMrs('/my/project')).toEqual([]);
+      expect(gateway.getById('/my/project', 'mr-to-archive')?.state).toBe('closed');
     });
 
     it('should return false when MR does not exist', () => {

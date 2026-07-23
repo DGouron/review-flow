@@ -101,7 +101,16 @@ export class InMemoryReviewRequestTrackingGateway implements ReviewRequestTracki
   }
 
   archive(projectPath: string, reviewRequestId: string): boolean {
-    return this.remove(projectPath, reviewRequestId);
+    const data = this.storage.get(projectPath);
+    if (!data) return false;
+
+    const index = data.mrs.findIndex((mr) => mr.id === reviewRequestId);
+    if (index === -1) return false;
+
+    data.mrs[index] = { ...data.mrs[index], state: 'closed' };
+    data.lastUpdated = new Date().toISOString();
+    this.storage.set(projectPath, data);
+    return true;
   }
 
   recordReviewEvent(projectPath: string, reviewRequestId: string, event: ReviewEvent): void {

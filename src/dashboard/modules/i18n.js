@@ -289,6 +289,7 @@ const translations = {
     'modal.markMerged.back': 'Go back',
     'modal.markMerged.confirm': 'Mark as merged',
     'badge.merged': 'Merged',
+    'badge.closed': 'Closed',
     'section.mergedReviews': 'Merged',
 
     // Confirm dialogs
@@ -767,6 +768,7 @@ const translations = {
     'modal.markMerged.back': 'Revenir',
     'modal.markMerged.confirm': 'Marquer comme mergée',
     'badge.merged': 'Mergée',
+    'badge.closed': 'Fermée',
     'section.mergedReviews': 'Mergées',
 
     // Confirm dialogs
