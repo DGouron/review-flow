@@ -316,11 +316,6 @@ export function filterGitHubEvent(event: GitHubPullRequestEvent): FilterResult {
     return { shouldProcess: false, reason: `PR state is ${pr.state}, not open` };
   }
 
-  // Skip draft PRs
-  if (pr.draft) {
-    return { shouldProcess: false, reason: 'PR is a draft' };
-  }
-
   // Check if I was the one requested
   // GitHub sends "requested_reviewer" in the event payload
   if (event.requested_reviewer?.login !== myUsername) {
@@ -415,11 +410,6 @@ export function filterGitHubLabelEvent(event: GitHubPullRequestEvent): FilterRes
   // PR must be open
   if (pr.state !== 'open') {
     return { shouldProcess: false, reason: `PR state is ${pr.state}, not open` };
-  }
-
-  // Skip draft PRs
-  if (pr.draft) {
-    return { shouldProcess: false, reason: 'PR is a draft' };
   }
 
   // Check if the added label is our trigger label

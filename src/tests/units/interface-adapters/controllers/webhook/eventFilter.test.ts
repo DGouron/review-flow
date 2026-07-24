@@ -347,7 +347,7 @@ describe('filterGitHubEvent', () => {
   });
 
   describe('when PR is draft', () => {
-    it('should not process draft PRs even with review requested', () => {
+    it('should process draft PRs when review is requested', () => {
       const event = GitHubEventFactory.createPullRequestEvent({
         action: 'review_requested',
         requested_reviewer: { login: 'claude-reviewer' },
@@ -356,8 +356,7 @@ describe('filterGitHubEvent', () => {
 
       const result = filterGitHubEvent(event);
 
-      expect(result.shouldProcess).toBe(false);
-      expect(result.reason).toContain('draft');
+      expect(result.shouldProcess).toBe(true);
     });
   });
 
@@ -467,14 +466,14 @@ describe('filterGitHubLabelEvent', () => {
   });
 
   describe('when PR is draft', () => {
-    it('should not process draft PRs', () => {
+    it('should process draft PRs when the needs-review label is added', () => {
       const event = GitHubEventFactory.createLabeledPr(REVIEW_TRIGGER_LABEL);
       event.pull_request.draft = true;
 
       const result = filterGitHubLabelEvent(event);
 
-      expect(result.shouldProcess).toBe(false);
-      expect(result.reason).toContain('draft');
+      expect(result.shouldProcess).toBe(true);
+      expect(result.reason).toContain(REVIEW_TRIGGER_LABEL);
     });
   });
 
