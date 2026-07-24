@@ -71,12 +71,14 @@ export const mrTrackingRoutes: FastifyPluginAsync<MrTrackingRoutesOptions> = asy
         'pending-approval',
       );
       const merged = reviewRequestTrackingGateway.getByState(validation.path, 'merged');
+      const closed = reviewRequestTrackingGateway.getByState(validation.path, 'closed');
       const stats = statsGateway?.loadProjectStats(validation.path) ?? null;
       return {
         success: true,
         pendingFix: mrDiffStatsPresenter.present(pendingFix, stats),
         pendingApproval: mrDiffStatsPresenter.present(pendingApproval, stats),
         merged: mrDiffStatsPresenter.present(merged, stats),
+        closed: mrDiffStatsPresenter.present(closed, stats),
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

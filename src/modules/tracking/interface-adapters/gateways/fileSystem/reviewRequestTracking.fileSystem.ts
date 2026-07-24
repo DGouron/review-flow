@@ -135,7 +135,15 @@ export class FileSystemReviewRequestTrackingGateway implements ReviewRequestTrac
   }
 
   archive(projectPath: string, reviewRequestId: string): boolean {
-    return this.remove(projectPath, reviewRequestId);
+    const data = this.loadTracking(projectPath);
+    if (!data) return false;
+
+    const index = data.mrs.findIndex((mr) => mr.id === reviewRequestId);
+    if (index === -1) return false;
+
+    data.mrs[index] = { ...data.mrs[index], state: 'closed' };
+    this.saveTracking(projectPath, data);
+    return true;
   }
 
   recordReviewEvent(projectPath: string, reviewRequestId: string, event: ReviewEvent): void {

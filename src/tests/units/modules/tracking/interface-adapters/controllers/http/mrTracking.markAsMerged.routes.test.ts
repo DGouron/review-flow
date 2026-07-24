@@ -139,4 +139,25 @@ describe('mrTrackingRoutes — GET /api/mr-tracking exposes the merged list (SPE
     expect(body.success).toBe(true);
     expect(body.merged.map((mr) => mr.id)).toContain('mr-42');
   });
+
+  it('returns closed reviews under a distinct "closed" field', async () => {
+    harness.trackingGateway.create(
+      projectPath,
+      TrackedMrFactory.create({ id: 'mr-99', state: 'closed' }),
+    );
+
+    const response = await harness.app.inject({
+      method: 'GET',
+      url: `/api/mr-tracking?path=${encodeURIComponent(projectPath)}`,
+    });
+
+    const body = response.json() as {
+      success: boolean;
+      merged: Array<{ id: string }>;
+      closed: Array<{ id: string }>;
+    };
+    expect(body.success).toBe(true);
+    expect(body.closed.map((mr) => mr.id)).toEqual(['mr-99']);
+    expect(body.merged.map((mr) => mr.id)).not.toContain('mr-99');
+  });
 });

@@ -238,15 +238,29 @@ describe('FileSystemReviewRequestTrackingGateway', () => {
   });
 
   describe('archive', () => {
-    it('delegates to remove and returns false for unknown id', () => {
+    it('returns false for unknown id', () => {
       expect(gateway.archive(projectPath, 'mr-unknown')).toBe(false);
     });
 
-    it('removes the matching MR and returns true', () => {
-      gateway.create(projectPath, TrackedMrFactory.create({ id: 'mr-archive' }));
+    it('retains the matching MR as closed instead of deleting it', () => {
+      gateway.create(
+        projectPath,
+        TrackedMrFactory.create({ id: 'mr-archive', state: 'pending-fix' }),
+      );
 
       expect(gateway.archive(projectPath, 'mr-archive')).toBe(true);
-      expect(gateway.getById(projectPath, 'mr-archive')).toBeNull();
+      expect(gateway.getById(projectPath, 'mr-archive')?.state).toBe('closed');
+    });
+
+    it('surfaces the archived MR through getByState("closed")', () => {
+      gateway.create(
+        projectPath,
+        TrackedMrFactory.create({ id: 'mr-archive', state: 'pending-fix' }),
+      );
+
+      gateway.archive(projectPath, 'mr-archive');
+
+      expect(gateway.getByState(projectPath, 'closed').map((mr) => mr.id)).toEqual(['mr-archive']);
     });
   });
 

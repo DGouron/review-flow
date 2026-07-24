@@ -460,7 +460,7 @@
     let reconnectAttempts = 0;
     let logsVisible = false;
 
-    let currentData = { activeReviews: [], recentReviews: [], logs: [], reviewFiles: [], pendingFix: [], pendingApproval: [], merged: [], pendingReviews: [] };
+    let currentData = { activeReviews: [], recentReviews: [], logs: [], reviewFiles: [], pendingFix: [], pendingApproval: [], merged: [], closed: [], pendingReviews: [] };
     const mrDataStore = new Map();
     let loadedReviews = {};
     let currentStatsReviews = [];
@@ -1825,9 +1825,13 @@
       }
       container.innerHTML = mergedList.map((mr) => {
         const mrPrefix = mr.platform === 'github' ? '#' : '!';
+        const isClosed = mr.state === 'closed';
+        const badge = isClosed
+          ? `<span class="badge closed"><i data-lucide="git-pull-request-closed"></i> ${t('badge.closed')}</span>`
+          : `<span class="badge merged"><i data-lucide="git-merge"></i> ${t('badge.merged')}</span>`;
         return `
           <div class="merged-review-row">
-            <span class="badge merged"><i data-lucide="git-merge"></i> ${t('badge.merged')}</span>
+            ${badge}
             <a href="${sanitizeHttpUrl(mr.url)}" target="_blank" rel="noopener noreferrer" class="merged-review-link">${mrPrefix}${mr.mrNumber} ${escapeHtml(String(mr.title ?? ''))}</a>
           </div>`;
       }).join('');
@@ -1867,7 +1871,7 @@
       pendingApprovalSection.classList.add('hidden');
       pendingApprovalCount.classList.add('hidden');
 
-      renderMergedReviews(currentData.merged);
+      renderMergedReviews([...(currentData.merged ?? []), ...(currentData.closed ?? [])]);
 
       refreshIcons();
     }
@@ -1985,6 +1989,7 @@
         currentData.pendingFix = [];
         currentData.pendingApproval = [];
         currentData.merged = [];
+        currentData.closed = [];
         document.getElementById('pending-fix-section').classList.add('hidden');
         document.getElementById('pending-approval-section').classList.add('hidden');
         setLoadingFlag('mrTracking', false);
@@ -1998,6 +2003,7 @@
           currentData.pendingFix = data.pendingFix || [];
           currentData.pendingApproval = data.pendingApproval || [];
           currentData.merged = data.merged || [];
+          currentData.closed = data.closed || [];
         }
       } catch (error) {
         console.error('Error fetching MR tracking:', error);
