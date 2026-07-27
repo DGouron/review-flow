@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.47.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.46.0...reviewflow-v3.47.0) (2026-07-27)
+
+
+### Added
+
+* **webhook:** trigger GitHub reviews on draft PRs ([#356](https://github.com/DGouron/review-flow/issues/356)) ([9ad1bae](https://github.com/DGouron/review-flow/commit/9ad1bae0c30d5038eaf5962d0ffb23e6114e24b3))
+
+
+### Fixed
+
+* [#359](https://github.com/DGouron/review-flow/issues/359) write resolved config port to daemon pid file ([#360](https://github.com/DGouron/review-flow/issues/360)) ([a06365b](https://github.com/DGouron/review-flow/commit/a06365b6574d50b3178fb37a17887647ed7594ef))
+* retain closed reviews as completed instead of deleting them ([#355](https://github.com/DGouron/review-flow/issues/355)) ([c9c57c2](https://github.com/DGouron/review-flow/commit/c9c57c20af7ca5f609535906cad0700209445563))
+
 ## [3.46.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.45.0...reviewflow-v3.46.0) (2026-07-22)
 
 
