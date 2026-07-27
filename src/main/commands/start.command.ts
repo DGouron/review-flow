@@ -49,7 +49,7 @@ export function executeStart(
 
   if (daemon) {
     const usecase = new StartDaemonUseCase(deps.startDaemonDeps);
-    const result = usecase.execute({ daemon: true, port });
+    const result = usecase.execute({ daemon: true, port: resolvedPort });
 
     switch (result.status) {
       case 'started':

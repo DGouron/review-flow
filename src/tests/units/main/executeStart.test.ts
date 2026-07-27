@@ -198,4 +198,19 @@ describe('executeStart', () => {
       expect(deps.log).toHaveBeenCalledWith(expect.stringContaining('8080'));
     });
   });
+
+  it('should write the config default port to the pid file when no port is specified', () => {
+    const writePidFile = vi.fn();
+    const deps = createFakeDeps({
+      startDaemonDeps: createFakeStartDaemonDeps({ writePidFile }),
+      loadStartupInfo: () => ({
+        enabledPlatforms: [] as Array<'gitlab' | 'github'>,
+        defaultPort: 3847,
+      }),
+    });
+
+    executeStart(true, true, undefined, false, deps);
+
+    expect(writePidFile).toHaveBeenCalledWith(expect.objectContaining({ port: 3847 }));
+  });
 });
