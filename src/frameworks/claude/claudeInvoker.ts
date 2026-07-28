@@ -10,7 +10,7 @@ import { buildAuditScopeDirective } from '@/frameworks/claude/auditScopeDirectiv
 import { broadcastBudgetAfterUsage } from '@/frameworks/claude/broadcastBudgetAfterUsage.js';
 import { buildLanguageDirective } from '@/frameworks/claude/languageDirective.js';
 import { logInfo, logWarn, logError } from '@/frameworks/logging/logBuffer.js';
-import { getModel } from '@/frameworks/settings/runtimeSettings.js';
+import { getModel, getReviewTimeoutMs } from '@/frameworks/settings/runtimeSettings.js';
 import type { BillingStateGateway } from '@/modules/claude-invocation/entities/billingState/billingState.gateway.js';
 import type { EnvironmentGateway } from '@/modules/claude-invocation/entities/billingState/environment.gateway.js';
 import type { ClaudeSessionGateway } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
@@ -171,7 +171,7 @@ export function createDefaultClaudeInvocationDeps(): ClaudeInvocationDeps {
     reportGateway: new ReviewReportFileSystemGateway(),
     billingState: new InMemoryBillingStateGateway(),
     environment: new ProcessEnvironmentGateway(),
-    timeoutMs: 15 * 60 * 1000,
+    timeoutMs: getReviewTimeoutMs(),
     pollIntervalMs: 30 * 1000,
   };
 }

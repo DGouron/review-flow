@@ -6,6 +6,7 @@ import {
   createDefaultClaudeInvocationDeps,
   type ClaudeInvocationDeps,
 } from '@/frameworks/claude/claudeInvoker.js';
+import { getReviewTimeoutMs } from '@/frameworks/settings/runtimeSettings.js';
 import type { ReviewLogFileGateway } from '@/modules/data-lifecycle/entities/reviewLog/reviewLogFile.gateway.js';
 import { FileSystemReviewLogFileGateway } from '@/modules/data-lifecycle/interface-adapters/gateways/fileSystem/reviewLogFile.fileSystem.gateway.js';
 import type { ReviewContextGateway } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js';
@@ -89,6 +90,15 @@ function createLogger(): Logger {
   }
 
   return pino(options);
+}
+
+/**
+ * createDependencies runs before loadSettingsFromDisk (the settings logger needs
+ * deps.logger), so the invocation timeout is built from the in-memory default.
+ * Called by startServer once settings are loaded to adopt the persisted value.
+ */
+export function applyPersistedReviewTimeout(invocationDeps: { timeoutMs: number }): void {
+  invocationDeps.timeoutMs = getReviewTimeoutMs();
 }
 
 export function createDependencies(config: Config): Dependencies {

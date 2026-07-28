@@ -3,6 +3,7 @@ import type { Logger } from 'pino';
 
 import { loadConfig } from '@/frameworks/config/configLoader.js';
 import { ProjectSemaphore } from '@/frameworks/queue/projectSemaphore.js';
+import { getReviewTimeoutMs } from '@/frameworks/settings/runtimeSettings.js';
 import type { JobStatus, ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import type {
   ReviewProgress,
@@ -93,13 +94,30 @@ export function __resetProjectConcurrencyState(): void {
 let queue: PQueue | null = null;
 let logger: Logger | null = null;
 
+const JOB_TIMEOUT_GRACE_MS = 5 * 60 * 1000;
+
+/**
+ * The queue must outlive the Claude session it wraps, otherwise PQueue aborts
+ * the job before awaitSessionCompletion can report a `timeout` reason. The
+ * grace margin covers worktree preparation, report reading and stats writes.
+ */
+export function computeJobTimeoutMs(reviewTimeoutMs: number): number {
+  return reviewTimeoutMs + JOB_TIMEOUT_GRACE_MS;
+}
+
+export function setJobTimeoutMs(value: number): void {
+  if (queue) {
+    queue.timeout = value;
+  }
+}
+
 export function initQueue(log: Logger): PQueue {
   const config = loadConfig();
   logger = log;
 
   const createdQueue = new PQueue({
     concurrency: config.queue.maxConcurrent,
-    timeout: 30 * 60 * 1000, // 30 minutes max per job
+    timeout: computeJobTimeoutMs(getReviewTimeoutMs()),
     throwOnTimeout: true,
   });
   queue = createdQueue;

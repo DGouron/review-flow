@@ -97,6 +97,36 @@ Multiple repositories: add additional entries to the `repositories[]` array. Mix
 
 ---
 
+## Runtime Settings
+
+### Location
+
+`~/.claude-review/settings.json`, written by the daemon itself. These are the values changed from the dashboard header chips; each change is persisted immediately and reloaded at boot.
+
+### Fields
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `language` | `"en"` \| `"fr"` | `"en"` | Language used for Claude prompts and reports |
+| `model` | `"haiku"` \| `"sonnet"` \| `"opus"` | `"opus"` | Default Claude model when no project or routing override applies |
+| `triggerMode` | `"full-auto"` \| `"semi-auto"` \| `null` | `null` | Runtime override of the `config.json` trigger mode |
+| `worktreeStaleThresholdHours` | number (1–720) | `24` | Age after which a review worktree is considered stale |
+| `reviewTimeoutMinutes` | number (5–480) | `15` | Wall-clock budget for a single Claude review session |
+
+#### `reviewTimeoutMinutes`
+
+A review that produces no completion signal within this budget is failed with reason `timeout`. Change it from the dashboard `Timeout (min)` chip or with:
+
+```bash
+curl -X POST http://localhost:3847/api/settings/reviewTimeout \
+  -H 'Content-Type: application/json' \
+  -d '{"reviewTimeoutMinutes": 60}'
+```
+
+The change takes effect immediately, without a daemon restart: it is applied to the shared invocation dependencies and to the PQueue per-job timeout, which is kept 5 minutes above the session timeout so the queue never aborts a review before the session budget expires.
+
+---
+
 ## Project Configuration
 
 ### Location

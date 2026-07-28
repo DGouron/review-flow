@@ -11,7 +11,12 @@ vi.mock('@/frameworks/config/configLoader.js', () => ({
 
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { enqueueReview, initQueue } from '@/frameworks/queue/pQueueAdapter.js';
+import {
+  computeJobTimeoutMs,
+  enqueueReview,
+  initQueue,
+  setJobTimeoutMs,
+} from '@/frameworks/queue/pQueueAdapter.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 
@@ -299,5 +304,20 @@ describe('pQueueAdapter - replaceCompletedJobs (SPEC-176)', () => {
 
     const snapshot = getJobsStatus();
     expect(snapshot.recent.map((entry) => entry.id)).toEqual(['second']);
+  });
+});
+
+describe('pQueueAdapter - job timeout', () => {
+  it('leaves a grace margin above the review session timeout', () => {
+    expect(computeJobTimeoutMs(15 * 60 * 1000)).toBe(20 * 60 * 1000);
+    expect(computeJobTimeoutMs(120 * 60 * 1000)).toBe(125 * 60 * 1000);
+  });
+
+  it('applies a new timeout to the live queue', () => {
+    const queue = initQueue(createStubLogger());
+
+    setJobTimeoutMs(90 * 60 * 1000);
+
+    expect(queue.timeout).toBe(90 * 60 * 1000);
   });
 });
