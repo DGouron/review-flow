@@ -8,6 +8,7 @@ import type { Logger } from 'pino';
 import { getProjectAgents, getFollowupAgents, loadProjectConfig } from '@/config/projectConfig.js';
 import { buildAuditScopeDirective } from '@/frameworks/claude/auditScopeDirective.js';
 import { broadcastBudgetAfterUsage } from '@/frameworks/claude/broadcastBudgetAfterUsage.js';
+import { buildDesktopNotificationCommand } from '@/frameworks/claude/desktopNotification.js';
 import { buildLanguageDirective } from '@/frameworks/claude/languageDirective.js';
 import { logInfo, logWarn, logError } from '@/frameworks/logging/logBuffer.js';
 import { getModel, getReviewTimeoutMs } from '@/frameworks/settings/runtimeSettings.js';
@@ -809,20 +810,14 @@ async function invokeViaBackgroundSession(
  * Send desktop notification
  */
 export function sendNotification(title: string, message: string, logger: Logger): void {
+  const { command, args } = buildDesktopNotificationCommand(process.platform, title, message);
   try {
-    // Use notify-send on Linux
-    const child = spawn('notify-send', [
-      '--app-name=Claude Review',
-      '--urgency=normal',
-      '--icon=dialog-information',
-      title,
-      message,
-    ]);
+    const child = spawn(command, args);
 
     child.on('error', (error) => {
-      logger.warn({ error }, 'Notification desktop non disponible');
+      logger.warn({ error, command }, 'Notification desktop non disponible');
     });
-  } catch {
-    logger.warn('notify-send non disponible');
+  } catch (error) {
+    logger.warn({ error, command }, 'Notification desktop non disponible');
   }
 }
