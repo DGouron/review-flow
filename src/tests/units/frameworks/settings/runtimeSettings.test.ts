@@ -14,6 +14,9 @@ import {
   setModel,
   getTriggerMode,
   setTriggerMode,
+  getReviewTimeoutMinutes,
+  getReviewTimeoutMs,
+  setReviewTimeoutMinutes,
   getSettings,
   __resetForTestsOnly,
   type ClaudeModel,
@@ -77,6 +80,7 @@ describe('runtimeSettings', () => {
           model: 'opus',
           worktreeStaleThresholdHours: 24,
           triggerMode: null,
+          reviewTimeoutMinutes: 15,
         });
       });
 
@@ -158,6 +162,7 @@ describe('runtimeSettings', () => {
           model: 'sonnet',
           worktreeStaleThresholdHours: 24,
           triggerMode: null,
+          reviewTimeoutMinutes: 15,
         });
       });
     });
@@ -282,6 +287,76 @@ describe('runtimeSettings', () => {
         await expect(setWorktreeStaleThresholdHours(721)).rejects.toThrow(
           /Invalid stale threshold/,
         );
+      });
+    });
+
+    describe('reviewTimeoutMinutes', () => {
+      it('defaults to 15 when no settings file exists', async () => {
+        await loadSettingsFromDisk();
+
+        expect(getReviewTimeoutMinutes()).toBe(15);
+      });
+
+      it('exposes the default as milliseconds', async () => {
+        await loadSettingsFromDisk();
+
+        expect(getReviewTimeoutMs()).toBe(15 * 60 * 1000);
+      });
+
+      it('restores reviewTimeoutMinutes from an existing file', async () => {
+        writeFileSync(
+          settingsPath,
+          JSON.stringify({ language: 'en', model: 'opus', reviewTimeoutMinutes: 90 }),
+        );
+
+        await loadSettingsFromDisk();
+
+        expect(getReviewTimeoutMinutes()).toBe(90);
+        expect(getReviewTimeoutMs()).toBe(90 * 60 * 1000);
+      });
+
+      it('falls back to the default when the persisted value is below the minimum', async () => {
+        writeFileSync(
+          settingsPath,
+          JSON.stringify({ language: 'en', model: 'opus', reviewTimeoutMinutes: 1 }),
+        );
+
+        await loadSettingsFromDisk();
+
+        expect(getReviewTimeoutMinutes()).toBe(15);
+      });
+
+      it('persists reviewTimeoutMinutes after setReviewTimeoutMinutes', async () => {
+        await loadSettingsFromDisk();
+
+        await setReviewTimeoutMinutes(45);
+
+        const written = JSON.parse(readFileSync(settingsPath, 'utf-8'));
+        expect(written.reviewTimeoutMinutes).toBe(45);
+      });
+
+      it('survives a simulated process restart', async () => {
+        await loadSettingsFromDisk();
+        await setReviewTimeoutMinutes(120);
+
+        __resetForTestsOnly();
+        configureSettingsPath(settingsPath);
+        await loadSettingsFromDisk();
+
+        expect(getReviewTimeoutMinutes()).toBe(120);
+      });
+
+      it('throws when setReviewTimeoutMinutes receives a value outside [5, 480]', async () => {
+        await loadSettingsFromDisk();
+
+        await expect(setReviewTimeoutMinutes(4)).rejects.toThrow(/Invalid review timeout/);
+        await expect(setReviewTimeoutMinutes(481)).rejects.toThrow(/Invalid review timeout/);
+      });
+
+      it('throws when setReviewTimeoutMinutes receives a non-integer', async () => {
+        await loadSettingsFromDisk();
+
+        await expect(setReviewTimeoutMinutes(15.5)).rejects.toThrow(/Invalid review timeout/);
       });
     });
 

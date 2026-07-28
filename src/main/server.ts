@@ -58,7 +58,11 @@ import { startCleanupScheduler } from '../frameworks/scheduler/cleanupScheduler.
 import { startWorktreeSweepScheduler } from '../frameworks/scheduler/worktreeSweepScheduler.js';
 import { PID_FILE_PATH } from '../shared/services/daemonPaths.js';
 import { removePidFile } from '../shared/services/pidFileManager.js';
-import { createDependencies, type Dependencies } from './dependencies.js';
+import {
+  applyPersistedReviewTimeout,
+  createDependencies,
+  type Dependencies,
+} from './dependencies.js';
 import { registerRoutes } from './routes.js';
 import { setupWebSocketCallbacks } from './websocket.js';
 
@@ -188,6 +192,7 @@ export async function startServer(options: ServerOptions = {}): Promise<FastifyI
   configureSettingsPath(getDefaultSettingsPath());
   configureSettingsLogger(deps.logger);
   await loadSettingsFromDisk();
+  applyPersistedReviewTimeout(deps.claudeInvocationDeps);
 
   initQueue(deps.logger);
 

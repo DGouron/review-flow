@@ -9,7 +9,12 @@ import {
   setDefaultLanguage,
   getTriggerMode,
   setTriggerMode,
+  getReviewTimeoutMinutes,
+  getReviewTimeoutMs,
+  setReviewTimeoutMinutes,
   getSettings,
+  REVIEW_TIMEOUT_MINUTES_MIN,
+  REVIEW_TIMEOUT_MINUTES_MAX,
 } from '@/frameworks/settings/runtimeSettings.js';
 import { languageSchema } from '@/modules/shared-kernel/entities/language/language.schema.js';
 import { triggerModeSchema } from '@/modules/shared-kernel/entities/triggerMode/triggerMode.schema.js';
@@ -17,8 +22,28 @@ import { triggerModeSchema } from '@/modules/shared-kernel/entities/triggerMode/
 const modelRequestSchema = z.object({ model: claudeModelSchema });
 const languageRequestSchema = z.object({ language: languageSchema });
 const triggerModeRequestSchema = z.object({ triggerMode: triggerModeSchema });
+const reviewTimeoutRequestSchema = z.object({
+  reviewTimeoutMinutes: z
+    .number()
+    .int()
+    .min(REVIEW_TIMEOUT_MINUTES_MIN)
+    .max(REVIEW_TIMEOUT_MINUTES_MAX),
+});
 
-export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
+/**
+ * The review timeout is read at boot by the shared ClaudeInvocationDeps and by
+ * the PQueue job timeout, so a change must be pushed into those live objects
+ * instead of waiting for a daemon restart. The composition root supplies the
+ * port; tests and CLI one-shots can omit it.
+ */
+export interface SettingsRoutesOptions {
+  applyReviewTimeoutMs?: (timeoutMs: number) => void;
+}
+
+export const settingsRoutes: FastifyPluginAsync<SettingsRoutesOptions> = async (
+  fastify,
+  options,
+) => {
   fastify.get('/api/settings', async () => {
     return getSettings();
   });
@@ -71,5 +96,28 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
 
     await setTriggerMode(parsed.data.triggerMode);
     return { success: true, triggerMode: getTriggerMode() };
+  });
+
+  fastify.get('/api/settings/reviewTimeout', async () => {
+    return {
+      reviewTimeoutMinutes: getReviewTimeoutMinutes(),
+      minMinutes: REVIEW_TIMEOUT_MINUTES_MIN,
+      maxMinutes: REVIEW_TIMEOUT_MINUTES_MAX,
+    };
+  });
+
+  fastify.post('/api/settings/reviewTimeout', async (request, reply) => {
+    const parsed = reviewTimeoutRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      reply.code(400);
+      return {
+        success: false,
+        error: `Invalid review timeout. Use an integer number of minutes between ${REVIEW_TIMEOUT_MINUTES_MIN} and ${REVIEW_TIMEOUT_MINUTES_MAX}`,
+      };
+    }
+
+    await setReviewTimeoutMinutes(parsed.data.reviewTimeoutMinutes);
+    options.applyReviewTimeoutMs?.(getReviewTimeoutMs());
+    return { success: true, reviewTimeoutMinutes: getReviewTimeoutMinutes() };
   });
 };

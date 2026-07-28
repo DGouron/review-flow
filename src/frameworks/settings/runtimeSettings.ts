@@ -19,11 +19,22 @@ export type ClaudeModel = z.infer<typeof claudeModelSchema>;
 
 const worktreeStaleThresholdHoursSchema = z.number().int().min(1).max(720);
 
+export const REVIEW_TIMEOUT_MINUTES_MIN = 5;
+export const REVIEW_TIMEOUT_MINUTES_MAX = 480;
+const DEFAULT_REVIEW_TIMEOUT_MINUTES = 15;
+
+const reviewTimeoutMinutesSchema = z
+  .number()
+  .int()
+  .min(REVIEW_TIMEOUT_MINUTES_MIN)
+  .max(REVIEW_TIMEOUT_MINUTES_MAX);
+
 const runtimeSettingsSchema = z.object({
   language: languageSchema,
   model: claudeModelSchema,
   worktreeStaleThresholdHours: worktreeStaleThresholdHoursSchema.default(24),
   triggerMode: triggerModeSchema.nullable().default(null),
+  reviewTimeoutMinutes: reviewTimeoutMinutesSchema.default(DEFAULT_REVIEW_TIMEOUT_MINUTES),
 });
 
 type RuntimeSettings = z.infer<typeof runtimeSettingsSchema>;
@@ -37,6 +48,7 @@ const DEFAULT_SETTINGS: RuntimeSettings = {
   language: 'en',
   worktreeStaleThresholdHours: 24,
   triggerMode: null,
+  reviewTimeoutMinutes: DEFAULT_REVIEW_TIMEOUT_MINUTES,
 };
 
 let settings: RuntimeSettings = { ...DEFAULT_SETTINGS };
@@ -164,6 +176,29 @@ export async function setTriggerMode(triggerMode: TriggerMode): Promise<void> {
     throw new Error(`Invalid trigger mode: ${triggerMode}`);
   }
   settings.triggerMode = result.data;
+  await persistAsync();
+}
+
+export function getReviewTimeoutMinutes(): number {
+  return settings.reviewTimeoutMinutes;
+}
+
+/**
+ * Wall-clock budget for a single Claude review session, expressed in
+ * milliseconds so callers can hand it straight to awaitSessionCompletion.
+ */
+export function getReviewTimeoutMs(): number {
+  return settings.reviewTimeoutMinutes * 60 * 1000;
+}
+
+export async function setReviewTimeoutMinutes(minutes: number): Promise<void> {
+  const result = reviewTimeoutMinutesSchema.safeParse(minutes);
+  if (!result.success) {
+    throw new Error(
+      `Invalid review timeout (minutes): ${minutes}. Use an integer between ${REVIEW_TIMEOUT_MINUTES_MIN} and ${REVIEW_TIMEOUT_MINUTES_MAX}`,
+    );
+  }
+  settings.reviewTimeoutMinutes = result.data;
   await persistAsync();
 }
 

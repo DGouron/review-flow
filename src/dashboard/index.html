@@ -83,6 +83,10 @@
             <option value="semi-auto" id="i18n-trigger-mode-semi-auto"></option>
           </select>
         </div>
+        <div class="toolchain-chip toolchain-chip-model">
+          <span class="toolchain-chip-label" id="i18n-card-review-timeout"></span>
+          <input id="review-timeout-input" class="model-select" type="number" min="5" max="480" step="5" onchange="changeReviewTimeout(this.value)" />
+        </div>
       </div>
     </div>
 
@@ -2342,6 +2346,42 @@
       }
     }
 
+    async function loadReviewTimeoutSetting() {
+      try {
+        const response = await fetch(`${API_URL}/api/settings/reviewTimeout`);
+        const data = await response.json();
+        const input = document.getElementById('review-timeout-input');
+        if (input && data.reviewTimeoutMinutes) {
+          input.value = data.reviewTimeoutMinutes;
+          if (data.minMinutes) input.min = data.minMinutes;
+          if (data.maxMinutes) input.max = data.maxMinutes;
+        }
+      } catch (error) {
+        console.error('Error loading review timeout setting:', error);
+      }
+    }
+
+    async function changeReviewTimeout(value) {
+      const reviewTimeoutMinutes = Number(value);
+      try {
+        const response = await fetch(`${API_URL}/api/settings/reviewTimeout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reviewTimeoutMinutes })
+        });
+        const data = await response.json();
+        if (data.success) {
+          console.log('Review timeout changed to:', data.reviewTimeoutMinutes, 'min');
+        } else {
+          console.error('Review timeout rejected:', data.error);
+          await loadReviewTimeoutSetting();
+        }
+      } catch (error) {
+        console.error('Error changing review timeout:', error);
+        await loadReviewTimeoutSetting();
+      }
+    }
+
     async function loadLanguageSetting() {
       try {
         const response = await fetch(`${API_URL}/api/settings`);
@@ -3136,6 +3176,9 @@
       const cardTriggerMode = document.getElementById('i18n-card-trigger-mode');
       if (cardTriggerMode) cardTriggerMode.textContent = t('card.triggerMode');
 
+      const cardReviewTimeout = document.getElementById('i18n-card-review-timeout');
+      if (cardReviewTimeout) cardReviewTimeout.textContent = t('card.reviewTimeout');
+
       const cardLanguage = document.getElementById('i18n-card-language');
       if (cardLanguage) cardLanguage.textContent = t('card.language');
 
@@ -3429,6 +3472,7 @@
     window.checkClaudeStatus = checkClaudeStatus;
     window.toggleLogs = toggleLogs;
     window.changeModel = changeModel;
+    window.changeReviewTimeout = changeReviewTimeout;
     window.changeLanguage = changeLanguage;
     window.toggleReviewAccordion = toggleReviewAccordion;
     window.toggleReviewDescription = toggleReviewDescription;
@@ -3482,6 +3526,7 @@
     checkClaudeStatus();
     loadModelSetting();
     loadTriggerModeSetting();
+    loadReviewTimeoutSetting();
     loadLanguageSetting();
     initOverviewAndTabs();
     refreshBudgetTile();

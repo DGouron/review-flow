@@ -19,10 +19,12 @@ import {
 } from '@/frameworks/config/configLoader.js';
 import {
   cancelJob,
+  computeJobTimeoutMs,
   createJobId,
   getJobStatus,
   enqueueReview,
   getJobsStatus,
+  setJobTimeoutMs,
   setProjectConcurrencyCap,
   setGlobalConcurrency,
   getRunningCount,
@@ -198,7 +200,12 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     supervisorStatusStore: deps.supervisorStatusStore,
   });
 
-  await app.register(settingsRoutes);
+  await app.register(settingsRoutes, {
+    applyReviewTimeoutMs: (timeoutMs) => {
+      deps.claudeInvocationDeps.timeoutMs = timeoutMs;
+      setJobTimeoutMs(computeJobTimeoutMs(timeoutMs));
+    },
+  });
 
   await app.register(reviewRoutes, {
     reviewFileGateway: deps.reviewFileGateway,
