@@ -53,12 +53,26 @@ class RecordingCliExecutor {
 
 class RecordingPostGateway {
   readonly posts: Array<{ projectPath: string; mrNumber: number; body: string }> = [];
+  readonly threadReplies: Array<{
+    projectPath: string;
+    mrNumber: number;
+    threadId: string;
+    body: string;
+  }> = [];
   postComment = async (input: {
     projectPath: string;
     mrNumber: number;
     body: string;
   }): Promise<void> => {
     this.posts.push(input);
+  };
+  postThreadReply = async (input: {
+    projectPath: string;
+    mrNumber: number;
+    threadId: string;
+    body: string;
+  }): Promise<void> => {
+    this.threadReplies.push(input);
   };
 }
 

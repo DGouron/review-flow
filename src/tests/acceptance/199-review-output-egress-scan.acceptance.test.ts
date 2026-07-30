@@ -80,6 +80,14 @@ const baseContext: ReviewContext = {
   progress: { phase: 'completed', currentStep: null },
 };
 
+/**
+ * One decorated gateway scans every public-output body; the destination still differs
+ * per verb — a reply goes into its thread, a comment into the MR notes.
+ */
+function sinkedBodies(sink: StubNoteCommentPostGateway): string[] {
+  return [...sink.calls, ...sink.threadReplies].map((call) => call.body);
+}
+
 const publicOutputVerbs: Array<{ name: string; action: ReviewAction }> = [
   { name: 'POST_COMMENT', action: { type: 'POST_COMMENT', body: `## Review\ntoken ${SECRET}` } },
   {
@@ -103,9 +111,10 @@ describe('SPEC-199 review output egress scan (acceptance — shared chokepoint a
           gateway,
         );
 
-        expect(sink.calls).toHaveLength(1);
-        expect(sink.calls[0].body).toContain('[REDACTED]');
-        expect(sink.calls[0].body).not.toContain(SECRET);
+        const bodies = sinkedBodies(sink);
+        expect(bodies).toHaveLength(1);
+        expect(bodies[0]).toContain('[REDACTED]');
+        expect(bodies[0]).not.toContain(SECRET);
         expect(executor.secretBearingArgs()).toHaveLength(0);
         expect(trace.traces).toHaveLength(1);
       });
@@ -124,9 +133,10 @@ describe('SPEC-199 review output egress scan (acceptance — shared chokepoint a
           gateway,
         );
 
-        expect(sink.calls).toHaveLength(1);
-        expect(sink.calls[0].body).toContain('[REDACTED]');
-        expect(sink.calls[0].body).not.toContain(SECRET);
+        const bodies = sinkedBodies(sink);
+        expect(bodies).toHaveLength(1);
+        expect(bodies[0]).toContain('[REDACTED]');
+        expect(bodies[0]).not.toContain(SECRET);
         expect(executor.secretBearingArgs()).toHaveLength(0);
         expect(trace.traces).toHaveLength(1);
       });

@@ -37,6 +37,7 @@ import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/dif
 import type { Platform } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import type { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
 import type { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
+import { countSucceeded, emptyExecutionResult } from '@/shared/foundation/executionGateway.base.js';
 
 const progressWatcher = {
   start: startWatchingReviewContext,
@@ -170,9 +171,6 @@ export function buildExecuteReview(wiring: ExecuteReviewWiringDependencies): Exe
     sendNotification: (title, message) => sendNotification(title, message, logger),
     resolveThreads,
     executeContextActions: async ({ context, localPath, baseUrl }) => {
-      const threadsClosed = context.actions.filter(
-        (action) => action.type === 'THREAD_RESOLVE',
-      ).length;
       const result = await executeActionsFromContext(
         context,
         localPath,
@@ -181,16 +179,13 @@ export function buildExecuteReview(wiring: ExecuteReviewWiringDependencies): Exe
         baseUrl,
         noteCommentPostGateway,
       );
-      return { result, threadsClosed };
+      return { result, threadsClosed: countSucceeded(result, 'THREAD_RESOLVE') };
     },
     executeFallbackActions: async ({ stdout, job }) => {
       const threadActions = parseThreadActions(stdout);
       if (threadActions.length === 0) {
-        return { result: { total: 0, succeeded: 0, failed: 0, skipped: 0 }, threadsClosed: 0 };
+        return { result: emptyExecutionResult(), threadsClosed: 0 };
       }
-      const threadsClosed = threadActions.filter(
-        (action) => action.type === 'THREAD_RESOLVE',
-      ).length;
       const result = await dispatchConstrainedActions(threadActions, {
         context: {
           platform,
@@ -204,7 +199,7 @@ export function buildExecuteReview(wiring: ExecuteReviewWiringDependencies): Exe
         executor: defaultCommandExecutor,
         postGateway: noteCommentPostGateway,
       });
-      return { result, threadsClosed };
+      return { result, threadsClosed: countSucceeded(result, 'THREAD_RESOLVE') };
     },
     fetchDiffMetadata: (projectPath, mergeRequestNumber) =>
       diffMetadataFetchGateway.fetchDiffMetadata(projectPath, mergeRequestNumber),
