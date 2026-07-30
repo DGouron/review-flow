@@ -14,6 +14,11 @@ export interface SelfUpdateCliDependencies {
   execFileAsync: (command: string, args: string[]) => Promise<{ stdout: string; stderr: string }>;
   killProcess: (pid: number, signal: string) => void;
   spawnDaemonDelayed: (port: number | undefined, delaySec: number) => void;
+  /**
+   * Injectable so a test never reads or deletes the machine's live pid file —
+   * doing so orphaned the running daemon and left `reviewflow stop` unable to find it.
+   */
+  pidFilePath: string;
 }
 
 function defaultSpawnDaemonDelayed(port: number | undefined, delaySec: number): void {
@@ -36,6 +41,7 @@ function createDefaultDependencies(): SelfUpdateCliDependencies {
     execFileAsync: defaultExecFileAsync,
     killProcess: (pid, signal) => process.kill(pid, signal),
     spawnDaemonDelayed: defaultSpawnDaemonDelayed,
+    pidFilePath: PID_FILE_PATH,
   };
 }
 
@@ -62,11 +68,12 @@ export class SelfUpdateCliGateway implements SelfUpdateCommandPort {
   }
 
   async restartDaemon(serverPort?: number): Promise<void> {
-    const pidFileContent = readPidFile(PID_FILE_PATH);
+    const { pidFilePath } = this.dependencies;
+    const pidFileContent = readPidFile(pidFilePath);
     const port = pidFileContent?.port ?? serverPort;
     const targetPid = pidFileContent?.pid ?? process.pid;
 
-    removePidFile(PID_FILE_PATH);
+    removePidFile(pidFilePath);
 
     this.dependencies.spawnDaemonDelayed(port, RESTART_DELAY_SECONDS);
 

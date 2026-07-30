@@ -1,4 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import {
   SelfUpdateCliGateway,
@@ -7,6 +11,11 @@ import {
 import { PID_FILE_PATH } from '@/shared/services/daemonPaths.js';
 import { writePidFile, removePidFile } from '@/shared/services/pidFileManager.js';
 
+// A throwaway pid file per test. Pointing these at PID_FILE_PATH used to delete the
+// pid file of whatever daemon the developer had running, orphaning the process.
+let sandboxDir: string;
+let pidFilePath: string;
+
 function createFakeDependencies(
   overrides?: Partial<SelfUpdateCliDependencies>,
 ): SelfUpdateCliDependencies {
@@ -14,13 +23,27 @@ function createFakeDependencies(
     execFileAsync: vi.fn().mockResolvedValue({ stdout: '', stderr: '' }),
     killProcess: vi.fn(),
     spawnDaemonDelayed: vi.fn(),
+    pidFilePath,
     ...overrides,
   };
 }
 
 describe('SelfUpdateCliGateway', () => {
   beforeEach(() => {
-    removePidFile(PID_FILE_PATH);
+    sandboxDir = mkdtempSync(join(tmpdir(), 'reviewflow-selfupdate-'));
+    pidFilePath = join(sandboxDir, 'reviewflow.pid');
+    removePidFile(pidFilePath);
+  });
+
+  afterEach(() => {
+    rmSync(sandboxDir, { recursive: true, force: true });
+  });
+
+  it('never reaches for the real daemon pid file', () => {
+    const deps = createFakeDependencies();
+
+    expect(deps.pidFilePath).not.toBe(PID_FILE_PATH);
+    expect(deps.pidFilePath.startsWith(tmpdir())).toBe(true);
   });
 
   describe('runGlobalUpdate', () => {
@@ -73,7 +96,7 @@ describe('SelfUpdateCliGateway', () => {
     });
 
     it('should use pid file port over server port when pid file exists', async () => {
-      writePidFile(PID_FILE_PATH, { pid: 9999, startedAt: new Date().toISOString(), port: 4000 });
+      writePidFile(pidFilePath, { pid: 9999, startedAt: new Date().toISOString(), port: 4000 });
       const deps = createFakeDependencies();
       const gateway = new SelfUpdateCliGateway(deps);
 
@@ -83,7 +106,7 @@ describe('SelfUpdateCliGateway', () => {
     });
 
     it('should kill process from pid file when it exists', async () => {
-      writePidFile(PID_FILE_PATH, { pid: 9999, startedAt: new Date().toISOString(), port: 4000 });
+      writePidFile(pidFilePath, { pid: 9999, startedAt: new Date().toISOString(), port: 4000 });
       const deps = createFakeDependencies();
       const gateway = new SelfUpdateCliGateway(deps);
 
@@ -130,14 +153,14 @@ describe('SelfUpdateCliGateway', () => {
     });
 
     it('should remove pid file before spawning', async () => {
-      writePidFile(PID_FILE_PATH, { pid: 9999, startedAt: new Date().toISOString(), port: 4000 });
+      writePidFile(pidFilePath, { pid: 9999, startedAt: new Date().toISOString(), port: 4000 });
       const deps = createFakeDependencies();
       const gateway = new SelfUpdateCliGateway(deps);
 
       await gateway.restartDaemon(3847);
 
       const { readPidFile } = await import('@/shared/services/pidFileManager.js');
-      expect(readPidFile(PID_FILE_PATH)).toBeNull();
+      expect(readPidFile(pidFilePath)).toBeNull();
     });
   });
 });
