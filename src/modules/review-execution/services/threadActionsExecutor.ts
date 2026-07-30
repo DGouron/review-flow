@@ -8,6 +8,10 @@ import type { DiffMetadata } from '@/modules/review-execution/entities/reviewCon
 import { GitHubReviewActionCliGateway } from '@/modules/review-execution/interface-adapters/gateways/cli/reviewAction.github.cli.gateway.js';
 import { GitLabReviewActionCliGateway } from '@/modules/review-execution/interface-adapters/gateways/cli/reviewAction.gitlab.cli.gateway.js';
 import {
+  logExecutionFailures,
+  mergeSinkedOutcomes,
+} from '@/modules/review-execution/services/actionExecutionReport.js';
+import {
   executePublicOutput,
   isPublicOutputAction,
 } from '@/modules/review-execution/services/publicOutputExecutor.js';
@@ -87,7 +91,9 @@ export async function executeThreadActions(
       : new GitHubReviewActionCliGateway(executor);
 
   if (postGateway === null) {
-    return gateway.execute(effectiveActions, gatewayContext);
+    const result = await gateway.execute(effectiveActions, gatewayContext);
+    logExecutionFailures(result, logger);
+    return result;
   }
 
   const publicOutputActions = effectiveActions.filter(isPublicOutputAction);
@@ -100,13 +106,9 @@ export async function executeThreadActions(
   );
 
   const cliResult = await gateway.execute(remainingActions, gatewayContext);
+  logExecutionFailures(cliResult, logger);
 
-  return {
-    total: effectiveActions.length,
-    succeeded: cliResult.succeeded + publicOutputActions.length,
-    failed: cliResult.failed,
-    skipped: cliResult.skipped,
-  };
+  return mergeSinkedOutcomes(cliResult, publicOutputActions);
 }
 
 export const defaultCommandExecutor: CommandExecutor = (

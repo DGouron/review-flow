@@ -7,6 +7,7 @@ import {
   type ExecuteReviewInput,
 } from '@/modules/review-execution/usecases/executeReview.usecase.js';
 import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
+import type { ExecutionResult } from '@/shared/foundation/executionGateway.base.js';
 import { ReviewJobFactory } from '@/tests/factories/reviewJob.factory.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
 import { ClaudeReviewInvokerStub } from '@/tests/stubs/claudeReviewInvoker.stub.js';
@@ -17,6 +18,16 @@ import { StubReviewContextGateway } from '@/tests/stubs/reviewContextGateway.stu
 import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 
 const SUCCESS_STDOUT = '[REVIEW_STATS:blocking=1:warnings=2:suggestions=3:score=7.5]';
+
+function singleSucceededResult(): ExecutionResult {
+  return {
+    total: 1,
+    succeeded: 1,
+    failed: 0,
+    skipped: 0,
+    outcomes: [{ type: 'THREAD_RESOLVE', status: 'succeeded' }],
+  };
+}
 
 interface Harness {
   deps: ExecuteReviewDependencies;
@@ -79,14 +90,14 @@ function createHarness(): Harness {
     executeContextActions: async () => {
       state.contextActionCalls += 1;
       return {
-        result: { total: 1, succeeded: 1, failed: 0, skipped: 0 },
+        result: singleSucceededResult(),
         threadsClosed: state.contextThreadsClosed,
       };
     },
     executeFallbackActions: async () => {
       state.fallbackActionCalls += 1;
       return {
-        result: { total: 1, succeeded: 1, failed: 0, skipped: 0 },
+        result: singleSucceededResult(),
         threadsClosed: state.fallbackThreadsClosed,
       };
     },

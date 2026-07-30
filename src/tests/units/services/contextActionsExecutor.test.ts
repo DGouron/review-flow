@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import type { ReviewContext } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
 import { executeActionsFromContext } from '@/modules/review-execution/services/contextActionsExecutor.js';
+import { countSucceeded } from '@/shared/foundation/executionGateway.base.js';
 
 // AC6/AC7: the context auto-path executor is bounded to read + postComment.
 // THREAD_RESOLVE / ADD_LABEL are dropped (no-op, logged), POST_COMMENT executes.
@@ -238,5 +239,68 @@ describe('executeActionsFromContext (auto path, capability-bounded)', () => {
     expect(result.total).toBe(2);
     expect(result.failed).toBe(1);
     expect(result.succeeded).toBe(1);
+  });
+
+  describe('a failed command is reported, never counted as done', () => {
+    const contextWithAuthenticatedResolve: ReviewContext = {
+      ...baseContext,
+      threads: [
+        {
+          id: 'PRRT_kwDONxxx',
+          file: 'src/app.ts',
+          line: 3,
+          status: 'open',
+          body: 'blocking finding',
+        },
+      ],
+      actions: [{ type: 'THREAD_RESOLVE', threadId: 'PRRT_kwDONxxx' }],
+    };
+
+    it('logs the command error with the action type', async () => {
+      mockExecutor.mockImplementationOnce(() => {
+        throw new Error('gh: Could not resolve to a node with the global id');
+      });
+
+      await executeActionsFromContext(
+        contextWithAuthenticatedResolve,
+        '/tmp/repo',
+        mockLogger,
+        mockExecutor,
+      );
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        {
+          actionType: 'THREAD_RESOLVE',
+          error: 'gh: Could not resolve to a node with the global id',
+        },
+        'Review action command failed',
+      );
+    });
+
+    it('leaves the failed resolve out of the succeeded count', async () => {
+      mockExecutor.mockImplementationOnce(() => {
+        throw new Error('gh: Could not resolve to a node with the global id');
+      });
+
+      const result = await executeActionsFromContext(
+        contextWithAuthenticatedResolve,
+        '/tmp/repo',
+        mockLogger,
+        mockExecutor,
+      );
+
+      expect(countSucceeded(result, 'THREAD_RESOLVE')).toBe(0);
+    });
+
+    it('counts a resolve that the platform accepted', async () => {
+      const result = await executeActionsFromContext(
+        contextWithAuthenticatedResolve,
+        '/tmp/repo',
+        mockLogger,
+        mockExecutor,
+      );
+
+      expect(countSucceeded(result, 'THREAD_RESOLVE')).toBe(1);
+    });
   });
 });

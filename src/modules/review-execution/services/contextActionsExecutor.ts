@@ -5,6 +5,10 @@ import type { ReviewContext } from '@/modules/review-execution/entities/reviewCo
 import { GitHubReviewActionCliGateway } from '@/modules/review-execution/interface-adapters/gateways/cli/reviewAction.github.cli.gateway.js';
 import { GitLabReviewActionCliGateway } from '@/modules/review-execution/interface-adapters/gateways/cli/reviewAction.gitlab.cli.gateway.js';
 import {
+  logExecutionFailures,
+  mergeSinkedOutcomes,
+} from '@/modules/review-execution/services/actionExecutionReport.js';
+import {
   executePublicOutput,
   isPublicOutputAction,
 } from '@/modules/review-execution/services/publicOutputExecutor.js';
@@ -91,7 +95,9 @@ export async function executeActionsFromContext(
       : new GitHubReviewActionCliGateway(executor);
 
   if (postGateway === null) {
-    return gateway.execute(allowed, gatewayContext);
+    const result = await gateway.execute(allowed, gatewayContext);
+    logExecutionFailures(result, logger);
+    return result;
   }
 
   const publicOutputActions = allowed.filter(isPublicOutputAction);
@@ -104,11 +110,7 @@ export async function executeActionsFromContext(
   );
 
   const cliResult = await gateway.execute(remainingActions, gatewayContext);
+  logExecutionFailures(cliResult, logger);
 
-  return {
-    total: allowed.length,
-    succeeded: cliResult.succeeded + publicOutputActions.length,
-    failed: cliResult.failed,
-    skipped: cliResult.skipped,
-  };
+  return mergeSinkedOutcomes(cliResult, publicOutputActions);
 }

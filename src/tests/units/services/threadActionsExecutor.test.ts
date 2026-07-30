@@ -186,7 +186,7 @@ describe('executeThreadActions (auto path, capability-bounded)', () => {
 
       const result = await executeThreadActions([], context, mockLogger, mockExecutor);
 
-      expect(result).toEqual({ total: 0, succeeded: 0, failed: 0, skipped: 0 });
+      expect(result).toEqual({ total: 0, succeeded: 0, failed: 0, skipped: 0, outcomes: [] });
       expect(mockExecutor).not.toHaveBeenCalled();
     });
   });

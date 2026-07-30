@@ -5,6 +5,7 @@ import {
   type ExecuteReviewDependencies,
 } from '@/modules/review-execution/usecases/executeReview.usecase.js';
 import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
+import { emptyExecutionResult } from '@/shared/foundation/executionGateway.base.js';
 import { ReviewJobFactory } from '@/tests/factories/reviewJob.factory.js';
 import { ClaudeReviewInvokerStub } from '@/tests/stubs/claudeReviewInvoker.stub.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
@@ -50,11 +51,20 @@ function buildDependencies(overrides?: Partial<ExecuteReviewDependencies>): {
       const threadsClosed = context.actions.filter(
         (action) => action.type === 'THREAD_RESOLVE',
       ).length;
-      return { result: { total: 1, succeeded: 1, failed: 0, skipped: 0 }, threadsClosed };
+      return {
+        result: {
+          total: 1,
+          succeeded: 1,
+          failed: 0,
+          skipped: 0,
+          outcomes: [{ type: 'THREAD_RESOLVE', status: 'succeeded' }],
+        },
+        threadsClosed,
+      };
     },
     executeFallbackActions: async () => {
       fallbackActionCalls.push(Date.now());
-      return { result: { total: 1, succeeded: 1, failed: 0, skipped: 0 }, threadsClosed: 0 };
+      return { result: emptyExecutionResult(), threadsClosed: 0 };
     },
     fetchDiffMetadata: () => ({ baseSha: 'a', headSha: 'b', startSha: 'c' }),
     logger: createStubLogger(),
