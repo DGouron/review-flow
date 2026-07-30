@@ -46,7 +46,7 @@ const gitlabContext: ExecutionContext = {
 };
 
 describe('executeThreadActions — egress routing (pentest amendment AC7/AC9)', () => {
-  it('routes a THREAD_REPLY body through the decorated sink, never the raw CLI primitive', async () => {
+  it('routes a THREAD_REPLY body through the decorated thread-reply sink, never the raw CLI primitive', async () => {
     const { sink, gateway } = buildDecoratedSink();
     const rawCalls: string[][] = [];
     const recordingExecutor: CommandExecutor = (_command, args) => {
@@ -58,9 +58,11 @@ describe('executeThreadActions — egress routing (pentest amendment AC7/AC9)', 
 
     await executeThreadActions(actions, gitlabContext, silentLogger, recordingExecutor, gateway);
 
-    expect(sink.calls).toHaveLength(1);
-    expect(sink.calls[0].body).toContain('[REDACTED]');
-    expect(sink.calls[0].body).not.toContain(SECRET);
+    expect(sink.calls).toHaveLength(0);
+    expect(sink.threadReplies).toHaveLength(1);
+    expect(sink.threadReplies[0].threadId).toBe('abc');
+    expect(sink.threadReplies[0].body).toContain('[REDACTED]');
+    expect(sink.threadReplies[0].body).not.toContain(SECRET);
 
     const reachedRawNotePrimitive = rawCalls.some((args) =>
       args.some((arg) => arg.includes(SECRET) || arg.includes('/notes')),
@@ -133,9 +135,10 @@ describe('executeThreadActions — egress routing (pentest amendment AC7/AC9)', 
 
     await executeThreadActions(actions, gitlabContext, silentLogger, recordingExecutor, gateway);
 
-    expect(sink.calls).toHaveLength(2);
-    for (const call of sink.calls) {
-      expect(call.body).not.toContain(SECRET);
+    const sinkedBodies = [...sink.calls, ...sink.threadReplies].map((call) => call.body);
+    expect(sinkedBodies).toHaveLength(2);
+    for (const body of sinkedBodies) {
+      expect(body).not.toContain(SECRET);
     }
     const rawSecretCalls = rawCalls.filter((args) => args.some((arg) => arg.includes(SECRET)));
     expect(rawSecretCalls).toHaveLength(0);

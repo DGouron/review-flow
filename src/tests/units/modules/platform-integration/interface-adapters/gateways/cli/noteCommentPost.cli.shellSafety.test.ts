@@ -45,4 +45,44 @@ describe('CLI note-comment post gateways — shell safety (issue #276)', () => {
 
     expect(parsesAsValidShell(captured)).toBe(true);
   });
+
+  it('GitLab: a thread reply targets the discussion notes endpoint and stays shell-valid', async () => {
+    let captured = '';
+    const gateway = new GitLabNoteCommentPostCliGateway((command: string): string => {
+      captured = command;
+      return '';
+    });
+
+    await gateway.postThreadReply({
+      projectPath: 'group/project',
+      mrNumber: 42,
+      threadId: 'abc123',
+      body: DANGEROUS_BODY,
+    });
+
+    expect(captured).toContain(
+      'projects/group%2Fproject/merge_requests/42/discussions/abc123/notes',
+    );
+    expect(parsesAsValidShell(captured)).toBe(true);
+  });
+
+  it('GitHub: a thread reply uses the review-thread reply mutation and stays shell-valid', async () => {
+    let captured = '';
+    const gateway = new GitHubNoteCommentPostCliGateway((command: string): string => {
+      captured = command;
+      return '';
+    });
+
+    await gateway.postThreadReply({
+      projectPath: 'owner/repo',
+      mrNumber: 7,
+      threadId: 'PRRT_kwDOabc',
+      body: DANGEROUS_BODY,
+    });
+
+    expect(captured).toContain('addPullRequestReviewThreadReply');
+    expect(captured).toContain("threadId='PRRT_kwDOabc'");
+    expect(captured).not.toContain('/issues/7/comments');
+    expect(parsesAsValidShell(captured)).toBe(true);
+  });
 });

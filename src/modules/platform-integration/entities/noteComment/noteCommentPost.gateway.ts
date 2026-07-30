@@ -4,6 +4,11 @@ export interface NoteCommentPostInput {
   body: string;
 }
 
+export interface NoteCommentThreadReplyInput extends NoteCommentPostInput {
+  threadId: string;
+}
+
 export interface NoteCommentPostGateway {
   postComment(input: NoteCommentPostInput): Promise<void>;
+  postThreadReply(input: NoteCommentThreadReplyInput): Promise<void>;
 }

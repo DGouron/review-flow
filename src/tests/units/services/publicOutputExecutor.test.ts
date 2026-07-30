@@ -27,6 +27,14 @@ function buildDecoratedGateway() {
 
 const context = { projectPath: 'group/project', mrNumber: 42 };
 
+/**
+ * The invariant is one decorated gateway for every public-output body, not one method:
+ * a reply reaches the thread it answers, a comment reaches the MR notes.
+ */
+function bodiesSentThrough(sink: StubNoteCommentPostGateway): string[] {
+  return [...sink.calls, ...sink.threadReplies].map((call) => call.body);
+}
+
 describe('executePublicOutput', () => {
   describe('AC7 — THREAD_REPLY egress is scanned', () => {
     it('routes a THREAD_REPLY body through the decorated sink with redaction', async () => {
@@ -37,9 +45,9 @@ describe('executePublicOutput', () => {
 
       await executePublicOutput(actions, context, gateway);
 
-      expect(sink.calls).toHaveLength(1);
-      expect(sink.calls[0].body).toContain('[REDACTED]');
-      expect(sink.calls[0].body).not.toContain(SECRET);
+      expect(sink.threadReplies).toHaveLength(1);
+      expect(sink.threadReplies[0].body).toContain('[REDACTED]');
+      expect(sink.threadReplies[0].body).not.toContain(SECRET);
     });
   });
 
@@ -57,9 +65,10 @@ describe('executePublicOutput', () => {
 
       await executePublicOutput([action], context, gateway);
 
-      expect(sink.calls).toHaveLength(1);
-      expect(sink.calls[0].body).not.toContain(SECRET);
-      expect(sink.calls[0].body).toContain('[REDACTED]');
+      const bodies = bodiesSentThrough(sink);
+      expect(bodies).toHaveLength(1);
+      expect(bodies[0]).not.toContain(SECRET);
+      expect(bodies[0]).toContain('[REDACTED]');
     });
 
     it('every auto-path public-output verb resolves to one shared decorated sink', async () => {
@@ -71,10 +80,11 @@ describe('executePublicOutput', () => {
 
       await executePublicOutput(actions, context, gateway);
 
-      expect(sink.calls).toHaveLength(2);
-      for (const call of sink.calls) {
-        expect(call.body).not.toContain(SECRET);
-        expect(call.body).toContain('[REDACTED]');
+      const bodies = bodiesSentThrough(sink);
+      expect(bodies).toHaveLength(2);
+      for (const body of bodies) {
+        expect(body).not.toContain(SECRET);
+        expect(body).toContain('[REDACTED]');
       }
     });
 
@@ -87,7 +97,7 @@ describe('executePublicOutput', () => {
 
       await executePublicOutput(actions, context, gateway);
 
-      expect(sink.calls).toHaveLength(0);
+      expect(bodiesSentThrough(sink)).toHaveLength(0);
     });
   });
 });

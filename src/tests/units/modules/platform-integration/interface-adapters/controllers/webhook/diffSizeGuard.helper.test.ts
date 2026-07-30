@@ -155,6 +155,9 @@ describe('applyDiffSizeGuard', () => {
       postComment: async () => {
         throw new Error('comment failed');
       },
+      postThreadReply: async () => {
+        throw new Error('reply failed');
+      },
     };
 
     const result = await applyDiffSizeGuard({
