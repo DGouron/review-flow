@@ -33,6 +33,7 @@ import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.j
 import { mrTrackingAdvancedRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTrackingAdvanced.routes.js';
 import { TrackedMrFactory, MrTrackingDataFactory } from '@/tests/factories/trackedMr.factory.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
+import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
 
 interface RepoStub {
   name: string;
@@ -139,6 +140,7 @@ async function buildApp(options: BuildAppOptions): Promise<AppBundle> {
     recordReviewCompletion: { execute: vi.fn() } as never,
     enforceBudget: { execute: enforceBudgetExecute } as never,
     broadcastBudgetExceeded,
+    noteCommentPostGatewayFactory: () => new StubNoteCommentPostGateway(),
     gateClaudeInvocation:
       options.gateResult == null ? undefined : ({ execute: gateExecute } as never),
     logger: createStubLogger(),

@@ -9,6 +9,7 @@ import { logInfo, logError } from '@/frameworks/logging/logBuffer.js';
 import { enqueueReview, createJobId, updateJobProgress } from '@/frameworks/queue/pQueueAdapter.js';
 import { startWatchingReviewContext, stopWatchingReviewContext } from '@/main/websocket.js';
 import type { BudgetExceededPayload } from '@/main/websocket.js';
+import type { NoteCommentPostGateway } from '@/modules/platform-integration/entities/noteComment/noteCommentPost.gateway.js';
 import type { GitHubDiffMetadataFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/diffMetadataFetch.github.gateway.js';
 import type { GitLabDiffMetadataFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/diffMetadataFetch.gitlab.gateway.js';
 import type { GitHubThreadFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.github.gateway.js';
@@ -32,6 +33,7 @@ import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/t
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import type { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
 import type { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
+import type { CommandExecutor } from '@/shared/foundation/executionGateway.base.js';
 
 type Platform = 'gitlab' | 'github';
 
@@ -52,6 +54,13 @@ export interface MrTrackingAdvancedRoutesOptions {
   recordReviewCompletion: RecordReviewCompletionUseCase;
   enforceBudget: Pick<EnforceBudgetUseCase, 'execute'>;
   broadcastBudgetExceeded: (payload: BudgetExceededPayload) => void;
+  /**
+   * The scanned egress sink every public-output body must travel through (SPEC-199).
+   * Manual follow-ups used to reach the raw CLI note primitive directly, so a report
+   * or a reply left the machine unscanned.
+   */
+  noteCommentPostGatewayFactory: (platform: Platform) => NoteCommentPostGateway;
+  commandExecutor?: CommandExecutor;
   claudeInvokerDeps?: ClaudeInvokerDependencies;
   gateClaudeInvocation?: GateClaudeInvocationUseCase;
   logger: Logger;
@@ -87,6 +96,8 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
     recordReviewCompletion,
     enforceBudget,
     broadcastBudgetExceeded,
+    noteCommentPostGatewayFactory,
+    commandExecutor = defaultCommandExecutor,
     claudeInvokerDeps,
     gateClaudeInvocation,
     logger,
@@ -296,7 +307,9 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
               reviewContext,
               job.localPath,
               logger,
-              defaultCommandExecutor,
+              commandExecutor,
+              null,
+              noteCommentPostGatewayFactory(job.platform),
             );
             logger.info(
               { ...actionResult, threadResolveCount, mrNumber: job.mrNumber },
@@ -319,7 +332,8 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
                 diffMetadata: reviewContext?.diffMetadata,
               },
               logger,
-              defaultCommandExecutor,
+              commandExecutor,
+              noteCommentPostGatewayFactory(job.platform),
             );
             logger.info(
               { ...actionResult, threadResolveCount, mrNumber: job.mrNumber },

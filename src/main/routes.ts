@@ -375,6 +375,24 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     platform === 'github'
       ? new GitHubThreadFetchGateway(defaultGitHubExecutor)
       : new GitLabThreadFetchGateway(defaultGitLabExecutor);
+
+  // The single scanned egress sink per platform (SPEC-199). Built here because the
+  // manual-followup routes registered just below need it as much as the webhook path.
+  const egressScanner = createEgressScanner(defaultEgressScanConfig);
+  const egressTraceGateway = new LoggerEgressTraceGateway(deps.logger);
+  const gitLabNoteCommentPostGateway = new EgressScannedNoteCommentPostGateway(
+    new GitLabNoteCommentPostCliGateway(defaultGitLabExecutor),
+    egressScanner,
+    egressTraceGateway,
+  );
+  const gitHubNoteCommentPostGateway = new EgressScannedNoteCommentPostGateway(
+    new GitHubNoteCommentPostCliGateway(defaultGitHubExecutor),
+    egressScanner,
+    egressTraceGateway,
+  );
+  const noteCommentPostGatewayFactory = (platform: 'gitlab' | 'github') =>
+    platform === 'github' ? gitHubNoteCommentPostGateway : gitLabNoteCommentPostGateway;
+
   await app.register(mrTrackingAdvancedRoutes, {
     getRepositories: () => deps.config.repositories,
     reviewRequestTrackingGateway: deps.reviewRequestTrackingGateway,
@@ -396,6 +414,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     recordReviewCompletion: new RecordReviewCompletionUseCase(deps.reviewRequestTrackingGateway),
     enforceBudget,
     broadcastBudgetExceeded,
+    noteCommentPostGatewayFactory,
     claudeInvokerDeps,
     gateClaudeInvocation,
     logger: deps.logger,
@@ -447,9 +466,6 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
   const trackingGw = deps.reviewRequestTrackingGateway;
   const threadFetchGw = new GitLabThreadFetchGateway(defaultGitLabExecutor);
 
-  const egressScanner = createEgressScanner(defaultEgressScanConfig);
-  const egressTraceGateway = new LoggerEgressTraceGateway(deps.logger);
-
   // Confirming a parked review rebuilds the real review processor from a code-side
   // registry: the builders close over framework gateways re-created at boot, so a
   // confirmation survives a server restart and is driven only by the persisted
@@ -459,16 +475,6 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
 
   const gitLabThreadFetchGatewayForReview = new GitLabThreadFetchGateway(defaultGitLabExecutor);
   const gitHubThreadFetchGatewayForReview = new GitHubThreadFetchGateway(defaultGitHubExecutor);
-  const gitLabNoteCommentPostGateway = new EgressScannedNoteCommentPostGateway(
-    new GitLabNoteCommentPostCliGateway(defaultGitLabExecutor),
-    egressScanner,
-    egressTraceGateway,
-  );
-  const gitHubNoteCommentPostGateway = new EgressScannedNoteCommentPostGateway(
-    new GitHubNoteCommentPostCliGateway(defaultGitHubExecutor),
-    egressScanner,
-    egressTraceGateway,
-  );
 
   const gitLabExecuteReview = buildExecuteReview({
     platform: 'gitlab',
