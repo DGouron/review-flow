@@ -155,16 +155,38 @@ function buildProgressReporter(
   };
 }
 
+/**
+ * Claude reaches the platform only by appending actions to the review context file
+ * (the MCP `add_action` tool); the prompt forbids stdout markers. An unreadable context
+ * therefore means every action Claude asked for is already lost — no thread resolved,
+ * no reply, no report. That is a failed review, not a case for the marker fallback,
+ * which would report success while publishing nothing.
+ */
+const CONTEXT_UNREADABLE_REASON =
+  'review context is unreadable after the run: every requested action was lost';
+
 async function executePostReviewActions(
   input: ExecuteReviewInput,
   deps: ExecuteReviewDependencies,
   mergeRequestId: string,
   stdout: string,
-): Promise<number> {
+): Promise<number | null> {
   const { job, platform } = input;
   const context = deps.reviewContextGateway.read(job.localPath, mergeRequestId);
 
-  if (context && context.actions.length > 0) {
+  if (!context) {
+    deps.logger.error(
+      {
+        mrNumber: job.mrNumber,
+        localPath: job.localPath,
+        contextFilePath: deps.reviewContextGateway.getFilePath(job.localPath, mergeRequestId),
+      },
+      CONTEXT_UNREADABLE_REASON,
+    );
+    return null;
+  }
+
+  if (context.actions.length > 0) {
     const outcome = await deps.executeContextActions({
       context,
       localPath: job.localPath,
@@ -241,6 +263,11 @@ export async function executeReview(
 
   const parsed = parseReviewOutput(result.stdout);
   const threadsClosed = await executePostReviewActions(input, deps, mergeRequestId, result.stdout);
+
+  if (threadsClosed === null) {
+    deps.sendNotification(`Review ${followupSuffix}échouée`, messageTarget);
+    return { status: 'failed', reason: CONTEXT_UNREADABLE_REASON };
+  }
 
   deps.reviewContextGateway.setResult(
     job.localPath,

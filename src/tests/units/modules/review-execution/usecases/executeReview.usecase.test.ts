@@ -168,6 +168,13 @@ function appendContextActionsDuringInvoke(
   });
 }
 
+/** Reproduces a worktree cleaned up while Claude was running: the context file vanishes. */
+function dropContextDuringInvoke(harness: Harness, mergeRequestId: string): void {
+  harness.claudeInvoker.onInvoke((job) => {
+    harness.contextGateway.delete(job.localPath, mergeRequestId);
+  });
+}
+
 describe('executeReview', () => {
   let harness: Harness;
 
@@ -289,8 +296,49 @@ describe('executeReview', () => {
     });
   });
 
+  describe('unreadable review context', () => {
+    it('returns failed when the context file is gone after Claude ran', async () => {
+      const job = ReviewJobFactory.create({ jobType: 'followup' });
+      const mergeRequestId = `gitlab-${job.projectPath}-${job.mrNumber}`;
+      seedTrackedMr(harness, mergeRequestId);
+      dropContextDuringInvoke(harness, mergeRequestId);
+
+      const result = await executeReview(reviewInput({ job, isFollowup: true }), harness.deps);
+
+      expect(result.status).toBe('failed');
+      if (result.status === 'failed') {
+        expect(result.reason).toContain('review context');
+      }
+    });
+
+    it('notifies failure instead of completion', async () => {
+      const job = ReviewJobFactory.create({ jobType: 'followup' });
+      const mergeRequestId = `gitlab-${job.projectPath}-${job.mrNumber}`;
+      seedTrackedMr(harness, mergeRequestId);
+      dropContextDuringInvoke(harness, mergeRequestId);
+
+      await executeReview(reviewInput({ job, isFollowup: true }), harness.deps);
+
+      expect(harness.notifications.at(-1)?.title).toBe('Review followup échouée');
+    });
+
+    it('never silently falls back to stdout markers and records no stats', async () => {
+      const job = ReviewJobFactory.create({ jobType: 'followup' });
+      const mergeRequestId = `gitlab-${job.projectPath}-${job.mrNumber}`;
+      seedTrackedMr(harness, mergeRequestId);
+      dropContextDuringInvoke(harness, mergeRequestId);
+
+      await executeReview(reviewInput({ job, isFollowup: true }), harness.deps);
+
+      expect(harness.contextActionCalls).toBe(0);
+      expect(harness.fallbackActionCalls).toBe(0);
+      const stored = harness.trackingGateway.getById('/tmp/repos/test-project', mergeRequestId);
+      expect(stored?.reviews.length ?? 0).toBe(0);
+    });
+  });
+
   describe('best-effort context creation', () => {
-    it('still invokes Claude when thread resolution fails', async () => {
+    it('still invokes Claude when thread resolution fails, then reports the lost context', async () => {
       harness.setResolveThreadsError(new Error('thread fetch boom'));
       const job = ReviewJobFactory.create({ jobType: 'review' });
       const mergeRequestId = `gitlab-${job.projectPath}-${job.mrNumber}`;
@@ -298,8 +346,9 @@ describe('executeReview', () => {
 
       const result = await executeReview(reviewInput({ job }), harness.deps);
 
-      expect(result.status).toBe('completed');
       expect(harness.claudeInvoker.invocations).toHaveLength(1);
+      // No context file was ever written, so nothing Claude asked for could be published.
+      expect(result.status).toBe('failed');
     });
 
     it('still invokes Claude when diff metadata fetch fails', async () => {
