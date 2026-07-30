@@ -1,8 +1,10 @@
 import { execSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 // Run integration tests against the TypeScript source via tsx — avoids the
 // requirement of a prior `yarn build`, keeping the tests stable in fresh
@@ -16,11 +18,27 @@ const cliCommand = `${tsxBin} ${cliSrc}`;
 // Cold-start tsx spawns can exceed the 5s default under load; allow headroom.
 const TEST_TIMEOUT_MS = 15000;
 
+// The pid file lives under the home directory, so these tests used to read the one
+// belonging to the developer's own daemon: `status` answered "running" and the
+// stopped-server expectations failed. A throwaway HOME gives the spawned CLI an
+// empty config dir, making "stopped" a fact of the fixture rather than of the machine.
+let fakeHome: string;
+let cliEnvironment: NodeJS.ProcessEnv;
+
+beforeAll(() => {
+  fakeHome = mkdtempSync(join(tmpdir(), 'reviewflow-cli-home-'));
+  cliEnvironment = { ...process.env, HOME: fakeHome, USERPROFILE: fakeHome, NO_COLOR: '1' };
+});
+
+afterAll(() => {
+  rmSync(fakeHome, { recursive: true, force: true });
+});
+
 describe('CLI integration', () => {
   it(
     'should print version when called with --version',
     () => {
-      const output = execSync(`${cliCommand} --version`).toString().trim();
+      const output = execSync(`${cliCommand} --version`, { env: cliEnvironment }).toString().trim();
       expect(output).toMatch(/^\d+\.\d+\.\d+$/);
     },
     TEST_TIMEOUT_MS,
@@ -29,7 +47,7 @@ describe('CLI integration', () => {
   it(
     'should print help when called with --help',
     () => {
-      const output = execSync(`${cliCommand} --help`).toString();
+      const output = execSync(`${cliCommand} --help`, { env: cliEnvironment }).toString();
       expect(output).toContain('reviewflow');
       expect(output).toContain('start');
       expect(output).toContain('stop');
@@ -47,7 +65,7 @@ describe('CLI integration', () => {
     'should exit with code 1 when status is checked and server is not running',
     () => {
       try {
-        execSync(`${cliCommand} status`, { env: { ...process.env, NO_COLOR: '1' } });
+        execSync(`${cliCommand} status`, { env: cliEnvironment });
         expect.unreachable('should have thrown');
       } catch (error) {
         const execError = error as { status: number; stdout: Buffer };
@@ -62,7 +80,7 @@ describe('CLI integration', () => {
     'should output JSON for status --json when stopped',
     () => {
       try {
-        execSync(`${cliCommand} status --json`);
+        execSync(`${cliCommand} status --json`, { env: cliEnvironment });
         expect.unreachable('should have thrown');
       } catch (error) {
         const execError = error as { status: number; stdout: Buffer };
