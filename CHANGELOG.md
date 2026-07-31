@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.48.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.47.0...reviewflow-v3.48.0) (2026-07-30)
+
+
+### Added
+
+* **settings:** make the review timeout configurable ([#364](https://github.com/DGouron/review-flow/issues/364)) ([8053159](https://github.com/DGouron/review-flow/commit/805315929be197c4c789cad91f3f3d96d5e4dcf0))
+
+
+### Fixed
+
+* close follow-up threads and reply inside the conversation on GitHub ([#369](https://github.com/DGouron/review-flow/issues/369)) ([ac6d535](https://github.com/DGouron/review-flow/commit/ac6d535989bcf62f4f0369e94d9d44012c5b8072))
+* scan manual follow-up output before it leaves the machine ([#370](https://github.com/DGouron/review-flow/issues/370)) ([58be005](https://github.com/DGouron/review-flow/commit/58be0058d72bbd470c8f8f8e0ed2af8ec9bc495a))
+* stop the test suite from destroying the running daemon's pid file ([#371](https://github.com/DGouron/review-flow/issues/371)) ([dfbfe74](https://github.com/DGouron/review-flow/commit/dfbfe74318292fb9d696f8fce8bf07fd04cabadf))
+
 ## [3.47.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.46.0...reviewflow-v3.47.0) (2026-07-27)
 
 
