@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { ClearReviewInProgressUseCase } from '@/modules/platform-integration/usecases/clearReviewInProgress.usecase.js';
+import { MarkReviewDoneUseCase } from '@/modules/platform-integration/usecases/markReviewDone.usecase.js';
 import { MarkReviewInProgressUseCase } from '@/modules/platform-integration/usecases/markReviewInProgress.usecase.js';
 import {
   executeReview,
@@ -74,6 +75,7 @@ function buildDependencies(overrides?: Partial<ExecuteReviewDependencies>): {
     fetchDiffMetadata: () => ({ baseSha: 'a', headSha: 'b', startSha: 'c' }),
     markReviewInProgress: new MarkReviewInProgressUseCase({ reviewLabelGateway, logger }),
     clearReviewInProgress: new ClearReviewInProgressUseCase({ reviewLabelGateway, logger }),
+    markReviewDone: new MarkReviewDoneUseCase({ reviewLabelGateway, logger }),
     logger,
     ...overrides,
   };

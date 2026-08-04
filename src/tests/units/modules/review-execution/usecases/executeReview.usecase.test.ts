@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
+import {
+  REVIEW_DONE_LABEL,
+  REVIEW_IN_PROGRESS_LABEL,
+} from '@/modules/platform-integration/entities/reviewLabel/reviewLabel.js';
 import { ClearReviewInProgressUseCase } from '@/modules/platform-integration/usecases/clearReviewInProgress.usecase.js';
+import { MarkReviewDoneUseCase } from '@/modules/platform-integration/usecases/markReviewDone.usecase.js';
 import { MarkReviewInProgressUseCase } from '@/modules/platform-integration/usecases/markReviewInProgress.usecase.js';
 import type { ReviewContextThread } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
 import {
@@ -111,6 +116,7 @@ function createHarness(): Harness {
       diffMetadata.fetchDiffMetadata(projectPath, mrNumber),
     markReviewInProgress: new MarkReviewInProgressUseCase({ reviewLabelGateway, logger }),
     clearReviewInProgress: new ClearReviewInProgressUseCase({ reviewLabelGateway, logger }),
+    markReviewDone: new MarkReviewDoneUseCase({ reviewLabelGateway, logger }),
     logger,
   };
 
@@ -392,13 +398,18 @@ describe('executeReview', () => {
       await executeReview(reviewInput({ job }), harness.deps);
 
       expect(harness.reviewLabelGateway.operations).toEqual([
+        'removeLabel',
+        'ensureLabelExists',
+        'addLabel',
         'ensureLabelExists',
         'addLabel',
         'removeLabel',
       ]);
-      expect(harness.reviewLabelGateway.added).toEqual([
-        { projectPath: job.projectPath, mrNumber: job.mrNumber, label: 'review-in-progress' },
-      ]);
+      expect(harness.reviewLabelGateway.added).toContainEqual({
+        projectPath: job.projectPath,
+        mrNumber: job.mrNumber,
+        label: REVIEW_IN_PROGRESS_LABEL,
+      });
     });
 
     it('has already applied the label when Claude is invoked', async () => {
@@ -409,7 +420,7 @@ describe('executeReview', () => {
 
       await executeReview(reviewInput(), harness.deps);
 
-      expect(operationsAtInvoke).toEqual(['ensureLabelExists', 'addLabel']);
+      expect(operationsAtInvoke).toEqual(['removeLabel', 'ensureLabelExists', 'addLabel']);
     });
 
     it('clears the label when the review is cancelled', async () => {
@@ -425,7 +436,10 @@ describe('executeReview', () => {
       const result = await executeReview(reviewInput(), harness.deps);
 
       expect(result.status).toBe('cancelled');
-      expect(harness.reviewLabelGateway.removed).toHaveLength(1);
+      expect(harness.reviewLabelGateway.removed.map((entry) => entry.label)).toEqual([
+        REVIEW_DONE_LABEL,
+        REVIEW_IN_PROGRESS_LABEL,
+      ]);
     });
 
     it('clears the label when the invocation fails', async () => {
@@ -441,7 +455,10 @@ describe('executeReview', () => {
       const result = await executeReview(reviewInput(), harness.deps);
 
       expect(result).toEqual({ status: 'failed', reason: 'exploded' });
-      expect(harness.reviewLabelGateway.removed).toHaveLength(1);
+      expect(harness.reviewLabelGateway.removed.map((entry) => entry.label)).toEqual([
+        REVIEW_DONE_LABEL,
+        REVIEW_IN_PROGRESS_LABEL,
+      ]);
     });
 
     it('clears the label when the review context is unreadable after the run', async () => {
@@ -455,7 +472,10 @@ describe('executeReview', () => {
       if (result.status === 'failed') {
         expect(result.reason).toContain('review context is unreadable');
       }
-      expect(harness.reviewLabelGateway.removed).toHaveLength(1);
+      expect(harness.reviewLabelGateway.removed.map((entry) => entry.label)).toEqual([
+        REVIEW_DONE_LABEL,
+        REVIEW_IN_PROGRESS_LABEL,
+      ]);
     });
 
     it('still runs the review when the label cannot be applied', async () => {
@@ -484,7 +504,81 @@ describe('executeReview', () => {
       const result = await executeReview(reviewInput({ job, isFollowup: true }), harness.deps);
 
       expect(result.status).toBe('completed');
-      expect(harness.reviewLabelGateway.operations).toEqual([]);
+      expect(harness.reviewLabelGateway.added.map((entry) => entry.label)).not.toContain(
+        REVIEW_IN_PROGRESS_LABEL,
+      );
+      expect(harness.reviewLabelGateway.removed).toEqual([]);
+    });
+  });
+
+  describe('review-done label', () => {
+    it('applies the done label when an initial review completes', async () => {
+      const job = ReviewJobFactory.create({ jobType: 'review' });
+
+      await executeReview(reviewInput({ job }), harness.deps);
+
+      expect(harness.reviewLabelGateway.added.at(-1)).toEqual({
+        projectPath: job.projectPath,
+        mrNumber: job.mrNumber,
+        label: REVIEW_DONE_LABEL,
+      });
+    });
+
+    it('applies the done label when a follow-up completes', async () => {
+      const job = ReviewJobFactory.createFollowup();
+
+      const result = await executeReview(reviewInput({ job, isFollowup: true }), harness.deps);
+
+      expect(result.status).toBe('completed');
+      expect(harness.reviewLabelGateway.added.map((entry) => entry.label)).toEqual([
+        REVIEW_DONE_LABEL,
+      ]);
+    });
+
+    it('applies nothing when the review is cancelled', async () => {
+      harness.claudeInvoker.setResult({
+        success: false,
+        cancelled: true,
+        exitCode: null,
+        stdout: '',
+        stderr: '',
+        durationMs: 0,
+      });
+
+      await executeReview(reviewInput(), harness.deps);
+
+      expect(harness.reviewLabelGateway.added.map((entry) => entry.label)).not.toContain(
+        REVIEW_DONE_LABEL,
+      );
+    });
+
+    it('applies nothing when the invocation fails', async () => {
+      harness.claudeInvoker.setResult({
+        success: false,
+        cancelled: false,
+        exitCode: 2,
+        stdout: '',
+        stderr: 'exploded',
+        durationMs: 500,
+      });
+
+      await executeReview(reviewInput(), harness.deps);
+
+      expect(harness.reviewLabelGateway.added.map((entry) => entry.label)).not.toContain(
+        REVIEW_DONE_LABEL,
+      );
+    });
+
+    it('applies nothing when the review context is unreadable after the run', async () => {
+      const job = ReviewJobFactory.create({ jobType: 'review' });
+      const mergeRequestId = `gitlab-${job.projectPath}-${job.mrNumber}`;
+      dropContextDuringInvoke(harness, mergeRequestId);
+
+      await executeReview(reviewInput({ job }), harness.deps);
+
+      expect(harness.reviewLabelGateway.added.map((entry) => entry.label)).not.toContain(
+        REVIEW_DONE_LABEL,
+      );
     });
   });
 

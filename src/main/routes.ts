@@ -38,7 +38,8 @@ import {
   setTriggerMode,
 } from '@/frameworks/settings/runtimeSettings.js';
 import type { Dependencies } from '@/main/dependencies.js';
-import { buildExecuteReview, buildGitHubInventoryGateway } from '@/main/executeReviewWiring.js';
+import { buildExecuteReview } from '@/main/executeReviewWiring.js';
+import { buildGitHubInventoryGateway } from '@/main/githubInventoryWiring.js';
 import { registerWebSocketRoutes } from '@/main/websocket.js';
 import {
   broadcastBudgetExceeded,

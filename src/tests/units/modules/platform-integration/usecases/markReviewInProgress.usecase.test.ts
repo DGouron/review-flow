@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { REVIEW_IN_PROGRESS_LABEL } from '@/modules/platform-integration/entities/reviewLabel/reviewLabel.js';
+import {
+  REVIEW_DONE_LABEL,
+  REVIEW_IN_PROGRESS_LABEL,
+} from '@/modules/platform-integration/entities/reviewLabel/reviewLabel.js';
 import { MarkReviewInProgressUseCase } from '@/modules/platform-integration/usecases/markReviewInProgress.usecase.js';
 import { createCapturingLogger, type CapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
 import { StubReviewLabelGateway } from '@/tests/stubs/reviewLabel.stub.js';
@@ -21,10 +24,11 @@ describe('MarkReviewInProgressUseCase', () => {
     });
   });
 
-  it('ensures the label exists before applying it to the merge request', async () => {
+  it('removes the stale done label before ensuring and applying the in-progress label', async () => {
     await useCase.execute(TARGET);
 
-    expect(reviewLabelGateway.operations).toEqual(['ensureLabelExists', 'addLabel']);
+    expect(reviewLabelGateway.operations).toEqual(['removeLabel', 'ensureLabelExists', 'addLabel']);
+    expect(reviewLabelGateway.removed).toEqual([{ ...TARGET, label: REVIEW_DONE_LABEL }]);
   });
 
   it('applies the in-progress label to the requested merge request', async () => {
@@ -51,5 +55,15 @@ describe('MarkReviewInProgressUseCase', () => {
     await expect(useCase.execute(TARGET)).resolves.toBeUndefined();
 
     expect(capturing.warnMessages).toHaveLength(1);
+  });
+
+  it('still applies the in-progress label when removing the stale done label fails', async () => {
+    reviewLabelGateway.failOn('removeLabel');
+
+    await expect(useCase.execute(TARGET)).resolves.toBeUndefined();
+
+    expect(reviewLabelGateway.added).toEqual([{ ...TARGET, label: REVIEW_IN_PROGRESS_LABEL }]);
+    expect(capturing.warnMessages).toHaveLength(1);
+    expect(capturing.warnMessages[0]).toContain(REVIEW_DONE_LABEL);
   });
 });
