@@ -7,11 +7,15 @@ import { updateJobProgress } from '@/frameworks/queue/pQueueAdapter.js';
 import { startWatchingReviewContext, stopWatchingReviewContext } from '@/main/websocket.js';
 import type { DiffMetadataFetchGateway } from '@/modules/platform-integration/entities/diffMetadata/diffMetadata.gateway.js';
 import type { NoteCommentPostGateway } from '@/modules/platform-integration/entities/noteComment/noteCommentPost.gateway.js';
+import type { ReviewLabelGateway } from '@/modules/platform-integration/entities/reviewLabel/reviewLabel.gateway.js';
 import type { ThreadFetchGateway } from '@/modules/platform-integration/entities/threadFetch/threadFetch.gateway.js';
 import {
   resolvePinnedThreadFetchTarget,
   resolvePinnedThreads,
 } from '@/modules/platform-integration/services/pinnedThreadFetchTarget.js';
+import { ClearReviewInProgressUseCase } from '@/modules/platform-integration/usecases/clearReviewInProgress.usecase.js';
+import { MarkReviewDoneUseCase } from '@/modules/platform-integration/usecases/markReviewDone.usecase.js';
+import { MarkReviewInProgressUseCase } from '@/modules/platform-integration/usecases/markReviewInProgress.usecase.js';
 import { resolveProvenance } from '@/modules/review-execution/entities/actionProvenance/actionProvenance.js';
 import type {
   ClaudeReviewInvoker,
@@ -19,10 +23,7 @@ import type {
 } from '@/modules/review-execution/entities/review/claudeReviewInvoker.gateway.js';
 import type { ReviewContextGateway } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js';
 import type { ReviewContextThread } from '@/modules/review-execution/entities/reviewContext/reviewContext.js';
-import type {
-  ThreadInventoryGateway,
-  ThreadInventoryPage,
-} from '@/modules/review-execution/entities/threadInventory/threadInventory.gateway.js';
+import type { ThreadInventoryGateway } from '@/modules/review-execution/entities/threadInventory/threadInventory.gateway.js';
 import { executeActionsFromContext } from '@/modules/review-execution/services/contextActionsExecutor.js';
 import { dispatchConstrainedActions } from '@/modules/review-execution/services/dispatchConstrainedActions.js';
 import { defaultCommandExecutor } from '@/modules/review-execution/services/threadActionsExecutor.js';
@@ -109,23 +110,6 @@ function buildPlainResolveThreads(
   return ({ job }) => threadFetchGateway.fetchThreads(job.projectPath, job.mrNumber);
 }
 
-/**
- * Authenticated GitHub thread inventory derived from the same gateway used to
- * pre-fetch the review context. A single complete page is sufficient: the
- * constrained-dispatch chokepoint only needs the authenticated id set, never the
- * webhook payload.
- */
-function buildGitHubInventoryGateway(
-  threadFetchGateway: ThreadFetchGateway,
-): ThreadInventoryGateway {
-  return {
-    fetchPage(projectPath: string, mergeRequestNumber: number): ThreadInventoryPage {
-      const threads = threadFetchGateway.fetchThreads(projectPath, mergeRequestNumber);
-      return { page: 1, totalPages: 1, threadIds: threads.map((thread) => thread.id) };
-    },
-  };
-}
-
 export interface ExecuteReviewWiringDependencies {
   platform: Platform;
   logger: Logger;
@@ -134,6 +118,7 @@ export interface ExecuteReviewWiringDependencies {
   diffMetadataFetchGateway: DiffMetadataFetchGateway;
   diffStatsFetchGateway: DiffStatsFetchGateway;
   noteCommentPostGateway: NoteCommentPostGateway;
+  reviewLabelGateway: ReviewLabelGateway;
   inventoryGateway: ThreadInventoryGateway;
   recordCompletion: RecordReviewCompletionUseCase;
   syncThreads: SyncThreadsUseCase;
@@ -149,6 +134,7 @@ export function buildExecuteReview(wiring: ExecuteReviewWiringDependencies): Exe
     diffMetadataFetchGateway,
     diffStatsFetchGateway,
     noteCommentPostGateway,
+    reviewLabelGateway,
     inventoryGateway,
     recordCompletion,
     syncThreads,
@@ -203,10 +189,11 @@ export function buildExecuteReview(wiring: ExecuteReviewWiringDependencies): Exe
     },
     fetchDiffMetadata: (projectPath, mergeRequestNumber) =>
       diffMetadataFetchGateway.fetchDiffMetadata(projectPath, mergeRequestNumber),
+    markReviewInProgress: new MarkReviewInProgressUseCase({ reviewLabelGateway, logger }),
+    clearReviewInProgress: new ClearReviewInProgressUseCase({ reviewLabelGateway, logger }),
+    markReviewDone: new MarkReviewDoneUseCase({ reviewLabelGateway, logger }),
     logger,
   };
 
   return (input) => executeReview(input, deps);
 }
-
-export { buildGitHubInventoryGateway };

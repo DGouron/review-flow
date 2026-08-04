@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
+import { ClearReviewInProgressUseCase } from '@/modules/platform-integration/usecases/clearReviewInProgress.usecase.js';
+import { MarkReviewDoneUseCase } from '@/modules/platform-integration/usecases/markReviewDone.usecase.js';
+import { MarkReviewInProgressUseCase } from '@/modules/platform-integration/usecases/markReviewInProgress.usecase.js';
 import {
   executeReview,
   type ExecuteReviewDependencies,
@@ -11,6 +14,7 @@ import { ClaudeReviewInvokerStub } from '@/tests/stubs/claudeReviewInvoker.stub.
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { ProgressWatcherStub } from '@/tests/stubs/progressWatcher.stub.js';
 import { StubReviewContextGateway } from '@/tests/stubs/reviewContextGateway.stub.js';
+import { StubReviewLabelGateway } from '@/tests/stubs/reviewLabel.stub.js';
 import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 
 const SUCCESS_STDOUT = '[REVIEW_STATS:blocking=1:warnings=2:suggestions=3:score=7.5]';
@@ -33,6 +37,8 @@ function buildDependencies(overrides?: Partial<ExecuteReviewDependencies>): {
     durationMs: 1000,
   });
   const trackingGateway = new InMemoryReviewRequestTrackingGateway();
+  const reviewLabelGateway = new StubReviewLabelGateway();
+  const logger = createStubLogger();
   const contextActionCalls: number[] = [];
   const fallbackActionCalls: number[] = [];
 
@@ -67,7 +73,10 @@ function buildDependencies(overrides?: Partial<ExecuteReviewDependencies>): {
       return { result: emptyExecutionResult(), threadsClosed: 0 };
     },
     fetchDiffMetadata: () => ({ baseSha: 'a', headSha: 'b', startSha: 'c' }),
-    logger: createStubLogger(),
+    markReviewInProgress: new MarkReviewInProgressUseCase({ reviewLabelGateway, logger }),
+    clearReviewInProgress: new ClearReviewInProgressUseCase({ reviewLabelGateway, logger }),
+    markReviewDone: new MarkReviewDoneUseCase({ reviewLabelGateway, logger }),
+    logger,
     ...overrides,
   };
 

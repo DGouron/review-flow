@@ -1,5 +1,8 @@
 import type { Logger } from 'pino';
 
+import type { ClearReviewInProgressUseCase } from '@/modules/platform-integration/usecases/clearReviewInProgress.usecase.js';
+import type { MarkReviewDoneUseCase } from '@/modules/platform-integration/usecases/markReviewDone.usecase.js';
+import type { MarkReviewInProgressUseCase } from '@/modules/platform-integration/usecases/markReviewInProgress.usecase.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import type { AgentDefinition } from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
 import type {
@@ -86,6 +89,9 @@ export interface ExecuteReviewDependencies {
   executeContextActions: (input: ExecuteContextActionsInput) => Promise<ActionExecutionOutcome>;
   executeFallbackActions: (input: ExecuteFallbackActionsInput) => Promise<ActionExecutionOutcome>;
   fetchDiffMetadata: (projectPath: string, mergeRequestNumber: number) => DiffMetadata;
+  markReviewInProgress: Pick<MarkReviewInProgressUseCase, 'execute'>;
+  clearReviewInProgress: Pick<ClearReviewInProgressUseCase, 'execute'>;
+  markReviewDone: Pick<MarkReviewDoneUseCase, 'execute'>;
   logger: Logger;
 }
 
@@ -229,7 +235,7 @@ function fetchDiffStatsBestEffort(
 
 export type ExecuteReview = (input: ExecuteReviewInput) => Promise<ExecuteReviewResult>;
 
-export async function executeReview(
+async function runReviewPipeline(
   input: ExecuteReviewInput,
   deps: ExecuteReviewDependencies,
 ): Promise<ExecuteReviewResult> {
@@ -313,4 +319,53 @@ export async function executeReview(
       durationMs: result.durationMs,
     },
   };
+}
+
+interface ReviewLabelTarget {
+  projectPath: string;
+  mrNumber: number;
+}
+
+/**
+ * `review-done` marks a run that produced a verdict (spec 222), so only the `completed`
+ * terminal state earns it — a cancelled or failed run signals nothing. Initial and
+ * follow-up runs both apply it.
+ */
+async function runAndMarkDone(
+  input: ExecuteReviewInput,
+  deps: ExecuteReviewDependencies,
+  target: ReviewLabelTarget,
+): Promise<ExecuteReviewResult> {
+  const result = await runReviewPipeline(input, deps);
+
+  if (result.status === 'completed') {
+    await deps.markReviewDone.execute(target);
+  }
+
+  return result;
+}
+
+/**
+ * Wraps the pipeline with the platform labels: `review-in-progress` is applied before
+ * Claude runs and cleared on every terminal state — the `finally` also covers an
+ * unexpected throw — while `review-done` lands on completion (spec 221 and 222). Every
+ * label use case is non-throwing, so the review outcome is never altered. Follow-up runs
+ * skip the in-progress label but still earn the done label.
+ */
+export async function executeReview(
+  input: ExecuteReviewInput,
+  deps: ExecuteReviewDependencies,
+): Promise<ExecuteReviewResult> {
+  const target = { projectPath: input.job.projectPath, mrNumber: input.job.mrNumber };
+
+  if (input.isFollowup) {
+    return runAndMarkDone(input, deps, target);
+  }
+
+  await deps.markReviewInProgress.execute(target);
+  try {
+    return await runAndMarkDone(input, deps, target);
+  } finally {
+    await deps.clearReviewInProgress.execute(target);
+  }
 }
