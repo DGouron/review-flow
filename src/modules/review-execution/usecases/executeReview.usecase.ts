@@ -1,5 +1,7 @@
 import type { Logger } from 'pino';
 
+import type { ClearReviewInProgressUseCase } from '@/modules/platform-integration/usecases/clearReviewInProgress.usecase.js';
+import type { MarkReviewInProgressUseCase } from '@/modules/platform-integration/usecases/markReviewInProgress.usecase.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import type { AgentDefinition } from '@/modules/review-execution/entities/progress/agentDefinition.type.js';
 import type {
@@ -86,6 +88,8 @@ export interface ExecuteReviewDependencies {
   executeContextActions: (input: ExecuteContextActionsInput) => Promise<ActionExecutionOutcome>;
   executeFallbackActions: (input: ExecuteFallbackActionsInput) => Promise<ActionExecutionOutcome>;
   fetchDiffMetadata: (projectPath: string, mergeRequestNumber: number) => DiffMetadata;
+  markReviewInProgress: Pick<MarkReviewInProgressUseCase, 'execute'>;
+  clearReviewInProgress: Pick<ClearReviewInProgressUseCase, 'execute'>;
   logger: Logger;
 }
 
@@ -229,7 +233,7 @@ function fetchDiffStatsBestEffort(
 
 export type ExecuteReview = (input: ExecuteReviewInput) => Promise<ExecuteReviewResult>;
 
-export async function executeReview(
+async function runReviewPipeline(
   input: ExecuteReviewInput,
   deps: ExecuteReviewDependencies,
 ): Promise<ExecuteReviewResult> {
@@ -313,4 +317,27 @@ export async function executeReview(
       durationMs: result.durationMs,
     },
   };
+}
+
+/**
+ * Wraps the pipeline with the `review-in-progress` platform label (spec 221): applied
+ * before Claude runs, cleared on every terminal state — the `finally` also covers an
+ * unexpected throw. Both label use cases are non-throwing, so the review outcome is
+ * never altered. Follow-up runs are out of scope and skip the label entirely.
+ */
+export async function executeReview(
+  input: ExecuteReviewInput,
+  deps: ExecuteReviewDependencies,
+): Promise<ExecuteReviewResult> {
+  if (input.isFollowup) {
+    return runReviewPipeline(input, deps);
+  }
+
+  const target = { projectPath: input.job.projectPath, mrNumber: input.job.mrNumber };
+  await deps.markReviewInProgress.execute(target);
+  try {
+    return await runReviewPipeline(input, deps);
+  } finally {
+    await deps.clearReviewInProgress.execute(target);
+  }
 }

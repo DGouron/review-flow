@@ -7,11 +7,14 @@ import { updateJobProgress } from '@/frameworks/queue/pQueueAdapter.js';
 import { startWatchingReviewContext, stopWatchingReviewContext } from '@/main/websocket.js';
 import type { DiffMetadataFetchGateway } from '@/modules/platform-integration/entities/diffMetadata/diffMetadata.gateway.js';
 import type { NoteCommentPostGateway } from '@/modules/platform-integration/entities/noteComment/noteCommentPost.gateway.js';
+import type { ReviewLabelGateway } from '@/modules/platform-integration/entities/reviewLabel/reviewLabel.gateway.js';
 import type { ThreadFetchGateway } from '@/modules/platform-integration/entities/threadFetch/threadFetch.gateway.js';
 import {
   resolvePinnedThreadFetchTarget,
   resolvePinnedThreads,
 } from '@/modules/platform-integration/services/pinnedThreadFetchTarget.js';
+import { ClearReviewInProgressUseCase } from '@/modules/platform-integration/usecases/clearReviewInProgress.usecase.js';
+import { MarkReviewInProgressUseCase } from '@/modules/platform-integration/usecases/markReviewInProgress.usecase.js';
 import { resolveProvenance } from '@/modules/review-execution/entities/actionProvenance/actionProvenance.js';
 import type {
   ClaudeReviewInvoker,
@@ -134,6 +137,7 @@ export interface ExecuteReviewWiringDependencies {
   diffMetadataFetchGateway: DiffMetadataFetchGateway;
   diffStatsFetchGateway: DiffStatsFetchGateway;
   noteCommentPostGateway: NoteCommentPostGateway;
+  reviewLabelGateway: ReviewLabelGateway;
   inventoryGateway: ThreadInventoryGateway;
   recordCompletion: RecordReviewCompletionUseCase;
   syncThreads: SyncThreadsUseCase;
@@ -149,6 +153,7 @@ export function buildExecuteReview(wiring: ExecuteReviewWiringDependencies): Exe
     diffMetadataFetchGateway,
     diffStatsFetchGateway,
     noteCommentPostGateway,
+    reviewLabelGateway,
     inventoryGateway,
     recordCompletion,
     syncThreads,
@@ -203,6 +208,8 @@ export function buildExecuteReview(wiring: ExecuteReviewWiringDependencies): Exe
     },
     fetchDiffMetadata: (projectPath, mergeRequestNumber) =>
       diffMetadataFetchGateway.fetchDiffMetadata(projectPath, mergeRequestNumber),
+    markReviewInProgress: new MarkReviewInProgressUseCase({ reviewLabelGateway, logger }),
+    clearReviewInProgress: new ClearReviewInProgressUseCase({ reviewLabelGateway, logger }),
     logger,
   };
 

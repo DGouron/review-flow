@@ -93,6 +93,8 @@ import { GitHubApprovalRevocationCliGateway } from '@/modules/platform-integrati
 import { GitLabApprovalRevocationCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/approvalRevocation.gitlab.cli.gateway.js';
 import { GitHubNoteCommentPostCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/noteCommentPost.github.cli.gateway.js';
 import { GitLabNoteCommentPostCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/noteCommentPost.gitlab.cli.gateway.js';
+import { GitHubReviewLabelCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/reviewLabel.github.cli.gateway.js';
+import { GitLabReviewLabelCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/reviewLabel.gitlab.cli.gateway.js';
 import { GitHubDiffMetadataFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/diffMetadataFetch.github.gateway.js';
 import { GitLabDiffMetadataFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/diffMetadataFetch.gitlab.gateway.js';
 import { EgressScannedNoteCommentPostGateway } from '@/modules/platform-integration/interface-adapters/gateways/egressScanned.noteCommentPost.gateway.js';
@@ -393,6 +395,11 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
   const noteCommentPostGatewayFactory = (platform: 'gitlab' | 'github') =>
     platform === 'github' ? gitHubNoteCommentPostGateway : gitLabNoteCommentPostGateway;
 
+  // No egress scan wrapper: the in-progress label is a code-side constant, never
+  // model-authored text, so it carries nothing to scan (unlike note bodies).
+  const gitLabReviewLabelGateway = new GitLabReviewLabelCliGateway(defaultGitLabExecutor);
+  const gitHubReviewLabelGateway = new GitHubReviewLabelCliGateway(defaultGitHubExecutor);
+
   await app.register(mrTrackingAdvancedRoutes, {
     getRepositories: () => deps.config.repositories,
     reviewRequestTrackingGateway: deps.reviewRequestTrackingGateway,
@@ -484,6 +491,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     diffMetadataFetchGateway: new GitLabDiffMetadataFetchGateway(defaultGitLabExecutor),
     diffStatsFetchGateway: new GitLabDiffStatsFetchGateway(defaultGitLabExecutor),
     noteCommentPostGateway: gitLabNoteCommentPostGateway,
+    reviewLabelGateway: gitLabReviewLabelGateway,
     inventoryGateway: new GitLabThreadInventoryGateway(defaultGitLabExecutor),
     recordCompletion: new RecordReviewCompletionUseCase(trackingGw),
     syncThreads: new SyncThreadsUseCase(trackingGw, gitLabThreadFetchGatewayForReview),
@@ -497,6 +505,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     diffMetadataFetchGateway: new GitHubDiffMetadataFetchGateway(defaultGitHubExecutor),
     diffStatsFetchGateway: new GitHubDiffStatsFetchGateway(defaultGitHubExecutor),
     noteCommentPostGateway: gitHubNoteCommentPostGateway,
+    reviewLabelGateway: gitHubReviewLabelGateway,
     inventoryGateway: buildGitHubInventoryGateway(gitHubThreadFetchGatewayForReview),
     recordCompletion: new RecordReviewCompletionUseCase(trackingGw),
     syncThreads: new SyncThreadsUseCase(trackingGw, gitHubThreadFetchGatewayForReview),
