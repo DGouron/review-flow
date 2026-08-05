@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.50.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.49.0...reviewflow-v3.50.0) (2026-08-05)
+
+
+### Added
+
+* **version:** implement spec-223 source-checkout self-update ([#378](https://github.com/DGouron/review-flow/issues/378)) ([b5802b0](https://github.com/DGouron/review-flow/commit/b5802b0019d1a9a520f7cef69d9af9c43db6e3c2))
+
 ## [3.49.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.48.0...reviewflow-v3.49.0) (2026-08-04)
 
 
