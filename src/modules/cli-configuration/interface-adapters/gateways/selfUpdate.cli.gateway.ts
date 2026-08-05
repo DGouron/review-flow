@@ -21,11 +21,17 @@ export interface SelfUpdateCliDependencies {
   pidFilePath: string;
 }
 
-function defaultSpawnDaemonDelayed(port: number | undefined, delaySec: number): void {
+export function buildRestartArgs(port: number | undefined): string[] {
   const args = ['start', '--skip-dependency-check'];
   if (port !== undefined) {
     args.push('--port', String(port));
   }
+  args.push('--daemon');
+  return args;
+}
+
+function defaultSpawnDaemonDelayed(port: number | undefined, delaySec: number): void {
+  const args = buildRestartArgs(port);
 
   const command = `sleep ${delaySec} && ${process.execPath} ${process.argv[1]} ${args.join(' ')}`;
   const child = spawn('sh', ['-c', command], {

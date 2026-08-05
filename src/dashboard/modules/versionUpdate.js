@@ -1,7 +1,7 @@
 import { escapeHtml } from './html.js';
 
 /**
- * @param {{ currentVersion: string, updateAvailable: boolean, latestVersion: string | null, installType: 'global-npm' | 'source-checkout' }} versionData
+ * @param {{ currentVersion: string, updateAvailable: boolean, latestVersion: string | null }} versionData
  * @param {(key: string, params?: Record<string, string | number>) => string} translate
  * @returns {string}
  */
@@ -18,19 +18,20 @@ export function renderVersionUpdateArea(versionData, translate) {
 
   const label = translate('version.updateAvailable', { version: versionData.latestVersion });
 
-  if (versionData.installType === 'source-checkout') {
-    const tooltip = translate('version.sourceCheckoutTooltip');
-    const sourceCheckoutButton = `<button id="version-source-checkout-btn" class="btn btn-update" title="${escapeHtml(tooltip)}" onclick="showSourceCheckoutUpdate()">
-    <i data-lucide="info"></i> <span>${escapeHtml(label)}</span>
-  </button>`;
-    return `${versionLabel}${sourceCheckoutButton}${checkButton}`;
-  }
-
-  const updateButton = `<button id="version-update-btn" class="btn btn-update" onclick="triggerVersionUpdate()">
+  const updateButton = `<button id="version-update-btn" class="btn btn-update" data-default-label="${escapeHtml(label)}" onclick="triggerVersionUpdate()">
     <i data-lucide="download"></i> <span>${escapeHtml(label)}</span>
   </button>`;
 
   return `${versionLabel}${updateButton}${checkButton}`;
+}
+
+/**
+ * @param {HTMLElement} button
+ * @param {string} label
+ */
+function setButtonLabel(button, label) {
+  const span = button.querySelector('span');
+  if (span) span.textContent = label;
 }
 
 /**
@@ -51,13 +52,50 @@ export function setVersionCheckState(status, translate) {
 
   if (status === 'updating' && updateBtn) {
     updateBtn.disabled = true;
-    const span = updateBtn.querySelector('span');
-    if (span) span.textContent = translate('version.updating');
-  }
-
-  if (status === 'restarting' && updateBtn) {
+    setButtonLabel(updateBtn, translate('version.updating'));
+  } else if (status === 'restarting' && updateBtn) {
     updateBtn.disabled = true;
-    const span = updateBtn.querySelector('span');
-    if (span) span.textContent = translate('version.restarting');
+    setButtonLabel(updateBtn, translate('version.restarting'));
+  } else if (updateBtn) {
+    updateBtn.disabled = false;
+    setButtonLabel(updateBtn, updateBtn.dataset.defaultLabel ?? '');
+  }
+}
+
+/**
+ * @typedef {{ kind: 'local-only' }
+ *   | { kind: 'reviews-in-progress', count: number }
+ *   | { kind: 'wrong-branch' }
+ *   | { kind: 'dirty-checkout' }
+ *   | { kind: 'missing-tool', tool: 'git' | 'yarn' }
+ *   | { kind: 'fetch-failed', detail: string }
+ *   | { kind: 'rebuild-failed' }} SelfUpdateRefusalMotive
+ */
+
+/**
+ * @param {SelfUpdateRefusalMotive} motive
+ * @param {(key: string, params?: Record<string, string | number>) => string} translate
+ * @returns {string}
+ */
+export function resolveRefusalWording(motive, translate) {
+  switch (motive.kind) {
+    case 'local-only':
+      return translate('version.refusal.localOnly');
+    case 'reviews-in-progress': {
+      const plural = motive.count === 1 ? '' : 's';
+      return `${motive.count} ${translate('version.refusal.reviewsInProgress', { plural })}`;
+    }
+    case 'wrong-branch':
+      return translate('version.refusal.wrongBranch');
+    case 'dirty-checkout':
+      return translate('version.refusal.dirtyCheckout');
+    case 'missing-tool':
+      return translate('version.refusal.missingTool', { tool: motive.tool });
+    case 'fetch-failed':
+      return `${translate('version.refusal.fetchFailed')} : ${motive.detail}`;
+    case 'rebuild-failed':
+      return translate('version.refusal.rebuildFailed');
+    default:
+      return translate('version.updateFailed');
   }
 }

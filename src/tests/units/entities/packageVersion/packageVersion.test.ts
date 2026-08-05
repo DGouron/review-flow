@@ -202,6 +202,16 @@ describe('SelfUpdateResult type', () => {
     expect(result.status).toBe('failed');
     expect(result.error).toBe('Permission denied');
   });
+
+  it('should represent a refused status with a structured motive', () => {
+    const result: SelfUpdateResult = {
+      status: 'refused',
+      motive: { kind: 'reviews-in-progress', count: 2 },
+    };
+
+    expect(result.status).toBe('refused');
+    expect(result.motive).toEqual({ kind: 'reviews-in-progress', count: 2 });
+  });
 });
 
 describe('UpdateStatus type', () => {

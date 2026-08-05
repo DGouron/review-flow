@@ -59,8 +59,10 @@ import { versionRoutes } from '@/modules/cli-configuration/interface-adapters/co
 import { InstallTypeDetectorFsGateway } from '@/modules/cli-configuration/interface-adapters/gateways/installTypeDetector.fs.gateway.js';
 import { NpmPackageVersionGateway } from '@/modules/cli-configuration/interface-adapters/gateways/packageVersion.npm.gateway.js';
 import { ProjectConfigFileSystemGateway } from '@/modules/cli-configuration/interface-adapters/gateways/projectConfig.fileSystem.gateway.js';
+import { QueueActivityPQueueGateway } from '@/modules/cli-configuration/interface-adapters/gateways/queueActivity.pQueue.gateway.js';
 import { RepositoriesListRuntimeConfigGateway } from '@/modules/cli-configuration/interface-adapters/gateways/repositoriesList.runtimeConfig.gateway.js';
 import { SelfUpdateCliGateway } from '@/modules/cli-configuration/interface-adapters/gateways/selfUpdate.cli.gateway.js';
+import { SourceCheckoutUpdateCliGateway } from '@/modules/cli-configuration/interface-adapters/gateways/sourceCheckoutUpdate.cli.gateway.js';
 import { VersionCacheMemoryGateway } from '@/modules/cli-configuration/interface-adapters/gateways/versionCache.memory.gateway.js';
 import { AddRepositoriesToConfigUseCase } from '@/modules/cli-configuration/usecases/cli/addRepositoriesToConfig.usecase.js';
 import { RemoveRepositoryFromConfigUseCase } from '@/modules/cli-configuration/usecases/cli/removeRepositoryFromConfig.usecase.js';
@@ -190,6 +192,8 @@ const packageVersionGateway = new NpmPackageVersionGateway();
 const versionCache = new VersionCacheMemoryGateway();
 const selfUpdateCommand = new SelfUpdateCliGateway();
 const installTypeDetector = new InstallTypeDetectorFsGateway();
+const queueActivityGateway = new QueueActivityPQueueGateway();
+const sourceCheckoutUpdateGateway = new SourceCheckoutUpdateCliGateway();
 
 export async function registerRoutes(app: FastifyInstance, deps: Dependencies): Promise<void> {
   await app.register(fastifyStatic, {
@@ -444,6 +448,8 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     selfUpdateCommand,
     installTypeDetector,
     serverPort: deps.config.server.port,
+    queueActivityGateway,
+    sourceCheckoutUpdateGateway,
   });
 
   await app.register(insightsRoutes, {
