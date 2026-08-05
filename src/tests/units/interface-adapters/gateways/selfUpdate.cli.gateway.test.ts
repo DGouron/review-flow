@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import {
   SelfUpdateCliGateway,
+  buildRestartArgs,
   type SelfUpdateCliDependencies,
 } from '@/modules/cli-configuration/interface-adapters/gateways/selfUpdate.cli.gateway.js';
 import { PID_FILE_PATH } from '@/shared/services/daemonPaths.js';
@@ -44,6 +45,22 @@ describe('SelfUpdateCliGateway', () => {
 
     expect(deps.pidFilePath).not.toBe(PID_FILE_PATH);
     expect(deps.pidFilePath.startsWith(tmpdir())).toBe(true);
+  });
+
+  describe('buildRestartArgs', () => {
+    it('includes --daemon so the restarted process writes its pid file', () => {
+      expect(buildRestartArgs(3847)).toContain('--daemon');
+    });
+
+    it('includes the port when one is given', () => {
+      expect(buildRestartArgs(3847)).toEqual(
+        expect.arrayContaining(['--port', '3847', '--daemon']),
+      );
+    });
+
+    it('omits the port when none is given', () => {
+      expect(buildRestartArgs(undefined)).not.toContain('--port');
+    });
   });
 
   describe('runGlobalUpdate', () => {

@@ -460,10 +460,15 @@ const translations = {
     'version.permissionDenied': 'Permission denied. Run this command manually:',
     'version.copyCommand': 'Copy command',
     'version.commandCopied': 'Command copied!',
-    'version.sourceCheckoutTooltip':
-      'Source-checkout install. Click to see the manual update command.',
-    'version.sourceCheckoutNotice':
-      'This daemon runs from a source checkout. Run this command manually to update:',
+    'version.refusal.localOnly': 'Update is only allowed from the local machine',
+    'version.refusal.reviewsInProgress':
+      'review{{plural}} in progress. Try again once the reviews are done.',
+    'version.refusal.wrongBranch': 'Update is only possible from the master branch',
+    'version.refusal.dirtyCheckout': 'You have uncommitted local changes. Update is not possible.',
+    'version.refusal.missingTool': 'Command {{tool}} not found',
+    'version.refusal.fetchFailed': 'Fetching the latest changes failed',
+    'version.refusal.rebuildFailed':
+      'The build failed. The server keeps running on the previous version.',
 
     // Worktree panel (SPEC-173)
     'worktree.section.title': 'Worktree pool',
@@ -947,10 +952,16 @@ const translations = {
     'version.permissionDenied': 'Permission refusée. Exécutez cette commande manuellement :',
     'version.copyCommand': 'Copier la commande',
     'version.commandCopied': 'Commande copiée !',
-    'version.sourceCheckoutTooltip':
-      'Installation depuis le code source. Cliquez pour voir la commande de mise à jour manuelle.',
-    'version.sourceCheckoutNotice':
-      'Ce daemon tourne depuis un checkout du code source. Exécutez cette commande manuellement pour mettre à jour :',
+    'version.refusal.localOnly': 'Mise à jour autorisée uniquement depuis la machine locale',
+    'version.refusal.reviewsInProgress':
+      'review{{plural}} en cours. Réessayez une fois les reviews terminées.',
+    'version.refusal.wrongBranch': 'Mise à jour possible uniquement depuis la branche master',
+    'version.refusal.dirtyCheckout':
+      'Des modifications locales ne sont pas validées. Mise à jour impossible.',
+    'version.refusal.missingTool': 'Commande {{tool}} introuvable',
+    'version.refusal.fetchFailed': 'La récupération des modifications a échoué',
+    'version.refusal.rebuildFailed':
+      'La compilation a échoué. Le serveur continue de tourner sur la version précédente.',
 
     // Worktree panel (SPEC-173)
     'worktree.section.title': 'Pool des worktrees',

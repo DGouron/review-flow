@@ -408,7 +408,7 @@
     import { getQualityProgress, getQualityTrend } from './modules/quality.js';
     import { createSessionMetricsState, trackSessionAction, updatePriorityItemTracking, getSessionMetricsSnapshot } from './modules/sessionMetrics.js';
     import { renderCleanupSection, handleCleanupClick } from './modules/cleanup.js';
-    import { renderVersionUpdateArea, setVersionCheckState } from './modules/versionUpdate.js';
+    import { renderVersionUpdateArea, setVersionCheckState, resolveRefusalWording } from './modules/versionUpdate.js';
     import { renderCollapsibleList, toggleCollapsibleList } from './modules/collapsibleList.js';
     import { renderMrSheetContent, drawScoreTimeline, drawIssuesBreakdown } from './modules/mrSheet.js';
     import { drawScoreTrendChart } from './modules/statsCharts.js';
@@ -3327,7 +3327,7 @@
         const versionUpdateArea = document.getElementById('version-update-area');
         if (versionUpdateArea) {
           versionUpdateArea.innerHTML = renderVersionUpdateArea(
-            { currentVersion: data.currentVersion || '?', updateAvailable: data.updateAvailable || false, latestVersion: data.latestVersion || null, installType: data.installType || 'global-npm' },
+            { currentVersion: data.currentVersion || '?', updateAvailable: data.updateAvailable || false, latestVersion: data.latestVersion || null },
             t
           );
           if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -3368,9 +3368,9 @@
         } else if (data.status === 'permission-denied') {
           setVersionCheckState('idle', t);
           showManualUpdateCommand(data.command);
-        } else if (data.status === 'source-checkout') {
+        } else if (data.status === 'refused') {
+          showToast(resolveRefusalWording(data.motive, t), 'error');
           setVersionCheckState('idle', t);
-          showManualUpdateCommand(data.manualCommand);
         } else {
           showToast(data.error || t('version.updateFailed'), 'error');
           setVersionCheckState('idle', t);
@@ -3379,21 +3379,6 @@
         console.error('Error triggering update:', error);
         showToast(t('version.updateFailed'), 'error');
         setVersionCheckState('idle', t);
-      }
-    }
-
-    async function showSourceCheckoutUpdate() {
-      try {
-        const response = await fetch(`${API_URL}/api/version/update`, { method: 'POST' });
-        const data = await response.json();
-        if (data.status === 'source-checkout') {
-          showManualUpdateCommand(data.manualCommand);
-        } else {
-          showToast(t('version.updateFailed'), 'error');
-        }
-      } catch (error) {
-        console.error('Error fetching manual update command:', error);
-        showToast(t('version.updateFailed'), 'error');
       }
     }
 
@@ -3466,7 +3451,6 @@
     // Expose functions to HTML onclick handlers
     window.checkForUpdates = checkForUpdates;
     window.triggerVersionUpdate = triggerVersionUpdate;
-    window.showSourceCheckoutUpdate = showSourceCheckoutUpdate;
     window.copyUpdateCommand = copyUpdateCommand;
     window.toggleCollapsibleList = toggleCollapsibleList;
     window.checkClaudeStatus = checkClaudeStatus;
