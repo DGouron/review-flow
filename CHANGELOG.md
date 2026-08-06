@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.51.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.50.0...reviewflow-v3.51.0) (2026-08-06)
+
+
+### Added
+
+* **review:** implement spec-224 follow-up review labels ([#380](https://github.com/DGouron/review-flow/issues/380)) ([c13e58d](https://github.com/DGouron/review-flow/commit/c13e58d680c0f04a844573db865d4a90ce482683))
+
 ## [3.50.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.49.0...reviewflow-v3.50.0) (2026-08-05)
 
 
