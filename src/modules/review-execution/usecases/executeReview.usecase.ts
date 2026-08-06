@@ -348,19 +348,16 @@ async function runAndMarkDone(
 /**
  * Wraps the pipeline with the platform labels: `review-in-progress` is applied before
  * Claude runs and cleared on every terminal state — the `finally` also covers an
- * unexpected throw — while `review-done` lands on completion (spec 221 and 222). Every
- * label use case is non-throwing, so the review outcome is never altered. Follow-up runs
- * skip the in-progress label but still earn the done label.
+ * unexpected throw — while `review-done` lands on completion (spec 221 and 222).
+ * Follow-up runs share that lifecycle since spec 224, so a re-review never leaves a stale
+ * `review-done` standing while it runs. Every label use case is non-throwing, so the
+ * review outcome is never altered.
  */
 export async function executeReview(
   input: ExecuteReviewInput,
   deps: ExecuteReviewDependencies,
 ): Promise<ExecuteReviewResult> {
   const target = { projectPath: input.job.projectPath, mrNumber: input.job.mrNumber };
-
-  if (input.isFollowup) {
-    return runAndMarkDone(input, deps, target);
-  }
 
   await deps.markReviewInProgress.execute(target);
   try {

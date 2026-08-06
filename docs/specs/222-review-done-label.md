@@ -30,9 +30,11 @@ statement that a review happened.
   signal
 - when an initial review starts, `review-done` is removed before `review-in-progress` is applied —
   a merge request must never carry both labels at once
-- a follow-up review does not remove `review-done` at start (it does not set `review-in-progress`
-  either, so the two labels cannot collide); re-applying `review-done` on a merge request that
-  already carries it is a harmless no-op
+- ~~a follow-up review does not remove `review-done` at start (it does not set `review-in-progress`
+  either, so the two labels cannot collide)~~ — superseded by
+  [224-followup-review-labels](224-followup-review-labels.md): a follow-up removes the stale
+  `review-done` and sets `review-in-progress` like an initial review. Re-applying `review-done` on a
+  merge request that already carries it stays a harmless no-op
 - label operations stay best-effort: any failure is logged as a warning and **never** changes the
   `ExecuteReviewResult` — a review that completes still reports `completed` even if its label could
   not be applied
@@ -43,8 +45,8 @@ statement that a review happened.
 
 - initial review completes: {initial review, Claude succeeds, actions executed} → `review-done`
   ensured then applied, `review-in-progress` removed, result `completed` with unchanged stats
-- follow-up completes: {follow-up review, Claude succeeds} → `review-done` ensured then applied, no
-  `review-in-progress` touched, result `completed`
+- follow-up completes: {follow-up review, Claude succeeds} → `review-done` ensured then applied,
+  result `completed` (since spec 224 the follow-up also carries `review-in-progress` while it runs)
 - blocking issues found: {initial review completes, `blocking: 3`} → `review-done` applied all the
   same (the label is neutral), stats unchanged
 - cancelled: {initial review aborted} → no `review-done` applied, `review-in-progress` still removed,

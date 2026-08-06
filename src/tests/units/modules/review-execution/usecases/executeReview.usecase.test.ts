@@ -496,7 +496,7 @@ describe('executeReview', () => {
       expect(result.status).toBe('completed');
     });
 
-    it('leaves follow-up reviews untouched', async () => {
+    it('applies the label on follow-up reviews too', async () => {
       const job = ReviewJobFactory.createFollowup();
       const mergeRequestId = `gitlab-${job.projectPath}-${job.mrNumber}`;
       appendContextActionsDuringInvoke(harness, mergeRequestId, ['t-1']);
@@ -504,10 +504,12 @@ describe('executeReview', () => {
       const result = await executeReview(reviewInput({ job, isFollowup: true }), harness.deps);
 
       expect(result.status).toBe('completed');
-      expect(harness.reviewLabelGateway.added.map((entry) => entry.label)).not.toContain(
+      expect(harness.reviewLabelGateway.added.map((entry) => entry.label)).toContain(
         REVIEW_IN_PROGRESS_LABEL,
       );
-      expect(harness.reviewLabelGateway.removed).toEqual([]);
+      expect(harness.reviewLabelGateway.removed.map((entry) => entry.label)).toContain(
+        REVIEW_IN_PROGRESS_LABEL,
+      );
     });
   });
 
@@ -531,6 +533,7 @@ describe('executeReview', () => {
 
       expect(result.status).toBe('completed');
       expect(harness.reviewLabelGateway.added.map((entry) => entry.label)).toEqual([
+        REVIEW_IN_PROGRESS_LABEL,
         REVIEW_DONE_LABEL,
       ]);
     });

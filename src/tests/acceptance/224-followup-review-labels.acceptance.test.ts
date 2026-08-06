@@ -27,17 +27,18 @@ import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewReques
 
 const SUCCESS_STDOUT = '[REVIEW_STATS:blocking=1:warnings=2:suggestions=3:score=7.5]';
 
-const GITHUB_ENSURE = `gh label create '${REVIEW_IN_PROGRESS_LABEL}' --force -R 'test-owner/test-repo'`;
-const GITHUB_ADD = `gh api --method POST 'repos/test-owner/test-repo/issues/123/labels' --field 'labels[]=${REVIEW_IN_PROGRESS_LABEL}'`;
-const GITHUB_REMOVE = `gh api --method DELETE 'repos/test-owner/test-repo/issues/123/labels/${REVIEW_IN_PROGRESS_LABEL}'`;
+const GITHUB_ADD_DONE = `gh api --method POST 'repos/test-owner/test-repo/issues/123/labels' --field 'labels[]=${REVIEW_DONE_LABEL}'`;
+const GITHUB_REMOVE_DONE = `gh api --method DELETE 'repos/test-owner/test-repo/issues/123/labels/${REVIEW_DONE_LABEL}'`;
+const GITHUB_ENSURE_IN_PROGRESS = `gh label create '${REVIEW_IN_PROGRESS_LABEL}' --force -R 'test-owner/test-repo'`;
+const GITHUB_ADD_IN_PROGRESS = `gh api --method POST 'repos/test-owner/test-repo/issues/123/labels' --field 'labels[]=${REVIEW_IN_PROGRESS_LABEL}'`;
+const GITHUB_REMOVE_IN_PROGRESS = `gh api --method DELETE 'repos/test-owner/test-repo/issues/123/labels/${REVIEW_IN_PROGRESS_LABEL}'`;
 
-/** Spec 222 drops a stale done label before the in-progress one is applied. */
-const GITHUB_REMOVE_STALE_DONE = `gh api --method DELETE 'repos/test-owner/test-repo/issues/123/labels/${REVIEW_DONE_LABEL}'`;
-const GITLAB_REMOVE_STALE_DONE = `glab api --method PUT 'projects/test-org%2Ftest-project/merge_requests/42' --field 'remove_labels=${REVIEW_DONE_LABEL}'`;
-
-const GITLAB_ENSURE = `glab api --method POST 'projects/test-org%2Ftest-project/labels' --field 'name=${REVIEW_IN_PROGRESS_LABEL}' --field 'color=#1f77b4'`;
-const GITLAB_ADD = `glab api --method PUT 'projects/test-org%2Ftest-project/merge_requests/42' --field 'add_labels=${REVIEW_IN_PROGRESS_LABEL}'`;
-const GITLAB_REMOVE = `glab api --method PUT 'projects/test-org%2Ftest-project/merge_requests/42' --field 'remove_labels=${REVIEW_IN_PROGRESS_LABEL}'`;
+const GITLAB_ENSURE_DONE = `glab api --method POST 'projects/test-org%2Ftest-project/labels' --field 'name=${REVIEW_DONE_LABEL}' --field 'color=#1f77b4'`;
+const GITLAB_ADD_DONE = `glab api --method PUT 'projects/test-org%2Ftest-project/merge_requests/42' --field 'add_labels=${REVIEW_DONE_LABEL}'`;
+const GITLAB_REMOVE_DONE = `glab api --method PUT 'projects/test-org%2Ftest-project/merge_requests/42' --field 'remove_labels=${REVIEW_DONE_LABEL}'`;
+const GITLAB_ENSURE_IN_PROGRESS = `glab api --method POST 'projects/test-org%2Ftest-project/labels' --field 'name=${REVIEW_IN_PROGRESS_LABEL}' --field 'color=#1f77b4'`;
+const GITLAB_ADD_IN_PROGRESS = `glab api --method PUT 'projects/test-org%2Ftest-project/merge_requests/42' --field 'add_labels=${REVIEW_IN_PROGRESS_LABEL}'`;
+const GITLAB_REMOVE_IN_PROGRESS = `glab api --method PUT 'projects/test-org%2Ftest-project/merge_requests/42' --field 'remove_labels=${REVIEW_IN_PROGRESS_LABEL}'`;
 
 interface HarnessOptions {
   platform: Platform;
@@ -109,12 +110,12 @@ function createHarness(options: HarnessOptions): Harness {
   return { deps, commands, commandsBeforeInvoke, claudeInvoker, contextGateway, warnMessages };
 }
 
-function gitLabInput(overrides?: Partial<ExecuteReviewInput>): ExecuteReviewInput {
+function gitLabFollowupInput(overrides?: Partial<ExecuteReviewInput>): ExecuteReviewInput {
   return {
-    job: ReviewJobFactory.create({ jobType: 'review' }),
+    job: ReviewJobFactory.createFollowup(),
     signal: new AbortController().signal,
     platform: 'gitlab',
-    isFollowup: false,
+    isFollowup: true,
     agents: [],
     baseUrl: 'https://gitlab.com',
     notificationPrefix: 'MR !',
@@ -123,10 +124,10 @@ function gitLabInput(overrides?: Partial<ExecuteReviewInput>): ExecuteReviewInpu
   };
 }
 
-function gitHubInput(overrides?: Partial<ExecuteReviewInput>): ExecuteReviewInput {
+function gitHubFollowupInput(overrides?: Partial<ExecuteReviewInput>): ExecuteReviewInput {
   return {
-    ...gitLabInput(),
-    job: ReviewJobFactory.createGitHub({ jobType: 'review' }),
+    ...gitLabFollowupInput(),
+    job: ReviewJobFactory.createGitHub({ jobType: 'followup' }),
     platform: 'github',
     baseUrl: null,
     notificationPrefix: 'PR #',
@@ -134,52 +135,45 @@ function gitHubInput(overrides?: Partial<ExecuteReviewInput>): ExecuteReviewInpu
   };
 }
 
-describe('SPEC-221 review-in-progress label (acceptance)', () => {
-  describe('an initial review ensures then applies the label before Claude is invoked', () => {
-    it('GitHub: ensures the label on the repository then applies it to the pull request', async () => {
+describe('SPEC-224 follow-up reviews carry the same labels (acceptance)', () => {
+  describe('a follow-up signals itself as in progress', () => {
+    it('follow-up starts: drops the stale done label then applies review-in-progress before Claude runs', async () => {
+      const harness = createHarness({ platform: 'gitlab' });
+
+      await executeReview(gitLabFollowupInput(), harness.deps);
+
+      expect(harness.commandsBeforeInvoke).toEqual([
+        GITLAB_REMOVE_DONE,
+        GITLAB_ENSURE_IN_PROGRESS,
+        GITLAB_ADD_IN_PROGRESS,
+      ]);
+    });
+
+    it('follow-up starts on GitHub: same lifecycle through gh', async () => {
       const harness = createHarness({ platform: 'github' });
 
-      await executeReview(gitHubInput(), harness.deps);
+      await executeReview(gitHubFollowupInput(), harness.deps);
 
       expect(harness.commandsBeforeInvoke).toEqual([
-        GITHUB_REMOVE_STALE_DONE,
-        GITHUB_ENSURE,
-        GITHUB_ADD,
+        GITHUB_REMOVE_DONE,
+        GITHUB_ENSURE_IN_PROGRESS,
+        GITHUB_ADD_IN_PROGRESS,
       ]);
     });
 
-    it('GitLab: ensures the label on the project then applies it to the merge request', async () => {
+    it('follow-up completes: applies review-done then removes review-in-progress', async () => {
       const harness = createHarness({ platform: 'gitlab' });
 
-      await executeReview(gitLabInput(), harness.deps);
+      const result = await executeReview(gitLabFollowupInput(), harness.deps);
 
-      expect(harness.commandsBeforeInvoke).toEqual([
-        GITLAB_REMOVE_STALE_DONE,
-        GITLAB_ENSURE,
-        GITLAB_ADD,
+      expect(harness.commands).toEqual([
+        GITLAB_REMOVE_DONE,
+        GITLAB_ENSURE_IN_PROGRESS,
+        GITLAB_ADD_IN_PROGRESS,
+        GITLAB_ENSURE_DONE,
+        GITLAB_ADD_DONE,
+        GITLAB_REMOVE_IN_PROGRESS,
       ]);
-    });
-  });
-
-  describe('ensuring the label is idempotent', () => {
-    it('applies the label without surfacing an error when the label already exists', async () => {
-      const harness = createHarness({ platform: 'gitlab', failOn: /labels$/ });
-
-      const result = await executeReview(gitLabInput(), harness.deps);
-
-      expect(harness.commands).toContain(GITLAB_ADD);
-      expect(result.status).toBe('completed');
-      expect(harness.warnMessages).toEqual([]);
-    });
-  });
-
-  describe('the label is removed on every terminal state', () => {
-    it('removes the label when the review completes, with unchanged stats', async () => {
-      const harness = createHarness({ platform: 'gitlab' });
-
-      const result = await executeReview(gitLabInput(), harness.deps);
-
-      expect(harness.commands.at(-1)).toBe(GITLAB_REMOVE);
       expect(result).toEqual({
         status: 'completed',
         stats: {
@@ -187,14 +181,16 @@ describe('SPEC-221 review-in-progress label (acceptance)', () => {
           blocking: 1,
           warnings: 2,
           suggestions: 3,
-          threadsOpened: 1,
+          threadsOpened: 0,
           threadsClosed: 0,
           durationMs: 1000,
         },
       });
     });
+  });
 
-    it('removes the label when the review is cancelled', async () => {
+  describe('every terminal state clears the in-progress label', () => {
+    it('follow-up cancelled: removes review-in-progress and applies no review-done', async () => {
       const harness = createHarness({ platform: 'github' });
       harness.claudeInvoker.setResult({
         success: false,
@@ -205,13 +201,14 @@ describe('SPEC-221 review-in-progress label (acceptance)', () => {
         durationMs: 0,
       });
 
-      const result = await executeReview(gitHubInput(), harness.deps);
+      const result = await executeReview(gitHubFollowupInput(), harness.deps);
 
-      expect(harness.commands.at(-1)).toBe(GITHUB_REMOVE);
+      expect(harness.commands.at(-1)).toBe(GITHUB_REMOVE_IN_PROGRESS);
+      expect(harness.commands).not.toContain(GITHUB_ADD_DONE);
       expect(result.status).toBe('cancelled');
     });
 
-    it('removes the label when Claude exits non-zero', async () => {
+    it('follow-up fails on invocation: removes review-in-progress and applies no review-done', async () => {
       const harness = createHarness({ platform: 'gitlab' });
       harness.claudeInvoker.setResult({
         success: false,
@@ -222,14 +219,15 @@ describe('SPEC-221 review-in-progress label (acceptance)', () => {
         durationMs: 500,
       });
 
-      const result = await executeReview(gitLabInput(), harness.deps);
+      const result = await executeReview(gitLabFollowupInput(), harness.deps);
 
-      expect(harness.commands.at(-1)).toBe(GITLAB_REMOVE);
+      expect(harness.commands.at(-1)).toBe(GITLAB_REMOVE_IN_PROGRESS);
+      expect(harness.commands).not.toContain(GITLAB_ADD_DONE);
       expect(result).toEqual({ status: 'failed', reason: 'exploded' });
     });
 
-    it('removes the label when the review context is unreadable after the run', async () => {
-      const job = ReviewJobFactory.create({ jobType: 'review' });
+    it('follow-up fails on an unreadable context: removes review-in-progress and applies no review-done', async () => {
+      const job = ReviewJobFactory.createFollowup();
       const mergeRequestId = `gitlab-${job.projectPath}-${job.mrNumber}`;
       const harness = createHarness({
         platform: 'gitlab',
@@ -238,9 +236,10 @@ describe('SPEC-221 review-in-progress label (acceptance)', () => {
         },
       });
 
-      const result = await executeReview(gitLabInput({ job }), harness.deps);
+      const result = await executeReview(gitLabFollowupInput({ job }), harness.deps);
 
-      expect(harness.commands.at(-1)).toBe(GITLAB_REMOVE);
+      expect(harness.commands.at(-1)).toBe(GITLAB_REMOVE_IN_PROGRESS);
+      expect(harness.commands).not.toContain(GITLAB_ADD_DONE);
       expect(result.status).toBe('failed');
       if (result.status === 'failed') {
         expect(result.reason).toContain('review context is unreadable');
@@ -248,48 +247,18 @@ describe('SPEC-221 review-in-progress label (acceptance)', () => {
     });
   });
 
-  describe('label operations never change the review outcome', () => {
-    it('still invokes Claude and completes when applying the label fails', async () => {
+  describe('label operations never change the follow-up outcome', () => {
+    it('still invokes Claude and completes when applying the in-progress label fails', async () => {
       const harness = createHarness({
         platform: 'github',
         failOn: new RegExp(`labels\\[\\]=${REVIEW_IN_PROGRESS_LABEL}`),
       });
 
-      const result = await executeReview(gitHubInput(), harness.deps);
+      const result = await executeReview(gitHubFollowupInput(), harness.deps);
 
       expect(harness.claudeInvoker.invocations).toHaveLength(1);
       expect(result.status).toBe('completed');
       expect(harness.warnMessages).toHaveLength(1);
-    });
-
-    it('still completes when removing the label fails', async () => {
-      const harness = createHarness({
-        platform: 'github',
-        failOn: new RegExp(`labels/${REVIEW_IN_PROGRESS_LABEL}`),
-      });
-
-      const result = await executeReview(gitHubInput(), harness.deps);
-
-      expect(result.status).toBe('completed');
-      expect(harness.warnMessages).toHaveLength(1);
-    });
-  });
-
-  describe('follow-up reviews share the lifecycle', () => {
-    /**
-     * Spec 224 superseded this spec's initial-only rule: a follow-up now runs the same
-     * in-progress lifecycle. Full coverage lives in the spec 224 acceptance test.
-     */
-    it('applies then removes the in-progress label', async () => {
-      const harness = createHarness({ platform: 'gitlab' });
-      const job = ReviewJobFactory.createFollowup();
-
-      const result = await executeReview(gitLabInput({ job, isFollowup: true }), harness.deps);
-
-      expect(harness.commandsBeforeInvoke).toContain(GITLAB_ENSURE);
-      expect(harness.commandsBeforeInvoke).toContain(GITLAB_ADD);
-      expect(harness.commands.at(-1)).toBe(GITLAB_REMOVE);
-      expect(result.status).toBe('completed');
     });
   });
 });
