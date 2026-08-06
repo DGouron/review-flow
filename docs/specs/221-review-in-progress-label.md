@@ -21,6 +21,9 @@ instructions.
 
 Scope is limited to the **initial review** (`isFollowup === false`). Follow-up runs are untouched.
 
+> **Superseded in part by [224-followup-review-labels](224-followup-review-labels.md)**: follow-up
+> runs now share the same in-progress lifecycle. Every rule below still holds for the initial review.
+
 ## Rules
 
 - the label name is the domain constant `review-in-progress` — not configurable in this iteration
@@ -36,7 +39,8 @@ Scope is limited to the **initial review** (`isFollowup === false`). Follow-up r
   `completed` even if its label could not be applied or removed
 - if applying the label failed, the removal attempt still runs (it is a no-op on the platform side)
   and its own failure is likewise swallowed
-- follow-up reviews (`isFollowup === true`) neither apply nor remove the label
+- ~~follow-up reviews (`isFollowup === true`) neither apply nor remove the label~~ — superseded by
+  spec 224: a follow-up runs the same lifecycle
 - both platforms are supported through one gateway contract with a GitLab CLI implementation
   (`glab`) and a GitHub CLI implementation (`gh`)
 
@@ -57,15 +61,14 @@ Scope is limited to the **initial review** (`isFollowup === false`). Follow-up r
 - apply fails: {initial review, ensure or add throws} → warning logged, Claude still invoked, review
   outcome identical to a run without the feature
 - remove fails: {initial review completes, remove throws} → warning logged, result still `completed`
-- follow-up review: {follow-up job} → no label applied, no label removed, behavior identical to
-  before this feature
+- ~~follow-up review: {follow-up job} → no label applied, no label removed~~ — superseded by spec 224
 
 ## Out of Scope
 
 - Making the label name configurable per project (`.reviewflow.json`)
 - Label colour / description management beyond what is needed to create a missing label
 - A distinct label per outcome (`review-passed`, `review-blocked`) — only the in-progress signal
-- Applying the label on follow-up reviews
+- ~~Applying the label on follow-up reviews~~ — delivered by spec 224
 - Exposing the label state on the dashboard
 - Reconciling labels left over from a daemon crash mid-review (no startup sweep)
 - Replacing or removing the existing Claude-driven `ADD_LABEL` review action

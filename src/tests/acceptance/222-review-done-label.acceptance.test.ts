@@ -166,16 +166,21 @@ describe('SPEC-222 review-done label (acceptance)', () => {
       });
     });
 
-    it('follow-up completes: applies review-done without touching review-in-progress', async () => {
+    /** Spec 224 gave the follow-up the full lifecycle; the done label still lands on it. */
+    it('follow-up completes: applies review-done inside the in-progress lifecycle', async () => {
       const harness = createHarness({ platform: 'github' });
       const job = ReviewJobFactory.createGitHub({ jobType: 'followup' });
 
       const result = await executeReview(gitHubInput({ job, isFollowup: true }), harness.deps);
 
-      expect(harness.commands).toEqual([GITHUB_ENSURE_DONE, GITHUB_ADD_DONE]);
-      expect(harness.commands).not.toContain(GITHUB_ENSURE_IN_PROGRESS);
-      expect(harness.commands).not.toContain(GITHUB_ADD_IN_PROGRESS);
-      expect(harness.commands).not.toContain(GITHUB_REMOVE_IN_PROGRESS);
+      expect(harness.commands).toEqual([
+        GITHUB_REMOVE_DONE,
+        GITHUB_ENSURE_IN_PROGRESS,
+        GITHUB_ADD_IN_PROGRESS,
+        GITHUB_ENSURE_DONE,
+        GITHUB_ADD_DONE,
+        GITHUB_REMOVE_IN_PROGRESS,
+      ]);
       expect(result.status).toBe('completed');
     });
 
