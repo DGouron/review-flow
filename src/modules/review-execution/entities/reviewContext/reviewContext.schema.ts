@@ -4,12 +4,19 @@ import { reviewActionSchema } from '@/modules/review-execution/entities/reviewAc
 
 import { reviewContextResultSchema } from './reviewContextResult.schema.js';
 
+export const reviewContextThreadCommentSchema = z.object({
+  author: z.string().nullable(),
+  body: z.string(),
+  createdAt: z.string(),
+});
+
 export const reviewContextThreadSchema = z.object({
   id: z.string(),
   file: z.string().nullable(),
   line: z.number().nullable(),
   status: z.enum(['open', 'resolved']),
   body: z.string(),
+  comments: z.array(reviewContextThreadCommentSchema).optional(),
 });
 
 export const reviewContextAgentSchema = z.object({

@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 
-import { createScopedGitLabExecutor } from '@/modules/platform-integration/interface-adapters/gateways/scopedGitLabExecutor.js';
+import {
+  createScopedGitLabExecutor,
+  createScopedGitLabArgvExecutor,
+} from '@/modules/platform-integration/interface-adapters/gateways/scopedGitLabExecutor.js';
 import { MissingExecutorTokenError } from '@/modules/platform-integration/services/scopedExecutorEnvironment.js';
 
 const TOKEN = 'glpat-scoped-exec-1';
@@ -91,6 +94,52 @@ describe('scoped gitlab executor factory (AC1-AC4 wiring)', () => {
     executor('glab api projects/x/merge_requests/1/discussions');
     expect(spawn.calls[0]?.env.HOME?.startsWith('/tmp/iso')).toBe(true);
     expect(spawn.calls[0]?.env.GLAB_CONFIG_DIR?.startsWith('/tmp/iso')).toBe(true);
+  });
+
+  it('argv variant: keeps the same isolation and spawns command and arguments separately', () => {
+    const calls: Array<{
+      command: string;
+      args: string[];
+      env: Record<string, string | undefined>;
+      cwd: string;
+    }> = [];
+    const fileWriter = new RecordingFileWriter();
+    const executor = createScopedGitLabArgvExecutor({
+      parentEnv: {
+        REVIEWFLOW_EXECUTOR_TOKEN: TOKEN,
+        PATH: '/usr/bin',
+        AMBIENT_ADMIN_TOKEN: 'canary',
+      },
+      isolatedDir: '/tmp/iso',
+      fileWriter,
+      spawn: (command, args, env, cwd) => {
+        calls.push({ command, args, env, cwd });
+        return '[]';
+      },
+    });
+
+    executor('glab', ['api', 'projects/x/merge_requests/1/discussions']);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.command).toBe('glab');
+    expect(calls[0]?.args).toEqual(['api', 'projects/x/merge_requests/1/discussions']);
+    expect(calls[0]?.env.HOME?.startsWith('/tmp/iso')).toBe(true);
+    expect(calls[0]?.env.AMBIENT_ADMIN_TOKEN).toBeUndefined();
+    for (const value of Object.values(calls[0]?.env ?? {})) {
+      expect(value).not.toBe(TOKEN);
+    }
+  });
+
+  it('argv variant: throws fail-closed when the service token is absent', () => {
+    const fileWriter = new RecordingFileWriter();
+    expect(() =>
+      createScopedGitLabArgvExecutor({
+        parentEnv: { PATH: '/usr/bin' },
+        isolatedDir: '/tmp/iso',
+        fileWriter,
+        spawn: () => '[]',
+      }),
+    ).toThrow(MissingExecutorTokenError);
   });
 
   it('AC4: writes the token only into the isolated glab config file', () => {

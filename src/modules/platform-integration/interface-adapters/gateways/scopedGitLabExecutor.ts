@@ -4,14 +4,50 @@ import {
   type ExecutorFileWriter,
   type ScopedExecutorEnv,
 } from '@/modules/platform-integration/services/scopedExecutorEnvironment.js';
+import type { ArgvCommandExecutor } from '@/shared/foundation/commandExecutor.js';
 
 export type ScopedSpawn = (command: string, env: ScopedExecutorEnv, cwd: string) => string;
+
+export type ScopedArgvSpawn = (
+  command: string,
+  args: string[],
+  env: ScopedExecutorEnv,
+  cwd: string,
+) => string;
 
 export interface CreateScopedGitLabExecutorInput {
   parentEnv: Record<string, string | undefined>;
   isolatedDir: string;
   fileWriter: ExecutorFileWriter;
   spawn: ScopedSpawn;
+}
+
+export interface CreateScopedGitLabArgvExecutorInput {
+  parentEnv: Record<string, string | undefined>;
+  isolatedDir: string;
+  fileWriter: ExecutorFileWriter;
+  spawn: ScopedArgvSpawn;
+}
+
+interface ScopedTarget {
+  env: ScopedExecutorEnv;
+  cwd: string;
+}
+
+interface ScopedTargetInput {
+  parentEnv: Record<string, string | undefined>;
+  isolatedDir: string;
+  fileWriter: ExecutorFileWriter;
+}
+
+function buildScopedTarget(input: ScopedTargetInput): ScopedTarget {
+  const { env } = buildScopedExecutorEnvironment({
+    parentEnv: input.parentEnv,
+    isolatedDir: input.isolatedDir,
+    fileWriter: input.fileWriter,
+  });
+
+  return { env, cwd: env.HOME ?? input.isolatedDir };
 }
 
 /**
@@ -23,13 +59,20 @@ export interface CreateScopedGitLabExecutorInput {
 export function createScopedGitLabExecutor(
   input: CreateScopedGitLabExecutorInput,
 ): CommandExecutor {
-  const { env } = buildScopedExecutorEnvironment({
-    parentEnv: input.parentEnv,
-    isolatedDir: input.isolatedDir,
-    fileWriter: input.fileWriter,
-  });
-
-  const cwd = env.HOME ?? input.isolatedDir;
+  const { env, cwd } = buildScopedTarget(input);
 
   return (command: string): string => input.spawn(command, env, cwd);
+}
+
+/**
+ * Same isolation as createScopedGitLabExecutor, for callers whose arguments carry
+ * attacker-influenceable values: command and arguments stay separate, so the spawn needs no
+ * shell and no value can escape a quoting context.
+ */
+export function createScopedGitLabArgvExecutor(
+  input: CreateScopedGitLabArgvExecutorInput,
+): ArgvCommandExecutor {
+  const { env, cwd } = buildScopedTarget(input);
+
+  return (command: string, args: string[]): string => input.spawn(command, args, env, cwd);
 }
