@@ -8,23 +8,38 @@ interface DependencyInfo {
 
 type CommandExecutor = (command: string, options?: object) => Buffer | string;
 
-const REQUIRED_DEPENDENCIES: DependencyInfo[] = [
-  {
-    name: 'Claude Code CLI',
-    command: 'claude --version',
-    installUrl: 'https://docs.anthropic.com/en/docs/claude-code/overview',
-  },
-  {
+type Platform = 'gitlab' | 'github';
+
+const CLAUDE_DEPENDENCY: DependencyInfo = {
+  name: 'Claude Code CLI',
+  command: 'claude --version',
+  installUrl: 'https://docs.anthropic.com/en/docs/claude-code/overview',
+};
+
+const PLATFORM_DEPENDENCIES: Record<Platform, DependencyInfo> = {
+  gitlab: {
     name: 'GitLab CLI (glab)',
     command: 'glab version',
     installUrl: 'https://gitlab.com/gitlab-org/cli#installation',
   },
-  {
+  github: {
     name: 'GitHub CLI (gh)',
     command: 'gh --version',
     installUrl: 'https://cli.github.com/',
   },
-];
+};
+
+function requiredDependencies(platforms: Platform[]): DependencyInfo[] {
+  const required = [CLAUDE_DEPENDENCY];
+
+  for (const platform of ['gitlab', 'github'] as const) {
+    if (platforms.includes(platform)) {
+      required.push(PLATFORM_DEPENDENCIES[platform]);
+    }
+  }
+
+  return required;
+}
 
 export function checkDependency(
   dep: { name: string; command: string },
@@ -38,9 +53,16 @@ export function checkDependency(
   }
 }
 
-export function validateDependencies(executor: CommandExecutor = execSync): DependencyInfo[] {
+/**
+ * A GitHub-only install must never be blocked by a missing `glab`, nor a GitLab-only install
+ * by a missing `gh`: only the CLIs of the platforms actually configured are required.
+ */
+export function validateDependencies(
+  platforms: Platform[],
+  executor: CommandExecutor = execSync,
+): DependencyInfo[] {
   const missing: DependencyInfo[] = [];
-  for (const dep of REQUIRED_DEPENDENCIES) {
+  for (const dep of requiredDependencies(platforms)) {
     if (!checkDependency(dep, executor)) {
       missing.push(dep);
     }
