@@ -1,6 +1,11 @@
+import { EventEmitter } from 'node:events';
+
 import { describe, it, expect } from 'vitest';
 
-import { SupervisorCliGateway } from '@/modules/supervisor-management/interface-adapters/gateways/supervisor.cli.gateway.js';
+import {
+  SupervisorCliGateway,
+  createDefaultSupervisorSpawner,
+} from '@/modules/supervisor-management/interface-adapters/gateways/supervisor.cli.gateway.js';
 import type {
   SupervisorProcessProbe,
   SupervisorProcessSpawner,
@@ -118,5 +123,40 @@ describe('SupervisorCliGateway.spawnDetached', () => {
 
     expect(result.state).toBe('failed');
     expect(result.reason).toMatch(/pid/i);
+  });
+});
+
+describe('createDefaultSupervisorSpawner', () => {
+  function fakeChild(pid: number | undefined): EventEmitter & {
+    pid: number | undefined;
+    unref: () => void;
+  } {
+    const child = Object.assign(new EventEmitter(), { pid, unref: () => {} });
+    return child;
+  }
+
+  it('reports the pid of the spawned supervisor', () => {
+    const child = fakeChild(4242);
+    const spawner = createDefaultSupervisorSpawner(() => child);
+
+    expect(spawner()).toEqual({ pid: 4242, error: null });
+  });
+
+  it('survives an asynchronous spawn error instead of crashing the daemon', () => {
+    const child = fakeChild(undefined);
+    const spawner = createDefaultSupervisorSpawner(() => child);
+
+    const result = spawner();
+
+    expect(result.pid).toBeNull();
+    expect(() => child.emit('error', new Error('spawn claude ENOENT'))).not.toThrow();
+  });
+
+  it('reports a synchronous spawn failure as an error', () => {
+    const spawner = createDefaultSupervisorSpawner(() => {
+      throw new Error('boom');
+    });
+
+    expect(spawner()).toEqual({ pid: null, error: 'boom' });
   });
 });
