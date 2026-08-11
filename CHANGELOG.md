@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.51.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.51.0...reviewflow-v3.51.1) (2026-08-11)
+
+
+### Fixed
+
+* keep the daemon alive and stop requiring unused platform CLIs ([#385](https://github.com/DGouron/review-flow/issues/385)) ([820b12f](https://github.com/DGouron/review-flow/commit/820b12fba225eaa1b4883a3cc72daf3471558b8a))
+
 ## [3.51.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.50.0...reviewflow-v3.51.0) (2026-08-06)
 
 
