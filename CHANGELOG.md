@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.51.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.51.0...reviewflow-v3.51.1) (2026-08-11)
+## [3.52.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.51.0...reviewflow-v3.52.0) (2026-08-11)
+
+
+### Added
+
+* **threads:** carry author replies in the context ([#382](https://github.com/DGouron/review-flow/issues/382)) ([42c7c52](https://github.com/DGouron/review-flow/commit/42c7c5233531d7af271327b0ae6a7e399b4e66f6))
 
 
 ### Fixed
