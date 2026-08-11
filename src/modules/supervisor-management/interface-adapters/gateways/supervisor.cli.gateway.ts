@@ -56,14 +56,33 @@ export function createDefaultSupervisorProbe(): SupervisorProcessProbe {
     });
 }
 
-export function createDefaultSupervisorSpawner(): SupervisorProcessSpawner {
+export interface SupervisorChildProcess {
+  pid?: number | undefined;
+  unref: () => void;
+  on: (event: 'error', listener: (error: Error) => void) => unknown;
+}
+
+export type SupervisorProcessLauncher = () => SupervisorChildProcess;
+
+const launchSupervisorProcess: SupervisorProcessLauncher = () =>
+  spawn('claude', ['agents'], {
+    detached: true,
+    stdio: 'ignore',
+    cwd: process.env.HOME ?? '/',
+  });
+
+/**
+ * `spawn` reports a missing binary through an asynchronous 'error' event, not a throw, and an
+ * unhandled 'error' event takes the whole daemon down. The supervisor is optional: a failed
+ * launch must be reported through the returned result, never kill the review server.
+ */
+export function createDefaultSupervisorSpawner(
+  launch: SupervisorProcessLauncher = launchSupervisorProcess,
+): SupervisorProcessSpawner {
   return () => {
     try {
-      const child = spawn('claude', ['agents'], {
-        detached: true,
-        stdio: 'ignore',
-        cwd: process.env.HOME ?? '/',
-      });
+      const child = launch();
+      child.on('error', () => {});
       child.unref();
       return { pid: child.pid ?? null, error: null };
     } catch (error) {

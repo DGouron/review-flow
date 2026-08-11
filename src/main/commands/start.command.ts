@@ -88,25 +88,27 @@ export function executeStart(
   startForeground();
 }
 
+function loadStartupInfo(): { enabledPlatforms: Array<'gitlab' | 'github'>; defaultPort: number } {
+  try {
+    const config = loadConfig();
+    const enabledPlatforms: Array<'gitlab' | 'github'> = [
+      ...new Set(config.repositories.filter((r) => r.enabled).map((r) => r.platform)),
+    ];
+    return { enabledPlatforms, defaultPort: config.server.port };
+  } catch {
+    return { enabledPlatforms: [], defaultPort: 3000 };
+  }
+}
+
 export function createStartDependencies(pidDeps: PidFileDeps): StartDependencies {
   return {
-    validateDependencies,
+    validateDependencies: () => validateDependencies(loadStartupInfo().enabledPlatforms),
     startServer: (port) => startServer({ portOverride: port }),
     exit: process.exit,
     error: console.error,
     log: console.log,
     startDaemonDeps: { ...pidDeps, spawnDaemon },
-    loadStartupInfo: () => {
-      try {
-        const config = loadConfig();
-        const enabledPlatforms: Array<'gitlab' | 'github'> = [
-          ...new Set(config.repositories.filter((r) => r.enabled).map((r) => r.platform)),
-        ];
-        return { enabledPlatforms, defaultPort: config.server.port };
-      } catch {
-        return { enabledPlatforms: [], defaultPort: 3000 };
-      }
-    },
+    loadStartupInfo,
     openInBrowser,
   };
 }
