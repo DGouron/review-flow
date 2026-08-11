@@ -22,6 +22,54 @@ describe('reviewContextThreadSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('should validate a thread carrying its conversation', () => {
+    const thread = {
+      id: 'PRRT_kwDONxxx',
+      file: 'src/services/myService.ts',
+      line: 42,
+      status: 'open',
+      body: 'Missing null check',
+      comments: [
+        { author: 'maintainer', body: 'Missing null check', createdAt: '2026-08-01T10:00:00Z' },
+        { author: null, body: 'Guard covers it', createdAt: '2026-08-01T11:00:00Z' },
+      ],
+    };
+
+    const result = reviewContextThreadSchema.safeParse(thread);
+
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject a comment whose body is missing', () => {
+    const thread = {
+      id: 'PRRT_kwDONxxx',
+      file: 'src/services/myService.ts',
+      line: 42,
+      status: 'open',
+      body: 'Missing null check',
+      comments: [{ author: 'maintainer', createdAt: '2026-08-01T10:00:00Z' }],
+    };
+
+    const result = reviewContextThreadSchema.safeParse(thread);
+
+    expect(result.success).toBe(false);
+  });
+
+  it('should accept a thread written before the conversation field existed', () => {
+    const thread = {
+      id: 'PRRT_kwDONxxx',
+      file: 'src/services/myService.ts',
+      line: 42,
+      status: 'open',
+      body: 'Missing null check',
+    };
+
+    const result = reviewContextThreadSchema.safeParse(thread);
+
+    expect(result.success).toBe(true);
+    expect(result.data?.comments).toBeUndefined();
+  });
+
   it('should accept null for file and line (PR-level comment)', () => {
     const thread = {
       id: 'PRRT_kwDONxxx',

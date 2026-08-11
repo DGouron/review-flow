@@ -106,10 +106,12 @@ import { LoggerEgressTraceGateway } from '@/modules/platform-integration/interfa
 import { GitLabMemberAccessCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/memberAccess.gitlab.cli.gateway.js';
 import {
   GitHubThreadFetchGateway,
+  defaultGitHubArgvExecutor,
   defaultGitHubExecutor,
 } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.github.gateway.js';
 import {
   GitLabThreadFetchGateway,
+  defaultGitLabArgvExecutor,
   defaultGitLabExecutor,
 } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
 import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
@@ -380,8 +382,8 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
 
   const threadFetchGatewayFactory = (platform: 'gitlab' | 'github') =>
     platform === 'github'
-      ? new GitHubThreadFetchGateway(defaultGitHubExecutor)
-      : new GitLabThreadFetchGateway(defaultGitLabExecutor);
+      ? new GitHubThreadFetchGateway(defaultGitHubArgvExecutor)
+      : new GitLabThreadFetchGateway(defaultGitLabArgvExecutor);
 
   // The single scanned egress sink per platform (SPEC-199). Built here because the
   // manual-followup routes registered just below need it as much as the webhook path.
@@ -478,7 +480,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
   await registerWebSocketRoutes(app, deps);
 
   const trackingGw = deps.reviewRequestTrackingGateway;
-  const threadFetchGw = new GitLabThreadFetchGateway(defaultGitLabExecutor);
+  const threadFetchGw = new GitLabThreadFetchGateway(defaultGitLabArgvExecutor);
 
   // Confirming a parked review rebuilds the real review processor from a code-side
   // registry: the builders close over framework gateways re-created at boot, so a
@@ -487,8 +489,8 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
   // source and job type (the registry keys on platform × triggerSource × jobType).
   const processorRegistry = new ProcessorRegistry();
 
-  const gitLabThreadFetchGatewayForReview = new GitLabThreadFetchGateway(defaultGitLabExecutor);
-  const gitHubThreadFetchGatewayForReview = new GitHubThreadFetchGateway(defaultGitHubExecutor);
+  const gitLabThreadFetchGatewayForReview = new GitLabThreadFetchGateway(defaultGitLabArgvExecutor);
+  const gitHubThreadFetchGatewayForReview = new GitHubThreadFetchGateway(defaultGitHubArgvExecutor);
 
   const gitLabExecuteReview = buildExecuteReview({
     platform: 'gitlab',
@@ -701,7 +703,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     });
   });
 
-  const gitHubThreadFetchGw = new GitHubThreadFetchGateway(defaultGitHubExecutor);
+  const gitHubThreadFetchGw = new GitHubThreadFetchGateway(defaultGitHubArgvExecutor);
 
   app.post('/webhooks/github', async (request, reply) => {
     let proceedGitHub = false;

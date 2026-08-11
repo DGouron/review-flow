@@ -77,6 +77,7 @@ vi.mock(
       fetchThreads: vi.fn(() => []),
     })),
     defaultGitLabExecutor: vi.fn(),
+    defaultGitLabArgvExecutor: vi.fn(),
   }),
 );
 

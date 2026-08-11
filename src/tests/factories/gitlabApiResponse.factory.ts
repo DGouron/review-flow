@@ -3,11 +3,17 @@ interface GitLabNotePosition {
   new_line: number | null;
 }
 
+interface GitLabNoteAuthor {
+  username: string;
+}
+
 interface GitLabNote {
   resolvable: boolean;
   resolved: boolean;
   body: string;
   position: GitLabNotePosition | null;
+  author?: GitLabNoteAuthor;
+  created_at?: string;
 }
 
 interface GitLabDiscussion {

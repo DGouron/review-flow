@@ -8,12 +8,25 @@ export interface DiffMetadata {
   startSha: string;
 }
 
+export interface ReviewContextThreadComment {
+  author: string | null;
+  body: string;
+  createdAt: string;
+}
+
+/**
+ * `comments` is the thread conversation, oldest first: index 0 is the comment that opened
+ * the thread (the review's own finding), later indexes are replies. Position — not the
+ * author login — tells them apart, since ReviewFlow posts with the maintainer's token.
+ * Optional because a context file persisted before this field existed must still parse.
+ */
 export interface ReviewContextThread {
   id: string;
   file: string | null;
   line: number | null;
   status: 'open' | 'resolved';
   body: string;
+  comments?: ReviewContextThreadComment[];
 }
 
 export interface ReviewContextAgent {
