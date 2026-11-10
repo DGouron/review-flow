@@ -3,6 +3,30 @@ export type DesktopNotificationCommand = {
   args: string[];
 };
 
+export type DesktopNotificationTarget = {
+  platform: NodeJS.Platform;
+  hasTerminalNotifier: boolean;
+};
+
+/**
+ * `terminal-notifier` is an optional Homebrew binary, so its location varies
+ * (arm64 and Intel prefixes differ). Walking PATH avoids hardcoding prefixes
+ * and still finds custom installs.
+ */
+export function resolveTerminalNotifier(
+  pathEnvironment: string | null,
+  exists: (candidate: string) => boolean,
+): boolean {
+  if (pathEnvironment === null) {
+    return false;
+  }
+
+  return pathEnvironment
+    .split(':')
+    .filter((directory) => directory.length > 0)
+    .some((directory) => exists(`${directory}/terminal-notifier`));
+}
+
 /**
  * AppleScript takes the notification as a quoted string literal inside a single
  * `-e` argument, so quotes and backslashes have to be escaped and newlines
@@ -18,15 +42,22 @@ function toAppleScriptLiteral(value: string): string {
 }
 
 /**
- * macOS has no `notify-send`; `osascript` is part of the base system. Linux and
- * anything else keeps `notify-send`, which is where it is expected to exist.
+ * `osascript` notifications are posted on behalf of Script Editor, so they hinge
+ * on a notification permission users rarely grant to that app.
+ * `terminal-notifier` ships its own bundle and gets its own permission entry, so
+ * it is preferred when installed; `osascript` stays as the zero-install
+ * fallback. Linux and anything else keeps `notify-send`.
  */
 export function buildDesktopNotificationCommand(
-  platform: NodeJS.Platform,
+  target: DesktopNotificationTarget,
   title: string,
   message: string,
 ): DesktopNotificationCommand {
-  if (platform === 'darwin') {
+  if (target.platform === 'darwin' && target.hasTerminalNotifier) {
+    return { command: 'terminal-notifier', args: ['-title', title, '-message', message] };
+  }
+
+  if (target.platform === 'darwin') {
     const script = `display notification "${toAppleScriptLiteral(message)}" with title "${toAppleScriptLiteral(title)}"`;
     return { command: 'osascript', args: ['-e', script] };
   }
