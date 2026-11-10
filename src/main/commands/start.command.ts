@@ -12,7 +12,9 @@ import { validateDependencies } from '@/shared/services/dependencyChecker.js';
 import type { PidFileDeps } from '@/shared/services/pidFileManager.js';
 
 export interface StartDependencies {
-  validateDependencies: () => { name: string; installUrl: string }[];
+  validateDependencies: (
+    enabledPlatforms: Array<'gitlab' | 'github'>,
+  ) => { name: string; installUrl: string }[];
   startServer: (port?: number) => Promise<unknown>;
   exit: (code: number) => void;
   error: (...args: unknown[]) => void;
@@ -45,7 +47,8 @@ export function executeStart(
   open: boolean,
   deps: StartDependencies,
 ): void {
-  const resolvedPort = port ?? deps.loadStartupInfo().defaultPort;
+  const { enabledPlatforms, defaultPort } = deps.loadStartupInfo();
+  const resolvedPort = port ?? defaultPort;
 
   if (daemon) {
     const usecase = new StartDaemonUseCase(deps.startDaemonDeps);
@@ -65,7 +68,7 @@ export function executeStart(
   }
 
   if (!skipDependencyCheck) {
-    const missing = deps.validateDependencies();
+    const missing = deps.validateDependencies(enabledPlatforms);
     if (missing.length > 0) {
       deps.error('Missing dependencies:');
       for (const dep of missing) {
@@ -102,7 +105,7 @@ function loadStartupInfo(): { enabledPlatforms: Array<'gitlab' | 'github'>; defa
 
 export function createStartDependencies(pidDeps: PidFileDeps): StartDependencies {
   return {
-    validateDependencies: () => validateDependencies(loadStartupInfo().enabledPlatforms),
+    validateDependencies,
     startServer: (port) => startServer({ portOverride: port }),
     exit: process.exit,
     error: console.error,
