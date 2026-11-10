@@ -8,7 +8,10 @@ import type { Logger } from 'pino';
 import { getProjectAgents, getFollowupAgents, loadProjectConfig } from '@/config/projectConfig.js';
 import { buildAuditScopeDirective } from '@/frameworks/claude/auditScopeDirective.js';
 import { broadcastBudgetAfterUsage } from '@/frameworks/claude/broadcastBudgetAfterUsage.js';
-import { buildDesktopNotificationCommand } from '@/frameworks/claude/desktopNotification.js';
+import {
+  buildDesktopNotificationCommand,
+  resolveTerminalNotifier,
+} from '@/frameworks/claude/desktopNotification.js';
 import { buildLanguageDirective } from '@/frameworks/claude/languageDirective.js';
 import { logInfo, logWarn, logError } from '@/frameworks/logging/logBuffer.js';
 import { getModel, getReviewTimeoutMs } from '@/frameworks/settings/runtimeSettings.js';
@@ -824,11 +827,24 @@ async function invokeViaBackgroundSession(
   };
 }
 
+let terminalNotifierAvailable: boolean | null = null;
+
+function hasTerminalNotifier(): boolean {
+  if (terminalNotifierAvailable === null) {
+    terminalNotifierAvailable = resolveTerminalNotifier(process.env.PATH ?? null, existsSync);
+  }
+  return terminalNotifierAvailable;
+}
+
 /**
  * Send desktop notification
  */
 export function sendNotification(title: string, message: string, logger: Logger): void {
-  const { command, args } = buildDesktopNotificationCommand(process.platform, title, message);
+  const { command, args } = buildDesktopNotificationCommand(
+    { platform: process.platform, hasTerminalNotifier: hasTerminalNotifier() },
+    title,
+    message,
+  );
   try {
     const child = spawn(command, args);
 
