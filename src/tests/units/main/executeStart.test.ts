@@ -55,6 +55,27 @@ describe('executeStart', () => {
     expect(deps.error).toHaveBeenCalledWith('  - gh: https://gh.example.com');
   });
 
+  it('should check only the CLIs of the enabled platforms', () => {
+    const validateDependencies = vi.fn(() => []);
+    const deps = createFakeDeps({
+      validateDependencies,
+      loadStartupInfo: () => ({ enabledPlatforms: ['github'], defaultPort: 3000 }),
+    });
+
+    executeStart(false, false, undefined, false, deps);
+
+    expect(validateDependencies).toHaveBeenCalledWith(['github']);
+  });
+
+  it('should check no platform CLI when no platform is enabled', () => {
+    const validateDependencies = vi.fn(() => []);
+    const deps = createFakeDeps({ validateDependencies });
+
+    executeStart(false, false, undefined, false, deps);
+
+    expect(validateDependencies).toHaveBeenCalledWith([]);
+  });
+
   it('should skip dependency check when flag is true', () => {
     const validateDependencies = vi.fn(() => [
       { name: 'missing', installUrl: 'https://example.com' },
