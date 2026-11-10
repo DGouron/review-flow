@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.54.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.53.1...reviewflow-v3.54.0) (2026-11-10)
+
+
+### Added
+
+* **notifications:** prefer terminal-notifier on macOS ([#414](https://github.com/DGouron/review-flow/issues/414)) ([971ec73](https://github.com/DGouron/review-flow/commit/971ec73715033d1fd2124bb094fe7d95cfb87cbc))
+
 ## [3.53.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.53.0...reviewflow-v3.53.1) (2026-11-10)
 
 
