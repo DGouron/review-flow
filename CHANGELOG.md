@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.53.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.53.0...reviewflow-v3.53.1) (2026-11-10)
+
+
+### Fixed
+
+* **cli:** check the CLIs of the platforms start enables ([#412](https://github.com/DGouron/review-flow/issues/412)) ([51a205b](https://github.com/DGouron/review-flow/commit/51a205b50340911be52cd31b8e828d249daa5e03))
+
 ## [3.53.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.52.0...reviewflow-v3.53.0) (2026-08-14)
 
 
