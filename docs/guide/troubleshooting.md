@@ -164,6 +164,32 @@ Look for `spawn-unstable` in `/health` reason — the supervisor dies immediatel
 - MCP server doesn't start just from being listed; Claude must invoke a tool
 - Verify `.mcp.json` exists in the project directory
 
+## Desktop Notifications
+
+The server sends an OS notification when a review starts, ends, fails, or is cancelled.
+
+| Platform | Command used |
+|----------|--------------|
+| macOS, `terminal-notifier` on the server's `PATH` | `terminal-notifier` |
+| macOS, without `terminal-notifier` | `osascript` (ships with macOS) |
+| Linux and others | `notify-send` |
+
+### No notification on macOS
+
+Without `terminal-notifier`, notifications go through `osascript` and are posted on behalf of **Script Editor**: they only show up if Script Editor is allowed in *System Settings → Notifications*. Installing `terminal-notifier` gives ReviewFlow notifications their own entry instead:
+
+```bash
+brew install terminal-notifier
+```
+
+Then:
+
+- Restart ReviewFlow — the binary is looked up once per server process.
+- Make sure the server's `PATH` includes the Homebrew prefix (`/opt/homebrew/bin` on Apple Silicon, `/usr/local/bin` on Intel). A server started from a service manager may not inherit your shell's `PATH`; in that case ReviewFlow silently keeps using `osascript`.
+- On the first notification, allow `terminal-notifier` in *System Settings → Notifications*.
+
+If a notification command fails to start, the server logs the warning `Notification desktop non disponible`.
+
 ## Log Locations
 
 | Log | Location |

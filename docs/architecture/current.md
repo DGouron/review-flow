@@ -160,7 +160,7 @@ claude --bg \
 - **Report retrieval**: read from `<worktree>/.claude/reviews/report-<mrNumber>.md`
 - **Cleanup**: `claude stop <sessionId>` then `claude rm <sessionId>`
 - **Rate-limit handling**: stderr or stdout matching `RATE_LIMIT_DETECTION_REGEX` (exported from `claudeSession.cli.gateway.ts`) triggers exponential backoff retry
-- **Notifications**: `notify-send` at start and end (Linux)
+- **Notifications**: desktop notification at start and end — `terminal-notifier` on macOS when it is on `PATH`, `osascript` otherwise; `notify-send` on Linux (`src/frameworks/claude/desktopNotification.ts`)
 
 Source: `src/modules/claude-invocation/usecases/runClaudeReviewJob.usecase.ts` orchestrates `dispatchClaudeSession` → `awaitSessionCompletion` → `retrieveReviewReport` → `cleanupClaudeSession`.
 
