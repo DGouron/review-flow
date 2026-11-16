@@ -27,6 +27,10 @@ GitHub ranges are never added to the GitLab route: GitLab publishes no
 machine-readable list, and widening the GitLab route to GitHub's shared SaaS
 ranges would buy nothing.
 
+A malformed entry in `WEBHOOK_ALLOWED_CIDR_RANGES` (for example `10.0.0.0/ 8`)
+matches no address. At startup, one `warn` line lists such entries in
+`malformedRanges`, each cut to 64 characters.
+
 The app binds to loopback only; TLS is terminated at the proxy. `trust proxy`
 is scoped to `WEBHOOK_TRUSTED_HOP` (never `true`, never a broad subnet). The
 accept/reject decision is taken solely by the transport guard from the raw socket

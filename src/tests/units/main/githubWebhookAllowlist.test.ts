@@ -33,6 +33,32 @@ describe('startGitHubWebhookAllowlist in manual mode', () => {
 
     expect(allowlist.currentRanges()).toEqual(['10.0.0.0/8', '192.30.252.0/22']);
     expect(capturing.infoMessages.join('\n')).toContain('manual mode');
+    expect(capturing.warnMessages).toEqual([]);
+    allowlist.stop();
+  });
+
+  it('names the malformed manual ranges in one startup warning', async () => {
+    vi.stubEnv(MODE_KEY, 'manual');
+    vi.stubEnv(CIDR_KEY, '10.0.0.0/8,10.0.0.0/ 8,oops');
+    const capturing = createCapturingLogger();
+
+    const allowlist = await startGitHubWebhookAllowlist(capturing.logger);
+
+    expect(capturing.warnMessages).toHaveLength(1);
+    expect(capturing.warnMessages[0]).toContain('"malformedRanges":["10.0.0.0/ 8","oops"]');
+    expect(capturing.warnMessages[0]).toContain('WEBHOOK_ALLOWED_CIDR_RANGES');
+    allowlist.stop();
+  });
+
+  it('truncates an oversized malformed manual range in the startup warning', async () => {
+    vi.stubEnv(MODE_KEY, 'manual');
+    vi.stubEnv(CIDR_KEY, 'x'.repeat(5_000));
+    const capturing = createCapturingLogger();
+
+    const allowlist = await startGitHubWebhookAllowlist(capturing.logger);
+
+    expect(capturing.warnMessages[0]).toContain(`"${'x'.repeat(64)}"`);
+    expect(capturing.warnMessages[0].length).toBeLessThan(400);
     allowlist.stop();
   });
 });
@@ -62,6 +88,19 @@ describe('startGitHubWebhookAllowlist in auto mode', () => {
 
     expect(allowlist.currentRanges()).toEqual(['9.234.106.48/28', '10.0.0.0/8']);
     expect(JSON.parse(readFileSync(cacheFilePath, 'utf-8')).ranges).toEqual(['9.234.106.48/28']);
+  });
+
+  it('names a malformed manual range in auto mode too', async () => {
+    vi.stubEnv(CIDR_KEY, '10.0.0.0/8,oops');
+    const capturing = createCapturingLogger();
+
+    const allowlist = await startGitHubWebhookAllowlist(capturing.logger, {
+      fetchFunction: answerWithHookRanges,
+    });
+    allowlist.stop();
+
+    expect(capturing.warnMessages).toHaveLength(1);
+    expect(capturing.warnMessages[0]).toContain('"malformedRanges":["oops"]');
   });
 
   it('starts offline from the cache file in the config directory', async () => {

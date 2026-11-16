@@ -6,6 +6,7 @@ import {
   startGitHubWebhookAllowlistScheduler,
   type GitHubWebhookAllowlistScheduler,
 } from '@/frameworks/scheduler/githubWebhookAllowlistScheduler.js';
+import { CidrRange } from '@/modules/platform-integration/entities/transport/cidrRange.valueObject.js';
 import {
   GitHubHookRangesHttpGateway,
   type GitHubHookRangesHttpGatewayOptions,
@@ -17,12 +18,26 @@ import { getConfigDir } from '@/shared/services/configDir.js';
 
 const TWENTY_FOUR_HOURS_IN_MILLISECONDS = 86_400_000;
 const HOOK_RANGES_CACHE_FILE_NAME = 'github-hook-ranges.json';
+const MAXIMUM_REPORTED_RANGE_LENGTH = 64;
+
+function warnAboutMalformedManualRanges(logger: Logger, manualRanges: string[]): void {
+  const malformedRanges = manualRanges
+    .filter((range) => CidrRange.parse(range) === null)
+    .map((range) => range.slice(0, MAXIMUM_REPORTED_RANGE_LENGTH));
+  if (malformedRanges.length > 0) {
+    logger.warn(
+      { malformedRanges },
+      'Ignoring malformed WEBHOOK_ALLOWED_CIDR_RANGES entries: they match no address',
+    );
+  }
+}
 
 export async function startGitHubWebhookAllowlist(
   logger: Logger,
   httpOptions: GitHubHookRangesHttpGatewayOptions = {},
 ): Promise<GitHubWebhookAllowlistScheduler> {
   const manualRanges = resolveAllowedCidrRanges();
+  warnAboutMalformedManualRanges(logger, manualRanges);
 
   if (resolveAllowlistMode() === 'manual') {
     logger.info(
