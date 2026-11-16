@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { GitHubHookRangesHttpGateway } from '@/modules/platform-integration/interface-adapters/gateways/transport/githubHookRanges.http.gateway.js';
+import { GitHubHookRangesHttpGateway } from '@/modules/platform-integration/interface-adapters/gateways/transport/hookRanges.github.http.gateway.js';
 import { GITHUB_HOOK_RANGES_SAMPLE } from '@/tests/factories/hookRangesSnapshot.factory.js';
 
 type FetchCall = { url: string; init: RequestInit | undefined };

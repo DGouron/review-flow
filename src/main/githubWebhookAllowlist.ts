@@ -9,7 +9,7 @@ import {
 import {
   GitHubHookRangesHttpGateway,
   type GitHubHookRangesHttpGatewayOptions,
-} from '@/modules/platform-integration/interface-adapters/gateways/transport/githubHookRanges.http.gateway.js';
+} from '@/modules/platform-integration/interface-adapters/gateways/transport/hookRanges.github.http.gateway.js';
 import { HookRangesCacheFileSystemGateway } from '@/modules/platform-integration/interface-adapters/gateways/transport/hookRangesCache.fileSystem.gateway.js';
 import { RefreshGitHubWebhookAllowlistUseCase } from '@/modules/platform-integration/usecases/transport/refreshGitHubWebhookAllowlist.usecase.js';
 import { resolveAllowedCidrRanges, resolveAllowlistMode } from '@/security/transportGuardConfig.js';
