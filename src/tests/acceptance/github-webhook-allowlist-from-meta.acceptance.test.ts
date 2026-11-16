@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 
 import { startGitHubWebhookAllowlistScheduler } from '@/frameworks/scheduler/githubWebhookAllowlistScheduler.js';
+import type { GitHubHookRangesGateway } from '@/modules/platform-integration/entities/transport/githubHookRanges.gateway.js';
 import { transportGuardMiddleware } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
 import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
+import { GitHubHookRangesHttpGateway } from '@/modules/platform-integration/interface-adapters/gateways/transport/githubHookRanges.http.gateway.js';
 import { RefreshGitHubWebhookAllowlistUseCase } from '@/modules/platform-integration/usecases/transport/refreshGitHubWebhookAllowlist.usecase.js';
 import { HookRangesSnapshotFactory } from '@/tests/factories/hookRangesSnapshot.factory.js';
 import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
@@ -15,7 +17,7 @@ const NEW_GITHUB_SENDER = '9.234.106.50';
 const NEW_GITHUB_IPV6_SENDER = '2606:50c0:8000::154';
 
 async function deliverGitHubWebhook(options: {
-  hookRangesGateway: StubGitHubHookRangesGateway;
+  hookRangesGateway: GitHubHookRangesGateway;
   hookRangesCacheGateway?: StubHookRangesCacheGateway;
   senderAddress: string;
 }) {
@@ -100,5 +102,30 @@ describe('GitHub webhook allowlist read from GitHub meta (acceptance)', () => {
     expect(outcome.capturing.errorMessages.join('\n')).toContain('WEBHOOK_ALLOWED_CIDR_RANGES');
     expect(outcome.capturing.warnMessages.join('\n')).toContain(NEW_GITHUB_SENDER);
     expect(outcome.capturing.warnMessages.join('\n')).toContain('off-allowlist');
+  });
+
+  it('ignores a poisoned GitHub meta answer: the cache is kept and the reason is logged', async () => {
+    const goodSnapshot = HookRangesSnapshotFactory.create();
+    const hookRangesCacheGateway = new StubHookRangesCacheGateway(goodSnapshot);
+    const poisonedMeta = new GitHubHookRangesHttpGateway({
+      fetchFunction: async () =>
+        new Response(JSON.stringify({ hooks: ['192.30.252.0/22', '0.0.0.0/0'] }), { status: 200 }),
+    });
+
+    const fromAnywhere = await deliverGitHubWebhook({
+      hookRangesGateway: poisonedMeta,
+      hookRangesCacheGateway,
+      senderAddress: '203.0.113.7',
+    });
+    const fromGitHub = await deliverGitHubWebhook({
+      hookRangesGateway: poisonedMeta,
+      hookRangesCacheGateway,
+      senderAddress: NEW_GITHUB_SENDER,
+    });
+
+    expect(fromAnywhere.accepted).toBe(false);
+    expect(fromGitHub.accepted).toBe(true);
+    expect(hookRangesCacheGateway.stored).toEqual(goodSnapshot);
+    expect(fromAnywhere.capturing.warnMessages.join('\n')).toContain('too broad');
   });
 });

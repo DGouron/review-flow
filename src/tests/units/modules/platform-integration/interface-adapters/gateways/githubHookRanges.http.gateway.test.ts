@@ -66,6 +66,30 @@ describe('GitHubHookRangesHttpGateway', () => {
     expect(result.kind).toBe('failed');
   });
 
+  it('fails with the offending range when one hooks entry is not a CIDR range', async () => {
+    const { fetchFunction } = fakeFetch(async () =>
+      jsonResponse({ hooks: [...GITHUB_HOOK_RANGES_SAMPLE, 'oops'] }),
+    );
+    const gateway = new GitHubHookRangesHttpGateway({ fetchFunction });
+
+    const result = await gateway.fetchHookRanges();
+
+    expect(result.kind).toBe('failed');
+    expect(result.kind === 'failed' ? result.reason : '').toContain('not a CIDR range: "oops"');
+  });
+
+  it('fails with the offending range when one hooks entry is too broad', async () => {
+    const { fetchFunction } = fakeFetch(async () =>
+      jsonResponse({ hooks: ['192.30.252.0/22', '0.0.0.0/0'] }),
+    );
+    const gateway = new GitHubHookRangesHttpGateway({ fetchFunction });
+
+    const result = await gateway.fetchHookRanges();
+
+    expect(result.kind).toBe('failed');
+    expect(result.kind === 'failed' ? result.reason : '').toContain('too broad: "0.0.0.0/0"');
+  });
+
   it('fails when the body is not json', async () => {
     const { fetchFunction } = fakeFetch(async () => new Response('<html>', { status: 200 }));
     const gateway = new GitHubHookRangesHttpGateway({ fetchFunction });

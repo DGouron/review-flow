@@ -32,6 +32,7 @@ export async function startGitHubWebhookAllowlist(
     hookRangesGateway: new GitHubHookRangesHttpGateway(),
     hookRangesCacheGateway: new HookRangesCacheFileSystemGateway({
       cacheFilePath: join(getConfigDir(), HOOK_RANGES_CACHE_FILE_NAME),
+      logger,
     }),
     manualRanges,
     logger,

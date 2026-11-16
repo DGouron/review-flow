@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 import { HookRangesCacheFileSystemGateway } from '@/modules/platform-integration/interface-adapters/gateways/transport/hookRangesCache.fileSystem.gateway.js';
 import { HookRangesSnapshotFactory } from '@/tests/factories/hookRangesSnapshot.factory.js';
+import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
 
 describe('HookRangesCacheFileSystemGateway', () => {
   let tempDir: string;
@@ -20,14 +21,24 @@ describe('HookRangesCacheFileSystemGateway', () => {
     rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('returns null when no cache was ever written', async () => {
-    const gateway = new HookRangesCacheFileSystemGateway({ cacheFilePath });
+  function buildGateway() {
+    const capturing = createCapturingLogger();
+    const gateway = new HookRangesCacheFileSystemGateway({
+      cacheFilePath,
+      logger: capturing.logger,
+    });
+    return { gateway, capturing };
+  }
+
+  it('returns null without warning when no cache was ever written', async () => {
+    const { gateway, capturing } = buildGateway();
 
     expect(await gateway.load()).toBeNull();
+    expect(capturing.warnMessages).toEqual([]);
   });
 
   it('loads back what it saved, creating the parent directory', async () => {
-    const gateway = new HookRangesCacheFileSystemGateway({ cacheFilePath });
+    const { gateway } = buildGateway();
     const snapshot = HookRangesSnapshotFactory.create();
 
     await gateway.save(snapshot);
@@ -36,19 +47,34 @@ describe('HookRangesCacheFileSystemGateway', () => {
     expect(JSON.parse(readFileSync(cacheFilePath, 'utf-8'))).toEqual(snapshot);
   });
 
-  it('returns null when the cache file is not valid json', async () => {
-    const gateway = new HookRangesCacheFileSystemGateway({ cacheFilePath });
+  it('returns null and warns when the cache file is not valid json', async () => {
+    const { gateway, capturing } = buildGateway();
     await gateway.save(HookRangesSnapshotFactory.create());
     writeFileSync(cacheFilePath, '{ truncated', 'utf-8');
 
     expect(await gateway.load()).toBeNull();
+    expect(capturing.warnMessages).toHaveLength(1);
+    expect(capturing.warnMessages[0]).toContain(cacheFilePath);
   });
 
   it('returns null when the cache file does not match the snapshot shape', async () => {
-    const gateway = new HookRangesCacheFileSystemGateway({ cacheFilePath });
+    const { gateway } = buildGateway();
     await gateway.save(HookRangesSnapshotFactory.create());
     writeFileSync(cacheFilePath, JSON.stringify({ ranges: [] }), 'utf-8');
 
     expect(await gateway.load()).toBeNull();
+  });
+
+  it('refuses and logs a cache holding a range that is too broad', async () => {
+    const { gateway, capturing } = buildGateway();
+    await gateway.save(HookRangesSnapshotFactory.create());
+    writeFileSync(
+      cacheFilePath,
+      JSON.stringify(HookRangesSnapshotFactory.create({ ranges: ['0.0.0.0/0'] })),
+      'utf-8',
+    );
+
+    expect(await gateway.load()).toBeNull();
+    expect(capturing.warnMessages.join('\n')).toContain('too broad: \\"0.0.0.0/0\\"');
   });
 });

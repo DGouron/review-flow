@@ -32,7 +32,8 @@ export class GitHubHookRangesHttpGateway implements GitHubHookRangesGateway {
 
       const parsed = safeParseGitHubMetaResponse(await response.json());
       if (!parsed.success) {
-        return { kind: 'failed', reason: 'GitHub meta payload has no usable hooks ranges' };
+        const issues = parsed.error.issues.map((issue) => issue.message).join('; ');
+        return { kind: 'failed', reason: `GitHub meta payload rejected: ${issues}` };
       }
       return { kind: 'fetched', ranges: parsed.data.hooks };
     } catch (error) {
