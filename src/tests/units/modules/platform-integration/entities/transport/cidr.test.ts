@@ -121,6 +121,26 @@ describe('isIpInCidr', () => {
       expect(isIpInCidr('2001:db8::1', '0.0.0.0/0')).toBe(false);
     });
 
+    it('matches an ipv4-mapped ipv6 address against the ipv4 range, as nginx writes it in dual-stack', () => {
+      expect(isIpInCidr('::ffff:9.234.98.164', '9.234.98.160/28')).toBe(true);
+      expect(isIpInCidr('::FFFF:9.234.98.164', '9.234.98.160/28')).toBe(true);
+      expect(isIpInCidr('::ffff:9ea:62a4', '9.234.98.160/28')).toBe(true);
+    });
+
+    it('rejects an ipv4-mapped ipv6 address outside the ipv4 range', () => {
+      expect(isIpInCidr('::ffff:9.234.98.200', '9.234.98.160/28')).toBe(false);
+    });
+
+    it('does not treat a non-mapped ipv6 address with an ipv4 tail as ipv4', () => {
+      expect(isIpInCidr('64:ff9b::9.234.98.164', '9.234.98.160/28')).toBe(false);
+    });
+
+    it('returns false for an ipv6 address with a malformed ipv4 tail', () => {
+      expect(isIpInCidr('::ffff:9.234.98.999', '0.0.0.0/0')).toBe(false);
+      expect(isIpInCidr('::ffff:9.234.98', '0.0.0.0/0')).toBe(false);
+      expect(isIpInCidr('::ffff:9.234.98.164:1', '0.0.0.0/0')).toBe(false);
+    });
+
     it('returns false for a malformed ipv6 address', () => {
       expect(isIpInCidr('2001:db8::1::2', '2001:db8::/32')).toBe(false);
       expect(isIpInCidr('2001:db8:zzzz::1', '2001:db8::/32')).toBe(false);

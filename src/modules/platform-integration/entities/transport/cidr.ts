@@ -41,8 +41,27 @@ function expandIpv6Groups(ip: string): string[] | null {
   return [...head, ...Array.from({ length: missingGroupCount }, () => '0'), ...tail];
 }
 
+function replaceDottedIpv4Tail(ip: string): string | null {
+  const lastColonIndex = ip.lastIndexOf(':');
+  const tail = ip.slice(lastColonIndex + 1);
+  if (!tail.includes('.')) {
+    return ip;
+  }
+  const tailValue = ipv4ToInteger(tail);
+  if (tailValue === null) {
+    return null;
+  }
+  const highGroup = (tailValue >>> 16).toString(16);
+  const lowGroup = (tailValue & 0xffff).toString(16);
+  return `${ip.slice(0, lastColonIndex + 1)}${highGroup}:${lowGroup}`;
+}
+
 function ipv6ToBigInt(ip: string): bigint | null {
-  const groups = expandIpv6Groups(ip);
+  const hexadecimalIp = replaceDottedIpv4Tail(ip);
+  if (hexadecimalIp === null) {
+    return null;
+  }
+  const groups = expandIpv6Groups(hexadecimalIp);
   if (groups === null || groups.length !== IPV6_GROUP_COUNT) {
     return null;
   }
@@ -57,10 +76,17 @@ function ipv6ToBigInt(ip: string): bigint | null {
   return value;
 }
 
+const IPV4_MAPPED_IPV6_MARKER = 0xffffn;
+
 function parseAddress(ip: string): ParsedAddress | null {
   if (ip.includes(':')) {
     const value = ipv6ToBigInt(ip);
-    return value === null ? null : { value, bitWidth: 128 };
+    if (value === null) {
+      return null;
+    }
+    return value >> 32n === IPV4_MAPPED_IPV6_MARKER
+      ? { value: value & 0xffffffffn, bitWidth: 32 }
+      : { value, bitWidth: 128 };
   }
   const value = ipv4ToInteger(ip);
   return value === null ? null : { value: BigInt(value), bitWidth: 32 };
