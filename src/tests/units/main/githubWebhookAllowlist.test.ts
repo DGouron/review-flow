@@ -11,6 +11,14 @@ import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
 const MODE_KEY = 'WEBHOOK_ALLOWLIST_MODE';
 const CIDR_KEY = 'WEBHOOK_ALLOWED_CIDR_RANGES';
 
+async function answerWithHookRanges(): Promise<Response> {
+  return new Response(JSON.stringify({ hooks: ['9.234.106.48/28'] }), { status: 200 });
+}
+
+async function failOffline(): Promise<Response> {
+  throw new Error('getaddrinfo ENOTFOUND api.github.com');
+}
+
 describe('startGitHubWebhookAllowlist in manual mode', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -47,11 +55,8 @@ describe('startGitHubWebhookAllowlist in auto mode', () => {
   });
 
   it('serves the GitHub meta ranges plus the manual ones and caches them in the config directory', async () => {
-    const fetchFunction = async () =>
-      new Response(JSON.stringify({ hooks: ['9.234.106.48/28'] }), { status: 200 });
-
     const allowlist = await startGitHubWebhookAllowlist(createCapturingLogger().logger, {
-      fetchFunction,
+      fetchFunction: answerWithHookRanges,
     });
     allowlist.stop();
 
@@ -65,12 +70,8 @@ describe('startGitHubWebhookAllowlist in auto mode', () => {
       cacheFilePath,
       JSON.stringify(HookRangesSnapshotFactory.create({ ranges: ['192.30.252.0/22'] })),
     );
-    const fetchFunction = async (): Promise<Response> => {
-      throw new Error('getaddrinfo ENOTFOUND api.github.com');
-    };
-
     const allowlist = await startGitHubWebhookAllowlist(createCapturingLogger().logger, {
-      fetchFunction,
+      fetchFunction: failOffline,
     });
     allowlist.stop();
 
