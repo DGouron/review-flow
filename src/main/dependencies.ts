@@ -36,6 +36,7 @@ import { WorktreeSizeProbeCliGateway } from '@/modules/worktree-management/inter
 import { WorktreePanelPresenter } from '@/modules/worktree-management/interface-adapters/presenters/worktreePanel.presenter.js';
 import { InMemoryForceCleanupLockService } from '@/modules/worktree-management/services/forceCleanupLock.js';
 import type { ForceCleanupLockService } from '@/modules/worktree-management/services/forceCleanupLock.js';
+import { resolveAllowedCidrRanges } from '@/security/transportGuardConfig.js';
 
 import type { Config } from '../config/loader.js';
 import { LOG_DIR, LOG_FILE_PATH } from '../shared/services/daemonPaths.js';
@@ -57,6 +58,7 @@ export interface Dependencies {
   worktreeHealthProbeGateway: WorktreeHealthProbeGateway;
   worktreePanelPresenter: WorktreePanelPresenter;
   sweepSchedulerControls: WorktreeSchedulerControls | null;
+  githubWebhookAllowedCidrRanges: () => string[];
   forceCleanupLock: ForceCleanupLockService;
   logger: Logger;
   config: Config;
@@ -135,6 +137,7 @@ export function createDependencies(config: Config): Dependencies {
     worktreeHealthProbeGateway,
     worktreePanelPresenter,
     sweepSchedulerControls: null,
+    githubWebhookAllowedCidrRanges: resolveAllowedCidrRanges,
     forceCleanupLock,
     logger,
     config,

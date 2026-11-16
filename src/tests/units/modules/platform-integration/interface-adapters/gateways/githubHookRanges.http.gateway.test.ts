@@ -1,0 +1,88 @@
+import { describe, it, expect } from 'vitest';
+
+import { GitHubHookRangesHttpGateway } from '@/modules/platform-integration/interface-adapters/gateways/transport/githubHookRanges.http.gateway.js';
+import { GITHUB_HOOK_RANGES_SAMPLE } from '@/tests/factories/hookRangesSnapshot.factory.js';
+
+type FetchCall = { url: string; init: RequestInit | undefined };
+
+function fakeFetch(respond: () => Promise<Response>) {
+  const calls: FetchCall[] = [];
+  const fetchFunction = async (url: string | URL | Request, init?: RequestInit) => {
+    calls.push({ url: String(url), init });
+    return respond();
+  };
+  return { fetchFunction, calls };
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+describe('GitHubHookRangesHttpGateway', () => {
+  it('returns the hooks ranges of GitHub meta', async () => {
+    const { fetchFunction, calls } = fakeFetch(async () =>
+      jsonResponse({ hooks: GITHUB_HOOK_RANGES_SAMPLE, web: ['1.2.3.4/32'] }),
+    );
+    const gateway = new GitHubHookRangesHttpGateway({ fetchFunction });
+
+    const result = await gateway.fetchHookRanges();
+
+    expect(result).toEqual({ kind: 'fetched', ranges: GITHUB_HOOK_RANGES_SAMPLE });
+    expect(calls[0].url).toBe('https://api.github.com/meta');
+  });
+
+  it('identifies itself and asks for the GitHub json media type', async () => {
+    const { fetchFunction, calls } = fakeFetch(async () =>
+      jsonResponse({ hooks: GITHUB_HOOK_RANGES_SAMPLE }),
+    );
+    const gateway = new GitHubHookRangesHttpGateway({ fetchFunction });
+
+    await gateway.fetchHookRanges();
+
+    const headers = new Headers(calls[0].init?.headers);
+    expect(headers.get('user-agent')).toBe('reviewflow');
+    expect(headers.get('accept')).toBe('application/vnd.github+json');
+    expect(calls[0].init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('fails with the http status when GitHub answers an error', async () => {
+    const { fetchFunction } = fakeFetch(async () => jsonResponse({ message: 'rate limited' }, 403));
+    const gateway = new GitHubHookRangesHttpGateway({ fetchFunction });
+
+    const result = await gateway.fetchHookRanges();
+
+    expect(result).toEqual({ kind: 'failed', reason: 'GitHub meta answered HTTP 403' });
+  });
+
+  it('fails when the payload has no hooks ranges', async () => {
+    const { fetchFunction } = fakeFetch(async () => jsonResponse({ hooks: [] }));
+    const gateway = new GitHubHookRangesHttpGateway({ fetchFunction });
+
+    const result = await gateway.fetchHookRanges();
+
+    expect(result.kind).toBe('failed');
+  });
+
+  it('fails when the body is not json', async () => {
+    const { fetchFunction } = fakeFetch(async () => new Response('<html>', { status: 200 }));
+    const gateway = new GitHubHookRangesHttpGateway({ fetchFunction });
+
+    const result = await gateway.fetchHookRanges();
+
+    expect(result.kind).toBe('failed');
+  });
+
+  it('fails with the network error message when the request throws', async () => {
+    const { fetchFunction } = fakeFetch(async () => {
+      throw new Error('getaddrinfo ENOTFOUND api.github.com');
+    });
+    const gateway = new GitHubHookRangesHttpGateway({ fetchFunction });
+
+    const result = await gateway.fetchHookRanges();
+
+    expect(result).toEqual({ kind: 'failed', reason: 'getaddrinfo ENOTFOUND api.github.com' });
+  });
+});

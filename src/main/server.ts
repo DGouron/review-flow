@@ -9,6 +9,7 @@ import {
   getDefaultSettingsPath,
   loadSettingsFromDisk,
 } from '@/frameworks/settings/runtimeSettings.js';
+import { startGitHubWebhookAllowlist } from '@/main/githubWebhookAllowlist.js';
 import { InMemorySupervisorHealthGateway } from '@/modules/claude-invocation/interface-adapters/gateways/supervisorHealth.memory.gateway.js';
 import { defaultEgressScanConfig } from '@/modules/platform-integration/entities/egressScan/egressScan.defaults.js';
 import { createEgressScanner } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
@@ -248,6 +249,9 @@ export async function startServer(options: ServerOptions = {}): Promise<FastifyI
     now: () => new Date(),
   });
 
+  const githubWebhookAllowlist = await startGitHubWebhookAllowlist(deps.logger);
+  deps.githubWebhookAllowedCidrRanges = githubWebhookAllowlist.currentRanges;
+
   deps.sweepSchedulerControls = {
     getLastSweep: () => worktreeSweepScheduler.getLastSweep(),
     getNextSweepEta: () => worktreeSweepScheduler.getNextSweepEta(),
@@ -322,6 +326,7 @@ export async function startServer(options: ServerOptions = {}): Promise<FastifyI
     deps.logger.info('Shutting down...');
     cleanupScheduler.stop();
     worktreeSweepScheduler.stop();
+    githubWebhookAllowlist.stop();
     stopClaudeInvocationTimers();
     supervisorScheduler.stop();
     removePidFile(PID_FILE_PATH);

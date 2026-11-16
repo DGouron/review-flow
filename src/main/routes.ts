@@ -721,7 +721,10 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
         resolver: clientIpResolver,
         logger: deps.logger,
       },
-      transportGuardConfig,
+      {
+        trustedHopAddress: transportGuardConfig.trustedHopAddress,
+        allowedCidrRanges: deps.githubWebhookAllowedCidrRanges(),
+      },
     );
     if (!proceedGitHub) {
       return;

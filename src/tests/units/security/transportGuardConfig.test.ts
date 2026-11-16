@@ -4,21 +4,26 @@ import {
   DEFAULT_LOOPBACK_HOP,
   resolveTrustedHopAddress,
   resolveAllowedCidrRanges,
+  resolveAllowlistMode,
   transportTrustProxyValue,
 } from '@/security/transportGuardConfig.js';
 
 const HOP_KEY = 'WEBHOOK_TRUSTED_HOP';
 const CIDR_KEY = 'WEBHOOK_ALLOWED_CIDR_RANGES';
+const MODE_KEY = 'WEBHOOK_ALLOWLIST_MODE';
 
 describe('transportGuardConfig (AC8)', () => {
   const originalHop = process.env[HOP_KEY];
   const originalCidr = process.env[CIDR_KEY];
+  const originalMode = process.env[MODE_KEY];
 
   afterEach(() => {
     if (originalHop === undefined) Reflect.deleteProperty(process.env, HOP_KEY);
     else process.env[HOP_KEY] = originalHop;
     if (originalCidr === undefined) Reflect.deleteProperty(process.env, CIDR_KEY);
     else process.env[CIDR_KEY] = originalCidr;
+    if (originalMode === undefined) Reflect.deleteProperty(process.env, MODE_KEY);
+    else process.env[MODE_KEY] = originalMode;
   });
 
   it('defaults the trusted hop to the loopback address', () => {
@@ -43,5 +48,20 @@ describe('transportGuardConfig (AC8)', () => {
   it('returns an empty allowlist when none is configured', () => {
     Reflect.deleteProperty(process.env, CIDR_KEY);
     expect(resolveAllowedCidrRanges()).toEqual([]);
+  });
+
+  it('reads GitHub hook ranges automatically when no allowlist mode is configured', () => {
+    Reflect.deleteProperty(process.env, MODE_KEY);
+    expect(resolveAllowlistMode()).toBe('auto');
+  });
+
+  it('switches back to the manual allowlist only when explicitly asked', () => {
+    process.env[MODE_KEY] = ' Manual ';
+    expect(resolveAllowlistMode()).toBe('manual');
+  });
+
+  it('keeps the automatic mode for any other value', () => {
+    process.env[MODE_KEY] = 'auto';
+    expect(resolveAllowlistMode()).toBe('auto');
   });
 });
