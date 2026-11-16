@@ -62,28 +62,37 @@ Degraded states are logged when they start, not on every refresh. A refresh that
 succeeds again logs at `info`.
 
 - **Source:** `https://api.github.com/meta`, field `hooks`, unauthenticated
-  (one call a day, far below the 60/hour anonymous rate limit), 10 s timeout.
+  (one call a day, far below the 60/hour anonymous rate limit), 10 s timeout,
+  no redirect followed, body capped at 2 MB.
+- **Validation:** every `hooks` entry must be a well-formed CIDR range no broader
+  than `/16` (IPv4) or `/24` (IPv6); GitHub publishes `/20` to `/32`. One invalid
+  or too broad entry rejects the whole answer: it counts as a failed read, the
+  previous cache is kept, and the `warn`/`error` line names the offending range.
 - **Startup:** the first resolution finishes before the server listens, so a
   restart never opens a window with a partial list.
 - **Cache file:** `github-hook-ranges.json` in the ReviewFlow config directory
   (`~/Library/Application Support/reviewflow/` on macOS,
   `$XDG_CONFIG_HOME/reviewflow/` or `~/.config/reviewflow/` on Linux). Deleting it
-  is safe; it is rewritten on the next successful read. A corrupt file counts as
-  no cache.
+  is safe; it is rewritten on the next successful read. It is written atomically
+  with mode `0600`. A corrupt file, or one holding an invalid or too broad range,
+  counts as no cache and logs one `warn` with the file path and the reason.
 - **Refresh period:** 24 h. A new GitHub range is accepted at the latest one day
   after GitHub publishes it, or right after a restart.
 
 ### IPv6
 
 The CIDR matcher handles both IPv4 and IPv6 (GitHub publishes `2a0a:a440::/29`
-and `2606:50c0::/32`). An address only matches a range of its own family. Known
-limit: an IPv4-mapped IPv6 address (`::ffff:192.30.252.1`) does not match an IPv4
-range. If your proxy listens on a dual-stack socket, check that it forwards
-plain IPv4 in `X-Forwarded-For`; the refusal log line below shows what it sends.
+and `2606:50c0::/32`). An address only matches a range of its own family. An
+IPv4-mapped IPv6 address (`::ffff:192.30.252.1`, what nginx writes on a
+dual-stack socket) is compared as the IPv4 address it carries.
 
 ### Diagnosing a refused webhook
 
-Every transport guard refusal writes one `warn` line:
+Each transport guard refusal writes one `warn` line, at most ten per reason per
+minute and per route. The first line of the next minute adds
+`suppressedInPreviousWindow` with the number of refusals not logged. Addresses
+longer than 64 characters are truncated and their original length is added as
+`clientIpLength` or `socketAddressLength`.
 
 ```json
 {"level":40,"reason":"off-allowlist","clientIp":"9.234.106.50","socketAddress":"127.0.0.1","msg":"Webhook rejected by transport guard"}
