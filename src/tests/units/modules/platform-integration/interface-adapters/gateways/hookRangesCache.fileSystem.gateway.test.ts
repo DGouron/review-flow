@@ -1,6 +1,6 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
@@ -45,6 +45,16 @@ describe('HookRangesCacheFileSystemGateway', () => {
 
     expect(await gateway.load()).toEqual(snapshot);
     expect(JSON.parse(readFileSync(cacheFilePath, 'utf-8'))).toEqual(snapshot);
+  });
+
+  it('writes the cache readable by its owner only, through a temporary file it does not leave behind', async () => {
+    const { gateway } = buildGateway();
+
+    await gateway.save(HookRangesSnapshotFactory.create());
+    await gateway.save(HookRangesSnapshotFactory.create({ fetchedAt: '2026-11-16T10:00:00.000Z' }));
+
+    expect(statSync(cacheFilePath).mode & 0o777).toBe(0o600);
+    expect(readdirSync(dirname(cacheFilePath))).toEqual(['github-hook-ranges.json']);
   });
 
   it('returns null and warns when the cache file is not valid json', async () => {

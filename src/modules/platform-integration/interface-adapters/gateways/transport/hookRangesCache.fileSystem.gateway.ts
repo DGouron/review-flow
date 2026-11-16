@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 import type { Logger } from 'pino';
@@ -6,6 +6,8 @@ import type { Logger } from 'pino';
 import { safeParseHookRangesSnapshot } from '@/modules/platform-integration/entities/transport/githubHookRanges.guard.js';
 import type { HookRangesSnapshot } from '@/modules/platform-integration/entities/transport/githubHookRanges.schema.js';
 import type { HookRangesCacheGateway } from '@/modules/platform-integration/entities/transport/hookRangesCache.gateway.js';
+
+const OWNER_READ_WRITE_ONLY = 0o600;
 
 export interface HookRangesCacheFileSystemGatewayOptions {
   cacheFilePath: string;
@@ -44,7 +46,12 @@ export class HookRangesCacheFileSystemGateway implements HookRangesCacheGateway 
 
   async save(snapshot: HookRangesSnapshot): Promise<void> {
     await mkdir(dirname(this.cacheFilePath), { recursive: true });
-    await writeFile(this.cacheFilePath, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf-8');
+    const temporaryFilePath = `${this.cacheFilePath}.${process.pid}.tmp`;
+    await writeFile(temporaryFilePath, `${JSON.stringify(snapshot, null, 2)}\n`, {
+      encoding: 'utf-8',
+      mode: OWNER_READ_WRITE_ONLY,
+    });
+    await rename(temporaryFilePath, this.cacheFilePath);
   }
 
   private warnUnusable(reason: string): void {
