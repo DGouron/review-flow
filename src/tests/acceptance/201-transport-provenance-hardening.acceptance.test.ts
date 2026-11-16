@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { transportGuardMiddleware } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
 import type { TransportGuardConfig } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
 import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
+import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 
 const TRUSTED_HOP = '127.0.0.1';
 
@@ -61,6 +62,7 @@ function runGuard(request: FakeRequest): GuardOutcome {
         nextCalled = true;
       },
       resolver: new ForwardedForClientIpResolver(),
+      logger: createStubLogger(),
     },
     config,
   );

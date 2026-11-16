@@ -633,6 +633,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
           proceed = true;
         },
         resolver: clientIpResolver,
+        logger: deps.logger,
       },
       transportGuardConfig,
     );
@@ -718,6 +719,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
           proceedGitHub = true;
         },
         resolver: clientIpResolver,
+        logger: deps.logger,
       },
       transportGuardConfig,
     );

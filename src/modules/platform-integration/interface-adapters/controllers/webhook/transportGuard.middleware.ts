@@ -1,3 +1,5 @@
+import type { Logger } from 'pino';
+
 import type { ClientIpResolver } from '@/modules/platform-integration/entities/transport/clientIpResolver.gateway.js';
 import { evaluateTransport } from '@/modules/platform-integration/usecases/transport/evaluateTransport.usecase.js';
 
@@ -23,6 +25,7 @@ export interface TransportGuardInput {
   reply: GuardReply;
   next: () => void;
   resolver: ClientIpResolver;
+  logger: Logger;
 }
 
 function singleHeaderValue(value: HeaderValue): string | null {
@@ -50,6 +53,10 @@ export function transportGuardMiddleware(
   });
 
   if (decision.kind === 'reject') {
+    input.logger.warn(
+      { reason: decision.reason, clientIp: resolvedClientIp, socketAddress: directSocketAddress },
+      'Webhook rejected by transport guard',
+    );
     input.reply.code(decision.status);
     input.reply.send();
     return;
