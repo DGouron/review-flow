@@ -6,7 +6,10 @@ import {
   startGitHubWebhookAllowlistScheduler,
   type GitHubWebhookAllowlistScheduler,
 } from '@/frameworks/scheduler/githubWebhookAllowlistScheduler.js';
-import { GitHubHookRangesHttpGateway } from '@/modules/platform-integration/interface-adapters/gateways/transport/githubHookRanges.http.gateway.js';
+import {
+  GitHubHookRangesHttpGateway,
+  type GitHubHookRangesHttpGatewayOptions,
+} from '@/modules/platform-integration/interface-adapters/gateways/transport/githubHookRanges.http.gateway.js';
 import { HookRangesCacheFileSystemGateway } from '@/modules/platform-integration/interface-adapters/gateways/transport/hookRangesCache.fileSystem.gateway.js';
 import { RefreshGitHubWebhookAllowlistUseCase } from '@/modules/platform-integration/usecases/transport/refreshGitHubWebhookAllowlist.usecase.js';
 import { resolveAllowedCidrRanges, resolveAllowlistMode } from '@/security/transportGuardConfig.js';
@@ -17,6 +20,7 @@ const HOOK_RANGES_CACHE_FILE_NAME = 'github-hook-ranges.json';
 
 export async function startGitHubWebhookAllowlist(
   logger: Logger,
+  httpOptions: GitHubHookRangesHttpGatewayOptions = {},
 ): Promise<GitHubWebhookAllowlistScheduler> {
   const manualRanges = resolveAllowedCidrRanges();
 
@@ -29,7 +33,7 @@ export async function startGitHubWebhookAllowlist(
   }
 
   const refreshAllowlist = new RefreshGitHubWebhookAllowlistUseCase({
-    hookRangesGateway: new GitHubHookRangesHttpGateway(),
+    hookRangesGateway: new GitHubHookRangesHttpGateway(httpOptions),
     hookRangesCacheGateway: new HookRangesCacheFileSystemGateway({
       cacheFilePath: join(getConfigDir(), HOOK_RANGES_CACHE_FILE_NAME),
       logger,

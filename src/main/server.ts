@@ -166,7 +166,7 @@ export function buildRecoveryExecuteActions(
   };
 }
 
-async function buildServer(deps: Dependencies): Promise<FastifyInstance> {
+export async function buildServer(deps: Dependencies): Promise<FastifyInstance> {
   // trust proxy is scoped to the single loopback hop only (never true, never a
   // broad subnet) so Fastify does not inflate request attributes from client
   // headers; the accept/reject decision lives entirely in the transport guard.
