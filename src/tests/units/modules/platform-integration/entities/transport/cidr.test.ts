@@ -38,6 +38,10 @@ describe('isIpInCidr', () => {
     it('returns false when prefix is missing', () => {
       expect(isIpInCidr('192.168.1.1', '192.168.1.0')).toBe(false);
     });
+
+    it('returns false when the prefix is empty instead of treating it as /0', () => {
+      expect(isIpInCidr('8.8.8.8', '10.0.0.0/')).toBe(false);
+    });
   });
 
   describe('invalid ip parsing', () => {
