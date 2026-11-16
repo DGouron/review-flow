@@ -34,6 +34,7 @@ export async function startGitHubWebhookAllowlistScheduler(
 
   await refresh();
   const intervalId = setInterval(refresh, intervalMs);
+  intervalId.unref();
 
   return {
     currentRanges: () => allowedCidrRanges,

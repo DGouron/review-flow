@@ -81,6 +81,23 @@ describe('startGitHubWebhookAllowlistScheduler', () => {
     expect(refreshAllowlist.callCount).toBe(1);
   });
 
+  it('does not keep the process alive with its refresh timer', async () => {
+    vi.useRealTimers();
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    const scheduler = await startGitHubWebhookAllowlistScheduler({
+      refreshAllowlist: sequenceOf([{ source: 'manual-only', allowedCidrRanges: [] }]),
+      initialRanges: MANUAL_RANGES,
+      intervalMs: INTERVAL_MS,
+      logger: createCapturingLogger().logger,
+    });
+
+    const refreshTimer = setIntervalSpy.mock.results[0].value;
+    setIntervalSpy.mockRestore();
+    scheduler.stop();
+
+    expect(refreshTimer.hasRef()).toBe(false);
+  });
+
   it('keeps the previous allowlist and logs an error when a refresh throws', async () => {
     const capturing = createCapturingLogger();
     const refreshAllowlist = sequenceOf([new Error('cache unreadable')]);
