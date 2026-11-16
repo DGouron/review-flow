@@ -77,7 +77,11 @@ function prefixMask(prefix: number, bitWidth: number): bigint {
  * matches a range of the other family.
  */
 export function isIpInCidr(ip: string, cidr: string): boolean {
-  const [rangeIp, prefixText] = cidr.split('/');
+  const parts = cidr.split('/');
+  if (parts.length !== 2 || !/^\d{1,3}$/.test(parts[1])) {
+    return false;
+  }
+  const [rangeIp, prefixText] = parts;
   const address = parseAddress(ip);
   const range = parseAddress(rangeIp);
   if (address === null || range === null || address.bitWidth !== range.bitWidth) {
@@ -85,7 +89,7 @@ export function isIpInCidr(ip: string, cidr: string): boolean {
   }
 
   const prefix = Number(prefixText);
-  if (prefixText === '' || !Number.isInteger(prefix) || prefix < 0 || prefix > range.bitWidth) {
+  if (prefix > range.bitWidth) {
     return false;
   }
 

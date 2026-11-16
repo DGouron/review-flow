@@ -42,6 +42,23 @@ describe('isIpInCidr', () => {
     it('returns false when the prefix is empty instead of treating it as /0', () => {
       expect(isIpInCidr('8.8.8.8', '10.0.0.0/')).toBe(false);
     });
+
+    it.each([' ', '\t', '0x0', '+0', '8.0', '1e1', ' 8', '8 ', '0008'])(
+      'returns false when the prefix "%s" is not plain decimal digits',
+      (prefixText) => {
+        expect(isIpInCidr('8.8.8.8', `10.0.0.0/${prefixText}`)).toBe(false);
+        expect(isIpInCidr('10.0.0.1', `10.0.0.0/${prefixText}`)).toBe(false);
+      },
+    );
+
+    it('returns false when the range has more than one slash', () => {
+      expect(isIpInCidr('10.200.0.1', '10.0.0.0/8/32')).toBe(false);
+    });
+
+    it('returns false when the ipv6 prefix is not plain decimal digits', () => {
+      expect(isIpInCidr('2001:db8::1', '2001:db8::/ ')).toBe(false);
+      expect(isIpInCidr('2001:db8::1', '2001:db8::/0x20')).toBe(false);
+    });
   });
 
   describe('invalid ip parsing', () => {
