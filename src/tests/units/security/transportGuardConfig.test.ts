@@ -60,8 +60,10 @@ describe('transportGuardConfig (AC8)', () => {
     expect(resolveAllowlistMode()).toBe('manual');
   });
 
-  it('keeps the automatic mode for any other value', () => {
-    process.env[MODE_KEY] = 'auto';
+  it('keeps the automatic mode for any other value, including a misspelled manual', () => {
+    process.env[MODE_KEY] = 'manuel';
+    expect(resolveAllowlistMode()).toBe('auto');
+    process.env[MODE_KEY] = 'off';
     expect(resolveAllowlistMode()).toBe('auto');
   });
 });

@@ -108,10 +108,48 @@ describe('RefreshGitHubWebhookAllowlistUseCase', () => {
       });
 
       await useCase.execute();
+      await useCase.execute();
+      await useCase.execute();
 
       expect(capturing.warnMessages).toHaveLength(1);
       expect(capturing.warnMessages[0]).toContain('HTTP 503');
       expect(capturing.warnMessages[0]).toContain('2026-11-09T08:00:00.000Z');
+    });
+
+    it('logs the manual-only fallback when the cache disappears after serving from it', async () => {
+      const hookRangesCacheGateway = new StubHookRangesCacheGateway(
+        HookRangesSnapshotFactory.create(),
+      );
+      const { useCase, capturing } = buildUseCase({
+        hookRangesGateway: StubGitHubHookRangesGateway.failing('HTTP 503'),
+        hookRangesCacheGateway,
+      });
+
+      const fromCache = await useCase.execute();
+      hookRangesCacheGateway.stored = null;
+      const withoutCache = await useCase.execute();
+
+      expect(fromCache.source).toBe('cache');
+      expect(withoutCache.source).toBe('manual-only');
+      expect(capturing.warnMessages).toHaveLength(1);
+      expect(capturing.errorMessages).toHaveLength(1);
+    });
+
+    it('warns about the cache when one appears after a manual-only start', async () => {
+      const hookRangesCacheGateway = new StubHookRangesCacheGateway();
+      const { useCase, capturing } = buildUseCase({
+        hookRangesGateway: StubGitHubHookRangesGateway.failing('HTTP 503'),
+        hookRangesCacheGateway,
+      });
+
+      const withoutCache = await useCase.execute();
+      hookRangesCacheGateway.stored = HookRangesSnapshotFactory.create();
+      const fromCache = await useCase.execute();
+
+      expect(withoutCache.source).toBe('manual-only');
+      expect(fromCache.source).toBe('cache');
+      expect(capturing.errorMessages).toHaveLength(1);
+      expect(capturing.warnMessages).toHaveLength(1);
     });
   });
 
