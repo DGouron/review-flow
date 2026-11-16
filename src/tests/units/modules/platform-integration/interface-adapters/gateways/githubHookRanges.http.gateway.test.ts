@@ -48,6 +48,49 @@ describe('GitHubHookRangesHttpGateway', () => {
     expect(calls[0].init?.signal).toBeInstanceOf(AbortSignal);
   });
 
+  it('refuses to follow redirects', async () => {
+    const { fetchFunction, calls } = fakeFetch(async () =>
+      jsonResponse({ hooks: GITHUB_HOOK_RANGES_SAMPLE }),
+    );
+    const gateway = new GitHubHookRangesHttpGateway({ fetchFunction });
+
+    await gateway.fetchHookRanges();
+
+    expect(calls[0].init?.redirect).toBe('error');
+  });
+
+  it('fails without reading the body when the declared length exceeds 2 MB', async () => {
+    const { fetchFunction } = fakeFetch(
+      async () =>
+        new Response(JSON.stringify({ hooks: GITHUB_HOOK_RANGES_SAMPLE }), {
+          status: 200,
+          headers: { 'content-length': '2000001' },
+        }),
+    );
+    const gateway = new GitHubHookRangesHttpGateway({ fetchFunction });
+
+    const result = await gateway.fetchHookRanges();
+
+    expect(result).toEqual({
+      kind: 'failed',
+      reason: 'GitHub meta body too large: 2000001 bytes',
+    });
+  });
+
+  it('fails when an undeclared body exceeds 2 MB', async () => {
+    const oversizedBody = JSON.stringify({
+      hooks: GITHUB_HOOK_RANGES_SAMPLE,
+      padding: 'x'.repeat(2_000_000),
+    });
+    const { fetchFunction } = fakeFetch(async () => new Response(oversizedBody, { status: 200 }));
+    const gateway = new GitHubHookRangesHttpGateway({ fetchFunction });
+
+    const result = await gateway.fetchHookRanges();
+
+    expect(result.kind).toBe('failed');
+    expect(result.kind === 'failed' ? result.reason : '').toContain('too large');
+  });
+
   it('fails with the http status when GitHub answers an error', async () => {
     const { fetchFunction } = fakeFetch(async () => jsonResponse({ message: 'rate limited' }, 403));
     const gateway = new GitHubHookRangesHttpGateway({ fetchFunction });
