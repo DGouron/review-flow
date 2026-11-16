@@ -90,6 +90,7 @@ import {
   buildGitLabReviewProcessor,
 } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
 import { transportGuardMiddleware } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
+import { TransportRejectionLog } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportRejectionLog.js';
 import { GitHubChangedFilesFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/changedFilesFetch.github.gateway.js';
 import { GitLabChangedFilesFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/changedFilesFetch.gitlab.gateway.js';
 import { GitHubApprovalRevocationCliGateway } from '@/modules/platform-integration/interface-adapters/gateways/cli/approvalRevocation.github.cli.gateway.js';
@@ -619,6 +620,8 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
 
   const transportGuardConfig = resolveTransportGuardConfig();
   const clientIpResolver = new ForwardedForClientIpResolver();
+  const gitLabRejectionLog = new TransportRejectionLog({ logger: deps.logger, now: Date.now });
+  const gitHubRejectionLog = new TransportRejectionLog({ logger: deps.logger, now: Date.now });
 
   app.post('/webhooks/gitlab', async (request, reply) => {
     let proceed = false;
@@ -633,7 +636,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
           proceed = true;
         },
         resolver: clientIpResolver,
-        logger: deps.logger,
+        rejectionLog: gitLabRejectionLog,
       },
       transportGuardConfig,
     );
@@ -719,7 +722,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
           proceedGitHub = true;
         },
         resolver: clientIpResolver,
-        logger: deps.logger,
+        rejectionLog: gitHubRejectionLog,
       },
       {
         trustedHopAddress: transportGuardConfig.trustedHopAddress,

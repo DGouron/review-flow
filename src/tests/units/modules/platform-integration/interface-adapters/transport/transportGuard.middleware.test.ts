@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { transportGuardMiddleware } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
 import type { TransportGuardConfig } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
+import { TransportRejectionLog } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportRejectionLog.js';
 import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
 import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
 
@@ -44,10 +45,15 @@ function buildRequest(
   };
 }
 
-function runGuard(request: FakeRequest) {
+function buildLogging() {
+  const capturing = createCapturingLogger();
+  const rejectionLog = new TransportRejectionLog({ logger: capturing.logger, now: () => 0 });
+  return { capturing, rejectionLog };
+}
+
+function runGuard(request: FakeRequest, logging = buildLogging()) {
   let nextCalled = false;
   const reply = new FakeResponse();
-  const capturing = createCapturingLogger();
 
   transportGuardMiddleware(
     {
@@ -57,12 +63,12 @@ function runGuard(request: FakeRequest) {
         nextCalled = true;
       },
       resolver: new ForwardedForClientIpResolver(),
-      logger: capturing.logger,
+      rejectionLog: logging.rejectionLog,
     },
     config,
   );
 
-  return { nextCalled, reply, warnMessages: capturing.warnMessages };
+  return { nextCalled, reply, warnMessages: logging.capturing.warnMessages };
 }
 
 describe('transportGuardMiddleware (AC5)', () => {
@@ -118,5 +124,22 @@ describe('transportGuardMiddleware rejection logging', () => {
     const outcome = runGuard(buildRequest());
 
     expect(outcome.warnMessages).toEqual([]);
+  });
+
+  it('truncates an oversized forwarded client ip in the log line', () => {
+    const outcome = runGuard(buildRequest({ forwardedFor: '9'.repeat(16_000) }));
+
+    expect(outcome.warnMessages).toHaveLength(1);
+    expect(outcome.warnMessages[0].length).toBeLessThan(400);
+  });
+
+  it('caps the log lines a flood of rejected requests can write', () => {
+    const logging = buildLogging();
+
+    for (let attempt = 0; attempt < 200; attempt++) {
+      runGuard(buildRequest({ forwardedFor: '192.168.1.1' }), logging);
+    }
+
+    expect(logging.capturing.warnMessages).toHaveLength(10);
   });
 });

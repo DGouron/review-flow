@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { transportGuardMiddleware } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
 import type { TransportGuardConfig } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
+import { TransportRejectionLog } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportRejectionLog.js';
 import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 
@@ -62,7 +63,7 @@ function runGuard(request: FakeRequest): GuardOutcome {
         nextCalled = true;
       },
       resolver: new ForwardedForClientIpResolver(),
-      logger: createStubLogger(),
+      rejectionLog: new TransportRejectionLog({ logger: createStubLogger(), now: () => 0 }),
     },
     config,
   );

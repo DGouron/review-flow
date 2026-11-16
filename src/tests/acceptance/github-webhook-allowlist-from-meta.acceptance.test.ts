@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { startGitHubWebhookAllowlistScheduler } from '@/frameworks/scheduler/githubWebhookAllowlistScheduler.js';
 import type { GitHubHookRangesGateway } from '@/modules/platform-integration/entities/transport/githubHookRanges.gateway.js';
 import { transportGuardMiddleware } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
+import { TransportRejectionLog } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportRejectionLog.js';
 import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
 import { GitHubHookRangesHttpGateway } from '@/modules/platform-integration/interface-adapters/gateways/transport/githubHookRanges.http.gateway.js';
 import { RefreshGitHubWebhookAllowlistUseCase } from '@/modules/platform-integration/usecases/transport/refreshGitHubWebhookAllowlist.usecase.js';
@@ -53,7 +54,7 @@ async function deliverGitHubWebhook(options: {
         accepted = true;
       },
       resolver: new ForwardedForClientIpResolver(),
-      logger: capturing.logger,
+      rejectionLog: new TransportRejectionLog({ logger: capturing.logger, now: () => 0 }),
     },
     { trustedHopAddress: TRUSTED_HOP, allowedCidrRanges: scheduler.currentRanges() },
   );
