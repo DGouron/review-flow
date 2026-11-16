@@ -140,6 +140,6 @@ describe('transportGuardMiddleware rejection logging', () => {
       runGuard(buildRequest({ forwardedFor: '192.168.1.1' }), logging);
     }
 
-    expect(logging.capturing.warnMessages).toHaveLength(10);
+    expect(logging.capturing.warnMessages).toHaveLength(1);
   });
 });

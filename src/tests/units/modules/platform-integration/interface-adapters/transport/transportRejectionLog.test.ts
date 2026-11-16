@@ -49,26 +49,66 @@ describe('TransportRejectionLog', () => {
     expect(capturing.warnMessages[0]).toContain('"clientIpLength":16000');
   });
 
-  it('logs at most ten rejections per reason and per minute', () => {
+  it('logs each source address once per reason and per minute', () => {
+    const { rejectionLog, capturing } = buildRejectionLog();
+
+    for (let attempt = 0; attempt < 50; attempt++) {
+      rejectionLog.record(offAllowlist('203.0.113.7'));
+    }
+
+    expect(capturing.warnMessages).toHaveLength(1);
+  });
+
+  it('logs at most 32 distinct addresses per reason and per minute', () => {
     const { rejectionLog, capturing } = buildRejectionLog();
 
     for (let attempt = 0; attempt < 500; attempt++) {
       rejectionLog.record(offAllowlist(`203.0.113.${attempt % 250}`));
     }
 
-    expect(capturing.warnMessages).toHaveLength(10);
+    expect(capturing.warnMessages).toHaveLength(32);
+  });
+
+  it('tracks a truncated oversized address as a single source', () => {
+    const { rejectionLog, capturing } = buildRejectionLog();
+
+    rejectionLog.record(offAllowlist(`${'a'.repeat(64)}first`));
+    rejectionLog.record(offAllowlist(`${'a'.repeat(64)}second`));
+
+    expect(capturing.warnMessages).toHaveLength(1);
+  });
+
+  it('keys a rejection without client ip on its socket address', () => {
+    const { rejectionLog, capturing } = buildRejectionLog();
+
+    rejectionLog.record({ reason: 'untrusted-socket', clientIp: null, socketAddress: '10.0.0.9' });
+    rejectionLog.record({ reason: 'untrusted-socket', clientIp: null, socketAddress: '10.0.0.9' });
+    rejectionLog.record({ reason: 'untrusted-socket', clientIp: null, socketAddress: '10.0.0.10' });
+
+    expect(capturing.warnMessages).toHaveLength(2);
   });
 
   it('throttles each reason separately', () => {
     const { rejectionLog, capturing } = buildRejectionLog();
 
     for (let attempt = 0; attempt < 50; attempt++) {
-      rejectionLog.record(offAllowlist('203.0.113.7'));
+      rejectionLog.record(offAllowlist(`203.0.113.${attempt}`));
     }
     rejectionLog.record({ reason: 'untrusted-socket', clientIp: null, socketAddress: '10.0.0.9' });
 
-    expect(capturing.warnMessages).toHaveLength(11);
-    expect(capturing.warnMessages[10]).toContain('"reason":"untrusted-socket"');
+    expect(capturing.warnMessages).toHaveLength(33);
+    expect(capturing.warnMessages[32]).toContain('"reason":"untrusted-socket"');
+  });
+
+  it('still logs a GitHub refusal while a scanner floods the same reason', () => {
+    const { rejectionLog, capturing } = buildRejectionLog();
+
+    for (let attempt = 0; attempt < 50; attempt++) {
+      rejectionLog.record(offAllowlist('203.0.113.7'));
+    }
+    rejectionLog.record(offAllowlist('9.234.106.50'));
+
+    expect(capturing.warnMessages.at(-1)).toContain('"clientIp":"9.234.106.50"');
   });
 
   it('logs again in the next minute with the count of rejections it suppressed', () => {
@@ -80,8 +120,8 @@ describe('TransportRejectionLog', () => {
     advanceTime(ONE_MINUTE_IN_MILLISECONDS);
     rejectionLog.record(offAllowlist('9.234.106.50'));
 
-    expect(capturing.warnMessages).toHaveLength(11);
-    expect(capturing.warnMessages[10]).toContain('"clientIp":"9.234.106.50"');
-    expect(capturing.warnMessages[10]).toContain('"suppressedInPreviousWindow":15');
+    expect(capturing.warnMessages).toHaveLength(2);
+    expect(capturing.warnMessages[1]).toContain('"clientIp":"9.234.106.50"');
+    expect(capturing.warnMessages[1]).toContain('"suppressedInPreviousWindow":24');
   });
 });

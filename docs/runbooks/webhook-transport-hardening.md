@@ -88,9 +88,12 @@ dual-stack socket) is compared as the IPv4 address it carries.
 
 ### Diagnosing a refused webhook
 
-Each transport guard refusal writes one `warn` line, at most ten per reason per
-minute and per route. The first line of the next minute adds
-`suppressedInPreviousWindow` with the number of refusals not logged. Addresses
+Each transport guard refusal writes one `warn` line. Per route, per reason and
+per minute, each source address (`clientIp`, or `socketAddress` when there is
+none) is logged once, for at most 32 distinct addresses: a scanner repeating
+from one address cannot hide the first refusal of a GitHub address. The first
+line of the next minute adds `suppressedInPreviousWindow` with the number of
+refusals not logged. Addresses
 longer than 64 characters are truncated and their original length is added as
 `clientIpLength` or `socketAddressLength`.
 
