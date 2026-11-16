@@ -14,6 +14,23 @@ function fakeFetch(respond: () => Promise<Response>) {
   return { fetchFunction, calls };
 }
 
+const CHUNK_BYTES = 65_536;
+
+function streamedBody(totalChunks: number) {
+  let pulledChunks = 0;
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (pulledChunks >= totalChunks) {
+        controller.close();
+        return;
+      }
+      pulledChunks += 1;
+      controller.enqueue(new Uint8Array(CHUNK_BYTES).fill(0x20));
+    },
+  });
+  return { stream, pulledChunks: () => pulledChunks };
+}
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -89,6 +106,19 @@ describe('GitHubHookRangesHttpGateway', () => {
 
     expect(result.kind).toBe('failed');
     expect(result.kind === 'failed' ? result.reason : '').toContain('too large');
+  });
+
+  it('stops reading an undeclared body as soon as it exceeds 2 MB', async () => {
+    const tenMegabytes = streamedBody(160);
+    const { fetchFunction } = fakeFetch(
+      async () => new Response(tenMegabytes.stream, { status: 200 }),
+    );
+    const gateway = new GitHubHookRangesHttpGateway({ fetchFunction });
+
+    const result = await gateway.fetchHookRanges();
+
+    expect(result.kind === 'failed' ? result.reason : '').toContain('too large');
+    expect(tenMegabytes.pulledChunks()).toBeLessThanOrEqual(Math.ceil(2_000_000 / CHUNK_BYTES) + 2);
   });
 
   it('fails with the http status when GitHub answers an error', async () => {

@@ -67,7 +67,8 @@ succeeds again logs at `info`.
 
 - **Source:** `https://api.github.com/meta`, field `hooks`, unauthenticated
   (one call a day, far below the 60/hour anonymous rate limit), 10 s timeout,
-  no redirect followed, body capped at 2 MB.
+  no redirect followed, body capped at 2 MB while it is read (never buffered
+  past the cap).
 - **Validation:** every `hooks` entry must be a well-formed CIDR range no broader
   than `/16` (IPv4) or `/24` (IPv6); GitHub publishes `/20` to `/32`. One invalid
   or too broad entry rejects the whole answer: it counts as a failed read, the
