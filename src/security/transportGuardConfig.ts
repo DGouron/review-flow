@@ -27,6 +27,17 @@ export function resolveAllowedCidrRanges(): string[] {
   return parseCidrRanges(process.env.WEBHOOK_ALLOWED_CIDR_RANGES);
 }
 
+export type AllowlistMode = 'auto' | 'manual';
+
+/**
+ * `auto` (default): GitHub webhook ranges are read from GitHub meta and
+ * `WEBHOOK_ALLOWED_CIDR_RANGES` is added to them. `manual`: only the variable.
+ */
+export function resolveAllowlistMode(): AllowlistMode {
+  const configured = process.env.WEBHOOK_ALLOWLIST_MODE?.trim().toLowerCase();
+  return configured === 'manual' ? 'manual' : 'auto';
+}
+
 export function resolveTransportGuardConfig(): TransportGuardConfig {
   return {
     trustedHopAddress: resolveTrustedHopAddress(),

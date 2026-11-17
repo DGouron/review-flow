@@ -38,6 +38,27 @@ describe('isIpInCidr', () => {
     it('returns false when prefix is missing', () => {
       expect(isIpInCidr('192.168.1.1', '192.168.1.0')).toBe(false);
     });
+
+    it('returns false when the prefix is empty instead of treating it as /0', () => {
+      expect(isIpInCidr('8.8.8.8', '10.0.0.0/')).toBe(false);
+    });
+
+    it.each([' ', '\t', '0x0', '+0', '8.0', '1e1', ' 8', '8 ', '0008'])(
+      'returns false when the prefix "%s" is not plain decimal digits',
+      (prefixText) => {
+        expect(isIpInCidr('8.8.8.8', `10.0.0.0/${prefixText}`)).toBe(false);
+        expect(isIpInCidr('10.0.0.1', `10.0.0.0/${prefixText}`)).toBe(false);
+      },
+    );
+
+    it('returns false when the range has more than one slash', () => {
+      expect(isIpInCidr('10.200.0.1', '10.0.0.0/8/32')).toBe(false);
+    });
+
+    it('returns false when the ipv6 prefix is not plain decimal digits', () => {
+      expect(isIpInCidr('2001:db8::1', '2001:db8::/ ')).toBe(false);
+      expect(isIpInCidr('2001:db8::1', '2001:db8::/0x20')).toBe(false);
+    });
   });
 
   describe('invalid ip parsing', () => {
@@ -59,6 +80,71 @@ describe('isIpInCidr', () => {
 
     it('returns false when the range ip is malformed', () => {
       expect(isIpInCidr('192.168.1.1', '999.168.1.0/24')).toBe(false);
+    });
+  });
+
+  describe('ipv6 ranges published by GitHub meta', () => {
+    it('matches an ipv6 address inside a /32 range', () => {
+      expect(isIpInCidr('2606:50c0:8000::154', '2606:50c0::/32')).toBe(true);
+    });
+
+    it('matches an ipv6 address inside a /29 range that is not byte aligned', () => {
+      expect(isIpInCidr('2a0a:a447:ffff::1', '2a0a:a440::/29')).toBe(true);
+    });
+
+    it('rejects an ipv6 address just outside a /29 range', () => {
+      expect(isIpInCidr('2a0a:a448::1', '2a0a:a440::/29')).toBe(false);
+    });
+
+    it('matches only the exact address when prefix is 128', () => {
+      expect(isIpInCidr('2001:db8::1', '2001:db8::1/128')).toBe(true);
+      expect(isIpInCidr('2001:db8::2', '2001:db8::1/128')).toBe(false);
+    });
+
+    it('compares fully expanded and compressed notations as the same address', () => {
+      expect(isIpInCidr('2001:0db8:0000:0000:0000:0000:0000:0001', '2001:db8::1/128')).toBe(true);
+    });
+
+    it('matches everything when prefix is 0', () => {
+      expect(isIpInCidr('2001:db8::1', '::/0')).toBe(true);
+    });
+
+    it('returns false when the ipv6 prefix is greater than 128', () => {
+      expect(isIpInCidr('2001:db8::1', '2001:db8::/129')).toBe(false);
+    });
+
+    it('never matches an ipv4 address against an ipv6 range', () => {
+      expect(isIpInCidr('10.0.0.1', '::/0')).toBe(false);
+    });
+
+    it('never matches an ipv6 address against an ipv4 range', () => {
+      expect(isIpInCidr('2001:db8::1', '0.0.0.0/0')).toBe(false);
+    });
+
+    it('matches an ipv4-mapped ipv6 address against the ipv4 range, as nginx writes it in dual-stack', () => {
+      expect(isIpInCidr('::ffff:9.234.98.164', '9.234.98.160/28')).toBe(true);
+      expect(isIpInCidr('::FFFF:9.234.98.164', '9.234.98.160/28')).toBe(true);
+      expect(isIpInCidr('::ffff:9ea:62a4', '9.234.98.160/28')).toBe(true);
+    });
+
+    it('rejects an ipv4-mapped ipv6 address outside the ipv4 range', () => {
+      expect(isIpInCidr('::ffff:9.234.98.200', '9.234.98.160/28')).toBe(false);
+    });
+
+    it('does not treat a non-mapped ipv6 address with an ipv4 tail as ipv4', () => {
+      expect(isIpInCidr('64:ff9b::9.234.98.164', '9.234.98.160/28')).toBe(false);
+    });
+
+    it('returns false for an ipv6 address with a malformed ipv4 tail', () => {
+      expect(isIpInCidr('::ffff:9.234.98.999', '0.0.0.0/0')).toBe(false);
+      expect(isIpInCidr('::ffff:9.234.98', '0.0.0.0/0')).toBe(false);
+      expect(isIpInCidr('::ffff:9.234.98.164:1', '0.0.0.0/0')).toBe(false);
+    });
+
+    it('returns false for a malformed ipv6 address', () => {
+      expect(isIpInCidr('2001:db8::1::2', '2001:db8::/32')).toBe(false);
+      expect(isIpInCidr('2001:db8:zzzz::1', '2001:db8::/32')).toBe(false);
+      expect(isIpInCidr('1:2:3:4:5:6:7:8:9', '::/0')).toBe(false);
     });
   });
 });

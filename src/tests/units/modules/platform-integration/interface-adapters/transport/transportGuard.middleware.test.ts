@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 
 import { transportGuardMiddleware } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
 import type { TransportGuardConfig } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportGuard.middleware.js';
+import { TransportRejectionLog } from '@/modules/platform-integration/interface-adapters/controllers/webhook/transportRejectionLog.js';
 import { ForwardedForClientIpResolver } from '@/modules/platform-integration/interface-adapters/gateways/transport/clientIpResolver.forwardedFor.gateway.js';
+import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
 
 const TRUSTED_HOP = '127.0.0.1';
 
@@ -43,90 +45,101 @@ function buildRequest(
   };
 }
 
+function buildLogging() {
+  const capturing = createCapturingLogger();
+  const rejectionLog = new TransportRejectionLog({ logger: capturing.logger, now: () => 0 });
+  return { capturing, rejectionLog };
+}
+
+function runGuard(request: FakeRequest, logging = buildLogging()) {
+  let nextCalled = false;
+  const reply = new FakeResponse();
+
+  transportGuardMiddleware(
+    {
+      request,
+      reply,
+      next: () => {
+        nextCalled = true;
+      },
+      resolver: new ForwardedForClientIpResolver(),
+      rejectionLog: logging.rejectionLog,
+    },
+    config,
+  );
+
+  return { nextCalled, reply, warnMessages: logging.capturing.warnMessages };
+}
+
 describe('transportGuardMiddleware (AC5)', () => {
   it('calls next on a fully valid transport and never sends a rejection', () => {
-    let nextCalled = false;
-    const request = buildRequest();
-    const reply = new FakeResponse();
+    const outcome = runGuard(buildRequest());
 
-    transportGuardMiddleware(
-      {
-        request,
-        reply,
-        next: () => {
-          nextCalled = true;
-        },
-        resolver: new ForwardedForClientIpResolver(),
-      },
-      config,
-    );
-
-    expect(nextCalled).toBe(true);
-    expect(reply.statusCode).toBeNull();
-    expect(reply.sent).toBe(false);
+    expect(outcome.nextCalled).toBe(true);
+    expect(outcome.reply.statusCode).toBeNull();
+    expect(outcome.reply.sent).toBe(false);
   });
 
   it('rejects with 403 and never calls next when the socket is untrusted', () => {
-    let nextCalled = false;
-    const request = buildRequest({ remoteAddress: '203.0.113.7' });
-    const reply = new FakeResponse();
+    const outcome = runGuard(buildRequest({ remoteAddress: '203.0.113.7' }));
 
-    transportGuardMiddleware(
-      {
-        request,
-        reply,
-        next: () => {
-          nextCalled = true;
-        },
-        resolver: new ForwardedForClientIpResolver(),
-      },
-      config,
-    );
-
-    expect(nextCalled).toBe(false);
-    expect(reply.statusCode).toBe(403);
-    expect(reply.sent).toBe(true);
+    expect(outcome.nextCalled).toBe(false);
+    expect(outcome.reply.statusCode).toBe(403);
+    expect(outcome.reply.sent).toBe(true);
   });
 
   it('rejects with 403 when the forwarded protocol is not https', () => {
-    let nextCalled = false;
-    const request = buildRequest({ proto: 'http' });
-    const reply = new FakeResponse();
+    const outcome = runGuard(buildRequest({ proto: 'http' }));
 
-    transportGuardMiddleware(
-      {
-        request,
-        reply,
-        next: () => {
-          nextCalled = true;
-        },
-        resolver: new ForwardedForClientIpResolver(),
-      },
-      config,
-    );
-
-    expect(nextCalled).toBe(false);
-    expect(reply.statusCode).toBe(403);
+    expect(outcome.nextCalled).toBe(false);
+    expect(outcome.reply.statusCode).toBe(403);
   });
 
   it('rejects with 403 when the resolved client ip is off the allowlist', () => {
-    let nextCalled = false;
-    const request = buildRequest({ forwardedFor: '192.168.1.1' });
-    const reply = new FakeResponse();
+    const outcome = runGuard(buildRequest({ forwardedFor: '192.168.1.1' }));
 
-    transportGuardMiddleware(
-      {
-        request,
-        reply,
-        next: () => {
-          nextCalled = true;
-        },
-        resolver: new ForwardedForClientIpResolver(),
-      },
-      config,
-    );
+    expect(outcome.nextCalled).toBe(false);
+    expect(outcome.reply.statusCode).toBe(403);
+  });
+});
 
-    expect(nextCalled).toBe(false);
-    expect(reply.statusCode).toBe(403);
+describe('transportGuardMiddleware rejection logging', () => {
+  it('logs one warn line with the source address and the reason when off the allowlist', () => {
+    const outcome = runGuard(buildRequest({ forwardedFor: '9.234.106.50' }));
+
+    expect(outcome.warnMessages).toHaveLength(1);
+    expect(outcome.warnMessages[0]).toContain('"clientIp":"9.234.106.50"');
+    expect(outcome.warnMessages[0]).toContain('"reason":"off-allowlist"');
+  });
+
+  it('logs the socket address and the reason when the socket is untrusted', () => {
+    const outcome = runGuard(buildRequest({ remoteAddress: '203.0.113.7' }));
+
+    expect(outcome.warnMessages).toHaveLength(1);
+    expect(outcome.warnMessages[0]).toContain('"socketAddress":"203.0.113.7"');
+    expect(outcome.warnMessages[0]).toContain('"reason":"untrusted-socket"');
+  });
+
+  it('logs nothing when the request is accepted', () => {
+    const outcome = runGuard(buildRequest());
+
+    expect(outcome.warnMessages).toEqual([]);
+  });
+
+  it('truncates an oversized forwarded client ip in the log line', () => {
+    const outcome = runGuard(buildRequest({ forwardedFor: '9'.repeat(16_000) }));
+
+    expect(outcome.warnMessages).toHaveLength(1);
+    expect(outcome.warnMessages[0].length).toBeLessThan(400);
+  });
+
+  it('caps the log lines a flood of rejected requests can write', () => {
+    const logging = buildLogging();
+
+    for (let attempt = 0; attempt < 200; attempt++) {
+      runGuard(buildRequest({ forwardedFor: '192.168.1.1' }), logging);
+    }
+
+    expect(logging.capturing.warnMessages).toHaveLength(1);
   });
 });
