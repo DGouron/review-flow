@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.54.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.54.0...reviewflow-v3.54.1) (2026-11-17)
+
+
+### Fixed
+
+* **webhook:** read GitHub hook ranges from meta ([#416](https://github.com/DGouron/review-flow/issues/416)) ([94128f0](https://github.com/DGouron/review-flow/commit/94128f0dbd2126991f2671e489683f4bb5168683))
+
 ## [3.54.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.53.1...reviewflow-v3.54.0) (2026-11-10)
 
 
