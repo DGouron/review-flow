@@ -35,16 +35,13 @@ const viewModel = {
 };
 
 describe('renderMergeRequestTokenUsage', () => {
-  it('shows each session with its kind, model, duration, turns, tokens and cost', () => {
+  it('shows each session with its kind, model, duration, context read from cache and cost', () => {
     const html = renderMergeRequestTokenUsage(viewModel, t);
 
     expect(html).toContain('tokenUsage.jobType.followup');
     expect(html).toContain('claude-opus-5-5');
     expect(html).toContain('4 min');
-    expect(html).toContain('21');
     expect(html).toContain('2.5m');
-    expect(html).toContain('113.4k');
-    expect(html).toContain('7.0k');
     expect(html).toContain('$1.55');
   });
 
@@ -55,7 +52,7 @@ describe('renderMergeRequestTokenUsage', () => {
     expect(html).toContain('tokenUsage.signal.projectMedian(ratio=1.8)');
   });
 
-  it('shows a dash where a session recorded no duration or turns', () => {
+  it('shows a dash where a session recorded no duration', () => {
     const html = renderMergeRequestTokenUsage(
       {
         ...viewModel,
@@ -92,6 +89,15 @@ describe('renderMergeRequestTokenUsage', () => {
 
     expect(html).toContain('tokenUsage.mergeRequest.empty');
     expect(html).not.toContain('<table');
+  });
+});
+
+describe('a table that fits the PR sheet', () => {
+  it('keeps five columns: kind, model, duration, context read from cache, cost', () => {
+    const html = renderMergeRequestTokenUsage(viewModel, t);
+
+    expect(html.match(/<th>/g)).toHaveLength(5);
+    expect(html).not.toContain('tokenUsage.column.cacheWrite');
   });
 });
 

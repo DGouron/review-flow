@@ -101,18 +101,18 @@ describe('Acceptance — Spec #163: Token Budget Cap with Live Indicator', () =>
       await context.budgetGateway.save({ limitUsd: 200 });
     });
 
-    it('rejects 750 with HTTP 400 and leaves the on-disk budget unchanged', async () => {
+    it('rejects 5001 with HTTP 400 and leaves the on-disk budget unchanged', async () => {
       const response = await context.app.inject({
         method: 'POST',
         url: '/api/budget',
-        payload: { limitUsd: 750 },
+        payload: { limitUsd: 5001 },
       });
 
       expect(response.statusCode).toBe(400);
       const body = response.json() as { success: boolean; error: string };
       expect(body.success).toBe(false);
       expect(body.error).toContain('0');
-      expect(body.error).toContain('600');
+      expect(body.error).toContain('5000');
 
       const persisted = await context.budgetGateway.load();
       expect(persisted).toEqual({ limitUsd: 200 });

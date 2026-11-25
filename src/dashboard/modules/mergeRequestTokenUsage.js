@@ -7,7 +7,6 @@ import { escapeHtml } from './html.js';
 import { formatTokenCount } from './tokenUsage.js';
 
 const minutesCell = (minutes) => (minutes === null ? '—' : `${minutes} min`);
-const countCell = (count) => (count === null ? '—' : String(count));
 
 function renderRow(row, kindLabel, modelLabel) {
   return `
@@ -15,10 +14,7 @@ function renderRow(row, kindLabel, modelLabel) {
       <td>${escapeHtml(kindLabel)}</td>
       <td>${escapeHtml(modelLabel)}</td>
       <td>${minutesCell(row.durationMinutes)}</td>
-      <td>${countCell(row.turns)}</td>
       <td>${formatTokenCount(row.cacheReadTokens)}</td>
-      <td>${formatTokenCount(row.cacheWriteTokens)}</td>
-      <td>${formatTokenCount(row.outputTokens)}</td>
       <td>${escapeHtml(row.costUsd)}</td>
     </tr>`;
 }
@@ -45,16 +41,7 @@ export function renderMergeRequestTokenUsage(viewModel, t) {
     return `<div class="empty-state" style="font-size: 0.8rem;">${escapeHtml(t('tokenUsage.mergeRequest.empty'))}</div>`;
   }
 
-  const headers = [
-    'kind',
-    'model',
-    'duration',
-    'turns',
-    'cacheRead',
-    'cacheWrite',
-    'output',
-    'cost',
-  ]
+  const headers = ['kind', 'model', 'duration', 'cacheRead', 'cost']
     .map((column) => `<th>${escapeHtml(t(`tokenUsage.column.${column}`))}</th>`)
     .join('');
   const rows = viewModel.sessions

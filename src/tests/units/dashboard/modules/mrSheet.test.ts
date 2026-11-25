@@ -37,4 +37,10 @@ describe('renderMrSheetContent', () => {
     expect(html).toContain('sheet.tokenUsage');
     expect(html).toContain('id="sheet-token-usage"');
   });
+
+  it('shows the token usage right under the key figures, before the charts', () => {
+    const html = renderMrSheetContent(mr, translate, 'review');
+
+    expect(html.indexOf('id="sheet-token-usage"')).toBeLessThan(html.indexOf('sheet-score-canvas'));
+  });
 });
