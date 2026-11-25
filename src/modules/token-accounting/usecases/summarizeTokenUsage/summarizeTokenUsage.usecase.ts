@@ -1,3 +1,4 @@
+import { medianMergeRequestCostUsd } from '@/modules/token-accounting/entities/tokenUsage/medianMergeRequestCost.js';
 import type { TokenUsageGateway } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.gateway.js';
 
 export type TokenUsageSummary = {
@@ -8,6 +9,8 @@ export type TokenUsageSummary = {
   totalCostUsd: number;
   recordCount: number;
   byModel: Record<string, { count: number; costUsd: number }>;
+  byJobType: Record<'review' | 'followup', { count: number; costUsd: number }>;
+  medianMergeRequestCostUsd: number | null;
 };
 
 export type SummarizeInput = {
@@ -31,6 +34,8 @@ export class SummarizeTokenUsageUseCase {
       totalCostUsd: 0,
       recordCount: records.length,
       byModel: {},
+      byJobType: { review: { count: 0, costUsd: 0 }, followup: { count: 0, costUsd: 0 } },
+      medianMergeRequestCostUsd: medianMergeRequestCostUsd(records),
     };
 
     for (const record of records) {
@@ -39,6 +44,10 @@ export class SummarizeTokenUsageUseCase {
       summary.totalCacheRead += record.usage.cacheReadInputTokens;
       summary.totalCacheCreation += record.usage.cacheCreationInputTokens;
       summary.totalCostUsd += record.usage.costUsd;
+
+      const jobTypeEntry = summary.byJobType[record.jobType ?? 'review'];
+      jobTypeEntry.count += 1;
+      jobTypeEntry.costUsd += record.usage.costUsd;
 
       const modelEntry = summary.byModel[record.model];
       if (modelEntry) {

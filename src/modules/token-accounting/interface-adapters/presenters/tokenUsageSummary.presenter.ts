@@ -8,11 +8,19 @@ export interface ModelBreakdownItem {
   costShare: string;
 }
 
+export interface JobTypeBreakdownItem {
+  name: 'review' | 'followup';
+  count: number;
+  costUsd: string;
+}
+
 export interface TokenUsageSummaryViewModel {
   totalCostUsd: string;
   recordCount: number;
   totalTokens: number;
   models: ModelBreakdownItem[];
+  jobTypes: JobTypeBreakdownItem[];
+  medianMergeRequestCostUsd: string | null;
   isEmpty: boolean;
 }
 
@@ -48,6 +56,15 @@ export class TokenUsageSummaryPresenter implements Presenter<
       recordCount: summary.recordCount,
       totalTokens: summary.totalInputTokens + summary.totalOutputTokens,
       models,
+      jobTypes: (['review', 'followup'] as const).map((name) => ({
+        name,
+        count: summary.byJobType[name].count,
+        costUsd: formatUsd(summary.byJobType[name].costUsd),
+      })),
+      medianMergeRequestCostUsd:
+        summary.medianMergeRequestCostUsd === null
+          ? null
+          : formatUsd(summary.medianMergeRequestCostUsd),
       isEmpty: summary.recordCount === 0,
     };
   }

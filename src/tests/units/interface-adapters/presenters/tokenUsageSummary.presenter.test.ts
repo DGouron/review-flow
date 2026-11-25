@@ -11,6 +11,8 @@ const emptySummary: TokenUsageSummary = {
   totalCostUsd: 0,
   recordCount: 0,
   byModel: {},
+  byJobType: { review: { count: 0, costUsd: 0 }, followup: { count: 0, costUsd: 0 } },
+  medianMergeRequestCostUsd: null,
 };
 
 describe('TokenUsageSummaryPresenter', () => {
@@ -119,6 +121,33 @@ describe('TokenUsageSummaryPresenter', () => {
       const viewModel = presenter.present(summary);
 
       expect(viewModel.models[0].costShare).toBe('0%');
+    });
+  });
+
+  describe('reviews, follow-ups and the median pull request', () => {
+    it('shows the cost of reviews and of follow-ups', () => {
+      const viewModel = new TokenUsageSummaryPresenter().present({
+        ...emptySummary,
+        byJobType: {
+          review: { count: 364, costUsd: 1200.5 },
+          followup: { count: 525, costUsd: 657.1 },
+        },
+      });
+
+      expect(viewModel.jobTypes).toEqual([
+        { name: 'review', count: 364, costUsd: '$1200.50' },
+        { name: 'followup', count: 525, costUsd: '$657.10' },
+      ]);
+    });
+
+    it('shows the cost of the median pull request, or nothing without one', () => {
+      const presenter = new TokenUsageSummaryPresenter();
+
+      expect(
+        presenter.present({ ...emptySummary, medianMergeRequestCostUsd: 4.2 })
+          .medianMergeRequestCostUsd,
+      ).toBe('$4.20');
+      expect(presenter.present(emptySummary).medianMergeRequestCostUsd).toBeNull();
     });
   });
 });

@@ -140,4 +140,50 @@ describe('SummarizeTokenUsageUseCase', () => {
     expect(summary.recordCount).toBe(2);
     expect(summary.totalInputTokens).toBe(500);
   });
+
+  it('splits the cost between reviews and follow-ups, an older record counting as a review', async () => {
+    gateway.setRecords([
+      TokenUsageRecordFactory.create({
+        jobType: 'review',
+        usage: { ...TokenUsageRecordFactory.create().usage, costUsd: 2 },
+      }),
+      TokenUsageRecordFactory.create({
+        jobType: 'followup',
+        usage: { ...TokenUsageRecordFactory.create().usage, costUsd: 0.5 },
+      }),
+      TokenUsageRecordFactory.create({
+        usage: { ...TokenUsageRecordFactory.create().usage, costUsd: 1 },
+      }),
+    ]);
+
+    const summary = await useCase.execute({ localPath: '/project' });
+
+    expect(summary.byJobType).toEqual({
+      review: { count: 2, costUsd: 3 },
+      followup: { count: 1, costUsd: 0.5 },
+    });
+  });
+
+  it('gives the median cost of a pull request over the period', async () => {
+    const costOf = (mrNumber: number, costUsd: number, recordedAt = '2026-11-10T10:00:00.000Z') =>
+      TokenUsageRecordFactory.create({
+        mrNumber,
+        recordedAt,
+        usage: { ...TokenUsageRecordFactory.create().usage, costUsd },
+      });
+    gateway.setRecords([
+      costOf(1, 1),
+      costOf(2, 2),
+      costOf(2, 2),
+      costOf(3, 9),
+      costOf(4, 100, '2026-10-30T10:00:00.000Z'),
+    ]);
+
+    const summary = await useCase.execute({
+      localPath: '/project',
+      since: '2026-11-01T00:00:00.000Z',
+    });
+
+    expect(summary.medianMergeRequestCostUsd).toBe(4);
+  });
 });

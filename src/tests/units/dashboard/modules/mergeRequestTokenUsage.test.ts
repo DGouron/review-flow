@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { renderReviewTabs, renderReviewTokenUsage } from '@/dashboard/modules/reviewTokenUsage.js';
+import {
+  fetchMergeRequestTokenUsage,
+  renderMergeRequestTokenUsage,
+} from '@/dashboard/modules/mergeRequestTokenUsage.js';
 
 const t = (key: string, params?: Record<string, string | number>) =>
   params
@@ -11,6 +14,7 @@ const t = (key: string, params?: Record<string, string | number>) =>
 
 const session = {
   sessionId: '3334f6a3',
+  jobType: 'followup' as const,
   model: 'claude-opus-5-5',
   recordedAt: '2026-11-25T13:48:20.000Z',
   durationMinutes: 4,
@@ -30,21 +34,11 @@ const viewModel = {
   costVsProjectMedian: 1.8,
 };
 
-describe('renderReviewTabs', () => {
-  it('offers the report and its token usage, the active one selected', () => {
-    const html = renderReviewTabs('review-2094', 'usage', t);
+describe('renderMergeRequestTokenUsage', () => {
+  it('shows each session with its kind, model, duration, turns, tokens and cost', () => {
+    const html = renderMergeRequestTokenUsage(viewModel, t);
 
-    expect(html).toContain('data-review-tab="report"');
-    expect(html).toContain('data-review-tab="usage"');
-    expect(html).toMatch(/data-review-tab="usage"[^>]*aria-selected="true"/);
-    expect(html).toMatch(/data-review-tab="report"[^>]*aria-selected="false"/);
-  });
-});
-
-describe('renderReviewTokenUsage', () => {
-  it('shows each session with its model, duration, turns, tokens and cost', () => {
-    const html = renderReviewTokenUsage(viewModel, t);
-
+    expect(html).toContain('tokenUsage.jobType.followup');
     expect(html).toContain('claude-opus-5-5');
     expect(html).toContain('4 min');
     expect(html).toContain('21');
@@ -55,14 +49,14 @@ describe('renderReviewTokenUsage', () => {
   });
 
   it('names the signals that say what to change', () => {
-    const html = renderReviewTokenUsage(viewModel, t);
+    const html = renderMergeRequestTokenUsage(viewModel, t);
 
-    expect(html).toContain('reviewUsage.signal.cacheRead(percent=96)');
-    expect(html).toContain('reviewUsage.signal.projectMedian(ratio=1.8)');
+    expect(html).toContain('tokenUsage.signal.cacheRead(percent=96)');
+    expect(html).toContain('tokenUsage.signal.projectMedian(ratio=1.8)');
   });
 
   it('shows a dash where a session recorded no duration or turns', () => {
-    const html = renderReviewTokenUsage(
+    const html = renderMergeRequestTokenUsage(
       {
         ...viewModel,
         sessions: [{ ...session, durationMinutes: null, turns: null }],
@@ -72,11 +66,11 @@ describe('renderReviewTokenUsage', () => {
     );
 
     expect(html).toContain('—');
-    expect(html).not.toContain('reviewUsage.signal.projectMedian');
+    expect(html).not.toContain('tokenUsage.signal.projectMedian');
   });
 
   it('escapes what it did not write', () => {
-    const html = renderReviewTokenUsage(
+    const html = renderMergeRequestTokenUsage(
       { ...viewModel, sessions: [{ ...session, model: '<img src=x onerror=alert(1)>' }] },
       t,
     );
@@ -84,8 +78,8 @@ describe('renderReviewTokenUsage', () => {
     expect(html).not.toContain('<img');
   });
 
-  it('says when no session was recorded for the report', () => {
-    const html = renderReviewTokenUsage(
+  it('says when no session was recorded for the pull request', () => {
+    const html = renderMergeRequestTokenUsage(
       {
         ...viewModel,
         isEmpty: true,
@@ -96,7 +90,27 @@ describe('renderReviewTokenUsage', () => {
       t,
     );
 
-    expect(html).toContain('reviewUsage.empty');
+    expect(html).toContain('tokenUsage.mergeRequest.empty');
     expect(html).not.toContain('<table');
+  });
+});
+
+describe('fetchMergeRequestTokenUsage', () => {
+  it('asks for the sessions of one pull request of one project', async () => {
+    const requested: string[] = [];
+    const fetchImpl = async (url: string) => {
+      requested.push(url);
+      return new Response(JSON.stringify(viewModel));
+    };
+
+    await fetchMergeRequestTokenUsage(
+      'Practic-IO/practivizio-app',
+      2094,
+      fetchImpl as typeof fetch,
+    );
+
+    expect(requested).toEqual([
+      '/api/token-usage/merge-request?project=Practic-IO%2Fpractivizio-app&mrNumber=2094',
+    ]);
   });
 });

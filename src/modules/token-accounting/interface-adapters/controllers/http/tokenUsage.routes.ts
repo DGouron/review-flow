@@ -1,16 +1,16 @@
 import type { FastifyPluginAsync } from 'fastify';
 
-import type { ReviewTokenUsagePresenter } from '@/modules/token-accounting/interface-adapters/presenters/reviewTokenUsage.presenter.js';
+import type { MergeRequestTokenUsagePresenter } from '@/modules/token-accounting/interface-adapters/presenters/mergeRequestTokenUsage.presenter.js';
 import type { TokenUsageSummaryPresenter } from '@/modules/token-accounting/interface-adapters/presenters/tokenUsageSummary.presenter.js';
-import type { GetReviewTokenUsageUseCase } from '@/modules/token-accounting/usecases/getReviewTokenUsage/getReviewTokenUsage.usecase.js';
+import type { GetMergeRequestTokenUsageUseCase } from '@/modules/token-accounting/usecases/getMergeRequestTokenUsage/getMergeRequestTokenUsage.usecase.js';
 import type { SummarizeTokenUsageUseCase } from '@/modules/token-accounting/usecases/summarizeTokenUsage/summarizeTokenUsage.usecase.js';
 
 export interface TokenUsageRoutesOptions {
   summarizeTokenUsage: SummarizeTokenUsageUseCase;
   presenter: TokenUsageSummaryPresenter;
-  getReviewTokenUsage: GetReviewTokenUsageUseCase;
-  reviewTokenUsagePresenter: ReviewTokenUsagePresenter;
-  findReportLocalPath: (filename: string) => Promise<string | null>;
+  getMergeRequestTokenUsage: GetMergeRequestTokenUsageUseCase;
+  mergeRequestTokenUsagePresenter: MergeRequestTokenUsagePresenter;
+  getLocalPaths: () => string[];
 }
 
 interface SummaryQuery {
@@ -18,7 +18,10 @@ interface SummaryQuery {
   since?: string;
 }
 
-const REPORT_FILENAME_REGEX = /^(\d{4}-\d{2}-\d{2})-(?:MR|PR)-(\d+)-(review|followup)\.md$/;
+interface MergeRequestQuery {
+  project?: string;
+  mrNumber?: string;
+}
 
 export const tokenUsageRoutes: FastifyPluginAsync<TokenUsageRoutesOptions> = async (
   fastify,
@@ -27,9 +30,9 @@ export const tokenUsageRoutes: FastifyPluginAsync<TokenUsageRoutesOptions> = asy
   const {
     summarizeTokenUsage,
     presenter,
-    getReviewTokenUsage,
-    reviewTokenUsagePresenter,
-    findReportLocalPath,
+    getMergeRequestTokenUsage,
+    mergeRequestTokenUsagePresenter,
+    getLocalPaths,
   } = opts;
 
   fastify.get<{ Querystring: SummaryQuery }>('/api/token-usage/summary', async (request, reply) => {
@@ -44,30 +47,22 @@ export const tokenUsageRoutes: FastifyPluginAsync<TokenUsageRoutesOptions> = asy
     return presenter.present(summary);
   });
 
-  fastify.get<{ Params: { filename: string } }>(
-    '/api/token-usage/review/:filename',
+  fastify.get<{ Querystring: MergeRequestQuery }>(
+    '/api/token-usage/merge-request',
     async (request, reply) => {
-      const { filename } = request.params;
-      const report = REPORT_FILENAME_REGEX.exec(filename);
-      if (!report) {
+      const { project } = request.query;
+      const mrNumber = Number(request.query.mrNumber);
+      if (!project || !Number.isInteger(mrNumber)) {
         reply.code(400);
-        return { error: 'Invalid filename format' };
+        return { error: 'project and mrNumber query parameters are required' };
       }
 
-      const localPath = await findReportLocalPath(filename);
-      if (localPath === null) {
-        reply.code(404);
-        return { error: 'Review not found' };
-      }
-
-      const [, day, mrNumber, jobType] = report;
-      const usage = await getReviewTokenUsage.execute({
-        localPath,
-        mrNumber: Number(mrNumber),
-        jobType: jobType === 'followup' ? 'followup' : 'review',
-        day,
+      const usage = await getMergeRequestTokenUsage.execute({
+        localPaths: getLocalPaths(),
+        project,
+        mrNumber,
       });
-      return reviewTokenUsagePresenter.present(usage);
+      return mergeRequestTokenUsagePresenter.present(usage);
     },
   );
 };
