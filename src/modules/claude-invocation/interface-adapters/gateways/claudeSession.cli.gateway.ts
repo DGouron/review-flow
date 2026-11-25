@@ -60,6 +60,7 @@ const agentArraySchema = z.array(agentEntrySchema);
 const assistantUsageLineSchema = z.object({
   type: z.literal('assistant'),
   message: z.object({
+    id: z.string().optional(),
     model: z.string(),
     usage: z.object({
       input_tokens: z.number(),
@@ -194,8 +195,8 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
   }
 
   async getSessionUsage(sessionId: SessionId, cwd: string): Promise<SessionUsageSnapshot | null> {
-    const slug = cwd.replace(/\//g, '-');
-    const transcriptPath = join(this.homeDir, '.claude', 'projects', slug, `${sessionId}.jsonl`);
+    const transcript = this.transcriptOf(sessionId, cwd);
+    const transcriptPath = transcript.path;
     if (!existsSync(transcriptPath)) {
       return null;
     }
@@ -207,11 +208,13 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
       return null;
     }
 
-    const entries = raw
-      .split('\n')
-      .filter((line) => line.trim().length > 0)
-      .map((line) => safeParseAssistantUsage(line))
-      .filter((entry): entry is z.infer<typeof assistantUsageLineSchema> => entry !== null);
+    const entries = onePerMessage(
+      raw
+        .split('\n')
+        .filter((line) => line.trim().length > 0)
+        .map((line) => safeParseAssistantUsage(line))
+        .filter((entry): entry is z.infer<typeof assistantUsageLineSchema> => entry !== null),
+    );
 
     if (entries.length === 0) {
       return null;
@@ -240,10 +243,62 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
     const costUsd = computeCostUsd(model, usageWithoutCost);
 
     return {
+      sessionId: transcript.sessionId,
       model,
+      turns: entries.length,
       usage: { ...totals, costUsd },
     };
   }
+
+  /**
+   * `claude --bg` prints a short id; the transcript is named by the full session id, which the job's
+   * state records with the session's own cwd. The state is gone once the session is removed.
+   */
+  private transcriptOf(sessionId: SessionId, cwd: string): { sessionId: string; path: string } {
+    const jobState = readBackgroundJobState(
+      join(this.homeDir, '.claude', 'jobs', sessionId, 'state.json'),
+    );
+    const transcriptName = jobState?.sessionId ?? sessionId;
+    const sessionCwd = jobState?.cwd ?? cwd;
+    return {
+      sessionId: transcriptName,
+      path: join(
+        this.homeDir,
+        '.claude',
+        'projects',
+        projectFolderOf(sessionCwd),
+        `${transcriptName}.jsonl`,
+      ),
+    };
+  }
+}
+
+const backgroundJobStateSchema = z.object({ sessionId: z.string().min(1), cwd: z.string().min(1) });
+
+function readBackgroundJobState(path: string): z.infer<typeof backgroundJobStateSchema> | null {
+  try {
+    const result = backgroundJobStateSchema.safeParse(JSON.parse(readFileSync(path, 'utf-8')));
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+}
+
+function projectFolderOf(cwd: string): string {
+  return cwd.replace(/[^A-Za-z0-9]/g, '-');
+}
+
+function onePerMessage(
+  entries: Array<z.infer<typeof assistantUsageLineSchema>>,
+): Array<z.infer<typeof assistantUsageLineSchema>> {
+  const seen = new Set<string>();
+  return entries.filter((entry) => {
+    const messageId = entry.message.id;
+    if (messageId === undefined) return true;
+    if (seen.has(messageId)) return false;
+    seen.add(messageId);
+    return true;
+  });
 }
 
 function safeParseAssistantUsage(line: string): z.infer<typeof assistantUsageLineSchema> | null {

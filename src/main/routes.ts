@@ -153,9 +153,11 @@ import { tokenUsageRoutes } from '@/modules/token-accounting/interface-adapters/
 import { FilesystemBudgetGateway } from '@/modules/token-accounting/interface-adapters/gateways/budget/budget.filesystem.gateway.js';
 import { FilesystemTokenUsageGateway } from '@/modules/token-accounting/interface-adapters/gateways/tokenUsage/tokenUsage.filesystem.gateway.js';
 import { BudgetStatusPresenter } from '@/modules/token-accounting/interface-adapters/presenters/budgetStatus.presenter.js';
+import { ReviewTokenUsagePresenter } from '@/modules/token-accounting/interface-adapters/presenters/reviewTokenUsage.presenter.js';
 import { TokenUsageSummaryPresenter } from '@/modules/token-accounting/interface-adapters/presenters/tokenUsageSummary.presenter.js';
 import { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
 import { GetBudgetStatusUseCase } from '@/modules/token-accounting/usecases/getBudgetStatus/getBudgetStatus.usecase.js';
+import { GetReviewTokenUsageUseCase } from '@/modules/token-accounting/usecases/getReviewTokenUsage/getReviewTokenUsage.usecase.js';
 import { SummarizeTokenUsageUseCase } from '@/modules/token-accounting/usecases/summarizeTokenUsage/summarizeTokenUsage.usecase.js';
 import { UpdateBudgetUseCase } from '@/modules/token-accounting/usecases/updateBudget/updateBudget.usecase.js';
 import { mrTrackingRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTracking.routes.js';
@@ -296,6 +298,17 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
   await app.register(tokenUsageRoutes, {
     summarizeTokenUsage: new SummarizeTokenUsageUseCase(tokenUsageGateway),
     presenter: new TokenUsageSummaryPresenter(),
+    getReviewTokenUsage: new GetReviewTokenUsageUseCase(tokenUsageGateway),
+    reviewTokenUsagePresenter: new ReviewTokenUsagePresenter(),
+    findReportLocalPath: async (filename) => {
+      for (const repo of deps.config.repositories) {
+        if (!repo.enabled) continue;
+        if ((await deps.reviewFileGateway.readReview(repo.localPath, filename)) !== null) {
+          return repo.localPath;
+        }
+      }
+      return null;
+    },
   });
 
   await app.register(worktreeOverviewRoutes, {

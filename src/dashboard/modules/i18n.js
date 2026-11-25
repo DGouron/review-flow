@@ -164,6 +164,24 @@ const translations = {
     'economics.tokenUsage': '// TOKEN USAGE',
     'economics.monthlyBudget': '// MONTHLY BUDGET',
 
+    // Review report tabs
+    'reviewTab.report': 'Report',
+    'reviewTab.usage': 'Usage',
+    'reviewUsage.empty': 'No session recorded for this report.',
+    'reviewUsage.total': 'Review',
+    'reviewUsage.column.session': 'Session',
+    'reviewUsage.column.duration': 'Duration',
+    'reviewUsage.column.turns': 'Turns',
+    'reviewUsage.column.cacheRead': 'Read (cache)',
+    'reviewUsage.column.cacheWrite': 'Written (cache)',
+    'reviewUsage.column.output': 'Output',
+    'reviewUsage.column.input': 'Input',
+    'reviewUsage.column.cost': 'API-equivalent cost',
+    'reviewUsage.signal.cacheRead':
+      '{{percent}}% of the tokens are context read again from the cache.',
+    'reviewUsage.signal.projectMedian':
+      'This review costs {{ratio}}× the median review of the project.',
+
     // Queue lanes
     'queueLane.now': 'Handle now',
     'queueLane.needsFix': 'Needs fixes',
@@ -648,6 +666,22 @@ const translations = {
     'section.claudeEconomics': 'Économie Claude',
     'economics.tokenUsage': '// CONSOMMATION TOKENS',
     'economics.monthlyBudget': '// BUDGET MENSUEL',
+
+    // Onglets du rapport de revue
+    'reviewTab.report': 'Rapport',
+    'reviewTab.usage': 'Consommation',
+    'reviewUsage.empty': 'Aucune session relevée pour ce rapport.',
+    'reviewUsage.total': 'Revue',
+    'reviewUsage.column.session': 'Session',
+    'reviewUsage.column.duration': 'Durée',
+    'reviewUsage.column.turns': 'Tours',
+    'reviewUsage.column.cacheRead': 'Relu (cache)',
+    'reviewUsage.column.cacheWrite': 'Écrit (cache)',
+    'reviewUsage.column.output': 'Sortie',
+    'reviewUsage.column.input': 'Entrée',
+    'reviewUsage.column.cost': 'Coût éq. API',
+    'reviewUsage.signal.cacheRead': '{{percent}} % des tokens sont du contexte relu en cache.',
+    'reviewUsage.signal.projectMedian': 'Cette revue coûte {{ratio}}× la revue médiane du projet.',
 
     // Queue lanes
     'queueLane.now': 'À traiter maintenant',

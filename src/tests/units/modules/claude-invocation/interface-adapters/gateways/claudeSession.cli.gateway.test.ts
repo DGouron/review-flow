@@ -411,3 +411,88 @@ describe('ClaudeSessionCliGateway.getSessionUsage', () => {
     }
   });
 });
+
+describe('ClaudeSessionCliGateway.getSessionUsage for a --bg session', () => {
+  const assistantLine = (id: string, usage: Record<string, number>) =>
+    JSON.stringify({ type: 'assistant', message: { id, model: 'claude-opus-5-5', usage } });
+
+  function writeBackgroundSession(
+    tempHome: string,
+    {
+      shortId,
+      sessionId,
+      cwd,
+      transcript,
+    }: { shortId: string; sessionId: string; cwd: string; transcript: string[] },
+  ): void {
+    const jobDir = join(tempHome, '.claude', 'jobs', shortId);
+    mkdirSync(jobDir, { recursive: true });
+    writeFileSync(join(jobDir, 'state.json'), JSON.stringify({ sessionId, cwd }));
+    const projectDir = join(
+      tempHome,
+      '.claude',
+      'projects',
+      '-Users-me--reviewflow-worktrees-github-org-repo-12',
+    );
+    mkdirSync(projectDir, { recursive: true });
+    writeFileSync(join(projectDir, `${sessionId}.jsonl`), `${transcript.join('\n')}\n`);
+  }
+
+  it('reads the transcript named by the job state, under the folder Claude derives from its cwd', async () => {
+    const tempHome = mkdtempSync(join(tmpdir(), 'rf-session-usage-'));
+    writeBackgroundSession(tempHome, {
+      shortId: '7f3c1a2b',
+      sessionId: '7f3c1a2b-0000-4000-8000-000000000001',
+      cwd: '/Users/me/.reviewflow/worktrees/github-org-repo-12',
+      transcript: [
+        assistantLine('msg_1', {
+          input_tokens: 5,
+          output_tokens: 40,
+          cache_read_input_tokens: 900,
+        }),
+      ],
+    });
+
+    try {
+      const gateway = new ClaudeSessionCliGateway(noopRunner(), { homeDir: tempHome });
+      const snapshot = await gateway.getSessionUsage(
+        parseSessionId('7f3c1a2b'),
+        '/Users/me/project',
+      );
+      expect(snapshot?.model).toBe('claude-opus-5-5');
+      expect(snapshot?.sessionId).toBe('7f3c1a2b-0000-4000-8000-000000000001');
+      expect(snapshot?.usage.outputTokens).toBe(40);
+      expect(snapshot?.usage.cacheReadInputTokens).toBe(900);
+    } finally {
+      rmSync(tempHome, { recursive: true, force: true });
+    }
+  });
+
+  it('counts an assistant message once when the transcript splits it over several lines', async () => {
+    const tempHome = mkdtempSync(join(tmpdir(), 'rf-session-usage-'));
+    const usage = { input_tokens: 2, output_tokens: 30, cache_read_input_tokens: 1000 };
+    writeBackgroundSession(tempHome, {
+      shortId: '9e8d7c6b',
+      sessionId: '9e8d7c6b-0000-4000-8000-000000000002',
+      cwd: '/Users/me/.reviewflow/worktrees/github-org-repo-12',
+      transcript: [
+        assistantLine('msg_1', usage),
+        assistantLine('msg_1', usage),
+        assistantLine('msg_2', usage),
+      ],
+    });
+
+    try {
+      const gateway = new ClaudeSessionCliGateway(noopRunner(), { homeDir: tempHome });
+      const snapshot = await gateway.getSessionUsage(
+        parseSessionId('9e8d7c6b'),
+        '/Users/me/project',
+      );
+      expect(snapshot?.turns).toBe(2);
+      expect(snapshot?.usage.outputTokens).toBe(60);
+      expect(snapshot?.usage.cacheReadInputTokens).toBe(2000);
+    } finally {
+      rmSync(tempHome, { recursive: true, force: true });
+    }
+  });
+});

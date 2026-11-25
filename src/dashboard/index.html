@@ -417,6 +417,7 @@
     import { renderDeveloperSheetContent, drawRadarChart } from './modules/developerSheet.js';
     import { buildInsightsReport } from './modules/insightsReport.js';
     import { fetchTokenUsageSummary, renderTokenUsageTile } from './modules/tokenUsage.js';
+    import { fetchReviewTokenUsage, renderReviewTabs, renderReviewTokenUsage } from './modules/reviewTokenUsage.js';
     import { buildPendingReviewsModel, renderPendingReviewsHtml } from './modules/pendingReviews.js';
     import {
       renderWorktreeSection,
@@ -1010,7 +1011,11 @@
             <button class="btn-delete" onclick="deleteReviewFile('${encodedFilename}')" title="${t('button.delete')}"><i data-lucide="trash-2"></i></button>
           </div>
           <div class="review-accordion-content">
+            ${renderReviewTabs(filenameDomId, 'report', t)}
             <div class="markdown-content" id="review-content-${filenameDomId}">
+              <div class="empty-state">${t('status.loading')}</div>
+            </div>
+            <div class="review-usage-content" id="review-usage-${filenameDomId}" hidden>
               <div class="empty-state">${t('status.loading')}</div>
             </div>
           </div>
@@ -1048,6 +1053,28 @@
       }
 
       contentEl.innerHTML = markdownToHtml(loadedReviews[filename]);
+    }
+
+    async function switchReviewTab(tabButton) {
+      const domId = tabButton.dataset.reviewDomId;
+      const showUsage = tabButton.dataset.reviewTab === 'usage';
+      tabButton.parentElement.querySelectorAll('.review-tab').forEach(tab => {
+        const isActive = tab === tabButton;
+        tab.classList.toggle('is-active', isActive);
+        tab.setAttribute('aria-selected', String(isActive));
+      });
+      document.getElementById(`review-content-${domId}`).hidden = showUsage;
+      const usageEl = document.getElementById(`review-usage-${domId}`);
+      usageEl.hidden = !showUsage;
+      if (!showUsage || usageEl.dataset.loaded === 'true') return;
+
+      const filename = safeDecodeURIComponent(tabButton.closest('.review-accordion').dataset.filename);
+      try {
+        usageEl.innerHTML = renderReviewTokenUsage(await fetchReviewTokenUsage(filename), t);
+        usageEl.dataset.loaded = 'true';
+      } catch (error) {
+        usageEl.innerHTML = `<div class="empty-state">${t('error.loading')}</div>`;
+      }
     }
 
     async function fetchReviewFiles() {
@@ -3460,6 +3487,7 @@
     window.changeReviewTimeout = changeReviewTimeout;
     window.changeLanguage = changeLanguage;
     window.toggleReviewAccordion = toggleReviewAccordion;
+    window.switchReviewTab = switchReviewTab;
     window.toggleReviewDescription = toggleReviewDescription;
     window.deleteReviewFile = deleteReviewFile;
     window.toggleMrAccordion = toggleMrAccordion;

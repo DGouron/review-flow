@@ -135,7 +135,9 @@ describe('SPEC-171 — Re-enable Token Usage Tracking in --bg Mode (acceptance)'
         reason: null,
       });
       const usageSnapshot: SessionUsageSnapshot = {
+        sessionId: 'session-1',
         model: 'claude-opus-4-7',
+        turns: 3,
         usage: {
           inputTokens: 1000,
           outputTokens: 500,
@@ -184,7 +186,9 @@ describe('SPEC-171 — Re-enable Token Usage Tracking in --bg Mode (acceptance)'
         reason: null,
       });
       ctx.sessionGateway.setSessionUsage({
+        sessionId: 'session-2',
         model: 'claude-sonnet-4-5',
+        turns: 3,
         usage: {
           inputTokens: 100,
           outputTokens: 50,
@@ -326,7 +330,9 @@ describe('SPEC-171 — Re-enable Token Usage Tracking in --bg Mode (acceptance)'
         costUsd: 0,
       });
       ctx.sessionGateway.setSessionUsage({
+        sessionId: 'session-3',
         model: 'mystery-model-x',
+        turns: 3,
         usage: {
           inputTokens: 1000,
           outputTokens: 500,

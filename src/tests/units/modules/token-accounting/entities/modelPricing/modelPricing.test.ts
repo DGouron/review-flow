@@ -108,3 +108,32 @@ describe('computeCostUsd', () => {
     expect(MODEL_PRICING_USD_PER_MILLION).toHaveProperty('claude-haiku-4-5');
   });
 });
+
+describe('computeCostUsd on the 5.x models', () => {
+  const million = (
+    field: 'inputTokens' | 'outputTokens' | 'cacheCreationInputTokens' | 'cacheReadInputTokens',
+  ) => ({
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheCreationInputTokens: 0,
+    cacheReadInputTokens: 0,
+    costUsd: 0,
+    [field]: 1_000_000,
+  });
+
+  it.each([
+    ['claude-opus-5-5', 4, 20, 8, 0.2],
+    ['claude-opus-5', 5, 25, 10, 0.5],
+    ['claude-sonnet-5-5', 2, 10, 4, 0.1],
+    ['claude-haiku-5-5', 0.1, 0.5, 0.2, 0.01],
+    ['claude-fable-5-2', 8, 40, 16, 0.2],
+  ])(
+    'prices %s per million: input %s, output %s, one-hour cache write %s, cache read %s',
+    (model, input, output, cacheWrite, cacheRead) => {
+      expect(computeCostUsd(model, million('inputTokens'))).toBeCloseTo(input, 6);
+      expect(computeCostUsd(model, million('outputTokens'))).toBeCloseTo(output, 6);
+      expect(computeCostUsd(model, million('cacheCreationInputTokens'))).toBeCloseTo(cacheWrite, 6);
+      expect(computeCostUsd(model, million('cacheReadInputTokens'))).toBeCloseTo(cacheRead, 6);
+    },
+  );
+});

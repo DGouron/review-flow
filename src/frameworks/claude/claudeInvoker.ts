@@ -48,10 +48,8 @@ import { FileSystemStatsGateway } from '@/modules/statistics-insights/interface-
 import { ProjectStatsCalculator } from '@/modules/statistics-insights/interface-adapters/presenters/projectStats.calculator.js';
 import { fetchDiffStatsSafely } from '@/modules/statistics-insights/services/fetchDiffStatsSafely.js';
 import { AddReviewStatsUseCase } from '@/modules/statistics-insights/usecases/stats/addReviewStats.usecase.js';
-import type {
-  TokenUsage,
-  TokenUsageRecord,
-} from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
+import type { TokenUsage } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
+import { tokenUsageRecordOf } from '@/modules/token-accounting/entities/tokenUsage/tokenUsageRecordOf.js';
 import { FilesystemBudgetGateway } from '@/modules/token-accounting/interface-adapters/gateways/budget/budget.filesystem.gateway.js';
 import { FilesystemTokenUsageGateway } from '@/modules/token-accounting/interface-adapters/gateways/tokenUsage/tokenUsage.filesystem.gateway.js';
 import {
@@ -742,16 +740,13 @@ async function invokeViaBackgroundSession(
 
     if (result.usage !== null) {
       try {
-        const tokenUsageRecord: TokenUsageRecord = {
-          jobId: job.id,
-          mrNumber: job.mrNumber,
-          platform: job.platform,
-          projectPath: job.projectPath,
-          model: result.usage.model,
+        const tokenUsageRecord = tokenUsageRecordOf({
+          job,
+          jobType,
+          session: result.usage,
+          durationMs,
           recordedAt: new Date().toISOString(),
-          localPath: job.localPath,
-          usage: result.usage.usage,
-        };
+        });
         await deps.trackTokenUsage.execute(tokenUsageRecord);
         await broadcastBudgetAfterUsage(
           {

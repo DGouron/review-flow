@@ -17,6 +17,10 @@ export const tokenUsageRecordSchema = z.object({
   recordedAt: z.string(),
   localPath: z.string(),
   usage: tokenUsageSchema,
+  sessionId: z.string().optional(),
+  jobType: z.enum(['review', 'followup']).optional(),
+  durationMs: z.number().optional(),
+  turns: z.number().optional(),
 });
 
 export type TokenUsage = z.infer<typeof tokenUsageSchema>;
