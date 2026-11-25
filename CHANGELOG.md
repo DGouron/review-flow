@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.55.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.54.1...reviewflow-v3.55.0) (2026-11-25)
+
+
+### Added
+
+* **token-accounting:** show usage of each review ([#418](https://github.com/DGouron/review-flow/issues/418)) ([6c145f6](https://github.com/DGouron/review-flow/commit/6c145f69de7c4a60b700edbe22d3987735bcd9e1))
+* **token-accounting:** show usage per PR and month ([#420](https://github.com/DGouron/review-flow/issues/420)) ([637852f](https://github.com/DGouron/review-flow/commit/637852f7537d66aa3a146981bbae83aa9b953f1d))
+
+
+### Fixed
+
+* **token-accounting:** raise budget ceiling to 5000 ([#421](https://github.com/DGouron/review-flow/issues/421)) ([c19ed21](https://github.com/DGouron/review-flow/commit/c19ed21428c420cfdc1508f7c5ca4c65cef0094c))
+
 ## [3.54.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.54.0...reviewflow-v3.54.1) (2026-11-17)
 
 
