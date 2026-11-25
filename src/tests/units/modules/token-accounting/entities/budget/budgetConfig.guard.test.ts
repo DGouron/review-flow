@@ -18,13 +18,14 @@ describe('budgetConfigGuard', () => {
     expect(result.success).toBe(true);
   });
 
-  it('accepts the ceiling 600', () => {
-    const result = budgetConfigGuard.safeParse({ limitUsd: BUDGET_CEILING_USD });
-    expect(result.success).toBe(true);
+  it('accepts the ceiling 5000, above a month of reviews priced at API rates', () => {
+    expect(BUDGET_CEILING_USD).toBe(5000);
+    expect(budgetConfigGuard.safeParse({ limitUsd: 2000 }).success).toBe(true);
+    expect(budgetConfigGuard.safeParse({ limitUsd: BUDGET_CEILING_USD }).success).toBe(true);
   });
 
-  it('rejects a limit above 600', () => {
-    const result = budgetConfigGuard.safeParse({ limitUsd: 750 });
+  it('rejects a limit above 5000', () => {
+    const result = budgetConfigGuard.safeParse({ limitUsd: 5001 });
     expect(result.success).toBe(false);
   });
 

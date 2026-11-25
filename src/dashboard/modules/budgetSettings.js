@@ -145,7 +145,7 @@ export async function fetchBudgetStatus(fetchImpl = fetch) {
 }
 
 /**
- * Submits a new budget limit. The server enforces the 0-600 range.
+ * Submits a new budget limit. The server enforces the 0-5000 range.
  *
  * @param {number} limitUsd
  * @param {typeof fetch} [fetchImpl]

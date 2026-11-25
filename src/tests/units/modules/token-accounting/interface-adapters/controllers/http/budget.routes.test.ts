@@ -92,18 +92,18 @@ describe('budgetRoutes', () => {
       await harness.app.close();
     });
 
-    it('rejects 750 with HTTP 400 and leaves the persisted config unchanged', async () => {
+    it('rejects 5001 with HTTP 400 and leaves the persisted config unchanged', async () => {
       const response = await harness.app.inject({
         method: 'POST',
         url: '/api/budget',
-        payload: { limitUsd: 750 },
+        payload: { limitUsd: 5001 },
       });
 
       expect(response.statusCode).toBe(400);
       const body = response.json() as { success: boolean; error: string };
       expect(body.success).toBe(false);
       expect(body.error).toContain('0');
-      expect(body.error).toContain('600');
+      expect(body.error).toContain('5000');
 
       const persisted = await harness.budgetGateway.load();
       expect(persisted).toEqual({ limitUsd: 200 });

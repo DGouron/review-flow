@@ -24,15 +24,15 @@ describe('UpdateBudgetUseCase', () => {
     expect(persisted).toEqual({ limitUsd: 350 });
   });
 
-  it('rejects a limit above 600 with a range error and does not persist', async () => {
+  it('rejects a limit above 5000 with a range error and does not persist', async () => {
     await budgetGateway.save({ limitUsd: 200 });
     const saveCountBefore = budgetGateway.saveCount;
 
-    const result = await useCase.execute({ limitUsd: 750 });
+    const result = await useCase.execute({ limitUsd: 5001 });
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error).toBe('limitUsd must be between 0 and 600');
+      expect(result.error).toBe('limitUsd must be between 0 and 5000');
     }
     expect(budgetGateway.saveCount).toBe(saveCountBefore);
     const persisted = await budgetGateway.load();
@@ -44,7 +44,7 @@ describe('UpdateBudgetUseCase', () => {
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error).toBe('limitUsd must be between 0 and 600');
+      expect(result.error).toBe('limitUsd must be between 0 and 5000');
     }
   });
 

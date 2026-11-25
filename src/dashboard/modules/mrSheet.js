@@ -141,6 +141,11 @@ export function renderMrSheetContent(mr, translate, mrType) {
     })()}
 
     <div class="sheet-section">
+      <div class="sheet-section-title"><i data-lucide="coins"></i> ${translate('sheet.tokenUsage')}</div>
+      <div id="sheet-token-usage"><div class="empty-state" style="font-size: 0.8rem;">${translate('status.loading')}</div></div>
+    </div>
+
+    <div class="sheet-section">
       <div class="sheet-section-title"><i data-lucide="trending-up"></i> ${translate('sheet.scoreTimeline')}</div>
       <div class="sheet-canvas-wrap">
         <canvas id="sheet-score-canvas" width="460" height="180"></canvas>
@@ -159,10 +164,6 @@ export function renderMrSheetContent(mr, translate, mrType) {
       ${reviewHistoryContent}
     </div>
 
-    <div class="sheet-section">
-      <div class="sheet-section-title"><i data-lucide="coins"></i> ${translate('sheet.tokenUsage')}</div>
-      <div id="sheet-token-usage"><div class="empty-state" style="font-size: 0.8rem;">${translate('status.loading')}</div></div>
-    </div>
 
     <div class="sheet-section">
       <div class="sheet-section-title"><i data-lucide="info"></i> ${translate('sheet.details')}</div>
