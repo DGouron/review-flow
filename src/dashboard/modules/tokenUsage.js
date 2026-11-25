@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 /**
  * Dashboard module — token consumption and cost tile.
  * Humble object: pure functions, no global state, no direct DOM access.
@@ -20,6 +22,8 @@
  * @property {number} totalTokens
  * @property {boolean} isEmpty
  * @property {ModelBreakdownItem[]} models
+ * @property {Array<{ name: 'review' | 'followup', count: number, costUsd: string }>} [jobTypes]
+ * @property {string | null} [medianMergeRequestCostUsd]
  */
 
 /**
@@ -67,13 +71,28 @@ function renderModelRow(model) {
   `;
 }
 
+function renderJobTypeRow(jobType, translate) {
+  return `
+    <div class="token-usage-model-row">
+      <span class="token-usage-model-name">${escapeHtml(translate(`tokenUsage.jobType.${jobType.name}`))}</span>
+      <span class="token-usage-model-count">${jobType.count}</span>
+      <span class="token-usage-model-cost">${escapeHtml(jobType.costUsd)}</span>
+    </div>
+  `;
+}
+
+/** The first instant of the current month, in UTC like the monthly budget. */
+export function startOfCurrentMonthUtc(now = new Date()) {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+}
+
 /**
  * Renders the token usage tile as an HTML string.
  *
  * @param {TokenUsageSummaryViewModel} viewModel
  * @returns {string}
  */
-export function renderTokenUsageTile(viewModel) {
+export function renderTokenUsageTile(viewModel, translate = t) {
   if (viewModel.isEmpty) {
     return `
       <div class="token-usage-tile token-usage-tile--empty">
@@ -90,8 +109,16 @@ export function renderTokenUsageTile(viewModel) {
       <div class="token-usage-header">Token usage</div>
       <div class="token-usage-total">
         <span class="token-usage-cost">${escapeHtml(viewModel.totalCostUsd)}</span>
-        <span class="token-usage-meta">${viewModel.recordCount} reviews · ${formatTokenCount(viewModel.totalTokens)} tokens</span>
+        <span class="token-usage-meta">${escapeHtml(translate('tokenUsage.sessions', { count: viewModel.recordCount }))} · ${formatTokenCount(viewModel.totalTokens)} tokens</span>
       </div>
+      <div class="token-usage-models">
+        ${(viewModel.jobTypes ?? []).map((jobType) => renderJobTypeRow(jobType, translate)).join('')}
+      </div>
+      ${
+        viewModel.medianMergeRequestCostUsd
+          ? `<div class="token-usage-meta">${escapeHtml(translate('tokenUsage.medianMergeRequest', { cost: viewModel.medianMergeRequestCostUsd }))}</div>`
+          : ''
+      }
       <div class="token-usage-models">
         ${modelsHtml}
       </div>

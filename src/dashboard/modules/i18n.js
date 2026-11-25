@@ -164,23 +164,26 @@ const translations = {
     'economics.tokenUsage': '// TOKEN USAGE',
     'economics.monthlyBudget': '// MONTHLY BUDGET',
 
-    // Review report tabs
-    'reviewTab.report': 'Report',
-    'reviewTab.usage': 'Usage',
-    'reviewUsage.empty': 'No session recorded for this report.',
-    'reviewUsage.total': 'Review',
-    'reviewUsage.column.session': 'Session',
-    'reviewUsage.column.duration': 'Duration',
-    'reviewUsage.column.turns': 'Turns',
-    'reviewUsage.column.cacheRead': 'Read (cache)',
-    'reviewUsage.column.cacheWrite': 'Written (cache)',
-    'reviewUsage.column.output': 'Output',
-    'reviewUsage.column.input': 'Input',
-    'reviewUsage.column.cost': 'API-equivalent cost',
-    'reviewUsage.signal.cacheRead':
+    // Token usage
+    'sheet.tokenUsage': 'Token usage',
+    'tokenUsage.sessions': '{{count}} sessions this month',
+    'tokenUsage.medianMergeRequest': 'Median pull request: {{cost}}',
+    'tokenUsage.mergeRequest.empty': 'No session recorded for this pull request.',
+    'tokenUsage.total': 'Total',
+    'tokenUsage.jobType.review': 'Review',
+    'tokenUsage.jobType.followup': 'Follow-up',
+    'tokenUsage.column.kind': 'Kind',
+    'tokenUsage.column.model': 'Model',
+    'tokenUsage.column.duration': 'Duration',
+    'tokenUsage.column.turns': 'Turns',
+    'tokenUsage.column.cacheRead': 'Read (cache)',
+    'tokenUsage.column.cacheWrite': 'Written (cache)',
+    'tokenUsage.column.output': 'Output',
+    'tokenUsage.column.cost': 'API-equivalent cost',
+    'tokenUsage.signal.cacheRead':
       '{{percent}}% of the tokens are context read again from the cache.',
-    'reviewUsage.signal.projectMedian':
-      'This review costs {{ratio}}× the median review of the project.',
+    'tokenUsage.signal.projectMedian':
+      'This pull request costs {{ratio}}× the median pull request of the project.',
 
     // Queue lanes
     'queueLane.now': 'Handle now',
@@ -667,21 +670,24 @@ const translations = {
     'economics.tokenUsage': '// CONSOMMATION TOKENS',
     'economics.monthlyBudget': '// BUDGET MENSUEL',
 
-    // Onglets du rapport de revue
-    'reviewTab.report': 'Rapport',
-    'reviewTab.usage': 'Consommation',
-    'reviewUsage.empty': 'Aucune session relevée pour ce rapport.',
-    'reviewUsage.total': 'Revue',
-    'reviewUsage.column.session': 'Session',
-    'reviewUsage.column.duration': 'Durée',
-    'reviewUsage.column.turns': 'Tours',
-    'reviewUsage.column.cacheRead': 'Relu (cache)',
-    'reviewUsage.column.cacheWrite': 'Écrit (cache)',
-    'reviewUsage.column.output': 'Sortie',
-    'reviewUsage.column.input': 'Entrée',
-    'reviewUsage.column.cost': 'Coût éq. API',
-    'reviewUsage.signal.cacheRead': '{{percent}} % des tokens sont du contexte relu en cache.',
-    'reviewUsage.signal.projectMedian': 'Cette revue coûte {{ratio}}× la revue médiane du projet.',
+    // Consommation de tokens
+    'sheet.tokenUsage': 'Consommation',
+    'tokenUsage.sessions': '{{count}} sessions ce mois-ci',
+    'tokenUsage.medianMergeRequest': 'PR médiane : {{cost}}',
+    'tokenUsage.mergeRequest.empty': 'Aucune session relevée pour cette PR.',
+    'tokenUsage.total': 'Total',
+    'tokenUsage.jobType.review': 'Revue',
+    'tokenUsage.jobType.followup': 'Suivi',
+    'tokenUsage.column.kind': 'Type',
+    'tokenUsage.column.model': 'Modèle',
+    'tokenUsage.column.duration': 'Durée',
+    'tokenUsage.column.turns': 'Tours',
+    'tokenUsage.column.cacheRead': 'Relu (cache)',
+    'tokenUsage.column.cacheWrite': 'Écrit (cache)',
+    'tokenUsage.column.output': 'Sortie',
+    'tokenUsage.column.cost': 'Coût éq. API',
+    'tokenUsage.signal.cacheRead': '{{percent}} % des tokens sont du contexte relu en cache.',
+    'tokenUsage.signal.projectMedian': 'Cette PR coûte {{ratio}}× la PR médiane du projet.',
 
     // Queue lanes
     'queueLane.now': 'À traiter maintenant',

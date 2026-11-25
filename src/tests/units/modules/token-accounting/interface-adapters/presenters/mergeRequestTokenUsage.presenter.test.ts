@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { ReviewTokenUsagePresenter } from '@/modules/token-accounting/interface-adapters/presenters/reviewTokenUsage.presenter.js';
+import { MergeRequestTokenUsagePresenter } from '@/modules/token-accounting/interface-adapters/presenters/mergeRequestTokenUsage.presenter.js';
 import {
   TokenUsageFactory,
   TokenUsageRecordFactory,
@@ -18,8 +18,8 @@ const sessionOf = (
     usage: TokenUsageFactory.create(usage),
   });
 
-describe('ReviewTokenUsagePresenter', () => {
-  const presenter = new ReviewTokenUsagePresenter();
+describe('MergeRequestTokenUsagePresenter', () => {
+  const presenter = new MergeRequestTokenUsagePresenter();
 
   it('shows one row per session, with its model, duration, turns, tokens and cost', () => {
     const viewModel = presenter.present({
@@ -40,6 +40,7 @@ describe('ReviewTokenUsagePresenter', () => {
     });
 
     expect(viewModel.sessions[0]).toMatchObject({
+      jobType: 'review',
       model: 'claude-opus-5-5',
       durationMinutes: 4,
       turns: 21,

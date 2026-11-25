@@ -1,8 +1,8 @@
 import type { TokenUsageRecord } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
-import type { ReviewTokenUsage } from '@/modules/token-accounting/usecases/getReviewTokenUsage/getReviewTokenUsage.usecase.js';
+import type { MergeRequestTokenUsage } from '@/modules/token-accounting/usecases/getMergeRequestTokenUsage/getMergeRequestTokenUsage.usecase.js';
 import type { Presenter } from '@/shared/foundation/presenter.base.js';
 
-export interface ReviewTokenUsageTotals {
+export interface MergeRequestTokenUsageTotals {
   durationMinutes: number | null;
   turns: number | null;
   inputTokens: number;
@@ -12,16 +12,17 @@ export interface ReviewTokenUsageTotals {
   costUsd: string;
 }
 
-export interface ReviewTokenUsageRow extends ReviewTokenUsageTotals {
+export interface MergeRequestTokenUsageRow extends MergeRequestTokenUsageTotals {
   sessionId: string | null;
+  jobType: 'review' | 'followup';
   model: string;
   recordedAt: string;
 }
 
-export interface ReviewTokenUsageViewModel {
+export interface MergeRequestTokenUsageViewModel {
   isEmpty: boolean;
-  sessions: ReviewTokenUsageRow[];
-  total: ReviewTokenUsageTotals;
+  sessions: MergeRequestTokenUsageRow[];
+  total: MergeRequestTokenUsageTotals;
   cacheReadSharePercent: number | null;
   costVsProjectMedian: number | null;
 }
@@ -40,9 +41,10 @@ function sumOrNull(values: Array<number | null>): number | null {
   return known.length === values.length ? sumOf(known) : null;
 }
 
-function rowOf(session: TokenUsageRecord): ReviewTokenUsageRow {
+function rowOf(session: TokenUsageRecord): MergeRequestTokenUsageRow {
   return {
     sessionId: session.sessionId ?? null,
+    jobType: session.jobType ?? 'review',
     model: session.model,
     recordedAt: session.recordedAt,
     durationMinutes: minutesOf(session.durationMs),
@@ -55,14 +57,17 @@ function rowOf(session: TokenUsageRecord): ReviewTokenUsageRow {
   };
 }
 
-export class ReviewTokenUsagePresenter implements Presenter<
-  ReviewTokenUsage,
-  ReviewTokenUsageViewModel
+export class MergeRequestTokenUsagePresenter implements Presenter<
+  MergeRequestTokenUsage,
+  MergeRequestTokenUsageViewModel
 > {
-  present({ sessions, projectMedianCostUsd }: ReviewTokenUsage): ReviewTokenUsageViewModel {
+  present({
+    sessions,
+    projectMedianCostUsd,
+  }: MergeRequestTokenUsage): MergeRequestTokenUsageViewModel {
     const rows = sessions.map(rowOf);
     const totalCostUsd = sumOf(sessions.map((session) => session.usage.costUsd));
-    const total: ReviewTokenUsageTotals = {
+    const total: MergeRequestTokenUsageTotals = {
       durationMinutes: sumOrNull(rows.map((row) => row.durationMinutes)),
       turns: sumOrNull(rows.map((row) => row.turns)),
       inputTokens: sumOf(rows.map((row) => row.inputTokens)),

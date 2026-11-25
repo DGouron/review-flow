@@ -160,6 +160,11 @@ export function renderMrSheetContent(mr, translate, mrType) {
     </div>
 
     <div class="sheet-section">
+      <div class="sheet-section-title"><i data-lucide="coins"></i> ${translate('sheet.tokenUsage')}</div>
+      <div id="sheet-token-usage"><div class="empty-state" style="font-size: 0.8rem;">${translate('status.loading')}</div></div>
+    </div>
+
+    <div class="sheet-section">
       <div class="sheet-section-title"><i data-lucide="info"></i> ${translate('sheet.details')}</div>
       <div class="sheet-details-grid">
         <div class="sheet-detail-row">

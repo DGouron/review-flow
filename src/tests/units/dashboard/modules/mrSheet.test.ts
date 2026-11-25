@@ -30,4 +30,11 @@ describe('renderMrSheetContent', () => {
     const html = renderMrSheetContent(malicious, translate, 'review');
     expect(html).not.toContain('<script>alert');
   });
+
+  it('keeps a place for the token usage of the pull request, filled once it is fetched', () => {
+    const html = renderMrSheetContent(mr, translate, 'review');
+
+    expect(html).toContain('sheet.tokenUsage');
+    expect(html).toContain('id="sheet-token-usage"');
+  });
 });

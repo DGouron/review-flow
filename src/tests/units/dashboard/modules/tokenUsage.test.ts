@@ -1,12 +1,28 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatTokenCount, renderTokenUsageTile } from '@/dashboard/modules/tokenUsage.js';
+import {
+  formatTokenCount,
+  renderTokenUsageTile,
+  startOfCurrentMonthUtc,
+} from '@/dashboard/modules/tokenUsage.js';
+
+const translate = (key: string, params?: Record<string, string | number>) =>
+  params
+    ? `${key}(${Object.entries(params)
+        .map(([name, value]) => `${name}=${value}`)
+        .join(',')})`
+    : key;
 
 const nonEmptyViewModel = {
   totalCostUsd: '$1.23',
   recordCount: 4,
   totalTokens: 1500,
   isEmpty: false,
+  jobTypes: [
+    { name: 'review' as const, count: 3, costUsd: '$1.00' },
+    { name: 'followup' as const, count: 1, costUsd: '$0.23' },
+  ],
+  medianMergeRequestCostUsd: '$0.62',
   models: [
     { name: 'claude-opus-4-7', count: 1, costUsd: '$0.93', costShare: '76%' },
     { name: 'claude-sonnet-4-6', count: 3, costUsd: '$0.30', costShare: '24%' },
@@ -89,5 +105,32 @@ describe('renderTokenUsageTile', () => {
       const html = renderTokenUsageTile(emptyViewModel);
       expect(html).not.toContain('claude-');
     });
+  });
+});
+
+describe('the monthly token usage of Economics', () => {
+  it('starts the month on its first day, in UTC like the monthly budget', () => {
+    expect(startOfCurrentMonthUtc(new Date('2026-11-25T15:00:00.000Z'))).toBe(
+      '2026-11-01T00:00:00.000Z',
+    );
+  });
+
+  it('counts sessions, then splits reviews from follow-ups', () => {
+    const html = renderTokenUsageTile(nonEmptyViewModel, translate);
+
+    expect(html).toContain('tokenUsage.sessions(count=4)');
+    expect(html).toContain('tokenUsage.jobType.review');
+    expect(html).toContain('$1.00');
+    expect(html).toContain('tokenUsage.jobType.followup');
+    expect(html).toContain('$0.23');
+  });
+
+  it('names the cost of the median pull request when there is one', () => {
+    expect(renderTokenUsageTile(nonEmptyViewModel, translate)).toContain(
+      'tokenUsage.medianMergeRequest',
+    );
+    expect(
+      renderTokenUsageTile({ ...nonEmptyViewModel, medianMergeRequestCostUsd: null }, translate),
+    ).not.toContain('tokenUsage.medianMergeRequest');
   });
 });
