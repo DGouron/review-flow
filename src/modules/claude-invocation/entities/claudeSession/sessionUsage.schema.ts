@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
 export const sessionUsageSnapshotSchema = z.object({
+  sessionId: z.string(),
   model: z.string(),
+  turns: z.number(),
   usage: z.object({
     inputTokens: z.number(),
     outputTokens: z.number(),

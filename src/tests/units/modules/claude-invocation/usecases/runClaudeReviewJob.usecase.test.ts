@@ -207,7 +207,9 @@ describe('runClaudeReviewJob orchestrator', () => {
         reason: null,
       });
       ctx.sessionGateway.setSessionUsage({
+        sessionId: 'session-1',
         model: 'claude-opus-4-7',
+        turns: 3,
         usage: {
           inputTokens: 100,
           outputTokens: 50,

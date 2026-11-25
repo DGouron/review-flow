@@ -4,7 +4,9 @@ import { describe, it, expect } from 'vitest';
 import type { TokenUsageGateway } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.gateway.js';
 import type { TokenUsageRecord } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
 import { tokenUsageRoutes } from '@/modules/token-accounting/interface-adapters/controllers/http/tokenUsage.routes.js';
+import { ReviewTokenUsagePresenter } from '@/modules/token-accounting/interface-adapters/presenters/reviewTokenUsage.presenter.js';
 import { TokenUsageSummaryPresenter } from '@/modules/token-accounting/interface-adapters/presenters/tokenUsageSummary.presenter.js';
+import { GetReviewTokenUsageUseCase } from '@/modules/token-accounting/usecases/getReviewTokenUsage/getReviewTokenUsage.usecase.js';
 import { SummarizeTokenUsageUseCase } from '@/modules/token-accounting/usecases/summarizeTokenUsage/summarizeTokenUsage.usecase.js';
 
 class StubTokenUsageGateway implements TokenUsageGateway {
@@ -37,12 +39,20 @@ function makeRecord(overrides: Partial<TokenUsageRecord> = {}): TokenUsageRecord
   };
 }
 
-async function buildAppWith(records: TokenUsageRecord[]) {
+const REPORT_LOCAL_PATH = '/Users/me/practivizio-app';
+
+async function buildAppWith(
+  records: TokenUsageRecord[],
+  reportsByFilename: Record<string, string> = {},
+) {
   const app = Fastify();
   const gateway = new StubTokenUsageGateway(records);
   await app.register(tokenUsageRoutes, {
     summarizeTokenUsage: new SummarizeTokenUsageUseCase(gateway),
     presenter: new TokenUsageSummaryPresenter(),
+    getReviewTokenUsage: new GetReviewTokenUsageUseCase(gateway),
+    reviewTokenUsagePresenter: new ReviewTokenUsagePresenter(),
+    findReportLocalPath: async (filename) => reportsByFilename[filename] ?? null,
   });
   return app;
 }
@@ -130,6 +140,58 @@ describe('tokenUsageRoutes', () => {
       const body = response.json() as { error: string };
       expect(body.error).toContain('projectPath');
 
+      await app.close();
+    });
+  });
+
+  describe('GET /api/token-usage/review/:filename', () => {
+    const REPORT = '2026-11-25-MR-2094-followup.md';
+
+    it('returns the sessions of the report, found in the project that holds it', async () => {
+      const app = await buildAppWith(
+        [
+          makeRecord({
+            mrNumber: 2094,
+            jobType: 'followup',
+            recordedAt: '2026-11-25T13:48:20.000Z',
+            sessionId: 'followup-session',
+          }),
+          makeRecord({ mrNumber: 2094, jobType: 'review', recordedAt: '2026-11-25T09:00:00.000Z' }),
+        ],
+        { [REPORT]: REPORT_LOCAL_PATH },
+      );
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/token-usage/review/${REPORT}`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().sessions.map((row: { sessionId: string }) => row.sessionId)).toEqual([
+        'followup-session',
+      ]);
+      await app.close();
+    });
+
+    it('returns 404 when no enabled project holds the report', async () => {
+      const app = await buildAppWith([]);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/token-usage/review/${REPORT}`,
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toEqual({ error: 'Review not found' });
+      await app.close();
+    });
+
+    it('returns 400 for a name that is not a review report', async () => {
+      const app = await buildAppWith([]);
+
+      const response = await app.inject({ method: 'GET', url: '/api/token-usage/review/notes.md' });
+
+      expect(response.statusCode).toBe(400);
       await app.close();
     });
   });
