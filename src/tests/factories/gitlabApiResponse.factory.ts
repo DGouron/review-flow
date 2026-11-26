@@ -36,4 +36,17 @@ export class GitLabApiResponseFactory {
   static createVersionsResponse(versions: GitLabMergeRequestVersion[]): string {
     return JSON.stringify(versions);
   }
+
+  static createMergeRequestResponse(
+    overrides: { title?: string; description?: string | null; sha?: string } = {},
+  ): string {
+    return JSON.stringify({
+      iid: 42,
+      title: 'Add VAT to invoices',
+      description: 'Invoices must show VAT per line.',
+      sha: 'aaa111',
+      state: 'opened',
+      ...overrides,
+    });
+  }
 }
