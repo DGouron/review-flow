@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.57.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.56.2...reviewflow-v3.57.0) (2026-11-26)
+
+
+### Added
+
+* **api:** implement spec-226 review request brief ([#436](https://github.com/DGouron/review-flow/issues/436)) ([7c13412](https://github.com/DGouron/review-flow/commit/7c13412576f5d6bebea5d1c283437fb6cc64a830))
+* **dashboard:** redesign the dashboard around the review queue ([#443](https://github.com/DGouron/review-flow/issues/443)) ([60485f1](https://github.com/DGouron/review-flow/commit/60485f15863c85edbeedb9b848e4b98e8215f992))
+* land the verdict tool and dashboard grades ([#440](https://github.com/DGouron/review-flow/issues/440)) ([94b284d](https://github.com/DGouron/review-flow/commit/94b284d8e1545bc5951121abf83b620aea97b51f))
+* **tracking:** implement spec-233 dashboard queue reflects the GitHub state ([#435](https://github.com/DGouron/review-flow/issues/435)) ([7bdfec2](https://github.com/DGouron/review-flow/commit/7bdfec2c0b54e121dc07ef17b706e61f8415b4dd))
+
+
+### Fixed
+
+* [#442](https://github.com/DGouron/review-flow/issues/442) stop the ember session when the answer was cancelled before dispatch returned ([#444](https://github.com/DGouron/review-flow/issues/444)) ([152df1a](https://github.com/DGouron/review-flow/commit/152df1a2f74c736fb5264ed0f67bbba7c5a0f232))
+
 ## [3.56.2](https://github.com/DGouron/review-flow/compare/reviewflow-v3.56.1...reviewflow-v3.56.2) (2026-11-26)
 
 
