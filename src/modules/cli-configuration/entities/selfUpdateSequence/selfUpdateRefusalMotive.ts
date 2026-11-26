@@ -1,5 +1,4 @@
 export type SelfUpdateRefusalMotive =
-  | { kind: 'local-only' }
   | { kind: 'reviews-in-progress'; count: number }
   | { kind: 'wrong-branch' }
   | { kind: 'dirty-checkout' }

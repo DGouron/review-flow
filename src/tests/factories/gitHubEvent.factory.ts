@@ -96,6 +96,7 @@ export class GitHubEventFactory {
       action: 'closed',
       pull_request: {
         state: 'closed',
+        merged: true,
       },
     });
   }

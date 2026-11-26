@@ -35,6 +35,18 @@ export class GitHubApiResponseFactory {
     return JSON.stringify(pr);
   }
 
+  static createPullRequestOverviewResponse(
+    overrides: { title?: string; body?: string | null; headSha?: string } = {},
+  ): string {
+    return JSON.stringify({
+      number: 42,
+      title: overrides.title ?? 'Add VAT to invoices',
+      body: overrides.body === undefined ? 'Invoices must show VAT per line.' : overrides.body,
+      state: 'open',
+      head: { sha: overrides.headSha ?? 'aaa111', ref: 'feature/vat' },
+    });
+  }
+
   static createReviewThreadsResponse(threads: GitHubThreadData[]): string {
     return JSON.stringify({
       data: {

@@ -7,8 +7,11 @@ import {
   type ClaudeInvocationDeps,
 } from '@/frameworks/claude/claudeInvoker.js';
 import { getReviewTimeoutMs } from '@/frameworks/settings/runtimeSettings.js';
+import { createPlatformSync, type PlatformSync } from '@/main/platformSync.js';
 import type { ReviewLogFileGateway } from '@/modules/data-lifecycle/entities/reviewLog/reviewLogFile.gateway.js';
 import { FileSystemReviewLogFileGateway } from '@/modules/data-lifecycle/interface-adapters/gateways/fileSystem/reviewLogFile.fileSystem.gateway.js';
+import { GitHubReviewRequestStateFetchGateway } from '@/modules/platform-integration/interface-adapters/gateways/reviewRequestStateFetch.github.gateway.js';
+import { defaultGitHubArgvExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.github.gateway.js';
 import type { ReviewContextGateway } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js';
 import { FileSystemReviewFileGateway } from '@/modules/review-execution/interface-adapters/gateways/fileSystem/reviewFile.fileSystem.js';
 import { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
@@ -22,8 +25,11 @@ import { FileSystemStatsGateway } from '@/modules/statistics-insights/interface-
 import { ProjectStatsCalculator } from '@/modules/statistics-insights/interface-adapters/presenters/projectStats.calculator.js';
 import type { SupervisorStatusStore } from '@/modules/supervisor-management/entities/supervisor/supervisorStatusStore.gateway.js';
 import { InMemorySupervisorStatusStore } from '@/modules/supervisor-management/interface-adapters/gateways/supervisorStatusStore.memory.gateway.js';
+import type { SyncSummaryGateway } from '@/modules/tracking/entities/platformSync/syncSummary.gateway.js';
 import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import { FileSystemReviewRequestTrackingGateway } from '@/modules/tracking/interface-adapters/gateways/fileSystem/reviewRequestTracking.fileSystem.js';
+import { InMemorySyncSummaryGateway } from '@/modules/tracking/interface-adapters/gateways/syncSummary.memory.gateway.js';
+import { ReconcileWithPlatformUseCase } from '@/modules/tracking/usecases/tracking/reconcileWithPlatform.usecase.js';
 import type { GitCommandExecutor } from '@/modules/worktree-management/entities/gitCommand/gitCommand.gateway.js';
 import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
 import type { WorktreeHealthProbeGateway } from '@/modules/worktree-management/entities/worktree/worktreeHealthProbe.gateway.js';
@@ -43,6 +49,8 @@ import { LOG_DIR, LOG_FILE_PATH } from '../shared/services/daemonPaths.js';
 
 export interface Dependencies {
   reviewRequestTrackingGateway: ReviewRequestTrackingGateway;
+  syncSummaryGateway: SyncSummaryGateway;
+  syncWithPlatform: PlatformSync;
   statsGateway: StatsGateway;
   reviewFileGateway: ReviewFileGateway;
   reviewLogFileGateway: ReviewLogFileGateway;
@@ -117,11 +125,27 @@ export function createDependencies(config: Config): Dependencies {
     sizeProbe: worktreeSizeProbeGateway,
   });
   const forceCleanupLock = new InMemoryForceCleanupLockService();
+  const reviewRequestTrackingGateway = new FileSystemReviewRequestTrackingGateway(
+    new ProjectStatsCalculator(),
+  );
+  const syncSummaryGateway = new InMemorySyncSummaryGateway();
+  const syncWithPlatform = createPlatformSync({
+    getRepositories: () => config.repositories,
+    reconcileWithPlatform: new ReconcileWithPlatformUseCase({
+      platform: 'github',
+      trackingGateway: reviewRequestTrackingGateway,
+      reviewRequestStateFetchGateway: new GitHubReviewRequestStateFetchGateway(
+        defaultGitHubArgvExecutor,
+      ),
+      syncSummaryGateway,
+      now: () => new Date(),
+    }),
+  });
 
   return {
-    reviewRequestTrackingGateway: new FileSystemReviewRequestTrackingGateway(
-      new ProjectStatsCalculator(),
-    ),
+    reviewRequestTrackingGateway,
+    syncSummaryGateway,
+    syncWithPlatform,
     statsGateway: new FileSystemStatsGateway(),
     reviewFileGateway: new FileSystemReviewFileGateway(),
     reviewLogFileGateway: new FileSystemReviewLogFileGateway(),

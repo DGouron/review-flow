@@ -142,6 +142,29 @@ describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)',
     expect(sessionGateway.dispatchCalls[0].flags.mcpConfigJson).toBe(mcpConfig);
   });
 
+  it('dispatches with the tool policy given in the options instead of the Ember default', async () => {
+    const dir = projectDirFor(homeDir, homeDir);
+    writeFileSync(
+      join(dir, 'stub-session-policy.jsonl'),
+      JSON.stringify({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn' },
+      }) + '\n',
+    );
+
+    const gateway = new EmberAnswerTransportClaudeGateway(sessionGateway, {
+      ...FAST_OPTIONS(homeDir),
+      toolPolicy: { allowedTools: 'Read,Glob,Grep', disallowedTools: 'Edit,Write,WebFetch' },
+    });
+    const { subscriber, finished } = settled();
+
+    gateway.start(startOptions(), subscriber);
+    await finished;
+
+    expect(sessionGateway.dispatchCalls[0].flags.allowedTools).toBe('Read,Glob,Grep');
+    expect(sessionGateway.dispatchCalls[0].flags.disallowedTools).toBe('Edit,Write,WebFetch');
+  });
+
   it('reports ember-answer-dispatch-failed and never stops a session when dispatch fails', async () => {
     sessionGateway.setDispatchResult({ status: 'failed', rawStderr: 'not logged in' });
 

@@ -91,7 +91,9 @@ import {
 } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { HandleCloseResult } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import { ResolveAuditScopeUseCase } from '@/modules/review-execution/usecases/resolveAuditScope.usecase.js';
+import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
 import { StubProjectPrinciplesGateway } from '@/tests/stubs/projectPrinciples.stub.js';
+import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
 
 import { findRepositoryByRemoteUrl } from '../../../../../config/loader.js';
 import { enqueueReview } from '../../../../../frameworks/queue/pQueueAdapter.js';
@@ -769,6 +771,59 @@ describe('handleGitHubWebhook', () => {
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'cleaned' }));
+    });
+  });
+
+  describe('merged PR', () => {
+    it('files a merged PR as merged, not as closed', async () => {
+      const trackingGateway = new InMemoryReviewRequestTrackingGateway();
+      trackingGateway.create(
+        '/home/user/projects/test-repo',
+        TrackedMrFactory.create({
+          id: 'github-test-owner/test-repo-123',
+          mrNumber: 123,
+          platform: 'github',
+          project: 'test-owner/test-repo',
+          state: 'pending-approval',
+        }),
+      );
+      const transitionState = new TransitionStateUseCase(trackingGateway);
+      const deps = createMockDeps();
+      deps.processWebhook = (event: WebhookEvent): Promise<ProcessWebhookResult> =>
+        processWebhook(event, {
+          handleClose: async (input) => {
+            const archived = trackingGateway.archive(
+              input.localPath,
+              `github-${input.projectPath}-${input.mergeRequestNumber}`,
+            );
+            return {
+              status: 'cleaned',
+              jobCancelled: false,
+              trackingArchived: archived,
+              contextDeleted: false,
+            };
+          },
+          transitionState,
+          recordPush: { execute: vi.fn(() => null) },
+          checkFollowupNeeded: { execute: vi.fn(() => false) },
+          removeWorktree: vi.fn(async () => ({ status: 'removed' as const })),
+          handlePlatformApproval: { execute: vi.fn(() => ({ kind: 'allowed' as const })) },
+          getQualityThreshold: () => null,
+          logger: createStubLogger(),
+        });
+      const request = {
+        body: GitHubEventFactory.createMergedPr(),
+        headers: {},
+      } as unknown as FastifyRequest;
+
+      await handleGitHubWebhook(request, mockReply, logger, deps);
+
+      const tracked = trackingGateway.getById(
+        '/home/user/projects/test-repo',
+        'github-test-owner/test-repo-123',
+      );
+      expect(tracked?.state).toBe('merged');
+      expect(tracked?.mergedAt).not.toBeNull();
     });
   });
 

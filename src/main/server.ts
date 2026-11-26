@@ -2,6 +2,7 @@ import fastifyWebsocket from '@fastify/websocket';
 import Fastify, { type FastifyInstance } from 'fastify';
 
 import { startClaudeInvocationTimers } from '@/frameworks/claude/timers/claudeInvocationTimers.js';
+import { startPlatformSyncScheduler } from '@/frameworks/scheduler/platformSyncScheduler.js';
 import { startSupervisorScheduler } from '@/frameworks/scheduler/supervisorScheduler.js';
 import {
   configureSettingsLogger,
@@ -186,6 +187,8 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
   return buildServer(deps);
 }
 
+const PLATFORM_SYNC_INTERVAL_MS = 5 * 60 * 1000;
+
 export async function startServer(options: ServerOptions = {}): Promise<FastifyInstance> {
   const config = options.config ?? loadConfig();
   const deps = createDependencies(config);
@@ -298,6 +301,13 @@ export async function startServer(options: ServerOptions = {}): Promise<FastifyI
     host: '0.0.0.0',
   });
 
+  const platformSyncScheduler = startPlatformSyncScheduler({
+    getRepositories: () => config.repositories,
+    syncWithPlatform: deps.syncWithPlatform,
+    logger: deps.logger,
+    intervalMs: PLATFORM_SYNC_INTERVAL_MS,
+  });
+
   // Recovery runs as a non-blocking background task so the HTTP listener is
   // available immediately at boot. A long replay backlog can't delay health
   // checks or webhook reception.
@@ -329,6 +339,7 @@ export async function startServer(options: ServerOptions = {}): Promise<FastifyI
     githubWebhookAllowlist.stop();
     stopClaudeInvocationTimers();
     supervisorScheduler.stop();
+    platformSyncScheduler.stop();
     removePidFile(PID_FILE_PATH);
     await app.close();
     process.exit(0);

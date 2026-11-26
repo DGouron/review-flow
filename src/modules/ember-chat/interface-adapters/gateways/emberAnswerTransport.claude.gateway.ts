@@ -52,15 +52,24 @@ import type {
  * STILL TO VERIFY MANUALLY: drive the chat end-to-end in a browser.
  */
 
+export interface EmberToolPolicy {
+  allowedTools: string;
+  disallowedTools: string;
+}
+
 export interface EmberAnswerTransportClaudeGatewayOptions {
   homeDir: string;
   pollIntervalMs?: number;
   buildMcpConfig: () => string;
+  toolPolicy?: EmberToolPolicy;
 }
 
 const DEFAULT_POLL_INTERVAL_MS = 750;
 
-const EMBER_ALLOWED_TOOLS = 'Read,Glob,Grep,mcp__review-progress__record_insight';
+const EMBER_TOOL_POLICY: EmberToolPolicy = {
+  allowedTools: 'Read,Glob,Grep,mcp__review-progress__record_insight',
+  disallowedTools: 'Edit,Write,Bash,Task',
+};
 
 export class EmberAnswerTransportClaudeGateway implements EmberAnswerTransportGateway {
   constructor(
@@ -77,6 +86,7 @@ export class EmberAnswerTransportClaudeGateway implements EmberAnswerTransportGa
       this.options.homeDir,
       this.options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS,
       this.options.buildMcpConfig(),
+      this.options.toolPolicy ?? EMBER_TOOL_POLICY,
       options,
       subscriber,
     );
@@ -103,6 +113,7 @@ class EmberAnswerRunner {
     private readonly homeDir: string,
     private readonly pollIntervalMs: number,
     private readonly mcpConfigJson: string,
+    private readonly toolPolicy: EmberToolPolicy,
     private readonly options: EmberAnswerStartOptions,
     private readonly subscriber: EmberAnswerSubscriber,
   ) {}
@@ -125,8 +136,8 @@ class EmberAnswerRunner {
         permissionMode: 'auto',
         systemPrompt: this.options.systemPrompt,
         mcpConfigJson: this.mcpConfigJson,
-        allowedTools: EMBER_ALLOWED_TOOLS,
-        disallowedTools: 'Edit,Write,Bash,Task',
+        allowedTools: this.toolPolicy.allowedTools,
+        disallowedTools: this.toolPolicy.disallowedTools,
       },
       localPath: this.options.projectPath,
       jobId: `ember-${Date.now()}`,

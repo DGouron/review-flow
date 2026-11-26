@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyPluginAsync, FastifyReply } from 'fastify';
 
 import type { InstallTypeDetector } from '@/modules/cli-configuration/entities/packageVersion/installTypeDetector.gateway.js';
 import type { PackageVersionGateway } from '@/modules/cli-configuration/entities/packageVersion/packageVersion.gateway.js';
@@ -14,20 +14,14 @@ import type {
   CheckVersionInput,
   CheckVersionDependencies,
 } from '@/modules/cli-configuration/usecases/version/checkVersion.usecase.js';
-import type {
-  TriggerSelfUpdateInput,
-  TriggerSelfUpdateDependencies,
-} from '@/modules/cli-configuration/usecases/version/triggerSelfUpdate.usecase.js';
+import type { TriggerSelfUpdateDependencies } from '@/modules/cli-configuration/usecases/version/triggerSelfUpdate.usecase.js';
 
 interface VersionRoutesOptions {
   checkVersion: (
     input: CheckVersionInput,
     dependencies: CheckVersionDependencies,
   ) => Promise<VersionCheckResult>;
-  triggerSelfUpdate: (
-    input: TriggerSelfUpdateInput,
-    dependencies: TriggerSelfUpdateDependencies,
-  ) => Promise<SelfUpdateResult>;
+  triggerSelfUpdate: (dependencies: TriggerSelfUpdateDependencies) => Promise<SelfUpdateResult>;
   currentVersion: string;
   packageVersionGateway: PackageVersionGateway;
   versionCache: VersionCachePort;
@@ -50,19 +44,15 @@ async function restartDaemonSilently(
 }
 
 async function handleSelfUpdateRequest(
-  request: FastifyRequest,
   reply: FastifyReply,
   options: VersionRoutesOptions,
 ): Promise<SelfUpdateResult> {
-  const result = await options.triggerSelfUpdate(
-    { requestOrigin: request.ip },
-    {
-      selfUpdateCommand: options.selfUpdateCommand,
-      installTypeDetector: options.installTypeDetector,
-      queueActivityGateway: options.queueActivityGateway,
-      sourceCheckoutUpdateGateway: options.sourceCheckoutUpdateGateway,
-    },
-  );
+  const result = await options.triggerSelfUpdate({
+    selfUpdateCommand: options.selfUpdateCommand,
+    installTypeDetector: options.installTypeDetector,
+    queueActivityGateway: options.queueActivityGateway,
+    sourceCheckoutUpdateGateway: options.sourceCheckoutUpdateGateway,
+  });
 
   if (result.status === 'failed') {
     reply.code(500);
@@ -93,7 +83,7 @@ export const versionRoutes: FastifyPluginAsync<VersionRoutesOptions> = async (fa
     );
   });
 
-  fastify.post('/api/version/update', async (request, reply) =>
-    handleSelfUpdateRequest(request, reply, options),
+  fastify.post('/api/version/update', async (_request, reply) =>
+    handleSelfUpdateRequest(reply, options),
   );
 };

@@ -22,6 +22,7 @@ import {
   filterGitHubEvent,
   filterGitHubLabelEvent,
   filterGitHubPrClose,
+  filterGitHubPrMerge,
   filterGitHubPrUpdate,
   filterGitHubIssueCommentEvent,
   filterGitHubPullRequestReviewEvent,
@@ -462,6 +463,34 @@ export async function handleGitHubWebhook(
     sendWebhookReply(
       reply,
       { kind: 'ignored', reason: 'PR closed, repo not configured' },
+      { numberKey: 'prNumber' },
+    );
+    return;
+  }
+
+  const mergeResult = filterGitHubPrMerge(event);
+  if (mergeResult.shouldProcess) {
+    const repoConfig = findRepositoryByRemoteUrl(event.repository.clone_url);
+    if (repoConfig) {
+      await deps.processWebhook({
+        type: 'merge',
+        platform: 'github',
+        projectPath: mergeResult.projectPath,
+        localPath: repoConfig.localPath,
+        mergeRequestNumber: mergeResult.mergeRequestNumber,
+      });
+      logger.info({ prNumber: mergeResult.mergeRequestNumber }, 'PR marked as merged');
+      sendWebhookReply(
+        reply,
+        { kind: 'merged', mergeRequestNumber: mergeResult.mergeRequestNumber },
+        { numberKey: 'prNumber' },
+      );
+      return;
+    }
+
+    sendWebhookReply(
+      reply,
+      { kind: 'ignored', reason: 'PR merged, repo not configured' },
       { numberKey: 'prNumber' },
     );
     return;
