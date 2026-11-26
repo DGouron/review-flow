@@ -52,6 +52,7 @@ async function handleSelfUpdateRequest(
     installTypeDetector: options.installTypeDetector,
     queueActivityGateway: options.queueActivityGateway,
     sourceCheckoutUpdateGateway: options.sourceCheckoutUpdateGateway,
+    packageVersionGateway: options.packageVersionGateway,
   });
 
   if (result.status === 'failed') {

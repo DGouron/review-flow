@@ -1,4 +1,5 @@
 import type { InstallTypeDetector } from '@/modules/cli-configuration/entities/packageVersion/installTypeDetector.gateway.js';
+import type { PackageVersionGateway } from '@/modules/cli-configuration/entities/packageVersion/packageVersion.gateway.js';
 import type { SelfUpdateResult } from '@/modules/cli-configuration/entities/packageVersion/packageVersion.js';
 import type { SelfUpdateCommandPort } from '@/modules/cli-configuration/entities/packageVersion/selfUpdateCommand.gateway.js';
 import type { QueueActivityGateway } from '@/modules/cli-configuration/entities/selfUpdateSequence/queueActivity.gateway.js';
@@ -10,22 +11,45 @@ export interface TriggerSelfUpdateDependencies {
   installTypeDetector: InstallTypeDetector;
   queueActivityGateway: QueueActivityGateway;
   sourceCheckoutUpdateGateway: SourceCheckoutUpdateGateway;
+  packageVersionGateway: PackageVersionGateway;
 }
 
 async function triggerGlobalNpmUpdate(
   selfUpdateCommand: SelfUpdateCommandPort,
+  packageVersionGateway: PackageVersionGateway,
 ): Promise<SelfUpdateResult> {
-  const updateResult = await selfUpdateCommand.runGlobalUpdate();
-
-  if (updateResult.success) {
-    return { status: 'started' };
+  const targetVersion = await packageVersionGateway.fetchLatestVersion();
+  if (targetVersion === null) {
+    return { status: 'refused', motive: { kind: 'latest-version-unavailable' } };
   }
 
-  if (updateResult.permissionDenied) {
-    return { status: 'permission-denied', command: 'sudo npm update -g reviewflow' };
+  const installOutcome = await selfUpdateCommand.installGlobalVersion(targetVersion);
+  switch (installOutcome.kind) {
+    case 'permission-denied':
+      return {
+        status: 'permission-denied',
+        command: `sudo npm install -g reviewflow@${targetVersion}`,
+      };
+    case 'version-not-on-registry':
+      return {
+        status: 'refused',
+        motive: { kind: 'version-not-on-registry', version: targetVersion },
+      };
+    case 'failed':
+      return { status: 'failed', error: installOutcome.error };
+    case 'installed':
+      break;
   }
 
-  return { status: 'failed', error: updateResult.error ?? 'Unknown error' };
+  const installedVersion = await selfUpdateCommand.readInstalledVersion();
+  if (installedVersion !== targetVersion) {
+    return {
+      status: 'refused',
+      motive: { kind: 'install-not-applied', expectedVersion: targetVersion, installedVersion },
+    };
+  }
+
+  return { status: 'started' };
 }
 
 export async function triggerSelfUpdate(
@@ -36,6 +60,7 @@ export async function triggerSelfUpdate(
     installTypeDetector,
     queueActivityGateway,
     sourceCheckoutUpdateGateway,
+    packageVersionGateway,
   } = dependencies;
 
   const activeOrWaitingCount = queueActivityGateway.countActiveOrWaiting();
@@ -50,5 +75,5 @@ export async function triggerSelfUpdate(
     return runSourceCheckoutSelfUpdate({ sourceCheckoutUpdateGateway });
   }
 
-  return triggerGlobalNpmUpdate(selfUpdateCommand);
+  return triggerGlobalNpmUpdate(selfUpdateCommand, packageVersionGateway);
 }

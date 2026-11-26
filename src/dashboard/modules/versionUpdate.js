@@ -68,7 +68,10 @@ export function setVersionCheckState(status, translate) {
  *   | { kind: 'dirty-checkout' }
  *   | { kind: 'missing-tool', tool: 'git' | 'yarn' }
  *   | { kind: 'fetch-failed', detail: string }
- *   | { kind: 'rebuild-failed' }} SelfUpdateRefusalMotive
+ *   | { kind: 'rebuild-failed' }
+ *   | { kind: 'latest-version-unavailable' }
+ *   | { kind: 'version-not-on-registry', version: string }
+ *   | { kind: 'install-not-applied', expectedVersion: string, installedVersion: string | null }} SelfUpdateRefusalMotive
  */
 
 /**
@@ -92,6 +95,15 @@ export function resolveRefusalWording(motive, translate) {
       return `${translate('version.refusal.fetchFailed')} : ${motive.detail}`;
     case 'rebuild-failed':
       return translate('version.refusal.rebuildFailed');
+    case 'latest-version-unavailable':
+      return translate('version.refusal.latestVersionUnavailable');
+    case 'version-not-on-registry':
+      return translate('version.refusal.versionNotOnRegistry', { version: motive.version });
+    case 'install-not-applied':
+      return translate('version.refusal.installNotApplied', {
+        expected: motive.expectedVersion,
+        installed: motive.installedVersion ?? '?',
+      });
     default:
       return translate('version.updateFailed');
   }

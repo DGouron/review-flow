@@ -25,7 +25,7 @@ async function buildVersionRoutesApplication(): Promise<FastifyInstance> {
     currentVersion: '1.0.0',
     packageVersionGateway: new StubPackageVersionGateway('2.0.0'),
     versionCache: new StubVersionCache(null, true),
-    selfUpdateCommand: new StubSelfUpdateCommand(true),
+    selfUpdateCommand: new StubSelfUpdateCommand(),
     installTypeDetector: new StubInstallTypeDetector('source-checkout'),
     serverPort: 3000,
     queueActivityGateway: new StubQueueActivity(0),
@@ -39,10 +39,11 @@ describe('SPEC-223 source-checkout self-update (acceptance)', () => {
   describe('usecase-level — trigger and gating', () => {
     it('scenario: nominal — fetches, rebuilds and starts on a clean checkout with new commits', async () => {
       const result = await triggerSelfUpdate({
-        selfUpdateCommand: new StubSelfUpdateCommand(true),
+        selfUpdateCommand: new StubSelfUpdateCommand(),
         installTypeDetector: new StubInstallTypeDetector('source-checkout'),
         queueActivityGateway: new StubQueueActivity(0),
         sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
+        packageVersionGateway: new StubPackageVersionGateway('2.0.0'),
       });
 
       expect(result).toEqual({ status: 'started' });
@@ -61,10 +62,11 @@ describe('SPEC-223 source-checkout self-update (acceptance)', () => {
 
     it('scenario: review running — refuses with the total count of running and waiting reviews', async () => {
       const result = await triggerSelfUpdate({
-        selfUpdateCommand: new StubSelfUpdateCommand(true),
+        selfUpdateCommand: new StubSelfUpdateCommand(),
         installTypeDetector: new StubInstallTypeDetector('source-checkout'),
         queueActivityGateway: new StubQueueActivity(2),
         sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
+        packageVersionGateway: new StubPackageVersionGateway('2.0.0'),
       });
 
       expect(result).toEqual({
@@ -159,23 +161,25 @@ describe('SPEC-223 source-checkout self-update (acceptance)', () => {
   describe('usecase-level — global-install path shares the two preconditions', () => {
     it('scenario: global install, nothing running — existing update path runs unchanged', async () => {
       const result = await triggerSelfUpdate({
-        selfUpdateCommand: new StubSelfUpdateCommand(true),
+        selfUpdateCommand: new StubSelfUpdateCommand(),
         installTypeDetector: new StubInstallTypeDetector('global-npm'),
         queueActivityGateway: new StubQueueActivity(0),
         sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
+        packageVersionGateway: new StubPackageVersionGateway('2.0.0'),
       });
 
       expect(result).toEqual({ status: 'started' });
     });
 
     it('scenario: global install, review running — refuses without reinstalling', async () => {
-      const selfUpdateCommand = new StubSelfUpdateCommand(true);
+      const selfUpdateCommand = new StubSelfUpdateCommand();
 
       const result = await triggerSelfUpdate({
         selfUpdateCommand,
         installTypeDetector: new StubInstallTypeDetector('global-npm'),
         queueActivityGateway: new StubQueueActivity(1),
         sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
+        packageVersionGateway: new StubPackageVersionGateway('2.0.0'),
       });
 
       expect(result).toEqual({

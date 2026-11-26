@@ -21,14 +21,13 @@ function isReviewflowCheckout(directory: string): boolean {
   return existsSync(join(directory, '.git')) && declaresReviewflowPackage(directory);
 }
 
-/**
- * Walks up from `startPath` to the reviewflow git checkout that contains it.
- * A `.git` belonging to another project (nvm, Homebrew) is not a reviewflow checkout.
- */
-export function findReviewflowCheckoutRoot(startPath: string): string | null {
+function findClosestAncestor(
+  startPath: string,
+  matches: (directory: string) => boolean,
+): string | null {
   let current = startPath;
   while (true) {
-    if (isReviewflowCheckout(current)) {
+    if (matches(current)) {
       return current;
     }
     const parent = dirname(current);
@@ -37,4 +36,19 @@ export function findReviewflowCheckoutRoot(startPath: string): string | null {
     }
     current = parent;
   }
+}
+
+/**
+ * Walks up from `startPath` to the reviewflow git checkout that contains it.
+ * A `.git` belonging to another project (nvm, Homebrew) is not a reviewflow checkout.
+ */
+export function findReviewflowCheckoutRoot(startPath: string): string | null {
+  return findClosestAncestor(startPath, isReviewflowCheckout);
+}
+
+/**
+ * Walks up from `startPath` to the reviewflow package that contains it, checkout or npm install.
+ */
+export function findReviewflowPackageRoot(startPath: string): string | null {
+  return findClosestAncestor(startPath, declaresReviewflowPackage);
 }

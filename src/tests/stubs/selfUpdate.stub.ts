@@ -1,25 +1,31 @@
-import type { SelfUpdateCommandPort } from '@/modules/cli-configuration/entities/packageVersion/selfUpdateCommand.gateway.js';
+import type {
+  GlobalInstallOutcome,
+  SelfUpdateCommandPort,
+} from '@/modules/cli-configuration/entities/packageVersion/selfUpdateCommand.gateway.js';
+
+type StubSelfUpdateCommandOptions = {
+  installOutcome?: GlobalInstallOutcome;
+  installedVersionAfterInstall?: string | null;
+};
 
 export class StubSelfUpdateCommand implements SelfUpdateCommandPort {
-  private readonly shouldSucceed: boolean;
-  private readonly errorMessage: string | null;
-  private readonly permissionDenied: boolean;
+  private readonly options: StubSelfUpdateCommandOptions;
+  requestedVersion: string | null = null;
 
-  constructor(shouldSucceed = true, errorMessage: string | null = null, permissionDenied = false) {
-    this.shouldSucceed = shouldSucceed;
-    this.errorMessage = errorMessage;
-    this.permissionDenied = permissionDenied;
+  constructor(options: StubSelfUpdateCommandOptions = {}) {
+    this.options = options;
   }
 
-  async runGlobalUpdate(): Promise<{
-    success: boolean;
-    error: string | null;
-    permissionDenied: boolean;
-  }> {
-    if (this.shouldSucceed) {
-      return { success: true, error: null, permissionDenied: false };
+  async installGlobalVersion(version: string): Promise<GlobalInstallOutcome> {
+    this.requestedVersion = version;
+    return this.options.installOutcome ?? { kind: 'installed' };
+  }
+
+  async readInstalledVersion(): Promise<string | null> {
+    if ('installedVersionAfterInstall' in this.options) {
+      return this.options.installedVersionAfterInstall ?? null;
     }
-    return { success: false, error: this.errorMessage, permissionDenied: this.permissionDenied };
+    return this.requestedVersion;
   }
 
   async restartDaemon(_serverPort?: number): Promise<void> {

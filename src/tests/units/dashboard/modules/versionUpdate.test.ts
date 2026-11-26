@@ -138,6 +138,38 @@ describe('resolveRefusalWording', () => {
     );
   });
 
+  it('words the latest-version-unavailable motive in French', () => {
+    expect(resolveRefusalWording({ kind: 'latest-version-unavailable' }, t)).toBe(
+      'Impossible de récupérer la dernière version depuis le registre npm. Réessayez plus tard.',
+    );
+  });
+
+  it('words the version-not-on-registry motive in French, naming the version', () => {
+    expect(resolveRefusalWording({ kind: 'version-not-on-registry', version: '3.57.0' }, t)).toBe(
+      "La v3.57.0 n'est pas encore disponible sur le registre npm. Réessayez dans quelques minutes.",
+    );
+  });
+
+  it('words the install-not-applied motive in French, naming both versions', () => {
+    expect(
+      resolveRefusalWording(
+        { kind: 'install-not-applied', expectedVersion: '3.57.0', installedVersion: '3.56.2' },
+        t,
+      ),
+    ).toBe(
+      "npm n'a pas installé la v3.57.0 (version installée : 3.56.2). Le serveur continue de tourner sur la version actuelle.",
+    );
+  });
+
+  it('words the install-not-applied motive with an unknown installed version', () => {
+    expect(
+      resolveRefusalWording(
+        { kind: 'install-not-applied', expectedVersion: '3.57.0', installedVersion: null },
+        t,
+      ),
+    ).toContain('version installée : ?');
+  });
+
   it('words the same motive differently in English than in French, keeping the count', () => {
     const french = resolveRefusalWording({ kind: 'reviews-in-progress', count: 2 }, t);
     setLanguage('en');
