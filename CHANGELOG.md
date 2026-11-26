@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.57.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.57.0...reviewflow-v3.57.1) (2026-11-26)
+
+
+### Fixed
+
+* [#448](https://github.com/DGouron/review-flow/issues/448) self-update discovers the running install and verifies the installed version ([#449](https://github.com/DGouron/review-flow/issues/449)) ([c4c0c9a](https://github.com/DGouron/review-flow/commit/c4c0c9ad9b0c95fef2e86e91e8d54fae7b0a6a4e))
+* **review-brief:** spec-226 cache folder collision and concurrent generations ([#445](https://github.com/DGouron/review-flow/issues/445)) ([a110d54](https://github.com/DGouron/review-flow/commit/a110d544f20f2a45bd57cbb8d5ad23452d03c9bb))
+
 ## [3.57.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.56.2...reviewflow-v3.57.0) (2026-11-26)
 
 
