@@ -293,6 +293,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     getQualityThreshold: (projectPath: string) =>
       loadProjectConfig(projectPath)?.qualityThreshold ?? null,
     statsGateway: deps.statsGateway,
+    getSyncSummary: (projectPath: string) => deps.syncSummaryGateway.get(projectPath),
     reviewContextGateway: deps.reviewContextGateway,
     cancelJob,
     buildJobId: createJobId,
@@ -438,6 +439,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
         deps.reviewRequestTrackingGateway,
         threadFetchGatewayFactory(platform),
       ),
+    syncWithPlatform: deps.syncWithPlatform,
     recordReviewCompletion: new RecordReviewCompletionUseCase(deps.reviewRequestTrackingGateway),
     enforceBudget,
     broadcastBudgetExceeded,

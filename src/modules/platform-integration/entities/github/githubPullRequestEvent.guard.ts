@@ -10,6 +10,7 @@ const gitHubPullRequestEventSchema = z.object({
     title: z.string(),
     body: z.string().optional(),
     state: z.enum(['open', 'closed']),
+    merged: z.boolean().optional(),
     draft: z.boolean(),
     html_url: z.string(),
     user: z.object({ login: z.string() }).optional(),

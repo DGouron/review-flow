@@ -353,9 +353,35 @@ export function filterGitHubPrClose(event: GitHubPullRequestEvent): FilterResult
     return { shouldProcess: false, reason: `State is ${pr.state}, not closed` };
   }
 
+  if (pr.merged === true) {
+    return { shouldProcess: false, reason: 'PR was merged, not closed' };
+  }
+
   return {
     shouldProcess: true,
     reason: 'PR was closed',
+    mergeRequestNumber: pr.number,
+    projectPath: event.repository.full_name,
+    mergeRequestUrl: pr.html_url,
+    sourceBranch: pr.head.ref,
+    targetBranch: pr.base.ref,
+  };
+}
+
+/**
+ * Check if a GitHub PR was merged.
+ * GitHub sends a merge as action "closed" with pull_request.merged = true.
+ */
+export function filterGitHubPrMerge(event: GitHubPullRequestEvent): FilterResult {
+  const pr = event.pull_request;
+
+  if (event.action !== 'closed' || pr.merged !== true) {
+    return { shouldProcess: false, reason: `Action is ${event.action}, PR not merged` };
+  }
+
+  return {
+    shouldProcess: true,
+    reason: 'PR was merged',
     mergeRequestNumber: pr.number,
     projectPath: event.repository.full_name,
     mergeRequestUrl: pr.html_url,
