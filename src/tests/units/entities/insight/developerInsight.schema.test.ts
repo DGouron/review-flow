@@ -119,7 +119,6 @@ describe('DeveloperInsight schema', () => {
   it('should validate metrics field with raw developer numbers', () => {
     const insight = DeveloperInsightFactory.create({
       metrics: {
-        averageScore: 8.3,
         averageBlocking: 0.1,
         averageWarnings: 1.4,
         averageDuration: 60000,
@@ -135,7 +134,7 @@ describe('DeveloperInsight schema', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.metrics).toBeDefined();
-      expect(result.data.metrics.averageScore).toBe(8.3);
+      expect(result.data.metrics).not.toHaveProperty('averageScore');
       expect(result.data.metrics.averageBlocking).toBe(0.1);
       expect(result.data.metrics.firstReviewQualityRate).toBe(0.85);
     }
@@ -147,8 +146,8 @@ describe('DeveloperInsight schema', () => {
         {
           category: 'quality',
           type: 'strength',
-          descriptionKey: 'insight.quality.highScore',
-          params: { score: 8.3, teamAverage: 7.5 },
+          descriptionKey: 'insight.quality.highReadiness',
+          params: { readyRate: 80, teamReadyRate: 60, percent: 33 },
         },
       ],
     });
@@ -160,7 +159,9 @@ describe('DeveloperInsight schema', () => {
       expect(result.data.insightDescriptions).toHaveLength(1);
       expect(result.data.insightDescriptions[0].category).toBe('quality');
       expect(result.data.insightDescriptions[0].type).toBe('strength');
-      expect(result.data.insightDescriptions[0].descriptionKey).toBe('insight.quality.highScore');
+      expect(result.data.insightDescriptions[0].descriptionKey).toBe(
+        'insight.quality.highReadiness',
+      );
     }
   });
 

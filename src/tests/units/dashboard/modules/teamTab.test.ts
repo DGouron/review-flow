@@ -30,7 +30,6 @@ function createDeveloperViewModel(overrides = {}) {
     topPriority: 'iteration',
     reviewCount: 12,
     metrics: {
-      averageScore: 7.5,
       averageBlocking: 0.3,
       averageWarnings: 1.2,
       averageDuration: 300,
@@ -388,12 +387,11 @@ describe('renderTeamTab', () => {
     expect(html).toContain('tier-warning');
   });
 
-  it('should render metric chips with avg score and quality rate', () => {
+  it('should render metric chips with the ready-at-first-review rate', () => {
     const data = createInsightsData({
       developers: [
         createDeveloperViewModel({
           metrics: {
-            averageScore: 8.3,
             averageBlocking: 0.1,
             averageWarnings: 1.4,
             averageDuration: 300,
@@ -408,8 +406,7 @@ describe('renderTeamTab', () => {
 
     const html = renderTeamTab(data, translate);
 
-    expect(html).toContain('dev-chip-score');
-    expect(html).toContain('8.3');
+    expect(html).not.toContain('dev-chip-score');
     expect(html).toContain('dev-chip-quality');
     expect(html).toContain('90%');
   });

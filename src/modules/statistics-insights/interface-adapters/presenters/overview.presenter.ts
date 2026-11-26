@@ -2,10 +2,15 @@ import type { ReviewFileInfo } from '@/modules/review-execution/entities/review/
 import type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
 import { Duration } from '@/modules/shared-kernel/entities/shared/duration.valueObject.js';
 import type { ProjectStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
+import {
+  gradeRank,
+  outcomeOfReviewStats,
+} from '@/modules/statistics-insights/entities/stats/reviewReadiness.js';
 
 export interface OverviewProjectStatsSummary {
   totalReviews: number;
-  averageScore: number | null;
+  /** Percentage of judged reviews whose verdict is ready. */
+  readyRate: number | null;
   averageDuration: number;
   totalBlocking: number;
   totalWarnings: number;
@@ -22,7 +27,7 @@ const SPARKLINE_MAX_POINTS = 10;
 const RECENT_FEED_MAX_ITEMS = 10;
 const EMPTY_ELAPSED_LABEL = '—';
 const EMPTY_PROJECT_LABEL = '—';
-const EMPTY_SCORE_LABEL = '-';
+const EMPTY_READY_RATE_LABEL = '-';
 
 export interface OverviewActiveJobInput {
   id: string;
@@ -75,7 +80,8 @@ export interface OverviewProjectCardItem {
   projectPath: string;
   platform: 'gitlab' | 'github';
   totalReviews: number;
-  averageScoreLabel: string;
+  readyRateLabel: string;
+  /** Grade rank of the latest judged reviews, A = 4 down to E = 0. */
   sparklinePoints: number[];
   isEmptyHistory: boolean;
   externalLink?: string;
@@ -149,9 +155,9 @@ function formatElapsed(now: Date, startedAt: string | null): string {
   return Duration.fromMilliseconds(elapsedMs).formatted;
 }
 
-function formatAverageScore(averageScore: number | null): string {
-  if (averageScore === null) return EMPTY_SCORE_LABEL;
-  return averageScore.toFixed(1);
+function formatReadyRate(readyRate: number | null): string {
+  if (readyRate === null) return EMPTY_READY_RATE_LABEL;
+  return `${readyRate}%`;
 }
 
 function buildSparklinePoints(reviews: OverviewProjectStatsEntry['stats']['reviews']): number[] {
@@ -160,11 +166,9 @@ function buildSparklinePoints(reviews: OverviewProjectStatsEntry['stats']['revie
   );
   const lastTen = sorted.slice(-SPARKLINE_MAX_POINTS);
   return lastTen
-    .filter(
-      (review): review is typeof review & { score: number } =>
-        review.score !== null && review.score !== undefined,
-    )
-    .map((review) => review.score);
+    .map((review) => outcomeOfReviewStats(review).grade)
+    .filter((grade) => grade !== null)
+    .map(gradeRank);
 }
 
 function buildActiveReviewItem(
@@ -211,7 +215,7 @@ function buildProjectCard(
       projectPath: repository.localPath,
       platform: repository.platform,
       totalReviews: 0,
-      averageScoreLabel: EMPTY_SCORE_LABEL,
+      readyRateLabel: EMPTY_READY_RATE_LABEL,
       sparklinePoints: [],
       isEmptyHistory: true,
     };
@@ -224,7 +228,7 @@ function buildProjectCard(
     projectPath: repository.localPath,
     platform: repository.platform,
     totalReviews: statsEntry.summary.totalReviews,
-    averageScoreLabel: formatAverageScore(statsEntry.summary.averageScore),
+    readyRateLabel: formatReadyRate(statsEntry.summary.readyRate),
     sparklinePoints,
     isEmptyHistory: statsEntry.summary.totalReviews === 0,
   };

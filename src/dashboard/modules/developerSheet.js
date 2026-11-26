@@ -43,10 +43,6 @@ function renderMetricsSection(metrics, translate) {
     <div class="sheet-section">
       <div class="sheet-section-title">${icon('bar-chart-2')} ${translate('devSheet.metrics')}</div>
       <div class="sheet-stats-grid">
-        <div class="sheet-stat-card dev-score">
-          <div class="sheet-stat-label">${icon('star')} ${translate('devSheet.metrics.averageScore')}</div>
-          <div class="sheet-stat-value">${formatNumber(metrics.averageScore)}<span class="sheet-stat-unit">/10</span></div>
-        </div>
         <div class="sheet-stat-card dev-blocking">
           <div class="sheet-stat-label">${icon('shield-alert')} ${translate('devSheet.metrics.blockingPerReview')}</div>
           <div class="sheet-stat-value">${formatNumber(metrics.averageBlocking)}</div>

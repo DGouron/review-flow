@@ -12,6 +12,10 @@ import type {
 } from '@/modules/statistics-insights/entities/insight/persistedInsightsData.js';
 import type { TeamInsight } from '@/modules/statistics-insights/entities/insight/teamInsight.js';
 import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
+import {
+  outcomeOfReviewStats,
+  readinessOf,
+} from '@/modules/statistics-insights/entities/stats/reviewReadiness.js';
 import { computeTeamInsights } from '@/modules/statistics-insights/usecases/insights/computeTeamInsights.usecase.js';
 import type {
   DeveloperMetrics as ServiceDeveloperMetrics,
@@ -27,9 +31,17 @@ import {
   identifyTopPriority,
   computeTitle,
   computeOverallLevel,
+  computeVolumeGradeCorrelation,
+  firstReviewQualityRateOf,
+  NEUTRAL_READY_RATE,
 } from '@/modules/statistics-insights/usecases/insights/insightLevelComputation.service.js';
 
 const RECENT_REVIEWS_WINDOW = 20;
+
+type DeveloperAccumulators = Omit<PersistedDeveloperMetrics, 'totalScore' | 'scoredReviewCount'> & {
+  judgedReviewCount: number;
+  readyReviewCount: number;
+};
 
 interface InsightsWithPersistenceResult {
   developerInsights: DeveloperInsight[];
@@ -86,14 +98,11 @@ function createEmptyPersistedData(): PersistedInsightsData {
 function updateDeveloperMetrics(
   existingDevelopers: PersistedDeveloperMetrics[],
   newReviews: ReviewStats[],
-): PersistedDeveloperMetrics[] {
-  const developerMap = new Map<string, PersistedDeveloperMetrics>();
+): DeveloperAccumulators[] {
+  const developerMap = new Map<string, DeveloperAccumulators>();
 
   for (const developer of existingDevelopers) {
-    developerMap.set(developer.developerName, {
-      ...developer,
-      recentReviews: [...developer.recentReviews],
-    });
+    developerMap.set(developer.developerName, migrateDeveloper(developer));
   }
 
   for (const review of newReviews) {
@@ -112,16 +121,39 @@ function updateDeveloperMetrics(
   return Array.from(developerMap.values());
 }
 
-function updateExistingDeveloper(developer: PersistedDeveloperMetrics, review: ReviewStats): void {
+/** Drops the legacy score accumulators; files written before verdicts are seeded from their recent reviews. */
+function migrateDeveloper(developer: PersistedDeveloperMetrics): DeveloperAccumulators {
+  const {
+    totalScore: _legacyTotalScore,
+    scoredReviewCount: _legacyScoredReviewCount,
+    judgedReviewCount,
+    readyReviewCount,
+    ...accumulators
+  } = developer;
+  const isLegacy = judgedReviewCount === undefined || readyReviewCount === undefined;
+  const seeded = isLegacy
+    ? readinessOf(developer.recentReviews)
+    : { judged: judgedReviewCount, ready: readyReviewCount };
+
+  return {
+    ...accumulators,
+    judgedReviewCount: seeded.judged,
+    readyReviewCount: seeded.ready,
+    recentReviews: [...developer.recentReviews],
+  };
+}
+
+function updateExistingDeveloper(developer: DeveloperAccumulators, review: ReviewStats): void {
   developer.totalReviews += 1;
   developer.totalBlocking += review.blocking;
   developer.totalWarnings += review.warnings;
   developer.totalSuggestions += review.suggestions ?? 0;
   developer.totalDuration += review.duration;
 
-  if (review.score !== null) {
-    developer.totalScore += review.score;
-    developer.scoredReviewCount += 1;
+  const { verdict } = outcomeOfReviewStats(review);
+  if (verdict !== null) {
+    developer.judgedReviewCount += 1;
+    if (verdict === 'ready') developer.readyReviewCount += 1;
   }
 
   developer.recentReviews.push(review);
@@ -130,12 +162,13 @@ function updateExistingDeveloper(developer: PersistedDeveloperMetrics, review: R
   }
 }
 
-function createDeveloperFromReview(review: ReviewStats): PersistedDeveloperMetrics {
+function createDeveloperFromReview(review: ReviewStats): DeveloperAccumulators {
+  const { judged, ready } = readinessOf([review]);
   return {
     developerName: review.assignedBy ?? '',
     totalReviews: 1,
-    totalScore: review.score ?? 0,
-    scoredReviewCount: review.score !== null ? 1 : 0,
+    judgedReviewCount: judged,
+    readyReviewCount: ready,
     totalBlocking: review.blocking,
     totalWarnings: review.warnings,
     totalSuggestions: review.suggestions ?? 0,
@@ -151,11 +184,11 @@ function createDeveloperFromReview(review: ReviewStats): PersistedDeveloperMetri
  * Diff stats are only retained for the rolling window of recent reviews kept in
  * project stats. Recompute each developer's diff-stat aggregates from that window
  * so backfilled diff stats on already-processed reviews are picked up, and refresh
- * the per-developer recentReviews so volume/score correlation can be computed.
+ * the per-developer recentReviews so volume/grade correlation can be computed.
  * Developers with no review in the window keep their previously persisted values.
  */
 function reconcileDiffStatsFromWindow(
-  developers: PersistedDeveloperMetrics[],
+  developers: DeveloperAccumulators[],
   windowReviews: ReviewStats[],
 ): void {
   if (windowReviews.length === 0) return;
@@ -193,7 +226,7 @@ function reconcileDiffStatsFromWindow(
 }
 
 function computeInsightsFromPersistedMetrics(
-  developers: PersistedDeveloperMetrics[],
+  developers: DeveloperAccumulators[],
 ): DeveloperInsight[] {
   if (developers.length === 0) {
     return [];
@@ -245,14 +278,13 @@ function computeInsightsFromPersistedMetrics(
       topPriority,
       reviewCount: developer.totalReviews,
       metrics: {
-        averageScore: serviceMetrics.averageScore,
         averageBlocking: serviceMetrics.averageBlocking,
         averageWarnings: serviceMetrics.averageWarnings,
         averageDuration: serviceMetrics.averageDuration,
         totalFollowups: null,
         averageAdditions,
         averageDeletions,
-        firstReviewQualityRate: computeFirstReviewQualityRate(trendReviews),
+        firstReviewQualityRate: firstReviewQualityRateOf(trendReviews),
       },
       insightDescriptions,
     });
@@ -262,7 +294,7 @@ function computeInsightsFromPersistedMetrics(
 }
 
 function buildReviewsByDeveloperMap(
-  developers: PersistedDeveloperMetrics[],
+  developers: DeveloperAccumulators[],
 ): Map<string, ReviewStats[]> {
   const map = new Map<string, ReviewStats[]>();
 
@@ -274,10 +306,12 @@ function buildReviewsByDeveloperMap(
 }
 
 function buildDeveloperMetricsFromCumulative(
-  developer: PersistedDeveloperMetrics,
+  developer: DeveloperAccumulators,
 ): ServiceDeveloperMetrics {
-  const averageScore =
-    developer.scoredReviewCount > 0 ? developer.totalScore / developer.scoredReviewCount : 5;
+  const readyRate =
+    developer.judgedReviewCount > 0
+      ? developer.readyReviewCount / developer.judgedReviewCount
+      : NEUTRAL_READY_RATE;
   const averageBlocking =
     developer.totalReviews > 0 ? developer.totalBlocking / developer.totalReviews : 0;
   const averageWarnings =
@@ -289,61 +323,14 @@ function buildDeveloperMetricsFromCumulative(
       ? (developer.totalAdditions + developer.totalDeletions) / developer.diffStatsReviewCount
       : 0;
 
-  const correlation = computeVolumeScoreCorrelationFromRecent(developer.recentReviews);
-
   return {
-    averageScore,
+    readyRate,
     averageBlocking,
     averageWarnings,
     averageDuration,
     averageCodeVolume,
-    codeVolumeScoreCorrelation: correlation,
+    codeVolumeGradeCorrelation: computeVolumeGradeCorrelation(developer.recentReviews),
   };
-}
-
-function computeVolumeScoreCorrelationFromRecent(reviews: ReviewStats[]): number {
-  const reviewsWithBoth = reviews.filter(
-    (review) =>
-      review.score !== null && review.diffStats !== null && review.diffStats !== undefined,
-  );
-
-  if (reviewsWithBoth.length < 3) return 0;
-
-  const scores = reviewsWithBoth.map((review) => review.score ?? 0);
-  const volumes = reviewsWithBoth.map(
-    (review) => (review.diffStats?.additions ?? 0) + (review.diffStats?.deletions ?? 0),
-  );
-
-  const avgScore = scores.reduce((sum, value) => sum + value, 0) / scores.length;
-  const avgVolume = volumes.reduce((sum, value) => sum + value, 0) / volumes.length;
-
-  let numerator = 0;
-  let denominatorScore = 0;
-  let denominatorVolume = 0;
-
-  for (let index = 0; index < reviewsWithBoth.length; index++) {
-    const scoreDiff = scores[index] - avgScore;
-    const volumeDiff = volumes[index] - avgVolume;
-    numerator += scoreDiff * volumeDiff;
-    denominatorScore += scoreDiff * scoreDiff;
-    denominatorVolume += volumeDiff * volumeDiff;
-  }
-
-  const denominator = Math.sqrt(denominatorScore * denominatorVolume);
-  if (denominator === 0) return 0;
-
-  return numerator / denominator;
-}
-
-const QUALITY_SCORE_THRESHOLD = 7;
-
-function computeFirstReviewQualityRate(reviews: ReviewStats[]): number {
-  const reviewsWithScore = reviews.filter((review) => review.score !== null);
-  if (reviewsWithScore.length === 0) return 0;
-  const qualityReviews = reviewsWithScore.filter(
-    (review) => (review.score ?? 0) >= QUALITY_SCORE_THRESHOLD && review.blocking === 0,
-  );
-  return qualityReviews.length / reviewsWithScore.length;
 }
 
 function computePercentDifference(value: number, teamAverage: number): number {
@@ -410,14 +397,14 @@ function generateStrengthDescription(
 ): InsightDescription | null {
   switch (category) {
     case 'quality': {
-      const percent = computePercentDifference(metrics.averageScore, teamMetrics.averageScore);
+      const percent = computePercentDifference(metrics.readyRate, teamMetrics.readyRate);
       return {
         category: 'quality',
         type: 'strength',
-        descriptionKey: 'insight.quality.highScore',
+        descriptionKey: 'insight.quality.highReadiness',
         params: {
-          score: Math.round(metrics.averageScore * 10) / 10,
-          teamAverage: Math.round(teamMetrics.averageScore * 10) / 10,
+          readyRate: Math.round(metrics.readyRate * 100),
+          teamReadyRate: Math.round(teamMetrics.readyRate * 100),
           percent: Math.abs(percent),
         },
       };
@@ -446,7 +433,7 @@ function generateStrengthDescription(
         params: { lines: Math.round(metrics.averageCodeVolume) },
       };
     case 'iteration': {
-      const qualityRate = computeFirstReviewQualityRate(reviews);
+      const qualityRate = firstReviewQualityRateOf(reviews);
       return {
         category: 'iteration',
         type: 'strength',
@@ -504,7 +491,7 @@ function generateWeaknessDescription(
         params: { lines: Math.round(metrics.averageCodeVolume) },
       };
     case 'iteration': {
-      const qualityRate = computeFirstReviewQualityRate(reviews);
+      const qualityRate = firstReviewQualityRateOf(reviews);
       return {
         category: 'iteration',
         type: 'weakness',

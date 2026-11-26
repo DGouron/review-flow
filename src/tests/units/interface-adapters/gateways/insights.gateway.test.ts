@@ -65,8 +65,8 @@ describe('FileSystemInsightsGateway', () => {
           {
             developerName: 'alice',
             totalReviews: 10,
-            totalScore: 75,
-            scoredReviewCount: 9,
+            judgedReviewCount: 9,
+            readyReviewCount: 6,
             totalBlocking: 5,
             totalWarnings: 12,
             totalSuggestions: 20,
@@ -116,8 +116,8 @@ describe('FileSystemInsightsGateway', () => {
           {
             developerName: 'bob',
             totalReviews: 5,
-            totalScore: 40,
-            scoredReviewCount: 5,
+            judgedReviewCount: 5,
+            readyReviewCount: 3,
             totalBlocking: 2,
             totalWarnings: 8,
             totalSuggestions: 10,

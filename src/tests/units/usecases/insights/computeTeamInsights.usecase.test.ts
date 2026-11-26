@@ -142,6 +142,10 @@ describe('computeTeamInsights', () => {
     const result = computeTeamInsights(insights);
 
     expect(result.tips.length).toBeGreaterThan(0);
+    expect(result.tips).toContain(
+      '2 developers have a low quality level — review coding standards and provide additional training',
+    );
+    expect(result.tips.join(' ')).not.toMatch(/score/i);
   });
 
   it('should produce valid average levels between 1 and 10', () => {

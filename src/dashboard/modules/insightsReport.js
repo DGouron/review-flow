@@ -147,10 +147,6 @@ function renderPrintDeveloper(developer, translate, aiDeveloper) {
         <h4>${translate('export.metrics')}</h4>
         <div class="print-metrics-grid">
           <div class="print-metric">
-            <span class="print-metric-value">${Number(developer.metrics.averageScore).toFixed(1)}/10</span>
-            <span class="print-metric-label">${translate('export.avgScore')}</span>
-          </div>
-          <div class="print-metric">
             <span class="print-metric-value">${Number(developer.metrics.averageBlocking).toFixed(1)}</span>
             <span class="print-metric-label">${translate('export.avgBlocking')}</span>
           </div>

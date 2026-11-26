@@ -38,8 +38,8 @@ const SPARKLINE_PADDING = 2;
  * @property {string} projectPath
  * @property {'gitlab' | 'github'} platform
  * @property {number} totalReviews
- * @property {string} averageScoreLabel
- * @property {number[]} sparklinePoints
+ * @property {string} readyRateLabel
+ * @property {number[]} sparklinePoints Grade rank of the latest judged reviews, A = 4 down to E = 0
  * @property {boolean} isEmptyHistory
  * @property {string} [externalLink]
  */
@@ -178,7 +178,7 @@ function renderProjectCard(card) {
       </div>
       <div class="overview-project-card-totals">
         <span class="overview-project-card-count">${escapeHtml(String(card.totalReviews))} reviews</span>
-        <span class="overview-project-card-score">Score ${escapeHtml(card.averageScoreLabel)}</span>
+        <span class="overview-project-card-score">Prêtes ${escapeHtml(card.readyRateLabel)}</span>
       </div>
       <div class="overview-project-card-sparkline">${sparkline}</div>
     </button>

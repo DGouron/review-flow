@@ -23,7 +23,6 @@ describe('projectStats schema validation', () => {
     const oldFormat = {
       totalReviews: 2,
       totalDuration: 120000,
-      averageScore: 7,
       averageDuration: 60000,
       totalBlocking: 1,
       totalWarnings: 3,
@@ -52,11 +51,5 @@ describe('projectStats schema validation', () => {
     const result = safeParseProjectStats({ totalReviews: 'oops' });
 
     expect(result.success).toBe(false);
-  });
-
-  it('accepts a null averageScore', () => {
-    const result = safeParseProjectStats(ProjectStatsFactory.create({ averageScore: null }));
-
-    expect(result.success).toBe(true);
   });
 });

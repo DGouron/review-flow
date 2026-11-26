@@ -183,14 +183,14 @@ describe('Acceptance — SPEC-91: Dashboard Multi-Project Overview', () => {
             project: 'frontend',
             path: '/repos/frontend',
             totalReviews: 12,
-            averageScore: 7.2,
+            readyRate: 70,
             reviews: frontendReviews,
           }),
           ProjectStatsApiResponseFactory.create({
             project: 'api',
             path: '/repos/api',
             totalReviews: 8,
-            averageScore: 8.1,
+            readyRate: 80,
             reviews: apiReviews,
           }),
         ],
@@ -203,10 +203,10 @@ describe('Acceptance — SPEC-91: Dashboard Multi-Project Overview', () => {
       );
       const apiCard = viewModel.projectCards.items.find((card) => card.projectName === 'api');
       expect(frontendCard?.totalReviews).toBe(12);
-      expect(frontendCard?.averageScoreLabel).toBe('7.2');
+      expect(frontendCard?.readyRateLabel).toBe('70%');
       expect(frontendCard?.sparklinePoints).toHaveLength(10);
       expect(apiCard?.totalReviews).toBe(8);
-      expect(apiCard?.averageScoreLabel).toBe('8.1');
+      expect(apiCard?.readyRateLabel).toBe('80%');
       expect(apiCard?.sparklinePoints).toHaveLength(8);
       expect(apiCard?.isEmptyHistory).toBe(false);
     });
@@ -272,7 +272,7 @@ describe('Acceptance — SPEC-91: Dashboard Multi-Project Overview', () => {
             project: 'new-project',
             path: '/repos/new',
             totalReviews: 0,
-            averageScore: null,
+            readyRate: null,
             reviews: [],
           }),
         ],
@@ -282,7 +282,7 @@ describe('Acceptance — SPEC-91: Dashboard Multi-Project Overview', () => {
       expect(viewModel.projectCards.items).toHaveLength(1);
       const card = viewModel.projectCards.items[0];
       expect(card?.totalReviews).toBe(0);
-      expect(card?.averageScoreLabel).toBe('-');
+      expect(card?.readyRateLabel).toBe('-');
       expect(card?.sparklinePoints).toEqual([]);
       expect(card?.isEmptyHistory).toBe(true);
     });
