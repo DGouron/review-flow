@@ -137,6 +137,12 @@ function renderRowMeta(row, t) {
   return `<div class="queue-meta">${reason}${scope}${breaking}${author}${threads}${age}</div>`;
 }
 
+function renderExplainButton(row, t, options) {
+  const isLoading = options.briefStatusById?.[row.id] === 'loading';
+  const label = t('brief.explainRow', { number: `${row.prefix}${row.mrNumber}` });
+  return `<button type="button" class="btn btn-ask" data-action="explain" data-mr-id="${escapeHtml(row.id)}" aria-label="${escapeHtml(label)}"${isLoading ? ' aria-busy="true"' : ''}>${icon(isLoading ? 'loader-circle' : 'circle-help', isLoading ? 'spinning' : '')}${escapeHtml(t('brief.explain'))}</button>`;
+}
+
 function renderRow(row, t, options) {
   const isSelected = row.id === options.selectedId;
   const openLabel = t('queue.action.open');
@@ -147,6 +153,7 @@ function renderRow(row, t, options) {
     </div>
     <div class="queue-row-side">
       ${renderGrade(row, t)}
+      ${renderExplainButton(row, t, options)}
       ${renderRowAction(row, t, options)}
       <a class="btn btn-ghost btn-icon" href="${sanitizeHttpUrl(row.url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(openLabel)}" title="${escapeHtml(openLabel)}">${icon('external-link')}</a>
     </div>
@@ -156,11 +163,17 @@ function renderRow(row, t, options) {
 /**
  * @param {ReturnType<typeof import('./reviewQueue.js').buildReviewQueueModel>} model
  * @param {Translate} t
- * @param {{ selectedId?: string | null, armedNudge?: string | null, isLoading?: boolean }} [options]
+ * @param {{ selectedId?: string | null, armedNudge?: string | null, isLoading?: boolean, briefStatusById?: Record<string, string> }} [options]
  * @returns {string}
  */
 export function renderReviewQueueHtml(model, t, options = {}) {
-  const safeOptions = { selectedId: null, armedNudge: null, isLoading: false, ...options };
+  const safeOptions = {
+    selectedId: null,
+    armedNudge: null,
+    isLoading: false,
+    briefStatusById: {},
+    ...options,
+  };
   const emptyKey = safeOptions.isLoading ? 'queue.loading' : 'queue.empty';
   const rows =
     model.rows.length === 0

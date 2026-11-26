@@ -251,6 +251,7 @@
     import { renderKeyInsightsHtml } from './modules/keyInsights.js';
     import { buildTeamViewModel, renderTeamViewHtml } from './modules/teamView.js';
     import { renderWorktreeViewHtml } from './modules/worktreeView.js';
+    import { briefToText, digDeeperQuestion, renderBriefHtml, requestBrief } from './modules/prBrief.js';
     import { renderDeveloperSheetContent, drawRadarChart } from './modules/developerSheet.js';
     import { buildInsightsReport } from './modules/insightsReport.js';
     import { fetchTokenUsageSummary, renderTokenUsageTile, startOfCurrentMonthUtc } from './modules/tokenUsage.js';
@@ -1828,6 +1829,7 @@
       if (overviewSection) overviewSection.classList.add('hidden');
       selectedMrId = null;
       authorFilter = null;
+      briefStates.clear();
       renderDashboardTabs();
       renderReviewQueue();
       loadProjectConfigFromPath(projectPath);
@@ -2554,6 +2556,7 @@
     });
 
     // SPEC-230 — redesigned shell: views, review queue by actor, side panel.
+    const briefStates = new Map();
     let activeView = readActiveView();
     let activeLane = 'approve';
     let authorFilter = null;
@@ -2670,6 +2673,7 @@
           selectedId: selectedMrId,
           armedNudge,
           isLoading: loadingState.mrTracking > 0,
+          briefStatusById: Object.fromEntries([...briefStates].map(([mrId, state]) => [mrId, state.status])),
         });
       }
       renderViewNav();
@@ -2699,6 +2703,8 @@
       if (prPanel) {
         prPanel.hidden = !showPr;
         prPanel.innerHTML = showPr ? renderPrDetailHtml(buildPrDetailModel(row, trackedMergeRequestById(row.id)), t) : '';
+        const briefSlot = showPr ? prPanel.querySelector('#pr-brief-slot') : null;
+        if (briefSlot) briefSlot.innerHTML = renderBriefHtml(briefStates.get(row.id) ?? { status: 'idle' }, t, getLanguage());
       }
       if (emberPanel) emberPanel.hidden = showPr;
       emberSelection = row ? { prefix: row.prefix, mrNumber: row.mrNumber, subject: row.subject } : null;
@@ -2753,6 +2759,43 @@
         console.error('Error nudging authors:', error);
         showToast(t('queue.toast.nudgeFailed'), 'error');
       }
+    }
+
+    async function explainMergeRequest(mrId, refresh) {
+      const row = lastQueueModel?.allRows.find((candidate) => candidate.id === mrId);
+      if (!row || !currentProjectPath) return;
+      selectedMrId = mrId;
+      panelTab = 'pr';
+      const current = briefStates.get(mrId);
+      if (!refresh && (current?.status === 'ready' || current?.status === 'loading')) {
+        renderReviewQueue();
+        return;
+      }
+      trackUsefulAction('other');
+      briefStates.set(mrId, { status: 'loading' });
+      renderReviewQueue();
+      const projectPath = currentProjectPath;
+      const outcome = await requestBrief({ projectPath, mrNumber: row.mrNumber, refresh });
+      if (projectPath !== currentProjectPath) return;
+      briefStates.set(mrId, outcome);
+      renderReviewQueue();
+    }
+
+    async function copyBrief(mrId) {
+      const state = briefStates.get(mrId);
+      if (state?.status !== 'ready') return;
+      try {
+        await navigator.clipboard.writeText(briefToText(state.brief, t, getLanguage()));
+        showToast(t('brief.copied'), 'success');
+      } catch (error) {
+        console.error('Error copying the brief:', error);
+      }
+    }
+
+    function digIntoBrief(mrId) {
+      const state = briefStates.get(mrId);
+      if (state?.status !== 'ready') return;
+      askEmber(digDeeperQuestion(state.brief, t));
     }
 
     function handleShellAction(action, element) {
@@ -2822,6 +2865,18 @@
           return true;
         case 'recheck-claude':
           checkClaudeStatus();
+          return true;
+        case 'explain':
+          explainMergeRequest(mrId || selectedMrId, false);
+          return true;
+        case 'brief-refresh':
+          explainMergeRequest(selectedMrId, true);
+          return true;
+        case 'brief-copy':
+          copyBrief(selectedMrId);
+          return true;
+        case 'brief-dig':
+          digIntoBrief(selectedMrId);
           return true;
         case 'filter-member':
           showMemberQueue(element.dataset.author, element.dataset.lane);
