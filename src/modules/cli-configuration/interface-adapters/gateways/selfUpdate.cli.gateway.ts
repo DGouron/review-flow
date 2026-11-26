@@ -10,6 +10,8 @@ const defaultExecFileAsync = promisify(execFile);
 
 const RESTART_DELAY_SECONDS = 2;
 
+const EXIT_CODE_ASKING_SUPERVISOR_RESTART = 75;
+
 export interface SelfUpdateCliDependencies {
   execFileAsync: (command: string, args: string[]) => Promise<{ stdout: string; stderr: string }>;
   killProcess: (pid: number, signal: string) => void;
@@ -19,6 +21,12 @@ export interface SelfUpdateCliDependencies {
    * doing so orphaned the running daemon and left `reviewflow stop` unable to find it.
    */
   pidFilePath: string;
+  /**
+   * Under systemd a clean stop is never restarted and a detached restarter dies with the unit,
+   * so the restart is handed over to systemd through a failure exit code.
+   */
+  isSupervisedBySystemd: boolean;
+  exitProcess: (code: number) => void;
 }
 
 export function buildRestartArgs(port: number | undefined): string[] {
@@ -48,6 +56,8 @@ function createDefaultDependencies(): SelfUpdateCliDependencies {
     killProcess: (pid, signal) => process.kill(pid, signal),
     spawnDaemonDelayed: defaultSpawnDaemonDelayed,
     pidFilePath: PID_FILE_PATH,
+    isSupervisedBySystemd: Boolean(process.env.INVOCATION_ID),
+    exitProcess: (code) => process.exit(code),
   };
 }
 
@@ -74,6 +84,11 @@ export class SelfUpdateCliGateway implements SelfUpdateCommandPort {
   }
 
   async restartDaemon(serverPort?: number): Promise<void> {
+    if (this.dependencies.isSupervisedBySystemd) {
+      this.dependencies.exitProcess(EXIT_CODE_ASKING_SUPERVISOR_RESTART);
+      return;
+    }
+
     const { pidFilePath } = this.dependencies;
     const pidFileContent = readPidFile(pidFilePath);
     const port = pidFileContent?.port ?? serverPort;

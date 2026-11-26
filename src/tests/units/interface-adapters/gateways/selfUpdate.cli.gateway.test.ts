@@ -25,6 +25,8 @@ function createFakeDependencies(
     killProcess: vi.fn(),
     spawnDaemonDelayed: vi.fn(),
     pidFilePath,
+    isSupervisedBySystemd: false,
+    exitProcess: vi.fn(),
     ...overrides,
   };
 }
@@ -178,6 +180,37 @@ describe('SelfUpdateCliGateway', () => {
 
       const { readPidFile } = await import('@/shared/services/pidFileManager.js');
       expect(readPidFile(pidFilePath)).toBeNull();
+    });
+
+    it('should not exit the process when it is not supervised by systemd', async () => {
+      const deps = createFakeDependencies();
+      const gateway = new SelfUpdateCliGateway(deps);
+
+      await gateway.restartDaemon(3847);
+
+      expect(deps.exitProcess).not.toHaveBeenCalled();
+    });
+
+    describe('when supervised by systemd', () => {
+      it('should exit with a failure code so systemd restarts the updated server', async () => {
+        const deps = createFakeDependencies({ isSupervisedBySystemd: true });
+        const gateway = new SelfUpdateCliGateway(deps);
+
+        await gateway.restartDaemon(3847);
+
+        expect(deps.exitProcess).toHaveBeenCalledWith(75);
+      });
+
+      it('should neither spawn a detached restarter nor signal any process, since systemd kills them with the unit', async () => {
+        writePidFile(pidFilePath, { pid: 9999, startedAt: new Date().toISOString(), port: 4000 });
+        const deps = createFakeDependencies({ isSupervisedBySystemd: true });
+        const gateway = new SelfUpdateCliGateway(deps);
+
+        await gateway.restartDaemon(3847);
+
+        expect(deps.spawnDaemonDelayed).not.toHaveBeenCalled();
+        expect(deps.killProcess).not.toHaveBeenCalled();
+      });
     });
   });
 });

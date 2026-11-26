@@ -163,6 +163,12 @@ yarn build
 sudo systemctl start review-flow
 ```
 
+::: tip Updating from the dashboard
+The dashboard update button also works under systemd: once the new version is installed, Reviewflow
+exits with code `75` and lets systemd start the new version. This requires `Restart=on-failure` (or
+`Restart=always`) in the `[Service]` section of the unit.
+:::
+
 ::: tip Worktrees survive restarts
 The worktree state lives at `~/.reviewflow/worktrees/` (independent of the source checkout). A restart does not invalidate active worktrees; in-flight reviews resume on the next webhook with `ensureWorktree` fast-forwarding the existing worktree.
 :::
