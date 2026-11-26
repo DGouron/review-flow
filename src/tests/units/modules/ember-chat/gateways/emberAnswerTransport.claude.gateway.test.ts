@@ -50,7 +50,7 @@ function settled(): {
 }
 
 function projectDirFor(projectPath: string, homeDir: string): string {
-  const slug = projectPath.replace(/\//g, '-');
+  const slug = projectPath.replace(/[^A-Za-z0-9]/g, '-');
   const dir = join(homeDir, '.claude', 'projects', slug);
   mkdirSync(dir, { recursive: true });
   return dir;
@@ -260,6 +260,27 @@ describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)',
 
     expect(subscriber.chunks).toEqual(['real']);
     expect(subscriber.done).toBe(true);
+  });
+
+  it('scenario #458: reads the transcript Claude writes for a project path containing a dot or an underscore', async () => {
+    const projectPath = join(homeDir, 'review.flow_checkout');
+    const dir = projectDirFor(projectPath, homeDir);
+    writeFileSync(
+      join(dir, 'stub-session-dotted.jsonl'),
+      JSON.stringify({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: 'found' }], stop_reason: 'end_turn' },
+      }) + '\n',
+    );
+
+    const gateway = new EmberAnswerTransportClaudeGateway(sessionGateway, FAST_OPTIONS(homeDir));
+    const { subscriber, finished } = settled();
+
+    gateway.start({ ...startOptions(), projectPath }, subscriber);
+    await finished;
+
+    expect(subscriber.chunks).toEqual(['found']);
+    expect(subscriber.error).toBeNull();
   });
 
   it('times out and stops the session when no transcript ever turn-completes', async () => {

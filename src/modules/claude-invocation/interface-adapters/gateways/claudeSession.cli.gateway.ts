@@ -21,6 +21,7 @@ import {
   type SessionId,
 } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
 import type { SessionUsageSnapshot } from '@/modules/claude-invocation/entities/claudeSession/sessionUsage.schema.js';
+import { claudeProjectFolderOf } from '@/modules/claude-invocation/interface-adapters/gateways/claudeProjectFolder.js';
 import { computeCostUsd } from '@/modules/token-accounting/entities/modelPricing/modelPricing.js';
 
 export interface ClaudeProcessRunArgs {
@@ -280,7 +281,7 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
         this.homeDir,
         '.claude',
         'projects',
-        projectFolderOf(sessionCwd),
+        claudeProjectFolderOf(sessionCwd),
         `${transcriptName}.jsonl`,
       ),
     };
@@ -296,10 +297,6 @@ function readBackgroundJobState(path: string): z.infer<typeof backgroundJobState
   } catch {
     return null;
   }
-}
-
-function projectFolderOf(cwd: string): string {
-  return cwd.replace(/[^A-Za-z0-9]/g, '-');
 }
 
 function onePerMessage(

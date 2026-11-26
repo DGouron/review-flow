@@ -17,7 +17,7 @@ const FAST_OPTIONS = (homeDir: string) => ({
 const PROJECT_PATH = '/home/dev/Documents/Projets/target-project';
 
 function transcriptDir(homeDir: string, projectPath: string): string {
-  const slug = projectPath.replace(/\//g, '-');
+  const slug = projectPath.replace(/[^A-Za-z0-9]/g, '-');
   const dir = join(homeDir, '.claude', 'projects', slug);
   mkdirSync(dir, { recursive: true });
   return dir;
@@ -59,6 +59,23 @@ describe('AiInsightsSessionClaudeGateway (integration with real filesystem)', ()
     expect(sessionGateway.dispatchCalls[0].flags.mcpConfigJson).toBe('{"mcpServers":{}}');
     expect(sessionGateway.stopCalls).toEqual(['stub-session']);
     expect(sessionGateway.removeCalls).toEqual(['stub-session']);
+  });
+
+  it('scenario #458: reads the transcript Claude writes for a project path containing a dot or an underscore', async () => {
+    const dottedProjectPath = '/home/dev/Projets/review.flow_checkout';
+    const dir = transcriptDir(homeDir, dottedProjectPath);
+    writeFileSync(
+      join(dir, 'stub-session-dotted.jsonl'),
+      JSON.stringify({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: '{"found":true}' }], stop_reason: 'end_turn' },
+      }) + '\n',
+    );
+
+    const gateway = new AiInsightsSessionClaudeGateway(sessionGateway, FAST_OPTIONS(homeDir));
+    const result = await gateway.run('insights prompt', dottedProjectPath);
+
+    expect(result).toEqual({ status: 'completed', answer: '{"found":true}' });
   });
 
   it('skips a leading thinking turn and returns the JSON answer that follows', async () => {

@@ -9,6 +9,7 @@ import type {
   ClaudeSessionJobType,
   SessionId,
 } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
+import { claudeProjectFolderOf } from '@/modules/claude-invocation/interface-adapters/gateways/claudeProjectFolder.js';
 import {
   parseStreamJsonEvent,
   extractText,
@@ -84,8 +85,12 @@ export class EmberAnswerRunner {
       return;
     }
 
-    const slug = options.projectPath.replace(/\//g, '-');
-    this.projectDir = join(this.settings.homeDir, '.claude', 'projects', slug);
+    this.projectDir = join(
+      this.settings.homeDir,
+      '.claude',
+      'projects',
+      claudeProjectFolderOf(options.projectPath),
+    );
     this.scheduleTail();
   }
 
