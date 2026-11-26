@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 import type { ClaudeSessionGateway } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
 import type { SessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
+import { claudeProjectFolderOf } from '@/modules/claude-invocation/interface-adapters/gateways/claudeProjectFolder.js';
 import {
   parseStreamJsonEvent,
   extractText,
@@ -65,8 +66,12 @@ export class AiInsightsSessionClaudeGateway implements AiInsightsSessionGateway 
     }
 
     const sessionId = dispatch.sessionId;
-    const slug = projectPath.replace(/\//g, '-');
-    const projectDir = join(this.options.homeDir, '.claude', 'projects', slug);
+    const projectDir = join(
+      this.options.homeDir,
+      '.claude',
+      'projects',
+      claudeProjectFolderOf(projectPath),
+    );
 
     try {
       const answer = await this.readAnswer(projectDir, sessionId);
