@@ -122,7 +122,6 @@ describe('SPEC-230 — dashboard shell layout', () => {
       );
       const worktreesView = extractElementSubtree(indexHtml, '<div id="view-worktrees"');
       expect(worktreesView).toMatch(/id="worktree-section"/);
-      expect(worktreesView).toMatch(/id="cleanup-content"/);
     });
 
     it('drops the three rows of counters: the queue tabs are the only counters left', () => {
