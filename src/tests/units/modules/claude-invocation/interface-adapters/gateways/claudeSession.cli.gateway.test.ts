@@ -570,3 +570,40 @@ describe('ClaudeSessionCliGateway.getSessionUsage for a --bg session', () => {
     }
   });
 });
+
+describe('ClaudeSessionCliGateway when the claude process cannot be spawned (#459)', () => {
+  const unspawnableRunner: ClaudeProcessRunner = async () => {
+    throw Object.assign(new Error('spawn E2BIG'), { code: 'E2BIG' });
+  };
+  const sessionId = parseSessionId('abc12345');
+
+  it('stop reports a failed cleanup instead of rejecting', async () => {
+    const gateway = new ClaudeSessionCliGateway(unspawnableRunner);
+
+    expect(await gateway.stop(sessionId)).toEqual({ success: false, warning: 'spawn E2BIG' });
+  });
+
+  it('remove reports a failed cleanup instead of rejecting', async () => {
+    const gateway = new ClaudeSessionCliGateway(unspawnableRunner);
+
+    expect(await gateway.remove(sessionId)).toEqual({ success: false, warning: 'spawn E2BIG' });
+  });
+
+  it('listAgents reports no agent instead of rejecting', async () => {
+    const gateway = new ClaudeSessionCliGateway(unspawnableRunner);
+
+    expect(await gateway.listAgents()).toEqual([]);
+  });
+
+  it('daemonStatus reports the daemon unreachable instead of rejecting', async () => {
+    const gateway = new ClaudeSessionCliGateway(unspawnableRunner);
+
+    expect(await gateway.daemonStatus()).toEqual({ reachable: false, reason: 'spawn E2BIG' });
+  });
+
+  it('usage reports no API pool instead of rejecting', async () => {
+    const gateway = new ClaudeSessionCliGateway(unspawnableRunner);
+
+    expect(await gateway.usage()).toEqual({ usesApiPool: false, raw: 'spawn E2BIG' });
+  });
+});
