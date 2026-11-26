@@ -696,7 +696,7 @@ body.shell .segment[disabled] { opacity: 0.45; cursor: not-allowed; }
 body.shell .segment [data-lucide],
 body.shell .segment svg { width: 16px; height: 16px; }
 
-body.shell .panel-pr { overflow-y: auto; }
+body.shell .panel-pr { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 body.shell .panel-body { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
 body.shell .panel-empty { padding: 32px 18px; color: var(--ink-2); text-align: center; }
 body.shell .panel-head { display: flex; align-items: flex-start; gap: 12px; }
@@ -717,8 +717,8 @@ body.shell .verdict-title { font-weight: 600; font-size: 15px; }
 body.shell .verdict-sub { font-size: 12.5px; color: var(--ink-2); }
 body.shell .stats-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 body.shell .stat { display: block; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: #101214; }
-body.shell .stat-label { font-size: 12px; color: var(--ink-2); }
-body.shell .stat-value { font-size: 20px; font-weight: 500; margin-top: 2px; }
+body.shell .stat-label { display: block; min-height: 0; font-size: 12px; color: var(--ink-2); }
+body.shell .stat-value { display: block; min-height: 0; font-size: 20px; font-weight: 500; margin-top: 2px; line-height: 1.3; }
 body.shell .next-step { padding: 14px; border-radius: 10px; background: #1A140D; border: 1px solid #3B2A18; }
 body.shell .next-step-label { font-size: 12px; color: #F0A35E; font-weight: 500; }
 body.shell .next-step-value { margin-top: 4px; color: #F3E3D2; }
