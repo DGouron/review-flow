@@ -115,7 +115,7 @@ function generateTips(insights: DeveloperInsight[], weaknesses: InsightCategory[
   );
   if (lowBlockingDevelopers.length >= 2) {
     tips.push(
-      `${lowBlockingDevelopers.length} developers have low quality scores — review coding standards and provide additional training`,
+      `${lowBlockingDevelopers.length} developers have a low quality level — review coding standards and provide additional training`,
     );
   }
 

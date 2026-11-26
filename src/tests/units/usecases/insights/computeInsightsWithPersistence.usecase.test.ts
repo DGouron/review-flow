@@ -81,8 +81,8 @@ describe('computeInsightsWithPersistence', () => {
           PersistedDeveloperMetricsFactory.create({
             developerName: 'alice',
             totalReviews: 3,
-            totalScore: 24,
-            scoredReviewCount: 3,
+            judgedReviewCount: 3,
+            readyReviewCount: 0,
             totalBlocking: 3,
             totalWarnings: 6,
             totalSuggestions: 9,
@@ -116,7 +116,8 @@ describe('computeInsightsWithPersistence', () => {
         id: 'alice-new',
         assignedBy: 'alice',
         mrNumber: 100,
-        score: 9,
+        verdict: 'ready',
+        grade: 'B',
         blocking: 0,
         warnings: 0,
         suggestions: 1,
@@ -128,8 +129,8 @@ describe('computeInsightsWithPersistence', () => {
           PersistedDeveloperMetricsFactory.create({
             developerName: 'alice',
             totalReviews: 5,
-            totalScore: 35,
-            scoredReviewCount: 5,
+            judgedReviewCount: 5,
+            readyReviewCount: 0,
             totalBlocking: 5,
             totalWarnings: 10,
             totalSuggestions: 15,
@@ -151,15 +152,15 @@ describe('computeInsightsWithPersistence', () => {
       );
       expect(aliceMetrics).toBeDefined();
       expect(aliceMetrics?.totalReviews).toBe(6);
-      expect(aliceMetrics?.totalScore).toBe(44);
-      expect(aliceMetrics?.scoredReviewCount).toBe(6);
+      expect(aliceMetrics?.judgedReviewCount).toBe(6);
+      expect(aliceMetrics?.readyReviewCount).toBe(1);
       expect(aliceMetrics?.totalBlocking).toBe(5);
       expect(aliceMetrics?.totalWarnings).toBe(10);
       expect(aliceMetrics?.totalSuggestions).toBe(16);
       expect(aliceMetrics?.totalDuration).toBe(330000);
     });
 
-    it('should handle reviews with null scores in cumulative update', () => {
+    it('should not count an unjudged review in the readiness accumulators', () => {
       const existingReviews = createReviewsForDeveloper('alice', 5, { score: 7 });
       const newReview = ReviewStatsFactory.create({
         id: 'alice-null-score',
@@ -173,8 +174,8 @@ describe('computeInsightsWithPersistence', () => {
           PersistedDeveloperMetricsFactory.create({
             developerName: 'alice',
             totalReviews: 5,
-            totalScore: 35,
-            scoredReviewCount: 5,
+            judgedReviewCount: 5,
+            readyReviewCount: 2,
             recentReviews: existingReviews,
           }),
         ],
@@ -188,8 +189,127 @@ describe('computeInsightsWithPersistence', () => {
         (developer) => developer.developerName === 'alice',
       );
       expect(aliceMetrics?.totalReviews).toBe(6);
-      expect(aliceMetrics?.scoredReviewCount).toBe(5);
-      expect(aliceMetrics?.totalScore).toBe(35);
+      expect(aliceMetrics?.judgedReviewCount).toBe(5);
+      expect(aliceMetrics?.readyReviewCount).toBe(2);
+    });
+  });
+
+  describe('readiness accumulators migration', () => {
+    it('should seed the readiness accumulators from the recent reviews of a legacy developer', () => {
+      const recentReviews = [
+        ...createReviewsForDeveloper('alice', 3, { verdict: 'ready', grade: 'A' }),
+        ReviewStatsFactory.create({
+          id: 'alice-changes',
+          assignedBy: 'alice',
+          verdict: 'changes',
+          grade: 'C',
+        }),
+        ReviewStatsFactory.create({ id: 'alice-unjudged', assignedBy: 'alice', score: null }),
+      ];
+      const legacyDeveloper = PersistedDeveloperMetricsFactory.create({
+        developerName: 'alice',
+        totalReviews: 40,
+        judgedReviewCount: undefined,
+        readyReviewCount: undefined,
+        totalScore: 300,
+        scoredReviewCount: 38,
+        recentReviews,
+      });
+      const persistedData = PersistedInsightsDataFactory.withDevelopers(
+        [legacyDeveloper],
+        recentReviews.map((review) => review.id),
+      );
+
+      const result = computeInsightsWithPersistence([], persistedData);
+
+      const alice = result.persistedData.developers[0];
+      expect(alice.judgedReviewCount).toBe(4);
+      expect(alice.readyReviewCount).toBe(3);
+      expect(alice).not.toHaveProperty('totalScore');
+      expect(alice).not.toHaveProperty('scoredReviewCount');
+    });
+
+    it('should add a new review on top of the seeded accumulators', () => {
+      const recentReviews = createReviewsForDeveloper('alice', 5, {
+        verdict: 'changes',
+        grade: 'C',
+      });
+      const legacyDeveloper = PersistedDeveloperMetricsFactory.create({
+        developerName: 'alice',
+        totalReviews: 5,
+        judgedReviewCount: undefined,
+        readyReviewCount: undefined,
+        totalScore: 35,
+        scoredReviewCount: 5,
+        recentReviews,
+      });
+      const newReview = ReviewStatsFactory.create({
+        id: 'alice-new',
+        assignedBy: 'alice',
+        verdict: 'ready',
+        grade: 'A',
+      });
+      const persistedData = PersistedInsightsDataFactory.withDevelopers(
+        [legacyDeveloper],
+        recentReviews.map((review) => review.id),
+      );
+
+      const result = computeInsightsWithPersistence([...recentReviews, newReview], persistedData);
+
+      const alice = result.persistedData.developers[0];
+      expect(alice.judgedReviewCount).toBe(6);
+      expect(alice.readyReviewCount).toBe(1);
+    });
+
+    it('should keep the accumulators of a developer that already has them', () => {
+      const developer = PersistedDeveloperMetricsFactory.create({
+        developerName: 'alice',
+        judgedReviewCount: 30,
+        readyReviewCount: 21,
+        recentReviews: createReviewsForDeveloper('alice', 5, { verdict: 'changes', grade: 'C' }),
+      });
+
+      const result = computeInsightsWithPersistence(
+        [],
+        PersistedInsightsDataFactory.withDevelopers([developer]),
+      );
+
+      const alice = result.persistedData.developers[0];
+      expect(alice.judgedReviewCount).toBe(30);
+      expect(alice.readyReviewCount).toBe(21);
+    });
+
+    it('should read the quality strength from the cumulative ready rate', () => {
+      const developer = PersistedDeveloperMetricsFactory.create({
+        developerName: 'alice',
+        totalReviews: 50,
+        judgedReviewCount: 50,
+        readyReviewCount: 50,
+        totalBlocking: 0,
+        totalWarnings: 0,
+        recentReviews: createReviewsForDeveloper('alice', 5, {
+          verdict: 'changes',
+          grade: 'C',
+          blocking: 0,
+          warnings: 0,
+        }),
+      });
+
+      const result = computeInsightsWithPersistence(
+        [],
+        PersistedInsightsDataFactory.withDevelopers([developer]),
+      );
+
+      const qualityStrength = result.developerInsights[0].insightDescriptions.find(
+        (description) => description.category === 'quality' && description.type === 'strength',
+      );
+      expect(qualityStrength).toEqual({
+        category: 'quality',
+        type: 'strength',
+        descriptionKey: 'insight.quality.highReadiness',
+        params: { readyRate: 100, teamReadyRate: 60, percent: 67 },
+      });
+      expect(result.developerInsights[0].metrics.firstReviewQualityRate).toBe(0);
     });
   });
 
@@ -219,8 +339,8 @@ describe('computeInsightsWithPersistence', () => {
           PersistedDeveloperMetricsFactory.create({
             developerName: 'alice',
             totalReviews: 19,
-            totalScore: 133,
-            scoredReviewCount: 19,
+            judgedReviewCount: 19,
+            readyReviewCount: 0,
             recentReviews: existingReviews,
           }),
         ],
@@ -253,8 +373,8 @@ describe('computeInsightsWithPersistence', () => {
           PersistedDeveloperMetricsFactory.create({
             developerName: 'alice',
             totalReviews: 4,
-            totalScore: 28,
-            scoredReviewCount: 4,
+            judgedReviewCount: 4,
+            readyReviewCount: 0,
             totalBlocking: 4,
             totalWarnings: 8,
             totalSuggestions: 12,
@@ -284,8 +404,8 @@ describe('computeInsightsWithPersistence', () => {
           PersistedDeveloperMetricsFactory.create({
             developerName: 'alice',
             totalReviews: 20,
-            totalScore: 160,
-            scoredReviewCount: 20,
+            judgedReviewCount: 20,
+            readyReviewCount: 12,
             totalBlocking: 10,
             totalWarnings: 20,
             totalSuggestions: 30,
@@ -305,14 +425,15 @@ describe('computeInsightsWithPersistence', () => {
         (developer) => developer.developerName === 'alice',
       );
       expect(aliceMetrics?.totalReviews).toBe(20);
-      expect(aliceMetrics?.totalScore).toBe(160);
+      expect(aliceMetrics?.judgedReviewCount).toBe(20);
+      expect(aliceMetrics?.readyReviewCount).toBe(12);
       expect(result.developerInsights).toHaveLength(1);
       expect(result.developerInsights[0].developerName).toBe('alice');
     });
   });
 
   describe('correct averages from cumulative data', () => {
-    it('should compute averages from totalScore/scoredReviewCount', () => {
+    it('should compute averages from the cumulative accumulators', () => {
       const recentReviews = createReviewsForDeveloper('alice', 10, { score: 8 });
 
       const persistedData = PersistedInsightsDataFactory.create({
@@ -320,8 +441,8 @@ describe('computeInsightsWithPersistence', () => {
           PersistedDeveloperMetricsFactory.create({
             developerName: 'alice',
             totalReviews: 50,
-            totalScore: 400,
-            scoredReviewCount: 50,
+            judgedReviewCount: 50,
+            readyReviewCount: 30,
             totalBlocking: 25,
             totalWarnings: 50,
             totalSuggestions: 75,
@@ -659,7 +780,8 @@ describe('computeInsightsWithPersistence', () => {
           id: `alice-${index}`,
           assignedBy: 'alice',
           mrNumber: index + 1,
-          score: index < 10 ? 5 : 7,
+          verdict: index < 10 ? 'changes' : 'ready',
+          grade: index < 10 ? 'D' : 'B',
           blocking: 1,
           warnings: 2,
           suggestions: 3,
@@ -685,21 +807,22 @@ describe('computeInsightsWithPersistence', () => {
     });
   });
 
-  describe('code volume score correlation', () => {
-    it('should compute a non-zero correlation when both score and volume vary across recent reviews', () => {
+  describe('code volume grade correlation', () => {
+    it('should compute a non-zero correlation when both grade and volume vary across recent reviews', () => {
       const varyingData = [
-        { score: 5, additions: 100, deletions: 20 },
-        { score: 7, additions: 300, deletions: 60 },
-        { score: 9, additions: 500, deletions: 100 },
-        { score: 6, additions: 200, deletions: 40 },
-        { score: 8, additions: 400, deletions: 80 },
-      ];
+        { grade: 'D', additions: 100, deletions: 20 },
+        { grade: 'B', additions: 300, deletions: 60 },
+        { grade: 'A', additions: 500, deletions: 100 },
+        { grade: 'C', additions: 200, deletions: 40 },
+        { grade: 'B', additions: 400, deletions: 80 },
+      ] as const;
       const reviews = varyingData.map((data, index) =>
         ReviewStatsFactory.create({
           id: `alice-corr-${index}`,
           assignedBy: 'alice',
           mrNumber: index + 1,
-          score: data.score,
+          verdict: 'changes',
+          grade: data.grade,
           blocking: 0,
           warnings: 1,
           suggestions: 2,
@@ -721,12 +844,14 @@ describe('computeInsightsWithPersistence', () => {
 
     it('should fall back to zero correlation when volume has no variance (zero denominator)', () => {
       const constantVolume = DiffStatsFactory.create({ additions: 100, deletions: 20 });
-      const reviews = [5, 7, 9, 5, 7].map((score, index) =>
+      const grades = ['D', 'C', 'A', 'D', 'C'] as const;
+      const reviews = grades.map((grade, index) =>
         ReviewStatsFactory.create({
           id: `bob-flat-${index}`,
           assignedBy: 'bob',
           mrNumber: index + 1,
-          score,
+          verdict: 'changes',
+          grade,
           blocking: 0,
           warnings: 1,
           suggestions: 2,

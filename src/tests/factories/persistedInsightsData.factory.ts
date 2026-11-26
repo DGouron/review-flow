@@ -9,8 +9,8 @@ export class PersistedDeveloperMetricsFactory {
     return {
       developerName: 'alice',
       totalReviews: 10,
-      totalScore: 75,
-      scoredReviewCount: 9,
+      judgedReviewCount: 9,
+      readyReviewCount: 6,
       totalBlocking: 5,
       totalWarnings: 12,
       totalSuggestions: 20,

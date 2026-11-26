@@ -10,8 +10,8 @@ describe('persistedDeveloperMetricsSchema', () => {
     const validMetrics = {
       developerName: 'alice',
       totalReviews: 10,
-      totalScore: 75,
-      scoredReviewCount: 9,
+      judgedReviewCount: 9,
+      readyReviewCount: 6,
       totalBlocking: 5,
       totalWarnings: 12,
       totalSuggestions: 20,
@@ -27,11 +27,124 @@ describe('persistedDeveloperMetricsSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('should reject metrics with missing developerName', () => {
-    const invalidMetrics = {
+  it('should accept a developer written before verdicts, with the legacy score accumulators', () => {
+    const legacyMetrics = {
+      developerName: 'alice',
       totalReviews: 10,
       totalScore: 75,
       scoredReviewCount: 9,
+      totalBlocking: 5,
+      totalWarnings: 12,
+      totalSuggestions: 20,
+      totalDuration: 600000,
+      totalAdditions: 1500,
+      totalDeletions: 300,
+      diffStatsReviewCount: 8,
+      recentReviews: [],
+    };
+
+    const result = persistedDeveloperMetricsSchema.safeParse(legacyMetrics);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.judgedReviewCount).toBeUndefined();
+      expect(result.data.readyReviewCount).toBeUndefined();
+    }
+  });
+
+  it('should reject a negative ready review count', () => {
+    const invalidMetrics = {
+      developerName: 'alice',
+      totalReviews: 10,
+      judgedReviewCount: 9,
+      readyReviewCount: -1,
+      totalBlocking: 5,
+      totalWarnings: 12,
+      totalSuggestions: 20,
+      totalDuration: 600000,
+      totalAdditions: 1500,
+      totalDeletions: 300,
+      diffStatsReviewCount: 8,
+      recentReviews: [],
+    };
+
+    const result = persistedDeveloperMetricsSchema.safeParse(invalidMetrics);
+
+    expect(result.success).toBe(false);
+  });
+
+  it('should keep the verdict and grade of a recent review', () => {
+    const metrics = {
+      developerName: 'alice',
+      totalReviews: 1,
+      judgedReviewCount: 1,
+      readyReviewCount: 1,
+      totalBlocking: 0,
+      totalWarnings: 0,
+      totalSuggestions: 0,
+      totalDuration: 1000,
+      totalAdditions: 0,
+      totalDeletions: 0,
+      diffStatsReviewCount: 0,
+      recentReviews: [
+        {
+          id: 'review-1',
+          timestamp: '2024-01-15T10:00:00Z',
+          mrNumber: 1,
+          duration: 1000,
+          score: null,
+          blocking: 0,
+          warnings: 0,
+          verdict: 'ready',
+          grade: 'A',
+        },
+      ],
+    };
+
+    const result = persistedDeveloperMetricsSchema.safeParse(metrics);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.recentReviews[0].verdict).toBe('ready');
+      expect(result.data.recentReviews[0].grade).toBe('A');
+    }
+  });
+
+  it('should reject a recent review with an unknown grade', () => {
+    const metrics = {
+      developerName: 'alice',
+      totalReviews: 1,
+      totalBlocking: 0,
+      totalWarnings: 0,
+      totalSuggestions: 0,
+      totalDuration: 1000,
+      totalAdditions: 0,
+      totalDeletions: 0,
+      diffStatsReviewCount: 0,
+      recentReviews: [
+        {
+          id: 'review-1',
+          timestamp: '2024-01-15T10:00:00Z',
+          mrNumber: 1,
+          duration: 1000,
+          score: null,
+          blocking: 0,
+          warnings: 0,
+          grade: 'F',
+        },
+      ],
+    };
+
+    const result = persistedDeveloperMetricsSchema.safeParse(metrics);
+
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject metrics with missing developerName', () => {
+    const invalidMetrics = {
+      totalReviews: 10,
+      judgedReviewCount: 9,
+      readyReviewCount: 6,
       totalBlocking: 5,
       totalWarnings: 12,
       totalSuggestions: 20,
@@ -51,8 +164,8 @@ describe('persistedDeveloperMetricsSchema', () => {
     const invalidMetrics = {
       developerName: 'alice',
       totalReviews: -1,
-      totalScore: 75,
-      scoredReviewCount: 9,
+      judgedReviewCount: 9,
+      readyReviewCount: 6,
       totalBlocking: 5,
       totalWarnings: 12,
       totalSuggestions: 20,
@@ -88,8 +201,8 @@ describe('persistedInsightsDataSchema', () => {
         {
           developerName: 'alice',
           totalReviews: 10,
-          totalScore: 75,
-          scoredReviewCount: 9,
+          judgedReviewCount: 9,
+          readyReviewCount: 6,
           totalBlocking: 5,
           totalWarnings: 12,
           totalSuggestions: 20,

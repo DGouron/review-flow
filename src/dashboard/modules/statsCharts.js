@@ -1,4 +1,6 @@
+import { DEFAULT_TARGET_GRADE } from './constants.js';
 import { t } from './i18n.js';
+import { gradeRank, outcomeOfReviewEvent, QUALITY_GRADES } from './quality.js';
 
 const COLORS = {
   textPrimary: '#e8efff',
@@ -101,11 +103,12 @@ function drawSmoothPath(ctx, points) {
 }
 
 /**
- * Draw a line chart showing score evolution across reviews
+ * Draw a line chart showing the grade of each judged review, A on top.
  * @param {string} canvasId
- * @param {Array<{timestamp: string, score: number|null, type?: string}>} reviews
+ * @param {Array<Record<string, unknown>>} reviews
+ * @param {'A' | 'B' | 'C' | 'D' | 'E'} [targetGrade]
  */
-export function drawScoreTrendChart(canvasId, reviews) {
+export function drawGradeTrendChart(canvasId, reviews, targetGrade = DEFAULT_TARGET_GRADE) {
   const setup = getCanvasContext(canvasId);
   if (!setup) return;
   const { ctx, cssWidth } = setup;
@@ -113,12 +116,15 @@ export function drawScoreTrendChart(canvasId, reviews) {
   setupHiDpiCanvas(ctx, cssWidth, cssHeight);
 
   const scoredReviews = reviews
-    .filter((review) => review.score !== null && review.score !== undefined)
+    .map((review) => ({ ...review, grade: outcomeOfReviewEvent(review).grade }))
+    .filter((review) => review.grade !== null)
     .toSorted((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
   const padding = { top: 20, right: 20, bottom: 30, left: 35 };
   const chartWidth = cssWidth - padding.left - padding.right;
   const chartHeight = cssHeight - padding.top - padding.bottom;
+  const maxRank = QUALITY_GRADES.length - 1;
+  const yOfRank = (rank) => padding.top + chartHeight - (rank / maxRank) * chartHeight;
 
   if (scoredReviews.length === 0) {
     drawNoDataMessage(ctx, t('stats.noChartData'), cssWidth, cssHeight);
@@ -127,8 +133,8 @@ export function drawScoreTrendChart(canvasId, reviews) {
 
   ctx.font = '10px "JetBrains Mono", monospace';
   ctx.textAlign = 'right';
-  for (let score = 2; score <= 10; score += 2) {
-    const y = padding.top + chartHeight - (score / 10) * chartHeight;
+  for (const grade of QUALITY_GRADES) {
+    const y = yOfRank(gradeRank(grade));
     ctx.beginPath();
     ctx.strokeStyle = COLORS.gridLine;
     ctx.lineWidth = 0.5;
@@ -136,10 +142,10 @@ export function drawScoreTrendChart(canvasId, reviews) {
     ctx.lineTo(cssWidth - padding.right, y);
     ctx.stroke();
     ctx.fillStyle = COLORS.textMuted;
-    ctx.fillText(String(score), padding.left - 6, y + 3);
+    ctx.fillText(grade, padding.left - 6, y + 3);
   }
 
-  const targetY = padding.top + chartHeight - (8 / 10) * chartHeight;
+  const targetY = yOfRank(gradeRank(targetGrade));
   ctx.beginPath();
   ctx.setLineDash([5, 4]);
   ctx.strokeStyle = COLORS.targetLine;
@@ -154,7 +160,7 @@ export function drawScoreTrendChart(canvasId, reviews) {
       scoredReviews.length === 1
         ? padding.left + chartWidth / 2
         : padding.left + (index / (scoredReviews.length - 1)) * chartWidth;
-    const y = padding.top + chartHeight - (review.score / 10) * chartHeight;
+    const y = yOfRank(gradeRank(review.grade));
     return { x, y, review };
   });
 
@@ -186,14 +192,14 @@ export function drawScoreTrendChart(canvasId, reviews) {
     for (let index = windowSize - 1; index < scoredReviews.length; index++) {
       let sum = 0;
       for (let offset = 0; offset < windowSize; offset++) {
-        sum += scoredReviews[index - offset].score;
+        sum += gradeRank(scoredReviews[index - offset].grade);
       }
-      const avgScore = sum / windowSize;
+      const averageRank = sum / windowSize;
       const x =
         scoredReviews.length === 1
           ? padding.left + chartWidth / 2
           : padding.left + (index / (scoredReviews.length - 1)) * chartWidth;
-      const y = padding.top + chartHeight - (avgScore / 10) * chartHeight;
+      const y = yOfRank(averageRank);
       movingAvgPoints.push({ x, y });
     }
 
@@ -455,43 +461,32 @@ export function drawReviewActivityChart(canvasId, reviews) {
 }
 
 /**
- * Draw a horizontal bar chart showing score distribution
+ * Draw a horizontal bar chart showing how many judged reviews got each grade.
  * @param {string} canvasId
- * @param {Array<{score: number|null}>} reviews
+ * @param {Array<Record<string, unknown>>} reviews
  */
-export function drawScoreDistributionChart(canvasId, reviews) {
+export function drawGradeDistributionChart(canvasId, reviews) {
   const setup = getCanvasContext(canvasId);
   if (!setup) return;
   const { ctx, cssWidth } = setup;
   const cssHeight = 120;
   setupHiDpiCanvas(ctx, cssWidth, cssHeight);
 
-  const scoredReviews = reviews.filter(
-    (review) => review.score !== null && review.score !== undefined,
-  );
+  const grades = reviews
+    .map((review) => outcomeOfReviewEvent(review).grade)
+    .filter((grade) => grade !== null);
 
-  if (scoredReviews.length === 0) {
+  if (grades.length === 0) {
     drawNoDataMessage(ctx, t('stats.noChartData'), cssWidth, cssHeight);
     return;
   }
 
-  const ranges = [
-    { label: '8-10', min: 8, max: 10, color: COLORS.success, count: 0 },
-    { label: '6-8', min: 6, max: 8, color: '#a5d88e', count: 0 },
-    { label: '4-6', min: 4, max: 6, color: COLORS.warning, count: 0 },
-    { label: '2-4', min: 2, max: 4, color: '#e8946a', count: 0 },
-    { label: '0-2', min: 0, max: 2, color: COLORS.danger, count: 0 },
-  ];
-
-  for (const review of scoredReviews) {
-    const score = review.score;
-    for (const range of ranges) {
-      if ((score >= range.min && score < range.max) || (range.max === 10 && score === 10)) {
-        range.count++;
-        break;
-      }
-    }
-  }
+  const gradeColors = [COLORS.success, '#a5d88e', COLORS.warning, '#e8946a', COLORS.danger];
+  const ranges = QUALITY_GRADES.map((grade, index) => ({
+    label: grade,
+    color: gradeColors[index],
+    count: grades.filter((reviewGrade) => reviewGrade === grade).length,
+  }));
 
   const padding = { top: 8, right: 50, bottom: 8, left: 50 };
   const chartWidth = cssWidth - padding.left - padding.right;

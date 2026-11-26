@@ -103,7 +103,6 @@ describe('POST /api/stats/recalculate', () => {
       '/test/project',
       ProjectStatsFactory.create({
         reviews,
-        averageScore: 0,
       }),
     );
 
@@ -121,7 +120,7 @@ describe('POST /api/stats/recalculate', () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     const saved = options.statsGateway.loadProjectStats('/test/project');
-    expect(saved?.averageScore).toBe(7);
+    expect(saved?.totalReviews).toBe(2);
   });
 
   it('resolves the platform from the git remote, not from the config', async () => {
@@ -212,10 +211,7 @@ describe('POST /api/stats/recalculate', () => {
       gitRemoteGateway: new StubGitRemoteGateway(null, 'unknown'),
     });
     const reviews = [ReviewStatsFactory.create({ id: 'r1', mrNumber: 1, score: 7 })];
-    options.statsGateway.saveProjectStats(
-      '/test/project',
-      ProjectStatsFactory.create({ reviews, averageScore: 0 }),
-    );
+    options.statsGateway.saveProjectStats('/test/project', ProjectStatsFactory.create({ reviews }));
 
     const fastify = Fastify();
     await fastify.register(statsRoutes, options);

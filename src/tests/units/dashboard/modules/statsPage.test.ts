@@ -18,7 +18,8 @@ function createData(overrides = {}) {
   return {
     summary: {
       totalReviews: 100,
-      averageScore: '7.5',
+      readyRate: '62%',
+      grades: { A: 3, B: 5, C: 2, D: 1, E: 0 },
       totalTime: '12h 30m',
       averageTime: '7m',
       totalBlocking: 12,
@@ -31,9 +32,9 @@ function createData(overrides = {}) {
       averageAdditions: '84.0',
       averageDeletions: '21.0',
       totalLinesReviewed: 10500,
-      trend: { score: 'up', blocking: 'stable' },
+      trend: { readiness: 'up', blocking: 'stable' },
     },
-    stats: { reviews: [{ assignedBy: 'alice', score: 8 }] },
+    stats: { reviews: [{ assignedBy: 'alice', verdict: 'ready', grade: 'B' }] },
     analyticsHeader: { isEmpty: false, reviewsPerMonth: [] },
     bugsByCategory: { isEmpty: false },
     keyInsights: null,
@@ -75,10 +76,11 @@ describe('renderStatsPageHtml', () => {
 
   it('renders the quality KPI cards', () => {
     const html = renderStatsPageHtml(createData(), t);
-    expect(html).toContain('stats.averageScore');
+    expect(html).toContain('stats.readyRate');
     expect(html).toContain('stats.blocking');
     expect(html).toContain('stats.warnings');
-    expect(html).toContain('7.5');
+    expect(html).toMatch(/data-target="62" data-suffix="%"/);
+    expect(html).not.toContain('/10');
   });
 
   it('renders the total bugs-detected KPI from blocking plus warnings', () => {

@@ -45,8 +45,8 @@ describe('i18n', () => {
   });
 
   it('should translate quality labels in English', () => {
-    expect(t('quality.onTarget')).toBe('On target');
-    expect(t('quality.progress')).toBe('Progress');
+    expect(t('verdict.ready')).toBe('Ready');
+    expect(t('verdict.changes')).toBe('To rework');
     expect(t('quality.trendUp', { delta: '+1.0' })).toBe('Improving +1.0');
     expect(t('quality.trendUnknown')).toBe('No trend yet');
   });
@@ -82,8 +82,8 @@ describe('i18n', () => {
 
   it('should translate quality labels in French', () => {
     setLanguage('fr');
-    expect(t('quality.onTarget')).toBe('Objectif atteint');
-    expect(t('quality.progress')).toBe('Progression');
+    expect(t('verdict.ready')).toBe('Prête');
+    expect(t('verdict.changes')).toBe('À reprendre');
     expect(t('quality.trendUp', { delta: '+1.0' })).toBe('En amélioration +1.0');
     expect(t('quality.trendUnknown')).toBe('Pas de tendance');
   });
@@ -162,7 +162,6 @@ describe('i18n', () => {
     expect(t('export.teamSection')).toBe('Team Analysis');
     expect(t('export.developerSection')).toBe('Developer Profiles');
     expect(t('export.metrics')).toBe('Key Metrics');
-    expect(t('export.avgScore')).toBe('Avg Score');
     expect(t('export.avgBlocking')).toBe('Avg Blocking');
     expect(t('export.firstPassRate')).toBe('First-Pass Quality');
     expect(t('export.avgDuration')).toBe('Avg Duration');
@@ -180,7 +179,6 @@ describe('i18n', () => {
     expect(t('export.teamSection')).toBe("Analyse d'\u00e9quipe");
     expect(t('export.developerSection')).toBe('Profils d\u00e9veloppeurs');
     expect(t('export.metrics')).toBe('M\u00e9triques cl\u00e9s');
-    expect(t('export.avgScore')).toBe('Score moyen');
     expect(t('export.avgBlocking')).toBe('Bloquants moyens');
     expect(t('export.firstPassRate')).toBe('Qualit\u00e9 premi\u00e8re passe');
     expect(t('export.avgDuration')).toBe('Dur\u00e9e moyenne');

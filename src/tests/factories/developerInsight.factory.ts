@@ -17,7 +17,6 @@ export class DeveloperInsightFactory {
       topPriority: 'iteration',
       reviewCount: 10,
       metrics: {
-        averageScore: 8.0,
         averageBlocking: 0.5,
         averageWarnings: 1.0,
         averageDuration: 60000,
@@ -48,7 +47,6 @@ export class DeveloperInsightFactory {
       topPriority: 'iteration',
       reviewCount: 10,
       metrics: {
-        averageScore: 8.0,
         averageBlocking: 0.5,
         averageWarnings: 1.0,
         averageDuration: 60000,

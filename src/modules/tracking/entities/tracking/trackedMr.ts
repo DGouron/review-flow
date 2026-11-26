@@ -31,7 +31,6 @@ export interface TrackedMr {
   totalWarnings: number;
   totalSuggestions: number;
   totalDurationMs: number;
-  latestScore: number | null;
 
   autoFollowup: boolean;
 

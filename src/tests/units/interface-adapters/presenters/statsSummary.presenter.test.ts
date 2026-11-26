@@ -7,14 +7,14 @@ import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/proje
 const presenter = new StatsSummaryPresenter();
 
 describe('StatsSummaryPresenter aggregates', () => {
-  it('exposes existing aggregates (totalReviews, durations, score, counts)', () => {
+  it('exposes existing aggregates (totalReviews, durations, readiness, counts)', () => {
     const stats = ProjectStatsFactory.create({
       totalReviews: 5,
       totalDuration: 5 * 60_000,
       averageDuration: 60_000,
       reviews: [
-        ReviewStatsFactory.create({ id: 'a', score: 7 }),
-        ReviewStatsFactory.create({ id: 'b', score: 8 }),
+        ReviewStatsFactory.create({ id: 'a', verdict: 'ready', grade: 'B' }),
+        ReviewStatsFactory.create({ id: 'b', verdict: 'changes', grade: 'C' }),
       ],
       totalBlocking: 3,
       totalWarnings: 4,
@@ -23,7 +23,8 @@ describe('StatsSummaryPresenter aggregates', () => {
     const summary = presenter.present(stats);
 
     expect(summary.totalReviews).toBe(5);
-    expect(summary.averageScore).toBe('7.5');
+    expect(summary.readyRate).toBe('50%');
+    expect(summary.grades).toEqual({ A: 0, B: 1, C: 1, D: 0, E: 0 });
     expect(summary.totalBlocking).toBe(3);
     expect(summary.totalWarnings).toBe(4);
     expect(summary.bugsDetected).toBe(7);
@@ -56,52 +57,23 @@ describe('StatsSummaryPresenter aggregates', () => {
     expect(summary.totalLinesReviewed).toBe(0);
   });
 
-  it('renders averageScore as "-" when it is null', () => {
-    const summary = presenter.present(ProjectStatsFactory.create({ averageScore: null }));
+  it('renders readyRate as "-" when no review was judged', () => {
+    const stats = ProjectStatsFactory.create({
+      reviews: [ReviewStatsFactory.create({ id: 'a', score: null })],
+    });
 
-    expect(summary.averageScore).toBe('-');
+    expect(presenter.present(stats).readyRate).toBe('-');
   });
 
-  it('derives averageScore from reviews[] rather than the stored aggregate', () => {
+  it('reads a review recorded before verdicts through its counts', () => {
     const stats = ProjectStatsFactory.create({
-      averageScore: 7.0,
       reviews: [
-        ReviewStatsFactory.create({ id: 'a', score: 8 }),
-        ReviewStatsFactory.create({ id: 'b', score: 9 }),
+        ReviewStatsFactory.create({ id: 'a', score: 9, blocking: 0, warnings: 0 }),
+        ReviewStatsFactory.create({ id: 'b', score: 6, blocking: 1, warnings: 0 }),
       ],
     });
 
-    const summary = presenter.present(stats);
-
-    expect(summary.averageScore).toBe('8.5');
-  });
-
-  it('ignores reviews with a null score when deriving averageScore', () => {
-    const stats = ProjectStatsFactory.create({
-      averageScore: 7.0,
-      reviews: [
-        ReviewStatsFactory.create({ id: 'a', score: 8 }),
-        ReviewStatsFactory.create({ id: 'b', score: null }),
-      ],
-    });
-
-    const summary = presenter.present(stats);
-
-    expect(summary.averageScore).toBe('8.0');
-  });
-
-  it('renders averageScore as "-" when no review carries a score', () => {
-    const stats = ProjectStatsFactory.create({
-      averageScore: 7.0,
-      reviews: [
-        ReviewStatsFactory.create({ id: 'a', score: null }),
-        ReviewStatsFactory.create({ id: 'b', score: null }),
-      ],
-    });
-
-    const summary = presenter.present(stats);
-
-    expect(summary.averageScore).toBe('-');
+    expect(presenter.present(stats).readyRate).toBe('50%');
   });
 });
 
@@ -129,67 +101,63 @@ describe('StatsSummaryPresenter duration formatting', () => {
 });
 
 describe('StatsSummaryPresenter trends', () => {
+  const reviewsOf = (prefix: string, verdict: 'ready' | 'changes', blocking: number, count = 5) =>
+    Array.from({ length: count }, (_, index) =>
+      ReviewStatsFactory.create({ id: `${prefix}${index}`, verdict, grade: 'B', blocking }),
+    );
+
   it('keeps trends stable when there are too few reviews to compare', () => {
-    const stats = ProjectStatsFactory.withReviews([
-      ReviewStatsFactory.create({ id: 'a', score: 8, blocking: 0 }),
-      ReviewStatsFactory.create({ id: 'b', score: 8, blocking: 0 }),
-    ]);
+    const summary = presenter.present(
+      ProjectStatsFactory.withReviews(reviewsOf('a', 'ready', 0, 2)),
+    );
 
-    const summary = presenter.present(stats);
-
-    expect(summary.trend.score).toBe('stable');
+    expect(summary.trend.readiness).toBe('stable');
     expect(summary.trend.blocking).toBe('stable');
   });
 
-  it('reports score up and blocking up when recent reviews improve', () => {
-    const previous = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `p${index}`, score: 5, blocking: 3 }),
+  it('reports readiness up and blocking up when recent reviews improve', () => {
+    const summary = presenter.present(
+      ProjectStatsFactory.withReviews([
+        ...reviewsOf('p', 'changes', 3),
+        ...reviewsOf('r', 'ready', 0),
+      ]),
     );
-    const recent = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `r${index}`, score: 9, blocking: 0 }),
-    );
-    const summary = presenter.present(ProjectStatsFactory.withReviews([...previous, ...recent]));
 
-    expect(summary.trend.score).toBe('up');
+    expect(summary.trend.readiness).toBe('up');
     expect(summary.trend.blocking).toBe('up');
   });
 
-  it('reports score down and blocking down when recent reviews worsen', () => {
-    const previous = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `p${index}`, score: 9, blocking: 0 }),
+  it('reports readiness down and blocking down when recent reviews worsen', () => {
+    const summary = presenter.present(
+      ProjectStatsFactory.withReviews([
+        ...reviewsOf('p', 'ready', 0),
+        ...reviewsOf('r', 'changes', 4),
+      ]),
     );
-    const recent = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `r${index}`, score: 5, blocking: 4 }),
-    );
-    const summary = presenter.present(ProjectStatsFactory.withReviews([...previous, ...recent]));
 
-    expect(summary.trend.score).toBe('down');
+    expect(summary.trend.readiness).toBe('down');
     expect(summary.trend.blocking).toBe('down');
   });
 
-  it('keeps score trend stable when no scored reviews exist in either window', () => {
-    const previous = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `p${index}`, score: null, blocking: 1 }),
+  it('keeps readiness stable when no review was judged in either window', () => {
+    const unjudged = Array.from({ length: 10 }, (_, index) =>
+      ReviewStatsFactory.create({ id: `u${index}`, score: null, blocking: 1 }),
     );
-    const recent = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `r${index}`, score: null, blocking: 1 }),
-    );
-    const summary = presenter.present(ProjectStatsFactory.withReviews([...previous, ...recent]));
 
-    expect(summary.trend.score).toBe('stable');
-    expect(summary.trend.blocking).toBe('stable');
+    const summary = presenter.present(ProjectStatsFactory.withReviews(unjudged));
+
+    expect(summary.trend.readiness).toBe('stable');
   });
 
-  it('keeps score trend stable when changes stay within the threshold', () => {
-    const previous = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `p${index}`, score: 7, blocking: 1 }),
+  it('keeps readiness stable when the share moves by less than ten points', () => {
+    const summary = presenter.present(
+      ProjectStatsFactory.withReviews([
+        ...reviewsOf('p', 'ready', 1),
+        ...reviewsOf('r', 'ready', 1),
+      ]),
     );
-    const recent = Array.from({ length: 5 }, (_, index) =>
-      ReviewStatsFactory.create({ id: `r${index}`, score: 7.2, blocking: 1 }),
-    );
-    const summary = presenter.present(ProjectStatsFactory.withReviews([...previous, ...recent]));
 
-    expect(summary.trend.score).toBe('stable');
+    expect(summary.trend.readiness).toBe('stable');
     expect(summary.trend.blocking).toBe('stable');
   });
 });

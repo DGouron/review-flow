@@ -1,5 +1,7 @@
+import { DEFAULT_TARGET_GRADE } from './constants.js';
 import { formatTime, formatDuration } from './formatting.js';
 import { escapeHtml, sanitizeHttpUrl } from './html.js';
+import { gradeRank, latestOutcomeOf, outcomeOfReviewEvent, QUALITY_GRADES } from './quality.js';
 
 const COLORS = {
   base: '#0b1220',
@@ -20,17 +22,19 @@ const COLORS = {
  * @param {object} mr
  * @param {(key: string, params?: Record<string, string|number>) => string} translate
  * @param {string} [mrType]
+ * @param {'A' | 'B' | 'C' | 'D' | 'E'} [targetGrade]
  * @returns {string}
  */
-export function renderMrSheetContent(mr, translate, mrType) {
+export function renderMrSheetContent(mr, translate, mrType, targetGrade = DEFAULT_TARGET_GRADE) {
   const mrPrefix = mr.platform === 'github' ? '#' : '!';
   const assigneeDisplay = mr.assignment?.displayName || mr.assignment?.username || '';
   const assigneeInitial = assigneeDisplay ? assigneeDisplay.charAt(0).toUpperCase() : '?';
 
-  const scoreDisplay =
-    typeof mr.latestScore === 'number'
-      ? `${mr.latestScore.toFixed(1)}<span class="sheet-stat-unit">${translate('sheet.outOf10')}</span>`
-      : '-';
+  const latestOutcome = latestOutcomeOf(mr);
+  const outcomeDisplay =
+    latestOutcome.verdict === null
+      ? '-'
+      : `${escapeHtml(latestOutcome.grade ?? '-')}<span class="sheet-stat-unit">${escapeHtml(translate(`verdict.${latestOutcome.verdict}`))}</span>`;
 
   const threadsDisplay = typeof mr.openThreads === 'number' ? mr.openThreads : 0;
 
@@ -49,10 +53,11 @@ export function renderMrSheetContent(mr, translate, mrType) {
         r.type === 'review'
           ? `<i data-lucide="file-search"></i> Review`
           : `<i data-lucide="refresh-cw"></i> Follow-up`;
+      const outcome = outcomeOfReviewEvent(r);
       const scoreCell =
-        r.score !== null && r.score !== undefined
-          ? `<span class="sheet-event-score">${r.score}${translate('sheet.outOf10')}</span>`
-          : '-';
+        outcome.verdict === null
+          ? '-'
+          : `<span class="sheet-event-score">${escapeHtml(outcome.grade ?? '-')} · ${escapeHtml(translate(`verdict.${outcome.verdict}`))}</span>`;
       const blockingCell =
         r.blocking > 0 ? `<span class="sheet-event-blocking">${r.blocking}</span>` : '0';
       return `<tr>
@@ -101,8 +106,8 @@ export function renderMrSheetContent(mr, translate, mrType) {
     <div class="sheet-stats-grid">
       <div class="sheet-stat-card score">
         <div class="sheet-stat-label"><i data-lucide="star"></i> ${translate('sheet.qualityScore')}</div>
-        <div class="sheet-stat-value">${scoreDisplay}</div>
-        <div class="sheet-stat-detail">${translate('sheet.target', { target: 8 })}</div>
+        <div class="sheet-stat-value">${outcomeDisplay}</div>
+        <div class="sheet-stat-detail">${translate('sheet.target', { target: targetGrade })}</div>
       </div>
       <div class="sheet-stat-card threads">
         <div class="sheet-stat-label"><i data-lucide="message-circle"></i> ${translate('sheet.openThreads')}</div>
@@ -220,10 +225,13 @@ function setupHiDpiCanvas(context, cssWidth, cssHeight) {
 }
 
 /**
+ * Plots the grade of each judged review, A on top, with the target grade dashed.
+ *
  * @param {string} canvasId
- * @param {Array<{type: string, timestamp: string, score: number|null, blocking: number}>} reviews
+ * @param {Array<Record<string, unknown>>} reviews
+ * @param {'A' | 'B' | 'C' | 'D' | 'E'} [targetGrade]
  */
-export function drawScoreTimeline(canvasId, reviews) {
+export function drawGradeTimeline(canvasId, reviews, targetGrade = DEFAULT_TARGET_GRADE) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -233,13 +241,16 @@ export function drawScoreTimeline(canvasId, reviews) {
   const cssHeight = 180;
   setupHiDpiCanvas(ctx, cssWidth, cssHeight);
 
+  const maxRank = QUALITY_GRADES.length - 1;
   const scoredReviews = reviews
-    .filter((r) => r.score !== null && r.score !== undefined)
+    .map((review) => ({ ...review, grade: outcomeOfReviewEvent(review).grade }))
+    .filter((review) => review.grade !== null)
     .toSorted((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
   const padding = { top: 20, right: 20, bottom: 35, left: 35 };
   const chartWidth = cssWidth - padding.left - padding.right;
   const chartHeight = cssHeight - padding.top - padding.bottom;
+  const yOf = (grade) => padding.top + chartHeight - (gradeRank(grade) / maxRank) * chartHeight;
 
   if (scoredReviews.length === 0) {
     ctx.fillStyle = COLORS.textMuted;
@@ -252,8 +263,8 @@ export function drawScoreTimeline(canvasId, reviews) {
   ctx.fillStyle = COLORS.gridLine;
   ctx.font = '10px system-ui, sans-serif';
   ctx.textAlign = 'right';
-  for (let score = 2; score <= 10; score += 2) {
-    const y = padding.top + chartHeight - (score / 10) * chartHeight;
+  for (const grade of QUALITY_GRADES) {
+    const y = yOf(grade);
     ctx.beginPath();
     ctx.strokeStyle = COLORS.gridLine;
     ctx.lineWidth = 0.5;
@@ -261,10 +272,10 @@ export function drawScoreTimeline(canvasId, reviews) {
     ctx.lineTo(cssWidth - padding.right, y);
     ctx.stroke();
     ctx.fillStyle = COLORS.textMuted;
-    ctx.fillText(String(score), padding.left - 6, y + 3);
+    ctx.fillText(grade, padding.left - 6, y + 3);
   }
 
-  const targetY = padding.top + chartHeight - (8 / 10) * chartHeight;
+  const targetY = yOf(targetGrade);
   ctx.beginPath();
   ctx.setLineDash([5, 4]);
   ctx.strokeStyle = COLORS.targetLine;
@@ -277,7 +288,7 @@ export function drawScoreTimeline(canvasId, reviews) {
   if (scoredReviews.length === 1) {
     const review = scoredReviews[0];
     const x = padding.left + chartWidth / 2;
-    const y = padding.top + chartHeight - (review.score / 10) * chartHeight;
+    const y = yOf(review.grade);
     const color = review.type === 'followup' ? COLORS.followupPoint : COLORS.reviewPoint;
 
     ctx.beginPath();
@@ -298,7 +309,7 @@ export function drawScoreTimeline(canvasId, reviews) {
 
   const points = scoredReviews.map((review, index) => {
     const x = padding.left + (index / (scoredReviews.length - 1)) * chartWidth;
-    const y = padding.top + chartHeight - (review.score / 10) * chartHeight;
+    const y = yOf(review.grade);
     return { x, y, review };
   });
 

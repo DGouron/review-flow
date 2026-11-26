@@ -18,6 +18,30 @@ describe('AddReviewStatsUseCase', () => {
     useCase = new AddReviewStatsUseCase(statsGateway);
   });
 
+  it('records the verdict and the grade of the review', () => {
+    const review = useCase.execute({
+      projectPath: PROJECT,
+      mrNumber: 42,
+      duration: 60000,
+      parsed: {
+        score: null,
+        blocking: 0,
+        warnings: 1,
+        suggestions: 0,
+        categoryBreakdown: null,
+        verdict: 'changes',
+        grade: 'C',
+        levels: null,
+      },
+    });
+
+    expect(review).toMatchObject({ verdict: 'changes', grade: 'C' });
+    expect(statsGateway.loadProjectStats(PROJECT)?.reviews[0]).toMatchObject({
+      verdict: 'changes',
+      grade: 'C',
+    });
+  });
+
   it('records a new review on an empty project', () => {
     const review = useCase.execute({
       projectPath: PROJECT,
@@ -40,7 +64,6 @@ describe('AddReviewStatsUseCase', () => {
 
     const stats = statsGateway.loadProjectStats(PROJECT);
     expect(stats?.totalReviews).toBe(1);
-    expect(stats?.averageScore).toBe(8);
     expect(stats?.totalBlocking).toBe(1);
     expect(stats?.totalWarnings).toBe(2);
   });
@@ -53,9 +76,6 @@ describe('AddReviewStatsUseCase', () => {
       PROJECT,
       ProjectStatsFactory.create({
         totalReviews: 100,
-        totalScoreSum: 700,
-        scoredReviewCount: 100,
-        averageScore: 7,
         reviews,
       }),
     );
@@ -78,9 +98,6 @@ describe('AddReviewStatsUseCase', () => {
       PROJECT,
       ProjectStatsFactory.create({
         totalReviews: 2,
-        totalScoreSum: 14,
-        scoredReviewCount: 2,
-        averageScore: 7,
         reviews: [
           ReviewStatsFactory.create({ id: 'r1', score: 6 }),
           ReviewStatsFactory.create({ id: 'r2', score: 8 }),
@@ -105,7 +122,6 @@ describe('AddReviewStatsUseCase', () => {
     });
 
     const stats = statsGateway.loadProjectStats(PROJECT);
-    expect(stats?.averageScore).toBe(7);
     expect(stats?.totalReviews).toBe(3);
   });
 
@@ -130,8 +146,6 @@ describe('AddReviewStatsUseCase', () => {
 
     const stats = statsGateway.loadProjectStats(PROJECT);
     expect(stats?.totalReviews).toBe(1);
-    expect(stats?.averageScore).toBeNull();
-    expect(stats?.scoredReviewCount).toBe(0);
   });
 
   it('aggregates diff stats and assignedBy when provided', () => {
@@ -232,7 +246,6 @@ describe('AddReviewStatsUseCase', () => {
         totalReviews: 2,
         totalBlocking: 1,
         totalWarnings: 3,
-        averageScore: 7,
         reviews: [
           ReviewStatsFactory.create({ id: 'r1', score: 6, blocking: 1, warnings: 2 }),
           ReviewStatsFactory.create({ id: 'r2', score: 8, blocking: 0, warnings: 1 }),
@@ -249,8 +262,6 @@ describe('AddReviewStatsUseCase', () => {
 
     const stats = statsGateway.loadProjectStats(PROJECT);
     expect(stats?.totalReviews).toBe(3);
-    expect(stats?.totalScoreSum).toBeCloseTo(6 + 8 + 7.5, 1);
-    expect(stats?.scoredReviewCount).toBe(3);
   });
 
   it('stores the captured category breakdown on the review', () => {
@@ -330,8 +341,7 @@ describe('AddReviewStatsUseCase', () => {
     expect(review.score).toBeNull();
 
     const stats = statsGateway.loadProjectStats(PROJECT);
-    expect(stats?.averageScore).toBeNull();
-    expect(stats?.scoredReviewCount).toBe(0);
+    expect(stats?.reviews.at(-1)?.score).toBeNull();
   });
 
   it('leaves assignedBy undefined when not supplied', () => {
