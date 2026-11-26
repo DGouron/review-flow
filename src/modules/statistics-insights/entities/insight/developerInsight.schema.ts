@@ -17,13 +17,13 @@ export const categoryLevelsSchema = z.object({
 });
 
 export const developerMetricsSchema = z.object({
-  averageScore: z.number(),
   averageBlocking: z.number(),
   averageWarnings: z.number(),
   averageDuration: z.number(),
   totalFollowups: z.number().nullable(),
   averageAdditions: z.number(),
   averageDeletions: z.number(),
+  /** Share (0..1) of judged reviews whose verdict was ready at first review. */
   firstReviewQualityRate: z.number(),
 });
 

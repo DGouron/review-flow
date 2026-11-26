@@ -17,7 +17,6 @@ export function recalculateProjectStats(
     const emptyStats: ProjectStats = {
       totalReviews: 0,
       totalDuration: 0,
-      averageScore: null,
       averageDuration: 0,
       totalBlocking: 0,
       totalWarnings: 0,
@@ -41,13 +40,6 @@ export function recalculateProjectStats(
   stats.averageDuration = reviews.length > 0 ? stats.totalDuration / reviews.length : 0;
   stats.totalBlocking = reviews.reduce((sum, review) => sum + review.blocking, 0);
   stats.totalWarnings = reviews.reduce((sum, review) => sum + review.warnings, 0);
-
-  const reviewsWithScore = reviews.filter((review) => review.score !== null);
-  stats.averageScore =
-    reviewsWithScore.length > 0
-      ? reviewsWithScore.reduce((sum, review) => sum + (review.score ?? 0), 0) /
-        reviewsWithScore.length
-      : null;
 
   const reviewsWithDiffStats = reviews.filter(
     (review) => review.diffStats !== null && review.diffStats !== undefined,

@@ -7,6 +7,7 @@ import type {
 } from '@/modules/review-execution/entities/review/reviewFile.gateway.js';
 import type { RepositoryConfig } from '@/modules/shared-kernel/entities/repositoryConfig/repositoryConfig.js';
 import type { ProjectStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
+import { readinessOf } from '@/modules/statistics-insights/entities/stats/reviewReadiness.js';
 import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import {
   OverviewPresenter,
@@ -28,7 +29,7 @@ interface OverviewRoutesOptions {
 function buildSummary(stats: ProjectStats): OverviewProjectStatsSummary {
   return {
     totalReviews: stats.totalReviews,
-    averageScore: stats.averageScore,
+    readyRate: readinessOf(stats.reviews).readyRate,
     averageDuration: stats.averageDuration,
     totalBlocking: stats.totalBlocking,
     totalWarnings: stats.totalWarnings,

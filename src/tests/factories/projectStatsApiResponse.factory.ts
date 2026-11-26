@@ -8,7 +8,7 @@ export interface ProjectStatsApiResponseOverrides {
   project?: string;
   path?: string;
   totalReviews?: number;
-  averageScore?: number | null;
+  readyRate?: number | null;
   reviews?: ReviewStats[];
   averageDuration?: number;
   totalBlocking?: number;
@@ -21,7 +21,7 @@ export class ProjectStatsApiResponseFactory {
     const path = overrides.path ?? '/repos/sample-project';
     const reviews = overrides.reviews ?? [];
     const totalReviews = overrides.totalReviews ?? reviews.length;
-    const averageScore = overrides.averageScore ?? null;
+    const readyRate = overrides.readyRate ?? null;
     const averageDuration = overrides.averageDuration ?? 0;
     const totalBlocking = overrides.totalBlocking ?? 0;
     const totalWarnings = overrides.totalWarnings ?? 0;
@@ -29,7 +29,6 @@ export class ProjectStatsApiResponseFactory {
     const stats: ProjectStats = {
       totalReviews,
       totalDuration: 0,
-      averageScore,
       averageDuration,
       totalBlocking,
       totalWarnings,
@@ -47,7 +46,7 @@ export class ProjectStatsApiResponseFactory {
       stats,
       summary: {
         totalReviews,
-        averageScore,
+        readyRate,
         averageDuration,
         totalBlocking,
         totalWarnings,

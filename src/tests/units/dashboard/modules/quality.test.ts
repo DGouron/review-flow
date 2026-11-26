@@ -1,101 +1,113 @@
 import { describe, expect, it } from 'vitest';
 
-import { getQualityProgress, getQualityTrend } from '@/dashboard/modules/quality.js';
+import {
+  gradeRank,
+  latestOutcomeOf,
+  outcomeOfReviewEvent,
+  qualityViewOf,
+} from '@/dashboard/modules/quality.js';
 
-describe('getQualityProgress', () => {
-  it('should compute progress and target delta when score exists', () => {
-    const result = getQualityProgress(6.5, 8);
-
-    expect(result).toEqual({
-      qualityScore: 6.5,
-      qualityTarget: 8,
-      progressPercent: 81.25,
-      clampedProgressPercent: 81.25,
-      targetDelta: -1.5,
-      targetDeltaLabel: '-1.5',
+describe('outcomeOfReviewEvent', () => {
+  it('reads the verdict and the grade the event recorded', () => {
+    expect(outcomeOfReviewEvent({ verdict: 'ready', grade: 'B', score: null })).toEqual({
+      verdict: 'ready',
+      grade: 'B',
     });
   });
 
-  it('should clamp progress percent between 0 and 100', () => {
-    const highResult = getQualityProgress(11, 8);
-    const lowResult = getQualityProgress(-2, 8);
-
-    expect(highResult.clampedProgressPercent).toBe(100);
-    expect(lowResult.clampedProgressPercent).toBe(0);
+  it('rebuilds them from the counts of an event recorded before verdicts', () => {
+    expect(outcomeOfReviewEvent({ score: 8, blocking: 0, warnings: 2, suggestions: 1 })).toEqual({
+      verdict: 'changes',
+      grade: 'C',
+    });
   });
 
-  it('should return empty values when score is not available', () => {
-    const result = getQualityProgress(null, 8);
-
-    expect(result).toEqual({
-      qualityScore: null,
-      qualityTarget: 8,
-      progressPercent: null,
-      clampedProgressPercent: 0,
-      targetDelta: null,
-      targetDeltaLabel: '',
+  it('has none for an event recorded before verdicts without a score', () => {
+    expect(outcomeOfReviewEvent({ score: null, blocking: 0, warnings: 0 })).toEqual({
+      verdict: null,
+      grade: null,
     });
   });
 });
 
-describe('getQualityTrend', () => {
-  it('should return upward trend when latest score improves', () => {
-    const result = getQualityTrend({
+describe('latestOutcomeOf', () => {
+  it('reads the latest review event only', () => {
+    const mr = {
       reviews: [
-        { score: 6, timestamp: '2026-02-12T10:00:00.000Z' },
-        { score: 7.5, timestamp: '2026-02-13T10:00:00.000Z' },
+        { verdict: 'ready', grade: 'A' },
+        { verdict: null, grade: null },
       ],
-    });
+    };
 
-    expect(result).toEqual({
-      direction: 'up',
-      delta: 1.5,
-      label: '+1.5',
+    expect(latestOutcomeOf(mr)).toEqual({ verdict: null, grade: null });
+  });
+
+  it('has none before any review', () => {
+    expect(latestOutcomeOf({ reviews: [] })).toEqual({ verdict: null, grade: null });
+  });
+});
+
+describe('gradeRank', () => {
+  it('ranks A highest and E lowest', () => {
+    expect((['A', 'B', 'C', 'D', 'E'] as const).map(gradeRank)).toEqual([4, 3, 2, 1, 0]);
+  });
+});
+
+describe('qualityViewOf', () => {
+  const mrWith = (...reviews: Array<Record<string, unknown>>) => ({ reviews });
+
+  it('is unknown before any verdict', () => {
+    expect(qualityViewOf(mrWith(), 'B')).toMatchObject({
+      verdict: null,
+      grade: null,
+      state: 'unknown',
+      trend: { direction: 'unknown', label: '' },
     });
   });
 
-  it('should return downward trend when latest score drops', () => {
-    const result = getQualityTrend({
-      reviews: [
-        { score: 9, timestamp: '2026-02-12T10:00:00.000Z' },
-        { score: 7.2, timestamp: '2026-02-13T10:00:00.000Z' },
-      ],
-    });
-
-    expect(result).toEqual({
-      direction: 'down',
-      delta: -1.8,
-      label: '-1.8',
+  it('is excellent when ready at the target grade or better', () => {
+    expect(qualityViewOf(mrWith({ verdict: 'ready', grade: 'A' }), 'B')).toMatchObject({
+      verdict: 'ready',
+      grade: 'A',
+      targetGrade: 'B',
+      state: 'excellent',
     });
   });
 
-  it('should return flat trend when latest scores are equal', () => {
-    const result = getQualityTrend({
-      reviews: [
-        { score: 8, timestamp: '2026-02-12T10:00:00.000Z' },
-        { score: 8, timestamp: '2026-02-13T10:00:00.000Z' },
-      ],
-    });
-
-    expect(result).toEqual({
-      direction: 'flat',
-      delta: 0,
-      label: '0.0',
-    });
+  it('is a warning when ready below the target grade', () => {
+    expect(qualityViewOf(mrWith({ verdict: 'ready', grade: 'B' }), 'A').state).toBe('warning');
   });
 
-  it('should return unknown trend when there are less than two valid scores', () => {
-    const result = getQualityTrend({
-      reviews: [
-        { score: null, timestamp: '2026-02-12T10:00:00.000Z' },
-        { score: 8, timestamp: '2026-02-13T10:00:00.000Z' },
-      ],
-    });
+  it('is a warning when changes are asked on an important finding', () => {
+    expect(qualityViewOf(mrWith({ verdict: 'changes', grade: 'C' }), 'B').state).toBe('warning');
+  });
 
-    expect(result).toEqual({
-      direction: 'unknown',
-      delta: null,
-      label: '',
-    });
+  it('is critical on a blocking finding or a review that did not finish', () => {
+    expect(qualityViewOf(mrWith({ verdict: 'changes', grade: 'D' }), 'B').state).toBe('critical');
+    expect(qualityViewOf(mrWith({ verdict: 'incomplete', grade: null }), 'B').state).toBe(
+      'critical',
+    );
+  });
+
+  it('compares the grades of the last two judged reviews', () => {
+    const view = qualityViewOf(
+      mrWith({ verdict: 'changes', grade: 'D' }, { verdict: 'changes', grade: 'C' }),
+      'B',
+    );
+
+    expect(view.trend).toEqual({ direction: 'up', label: 'D → C' });
+  });
+
+  it('reports a drop and a flat trend', () => {
+    expect(
+      qualityViewOf(
+        mrWith({ verdict: 'ready', grade: 'B' }, { verdict: 'changes', grade: 'C' }),
+        'B',
+      ).trend.direction,
+    ).toBe('down');
+    expect(
+      qualityViewOf(mrWith({ verdict: 'ready', grade: 'B' }, { verdict: 'ready', grade: 'B' }), 'B')
+        .trend,
+    ).toEqual({ direction: 'flat', label: 'B → B' });
   });
 });

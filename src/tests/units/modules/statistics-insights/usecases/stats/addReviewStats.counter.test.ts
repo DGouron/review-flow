@@ -17,7 +17,7 @@ describe('AddReviewStatsUseCase cumulative counters', () => {
     useCase = new AddReviewStatsUseCase(statsGateway);
   });
 
-  it('moves scoredReviewCount by exactly one per recorded review, never double-counting', () => {
+  it('adds the counts of each recorded review exactly once', () => {
     useCase.execute({
       projectPath: PROJECT,
       mrNumber: 1,
@@ -32,8 +32,6 @@ describe('AddReviewStatsUseCase cumulative counters', () => {
     });
 
     const stats = statsGateway.loadProjectStats(PROJECT);
-    expect(stats?.scoredReviewCount).toBe(2);
-    expect(stats?.totalScoreSum).toBeCloseTo(15, 1);
     expect(stats?.totalBlocking).toBe(2);
     expect(stats?.totalWarnings).toBe(4);
   });
@@ -43,11 +41,8 @@ describe('AddReviewStatsUseCase cumulative counters', () => {
       PROJECT,
       ProjectStatsFactory.create({
         totalReviews: 1,
-        totalScoreSum: 6,
-        scoredReviewCount: 1,
         totalBlocking: 1,
         totalWarnings: 2,
-        averageScore: 6,
         reviews: [ReviewStatsFactory.create({ id: 'r1', mrNumber: 7, score: 6 })],
       }),
     );
@@ -60,46 +55,11 @@ describe('AddReviewStatsUseCase cumulative counters', () => {
     });
 
     const stats = statsGateway.loadProjectStats(PROJECT);
-    expect(stats?.scoredReviewCount).toBe(2);
-    expect(stats?.totalScoreSum).toBeCloseTo(13.5, 1);
     expect(stats?.totalBlocking).toBe(2);
     expect(stats?.totalWarnings).toBe(4);
   });
 
-  it('skips the counter when the new review carries a null score', () => {
-    statsGateway.saveProjectStats(
-      PROJECT,
-      ProjectStatsFactory.create({
-        totalReviews: 1,
-        totalScoreSum: 8,
-        scoredReviewCount: 1,
-        averageScore: 8,
-        reviews: [ReviewStatsFactory.create({ id: 'r1', mrNumber: 1, score: 8 })],
-      }),
-    );
-
-    useCase.execute({
-      projectPath: PROJECT,
-      mrNumber: 2,
-      duration: 60000,
-      parsed: {
-        score: null,
-        blocking: 0,
-        warnings: 0,
-        suggestions: 0,
-        categoryBreakdown: null,
-        verdict: null,
-        grade: null,
-        levels: null,
-      },
-    });
-
-    const stats = statsGateway.loadProjectStats(PROJECT);
-    expect(stats?.scoredReviewCount).toBe(1);
-    expect(stats?.totalScoreSum).toBe(8);
-  });
-
-  it('accumulates scoredReviewCount monotonically past the 100-review trim window', () => {
+  it('keeps counting reviews past the 100-review trim window', () => {
     const reviews = Array.from({ length: 100 }, (_, index) =>
       ReviewStatsFactory.create({ id: `review-${index}`, mrNumber: index + 1, score: 7 }),
     );
@@ -107,9 +67,6 @@ describe('AddReviewStatsUseCase cumulative counters', () => {
       PROJECT,
       ProjectStatsFactory.create({
         totalReviews: 300,
-        totalScoreSum: 2100,
-        scoredReviewCount: 300,
-        averageScore: 7,
         reviews,
       }),
     );
@@ -123,7 +80,6 @@ describe('AddReviewStatsUseCase cumulative counters', () => {
 
     const stats = statsGateway.loadProjectStats(PROJECT);
     expect(stats?.reviews).toHaveLength(100);
-    expect(stats?.scoredReviewCount).toBe(301);
     expect(stats?.totalReviews).toBe(301);
   });
 });

@@ -95,7 +95,7 @@ describe('renderOverviewHtml', () => {
     expect(html).toContain('https://gitlab.com/org/frontend/-/merge_requests/142');
   });
 
-  it('renders one project card with name, totals, score, sparkline and data-project-path for click navigation', () => {
+  it('renders one project card with name, totals, ready rate, sparkline and data-project-path for click navigation', () => {
     const html = renderOverviewHtml({
       activeReviews: { items: [], isEmpty: true, emptyMessage: 'Aucune review en cours' },
       projectCards: {
@@ -105,8 +105,8 @@ describe('renderOverviewHtml', () => {
             projectPath: '/repos/frontend',
             platform: 'gitlab',
             totalReviews: 24,
-            averageScoreLabel: '7.2',
-            sparklinePoints: [6, 7, 8, 7, 9],
+            readyRateLabel: '72%',
+            sparklinePoints: [2, 3, 4, 3, 4],
             isEmptyHistory: false,
           },
         ],
@@ -119,7 +119,7 @@ describe('renderOverviewHtml', () => {
     expect(html).toContain('data-project-path="/repos/frontend"');
     expect(html).toContain('frontend');
     expect(html).toContain('24 reviews');
-    expect(html).toContain('Score 7.2');
+    expect(html).toContain('Prêtes 72%');
     expect(html).toContain('<polyline');
   });
 
@@ -133,7 +133,7 @@ describe('renderOverviewHtml', () => {
             projectPath: '/repos/new',
             platform: 'gitlab',
             totalReviews: 0,
-            averageScoreLabel: '-',
+            readyRateLabel: '-',
             sparklinePoints: [],
             isEmptyHistory: true,
           },
@@ -146,7 +146,7 @@ describe('renderOverviewHtml', () => {
 
     expect(html).not.toContain('<polyline');
     expect(html).toContain('0 reviews');
-    expect(html).toContain('Score -');
+    expect(html).toContain('Prêtes -');
   });
 
   it('renders an external-link anchor on the project card when externalLink is an HTTPS url (SPEC-179)', () => {
@@ -159,8 +159,8 @@ describe('renderOverviewHtml', () => {
             projectPath: '/repos/frontend',
             platform: 'gitlab',
             totalReviews: 1,
-            averageScoreLabel: '7.0',
-            sparklinePoints: [7],
+            readyRateLabel: '70%',
+            sparklinePoints: [3],
             isEmptyHistory: false,
             externalLink: 'https://notion.so/team/projet',
           },
@@ -187,7 +187,7 @@ describe('renderOverviewHtml', () => {
             projectPath: '/repos/frontend',
             platform: 'gitlab',
             totalReviews: 0,
-            averageScoreLabel: '-',
+            readyRateLabel: '-',
             sparklinePoints: [],
             isEmptyHistory: true,
           },
@@ -208,7 +208,7 @@ describe('renderOverviewHtml', () => {
             projectPath: '/repos/frontend',
             platform: 'gitlab',
             totalReviews: 0,
-            averageScoreLabel: '-',
+            readyRateLabel: '-',
             sparklinePoints: [],
             isEmptyHistory: true,
             externalLink: '',
@@ -232,8 +232,8 @@ describe('renderOverviewHtml', () => {
             projectPath: '/repos/frontend',
             platform: 'gitlab',
             totalReviews: 1,
-            averageScoreLabel: '5.0',
-            sparklinePoints: [5],
+            readyRateLabel: '50%',
+            sparklinePoints: [2],
             isEmptyHistory: false,
             externalLink: 'javascript:alert(1)',
           },

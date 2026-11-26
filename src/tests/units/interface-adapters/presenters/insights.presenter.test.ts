@@ -147,7 +147,6 @@ describe('InsightsPresenter', () => {
       DeveloperInsightFactory.createValid({
         developerName: 'alice',
         metrics: {
-          averageScore: 8.3,
           averageBlocking: 0.1,
           averageWarnings: 1.4,
           averageDuration: 60000,
@@ -167,7 +166,6 @@ describe('InsightsPresenter', () => {
 
     const alice = viewModel.developers[0];
     expect(alice.metrics).toBeDefined();
-    expect(alice.metrics.averageScore).toBe(8.3);
     expect(alice.metrics.averageBlocking).toBe(0.1);
     expect(alice.metrics.firstReviewQualityRate).toBe(0.85);
   });
@@ -180,8 +178,8 @@ describe('InsightsPresenter', () => {
           {
             category: 'quality',
             type: 'strength',
-            descriptionKey: 'insight.quality.highScore',
-            params: { score: 8.3, teamAverage: 7.5, percent: 11 },
+            descriptionKey: 'insight.quality.highReadiness',
+            params: { readyRate: 80, teamReadyRate: 72, percent: 11 },
           },
         ],
       }),
@@ -195,7 +193,7 @@ describe('InsightsPresenter', () => {
 
     const alice = viewModel.developers[0];
     expect(alice.insightDescriptions).toHaveLength(1);
-    expect(alice.insightDescriptions[0].descriptionKey).toBe('insight.quality.highScore');
+    expect(alice.insightDescriptions[0].descriptionKey).toBe('insight.quality.highReadiness');
   });
 
   it('should include team average levels', () => {

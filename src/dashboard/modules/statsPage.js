@@ -115,11 +115,10 @@ function renderVolumeHero(summary, t) {
  * @returns {string}
  */
 function renderQualityKpis(summary, t) {
-  const numericScore = parseFloat(summary.averageScore);
-  const isScoreNumeric = !Number.isNaN(numericScore);
-  const scoreValue = isScoreNumeric
-    ? `<span class="stat-main" data-target="${numericScore}" data-suffix="/10">0</span>`
-    : `<span class="stat-main">${escapeHtml(summary.averageScore)}</span><span class="stat-denominator">/10</span>`;
+  const numericRate = parseFloat(summary.readyRate);
+  const readyRateValue = Number.isNaN(numericRate)
+    ? `<span class="stat-main">${escapeHtml(summary.readyRate)}</span>`
+    : `<span class="stat-main" data-target="${numericRate}" data-suffix="%">0</span>`;
   return `
     <section class="stats-quality">
       <div class="stats-section-eyebrow">// QUALITY</div>
@@ -129,8 +128,8 @@ function renderQualityKpis(summary, t) {
           <div class="stat-label"><i data-lucide="bug" aria-hidden="true"></i> ${t('stats.kpi.bugsCaught')}</div>
         </div>
         <div class="stat-card metric-score">
-          <div class="stat-value">${scoreValue}${trendIcon(summary.trend.score)}</div>
-          <div class="stat-label"><i data-lucide="star" aria-hidden="true"></i> ${t('stats.averageScore')}</div>
+          <div class="stat-value">${readyRateValue}${trendIcon(summary.trend.readiness)}</div>
+          <div class="stat-label"><i data-lucide="star" aria-hidden="true"></i> ${t('stats.readyRate')}</div>
         </div>
         <div class="stat-card metric-time">
           <div class="stat-value"><span class="stat-main">${escapeHtml(summary.totalTime)}</span></div>

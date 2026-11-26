@@ -10,21 +10,21 @@ describe('rankPendingFixForNowLane', () => {
         id: 'older-low-threads',
         mrNumber: 10,
         openThreads: 2,
-        latestScore: 6,
+        reviews: [{ verdict: 'changes', grade: 'D' }],
         createdAt: '2026-02-13T08:00:00.000Z',
       },
       {
         id: 'fresh-many-threads',
         mrNumber: 11,
         openThreads: 4,
-        latestScore: 7.5,
+        reviews: [{ verdict: 'changes', grade: 'C' }],
         createdAt: '2026-02-14T11:00:00.000Z',
       },
       {
-        id: 'high-score-few-threads',
+        id: 'ready-few-threads',
         mrNumber: 12,
         openThreads: 1,
-        latestScore: 9,
+        reviews: [{ verdict: 'ready', grade: 'B' }],
         createdAt: '2026-02-12T08:00:00.000Z',
       },
     ];
@@ -34,7 +34,7 @@ describe('rankPendingFixForNowLane', () => {
     expect(ranked.map((mr) => mr.id)).toEqual([
       'fresh-many-threads',
       'older-low-threads',
-      'high-score-few-threads',
+      'ready-few-threads',
     ]);
   });
 
@@ -45,21 +45,21 @@ describe('rankPendingFixForNowLane', () => {
         id: 'newer',
         mrNumber: 32,
         openThreads: 2,
-        latestScore: 6,
+        reviews: [{ verdict: 'changes', grade: 'D' }],
         createdAt: '2026-02-14T10:00:00.000Z',
       },
       {
         id: 'older',
         mrNumber: 31,
         openThreads: 2,
-        latestScore: 6,
+        reviews: [{ verdict: 'changes', grade: 'D' }],
         createdAt: '2026-02-14T08:00:00.000Z',
       },
       {
         id: 'same-date-lower-number',
         mrNumber: 30,
         openThreads: 2,
-        latestScore: 6,
+        reviews: [{ verdict: 'changes', grade: 'D' }],
         createdAt: '2026-02-14T08:00:00.000Z',
       },
     ];
@@ -75,14 +75,14 @@ describe('rankPendingFixForNowLane', () => {
         id: 'a',
         mrNumber: 10,
         openThreads: 1,
-        latestScore: 7,
+        reviews: [{ verdict: 'changes', grade: 'C' }],
         createdAt: '2026-02-14T10:00:00.000Z',
       },
       {
         id: 'b',
         mrNumber: 11,
         openThreads: 4,
-        latestScore: 5,
+        reviews: [{ verdict: 'changes', grade: 'D' }],
         createdAt: '2026-02-14T09:00:00.000Z',
       },
     ];
@@ -91,5 +91,19 @@ describe('rankPendingFixForNowLane', () => {
     rankPendingFixForNowLane(pendingFix, { nowIsoDate: '2026-02-14T12:00:00.000Z' });
 
     expect(pendingFix.map((mr) => mr.id)).toEqual(snapshot);
+  });
+
+  it('should rank the worse grade first when threads and age are equal', () => {
+    const nowIsoDate = '2026-02-14T12:00:00.000Z';
+    const shared = { openThreads: 1, createdAt: '2026-02-14T10:00:00.000Z' };
+    const pendingFix = [
+      { ...shared, id: 'grade-c', mrNumber: 1, reviews: [{ verdict: 'changes', grade: 'C' }] },
+      { ...shared, id: 'grade-d', mrNumber: 2, reviews: [{ verdict: 'changes', grade: 'D' }] },
+      { ...shared, id: 'no-verdict', mrNumber: 3, reviews: [] },
+    ];
+
+    const ranked = rankPendingFixForNowLane(pendingFix, { nowIsoDate, targetGrade: 'B' });
+
+    expect(ranked.map((mr) => mr.id)).toEqual(['grade-d', 'no-verdict', 'grade-c']);
   });
 });

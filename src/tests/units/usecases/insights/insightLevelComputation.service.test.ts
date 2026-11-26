@@ -13,8 +13,9 @@ import {
   computeTeamMetrics,
   computeCategoryLevels,
   average,
-  averageOfScores,
+  readyRateOf,
   averageCodeVolume,
+  ABSOLUTE_BENCHMARKS,
   clampLevel,
   trendToScore,
   invertTrend,
@@ -128,27 +129,31 @@ describe('normalizeLowerIsBetter', () => {
 });
 
 describe('level calibration with real-world data', () => {
-  it('should produce quality level 8-9 for developer with score 8.3 and 0.1 blocking', () => {
+  it('should produce a high quality level for a developer whose reviews are ready', () => {
     const damienReviews = createReviewsForDeveloper('damien', 35, {
-      score: 8.3,
+      verdict: 'ready',
+      grade: 'B',
       blocking: 0,
       warnings: 1,
       duration: 60000,
     });
     const augReviews = createReviewsForDeveloper('aug', 44, {
-      score: 7.4,
+      verdict: 'ready',
+      grade: 'C',
       blocking: 0,
       warnings: 2,
       duration: 60000,
     });
     const dariusReviews = createReviewsForDeveloper('darius', 14, {
-      score: 6.4,
+      verdict: 'changes',
+      grade: 'D',
       blocking: 1,
       warnings: 2,
       duration: 60000,
     });
     const mathysReviews = createReviewsForDeveloper('mathys', 6, {
-      score: 6.7,
+      verdict: 'changes',
+      grade: 'D',
       blocking: 1,
       warnings: 2,
       duration: 60000,
@@ -174,13 +179,15 @@ describe('level calibration with real-world data', () => {
 
   it('should spread levels across 3-9 range instead of clustering at 5-6', () => {
     const highPerformer = createReviewsForDeveloper('high', 10, {
-      score: 9,
+      verdict: 'ready',
+      grade: 'A',
       blocking: 0,
       warnings: 0,
       duration: 30000,
     });
     const lowPerformer = createReviewsForDeveloper('low', 10, {
-      score: 4,
+      verdict: 'changes',
+      grade: 'E',
       blocking: 3,
       warnings: 5,
       duration: 300000,
@@ -212,24 +219,45 @@ describe('average', () => {
   });
 });
 
-describe('averageOfScores', () => {
-  it('should return the neutral fallback of 5 when no review has a score', () => {
+describe('readyRateOf', () => {
+  it('should return the neutral fallback of 0.5 when no review is judged', () => {
     const reviews = [
       ReviewStatsFactory.create({ score: null }),
       ReviewStatsFactory.create({ score: null }),
     ];
 
-    expect(averageOfScores(reviews)).toBe(5);
+    expect(readyRateOf(reviews)).toBe(0.5);
   });
 
-  it('should average only the scored reviews', () => {
+  it('should return the given fallback when no review is judged', () => {
+    expect(readyRateOf([], 0)).toBe(0);
+  });
+
+  it('should return the share of judged reviews whose verdict is ready', () => {
     const reviews = [
-      ReviewStatsFactory.create({ score: 8 }),
+      ReviewStatsFactory.create({ verdict: 'ready', grade: 'A' }),
       ReviewStatsFactory.create({ score: null }),
-      ReviewStatsFactory.create({ score: 6 }),
+      ReviewStatsFactory.create({ verdict: 'changes', grade: 'C' }),
+      ReviewStatsFactory.create({ verdict: 'ready', grade: 'B' }),
+      ReviewStatsFactory.create({ verdict: 'stopped', grade: 'E' }),
     ];
 
-    expect(averageOfScores(reviews)).toBe(7);
+    expect(readyRateOf(reviews)).toBe(0.5);
+  });
+
+  it('should rebuild the verdict of a legacy scored review from its counts', () => {
+    const reviews = [
+      ReviewStatsFactory.create({ score: 9, blocking: 0, warnings: 0 }),
+      ReviewStatsFactory.create({ score: 9, blocking: 1, warnings: 0 }),
+    ];
+
+    expect(readyRateOf(reviews)).toBe(0.5);
+  });
+});
+
+describe('ABSOLUTE_BENCHMARKS', () => {
+  it('should expect a single developer to be ready at first review 60% of the time', () => {
+    expect(ABSOLUTE_BENCHMARKS.readyRate).toBe(0.6);
   });
 });
 
@@ -587,52 +615,87 @@ describe('computeDeveloperMetrics', () => {
     const metrics = computeDeveloperMetrics(reviews);
 
     expect(metrics.averageCodeVolume).toBe(0);
-    expect(metrics.codeVolumeScoreCorrelation).toBe(0);
+    expect(metrics.codeVolumeGradeCorrelation).toBe(0);
   });
 
-  it('should return zero correlation with fewer than three scored reviews carrying diff stats', () => {
+  it('should report the share of judged reviews whose verdict is ready', () => {
+    const reviews = [
+      ReviewStatsFactory.create({ id: 'r-1', verdict: 'ready', grade: 'A' }),
+      ReviewStatsFactory.create({ id: 'r-2', verdict: 'changes', grade: 'C' }),
+      ReviewStatsFactory.create({ id: 'r-3', verdict: 'changes', grade: 'D' }),
+      ReviewStatsFactory.create({ id: 'r-4', verdict: 'ready', grade: 'B' }),
+    ];
+
+    expect(computeDeveloperMetrics(reviews).readyRate).toBe(0.5);
+  });
+
+  it('should return zero correlation with fewer than three graded reviews carrying diff stats', () => {
     const reviews = [
       ReviewStatsFactory.withDiffStats(
         { commitsCount: 1, additions: 50, deletions: 10 },
-        { score: 8 },
+        { verdict: 'ready', grade: 'A' },
       ),
       ReviewStatsFactory.withDiffStats(
         { commitsCount: 1, additions: 30, deletions: 5 },
-        { score: 6 },
+        { verdict: 'changes', grade: 'D' },
+      ),
+      ReviewStatsFactory.withDiffStats(
+        { commitsCount: 1, additions: 300, deletions: 5 },
+        { score: null },
       ),
     ];
 
-    expect(computeDeveloperMetrics(reviews).codeVolumeScoreCorrelation).toBe(0);
+    expect(computeDeveloperMetrics(reviews).codeVolumeGradeCorrelation).toBe(0);
   });
 
   it('should return zero correlation when volume has no variance', () => {
-    const reviews = Array.from({ length: 4 }, (_, index) =>
+    const grades = ['A', 'B', 'C', 'D'] as const;
+    const reviews = grades.map((grade, index) =>
       ReviewStatsFactory.withDiffStats(
         { commitsCount: 1, additions: 100, deletions: 0 },
-        { id: `c-${index}`, score: index + 1 },
+        { id: `c-${index}`, verdict: 'changes', grade },
       ),
     );
 
-    expect(computeDeveloperMetrics(reviews).codeVolumeScoreCorrelation).toBe(0);
+    expect(computeDeveloperMetrics(reviews).codeVolumeGradeCorrelation).toBe(0);
   });
 
-  it('should compute a positive correlation when score grows with volume', () => {
+  it('should compute a positive correlation when the grade improves with volume', () => {
     const reviews = [
       ReviewStatsFactory.withDiffStats(
         { commitsCount: 1, additions: 10, deletions: 0 },
-        { id: 'p-1', score: 2 },
+        { id: 'p-1', verdict: 'changes', grade: 'D' },
       ),
       ReviewStatsFactory.withDiffStats(
         { commitsCount: 1, additions: 50, deletions: 0 },
-        { id: 'p-2', score: 5 },
+        { id: 'p-2', verdict: 'changes', grade: 'C' },
       ),
       ReviewStatsFactory.withDiffStats(
         { commitsCount: 1, additions: 100, deletions: 0 },
-        { id: 'p-3', score: 9 },
+        { id: 'p-3', verdict: 'ready', grade: 'A' },
       ),
     ];
 
-    expect(computeDeveloperMetrics(reviews).codeVolumeScoreCorrelation).toBeGreaterThan(0);
+    expect(computeDeveloperMetrics(reviews).codeVolumeGradeCorrelation).toBeGreaterThan(0);
+  });
+
+  it('should compute a negative correlation when the grade worsens with volume', () => {
+    const reviews = [
+      ReviewStatsFactory.withDiffStats(
+        { commitsCount: 1, additions: 10, deletions: 0 },
+        { id: 'n-1', verdict: 'ready', grade: 'A' },
+      ),
+      ReviewStatsFactory.withDiffStats(
+        { commitsCount: 1, additions: 50, deletions: 0 },
+        { id: 'n-2', verdict: 'changes', grade: 'C' },
+      ),
+      ReviewStatsFactory.withDiffStats(
+        { commitsCount: 1, additions: 100, deletions: 0 },
+        { id: 'n-3', verdict: 'stopped', grade: 'E' },
+      ),
+    ];
+
+    expect(computeDeveloperMetrics(reviews).codeVolumeGradeCorrelation).toBeLessThan(0);
   });
 });
 
@@ -640,23 +703,35 @@ describe('computeTeamMetrics', () => {
   it('should aggregate reviews across all developers', () => {
     const reviewsByDeveloper = new Map<string, ReviewStats[]>();
     reviewsByDeveloper.set('alice', [
-      ReviewStatsFactory.create({ id: 'a-1', score: 8, blocking: 0, warnings: 1 }),
+      ReviewStatsFactory.create({
+        id: 'a-1',
+        verdict: 'ready',
+        grade: 'B',
+        blocking: 0,
+        warnings: 1,
+      }),
     ]);
     reviewsByDeveloper.set('bob', [
-      ReviewStatsFactory.create({ id: 'b-1', score: 6, blocking: 2, warnings: 3 }),
+      ReviewStatsFactory.create({
+        id: 'b-1',
+        verdict: 'changes',
+        grade: 'D',
+        blocking: 2,
+        warnings: 3,
+      }),
     ]);
 
     const metrics = computeTeamMetrics(reviewsByDeveloper);
 
-    expect(metrics.averageScore).toBe(7);
+    expect(metrics.readyRate).toBe(0.5);
     expect(metrics.averageBlocking).toBe(1);
     expect(metrics.averageWarnings).toBe(2);
   });
 
-  it('should fall back to neutral score and zero volume for an empty team', () => {
+  it('should fall back to a neutral ready rate and zero volume for an empty team', () => {
     const metrics = computeTeamMetrics(new Map<string, ReviewStats[]>());
 
-    expect(metrics.averageScore).toBe(5);
+    expect(metrics.readyRate).toBe(0.5);
     expect(metrics.averageCodeVolume).toBe(0);
   });
 });
@@ -697,19 +772,56 @@ describe('computeCategoryLevels code volume and iteration branches', () => {
     expect(levels.iteration.level).toBeLessThanOrEqual(10);
   });
 
+  it('should read the quality trend from the grades of the reviews', () => {
+    const reviews = Array.from({ length: 20 }, (_, index) =>
+      ReviewStatsFactory.create({
+        id: `q-${index}`,
+        verdict: index < 10 ? 'changes' : 'ready',
+        grade: index < 10 ? 'D' : 'A',
+        blocking: 0,
+        warnings: 0,
+        timestamp: new Date(2024, 0, index + 1).toISOString(),
+      }),
+    );
+    const metrics = computeDeveloperMetrics(reviews);
+
+    const levels = computeCategoryLevels(reviews, metrics, ABSOLUTE_BENCHMARKS);
+
+    expect(levels.quality.trend).toBe('improving');
+  });
+
+  it('should count an ungraded review as a middle grade in the quality trend', () => {
+    const reviews = Array.from({ length: 20 }, (_, index) =>
+      ReviewStatsFactory.create({
+        id: `u-${index}`,
+        score: null,
+        verdict: index < 10 ? 'ready' : undefined,
+        grade: index < 10 ? 'A' : undefined,
+        blocking: 0,
+        warnings: 0,
+        timestamp: new Date(2024, 0, index + 1).toISOString(),
+      }),
+    );
+    const metrics = computeDeveloperMetrics(reviews);
+
+    const levels = computeCategoryLevels(reviews, metrics, ABSOLUTE_BENCHMARKS);
+
+    expect(levels.quality.trend).toBe('declining');
+  });
+
   it('should reward a positive code volume correlation', () => {
     const reviews = [
       ReviewStatsFactory.withDiffStats(
         { commitsCount: 1, additions: 10, deletions: 0 },
-        { id: 'cv-1', score: 2 },
+        { id: 'cv-1', verdict: 'changes', grade: 'D' },
       ),
       ReviewStatsFactory.withDiffStats(
         { commitsCount: 1, additions: 50, deletions: 0 },
-        { id: 'cv-2', score: 5 },
+        { id: 'cv-2', verdict: 'changes', grade: 'C' },
       ),
       ReviewStatsFactory.withDiffStats(
         { commitsCount: 1, additions: 100, deletions: 0 },
-        { id: 'cv-3', score: 9 },
+        { id: 'cv-3', verdict: 'ready', grade: 'A' },
       ),
     ];
     const metrics = computeDeveloperMetrics(reviews);
@@ -718,6 +830,6 @@ describe('computeCategoryLevels code volume and iteration branches', () => {
     const levels = computeCategoryLevels(reviews, metrics, teamMetrics);
 
     expect(levels.codeVolume.level).toBeGreaterThanOrEqual(1);
-    expect(metrics.codeVolumeScoreCorrelation).toBeGreaterThan(0);
+    expect(metrics.codeVolumeGradeCorrelation).toBeGreaterThan(0);
   });
 });

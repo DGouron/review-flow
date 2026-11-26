@@ -18,13 +18,12 @@ import {
   computeTitle,
   computeOverallLevel,
   average,
+  firstReviewQualityRateOf,
 } from '@/modules/statistics-insights/usecases/insights/insightLevelComputation.service.js';
 import type {
   DeveloperMetrics as ServiceDeveloperMetrics,
   TeamMetrics,
 } from '@/modules/statistics-insights/usecases/insights/insightLevelComputation.service.js';
-
-const QUALITY_SCORE_THRESHOLD = 7;
 
 export function computeDeveloperInsights(reviews: ReviewStats[]): DeveloperInsight[] {
   const reviewsByDeveloper = groupReviewsByDeveloper(reviews);
@@ -78,15 +77,6 @@ function filterEligibleDevelopers(
   }
 
   return eligible;
-}
-
-function computeFirstReviewQualityRate(reviews: ReviewStats[]): number {
-  const reviewsWithScore = reviews.filter((review) => review.score !== null);
-  if (reviewsWithScore.length === 0) return 0;
-  const qualityReviews = reviewsWithScore.filter(
-    (review) => (review.score ?? 0) >= QUALITY_SCORE_THRESHOLD && review.blocking === 0,
-  );
-  return qualityReviews.length / reviewsWithScore.length;
 }
 
 function computeAverageAdditions(reviews: ReviewStats[]): number {
@@ -161,14 +151,14 @@ function generateStrengthDescription(
 ): InsightDescription | null {
   switch (category) {
     case 'quality': {
-      const percent = computePercentDifference(metrics.averageScore, teamMetrics.averageScore);
+      const percent = computePercentDifference(metrics.readyRate, teamMetrics.readyRate);
       return {
         category: 'quality',
         type: 'strength',
-        descriptionKey: 'insight.quality.highScore',
+        descriptionKey: 'insight.quality.highReadiness',
         params: {
-          score: Math.round(metrics.averageScore * 10) / 10,
-          teamAverage: Math.round(teamMetrics.averageScore * 10) / 10,
+          readyRate: Math.round(metrics.readyRate * 100),
+          teamReadyRate: Math.round(teamMetrics.readyRate * 100),
           percent: Math.abs(percent),
         },
       };
@@ -197,7 +187,7 @@ function generateStrengthDescription(
         params: { lines: Math.round(metrics.averageCodeVolume) },
       };
     case 'iteration': {
-      const qualityRate = computeFirstReviewQualityRate(reviews);
+      const qualityRate = firstReviewQualityRateOf(reviews);
       return {
         category: 'iteration',
         type: 'strength',
@@ -255,7 +245,7 @@ function generateWeaknessDescription(
         params: { lines: Math.round(metrics.averageCodeVolume) },
       };
     case 'iteration': {
-      const qualityRate = computeFirstReviewQualityRate(reviews);
+      const qualityRate = firstReviewQualityRateOf(reviews);
       return {
         category: 'iteration',
         type: 'weakness',
@@ -305,14 +295,13 @@ function computeInsightForDeveloper(
     topPriority,
     reviewCount: reviews.length,
     metrics: {
-      averageScore: serviceMetrics.averageScore,
       averageBlocking: serviceMetrics.averageBlocking,
       averageWarnings: serviceMetrics.averageWarnings,
       averageDuration: serviceMetrics.averageDuration,
       totalFollowups: null,
       averageAdditions: computeAverageAdditions(reviews),
       averageDeletions: computeAverageDeletions(reviews),
-      firstReviewQualityRate: computeFirstReviewQualityRate(reviews),
+      firstReviewQualityRate: firstReviewQualityRateOf(reviews),
     },
     insightDescriptions,
   };

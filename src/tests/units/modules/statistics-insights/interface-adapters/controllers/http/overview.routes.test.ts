@@ -17,15 +17,9 @@ import type { OverviewViewModel } from '@/modules/statistics-insights/interface-
 import { RepositoryConfigFactory } from '@/tests/factories/repositoryConfig.factory.js';
 
 function makeStats(reviews: ProjectStats['reviews']): ProjectStats {
-  const scoredReviews = reviews.filter((review) => review.score !== null);
-  const averageScore =
-    scoredReviews.length === 0
-      ? null
-      : scoredReviews.reduce((sum, review) => sum + (review.score ?? 0), 0) / scoredReviews.length;
   return {
     totalReviews: reviews.length,
     totalDuration: 0,
-    averageScore,
     averageDuration: 0,
     totalBlocking: 0,
     totalWarnings: 0,
@@ -179,8 +173,20 @@ describe('overviewRoutes — GET /api/overview', () => {
       ],
       statsByPath: {
         '/repos/frontend': makeStats([
-          makeReview({ id: 'r-1', mrNumber: 100, timestamp: '2026-05-24T10:00:00.000Z', score: 7 }),
-          makeReview({ id: 'r-2', mrNumber: 101, timestamp: '2026-05-25T10:00:00.000Z', score: 8 }),
+          makeReview({
+            id: 'r-1',
+            mrNumber: 100,
+            timestamp: '2026-05-24T10:00:00.000Z',
+            verdict: 'ready',
+            grade: 'B',
+          }),
+          makeReview({
+            id: 'r-2',
+            mrNumber: 101,
+            timestamp: '2026-05-25T10:00:00.000Z',
+            verdict: 'changes',
+            grade: 'C',
+          }),
         ]),
         '/repos/api': makeStats([]),
       },
@@ -209,7 +215,8 @@ describe('overviewRoutes — GET /api/overview', () => {
 
     expect(body.projectCards.items).toHaveLength(2);
     expect(body.projectCards.items[0]?.projectName).toBe('frontend');
-    expect(body.projectCards.items[0]?.sparklinePoints).toEqual([7, 8]);
+    expect(body.projectCards.items[0]?.sparklinePoints).toEqual([3, 2]);
+    expect(body.projectCards.items[0]?.readyRateLabel).toBe('50%');
     expect(body.projectCards.items[1]?.projectName).toBe('api');
     expect(body.projectCards.items[1]?.isEmptyHistory).toBe(true);
 

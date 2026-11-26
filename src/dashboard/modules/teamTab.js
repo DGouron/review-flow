@@ -30,7 +30,6 @@ function renderDeveloperCard(developer, translate, aiDeveloper) {
     : `<div class="dev-title">${translate('title.' + developer.title)}</div>`;
 
   const metrics = developer.metrics;
-  const avgScore = metrics ? Number(metrics.averageScore).toFixed(1) : null;
   const qualityRate = metrics ? Math.round(metrics.firstReviewQualityRate * 100) : null;
 
   return `
@@ -44,7 +43,6 @@ function renderDeveloperCard(developer, translate, aiDeveloper) {
         ${renderLevelRing(developer.overallLevel, 52, translate('team.overallLevel') + ' ' + developer.overallLevel + '/10')}
       </div>
       <div class="dev-card-chips">
-        ${avgScore ? `<span class="dev-chip dev-chip-score" title="${translate('devSheet.metrics.averageScore')}">${icon('star', 'dev-chip-icon')} ${avgScore}</span>` : ''}
         ${qualityRate !== null ? `<span class="dev-chip dev-chip-quality" title="${translate('devSheet.metrics.firstPassQuality')}">${icon('zap', 'dev-chip-icon')} ${qualityRate}%</span>` : ''}
         <span class="dev-chip dev-chip-count" title="${translate('devSheet.reviewCount', { count: developer.reviewCount })}">${icon('file-search', 'dev-chip-icon')} ${developer.reviewCount}</span>
       </div>

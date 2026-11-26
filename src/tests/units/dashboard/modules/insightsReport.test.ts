@@ -30,7 +30,6 @@ function createDeveloperViewModel(overrides = {}) {
     topPriority: 'iteration',
     reviewCount: 12,
     metrics: {
-      averageScore: 7.5,
       averageBlocking: 1.2,
       firstReviewQualityRate: 0.75,
       averageDuration: '15m',
@@ -246,7 +245,6 @@ describe('buildInsightsReport', () => {
       developers: [
         createDeveloperViewModel({
           metrics: {
-            averageScore: 7.5,
             averageBlocking: 1.2,
             firstReviewQualityRate: 0.75,
             averageDuration: '15m',
@@ -261,8 +259,7 @@ describe('buildInsightsReport', () => {
     const html = buildInsightsReport(data, translate);
 
     expect(html).toContain('export.metrics');
-    expect(html).toContain('export.avgScore');
-    expect(html).toContain('7.5');
+    expect(html).not.toContain('export.avgScore');
     expect(html).toContain('export.avgBlocking');
     expect(html).toContain('1.2');
     expect(html).toContain('export.firstPassRate');

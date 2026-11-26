@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+import {
+  QUALITY_GRADES,
+  REVIEW_VERDICTS,
+} from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import { aiInsightsResultSchema } from '@/modules/statistics-insights/entities/insight/aiInsight.schema.js';
 
 const reviewStatsForPersistenceSchema = z.object({
@@ -20,13 +24,19 @@ const reviewStatsForPersistenceSchema = z.object({
     })
     .nullable()
     .optional(),
+  verdict: z.enum(REVIEW_VERDICTS).nullable().optional(),
+  grade: z.enum(QUALITY_GRADES).nullable().optional(),
 });
 
 export const persistedDeveloperMetricsSchema = z.object({
   developerName: z.string().min(1),
   totalReviews: z.number().int().min(0),
-  totalScore: z.number().min(0),
-  scoredReviewCount: z.number().int().min(0),
+  /** Absent from files written before verdicts: seeded from recentReviews on the next run. */
+  judgedReviewCount: z.number().int().min(0).optional(),
+  readyReviewCount: z.number().int().min(0).optional(),
+  /** Legacy /10 accumulators, still read from older files, never written again. */
+  totalScore: z.number().min(0).optional(),
+  scoredReviewCount: z.number().int().min(0).optional(),
   totalBlocking: z.number().int().min(0),
   totalWarnings: z.number().int().min(0),
   totalSuggestions: z.number().int().min(0),
