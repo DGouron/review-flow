@@ -121,7 +121,10 @@ import { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/i
 import { processWebhook } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import { reviewBriefRoutes } from '@/modules/review-brief/interface-adapters/controllers/http/reviewBrief.routes.js';
 import { ReviewBriefCacheFileSystemGateway } from '@/modules/review-brief/interface-adapters/gateways/reviewBriefCache.fileSystem.gateway.js';
-import { ReviewBriefModelEmberGateway } from '@/modules/review-brief/interface-adapters/gateways/reviewBriefModel.ember.gateway.js';
+import {
+  REVIEW_BRIEF_SESSION,
+  ReviewBriefModelEmberGateway,
+} from '@/modules/review-brief/interface-adapters/gateways/reviewBriefModel.ember.gateway.js';
 import { GitHubReviewRequestOverviewFetchGateway } from '@/modules/review-brief/interface-adapters/gateways/reviewRequestOverview.github.gateway.js';
 import { GitLabReviewRequestOverviewFetchGateway } from '@/modules/review-brief/interface-adapters/gateways/reviewRequestOverview.gitlab.gateway.js';
 import { ExplainReviewRequestUseCase } from '@/modules/review-brief/usecases/explainReviewRequest/explainReviewRequest.usecase.js';
@@ -461,14 +464,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
 
   const reviewBriefTransport = new EmberAnswerTransportClaudeGateway(
     new ClaudeSessionCliGateway(defaultProcessRunner()),
-    {
-      homeDir: homedir(),
-      buildMcpConfig: () => '{"mcpServers":{}}',
-      toolPolicy: {
-        allowedTools: 'Read,Glob,Grep',
-        disallowedTools: 'Edit,Write,Bash,Task,WebFetch,WebSearch,NotebookEdit',
-      },
-    },
+    { homeDir: homedir(), session: REVIEW_BRIEF_SESSION },
   );
   await app.register(reviewBriefRoutes, {
     getRepositories: () => deps.config.repositories,
@@ -885,7 +881,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
   });
   const emberAnswerTransport = new EmberAnswerTransportClaudeGateway(
     new ClaudeSessionCliGateway(defaultProcessRunner()),
-    { homeDir: homedir(), buildMcpConfig: buildMcpConfigJson },
+    { homeDir: homedir(), session: { buildMcpConfig: buildMcpConfigJson } },
   );
   const emberMemory = new EmberMemoryFileSystemGateway({ homeDir: homedir() });
 

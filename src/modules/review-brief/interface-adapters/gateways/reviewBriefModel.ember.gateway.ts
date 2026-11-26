@@ -1,4 +1,5 @@
 import type { EmberAnswerTransportGateway } from '@/modules/ember-chat/entities/emberAnswer/emberAnswerTransport.gateway.js';
+import type { EmberAnswerSessionConfiguration } from '@/modules/ember-chat/interface-adapters/gateways/emberAnswerTransport.claude.gateway.js';
 import type {
   ReviewBriefModelGateway,
   ReviewBriefModelRequest,
@@ -16,6 +17,15 @@ type BriefRun =
 type Countdown = { elapsed: Promise<'timeout'>; stop: () => void };
 
 const DEFAULT_TIMEOUT_MS = 55_000;
+
+export const REVIEW_BRIEF_SESSION: EmberAnswerSessionConfiguration = {
+  buildMcpConfig: () => '{"mcpServers":{}}',
+  toolPolicy: {
+    allowedTools: 'Read,Glob,Grep',
+    disallowedTools: 'Edit,Write,Bash,Task,WebFetch,WebSearch,NotebookEdit',
+  },
+  label: { jobType: 'review-brief', jobIdPrefix: 'review-brief' },
+};
 
 function startCountdown(milliseconds: number): Countdown {
   let timer: NodeJS.Timeout | null = null;

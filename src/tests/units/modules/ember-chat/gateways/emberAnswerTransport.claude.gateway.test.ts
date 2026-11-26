@@ -59,7 +59,7 @@ function projectDirFor(projectPath: string, homeDir: string): string {
 const FAST_OPTIONS = (homeDir: string) => ({
   homeDir,
   pollIntervalMs: 1,
-  buildMcpConfig: () => '{"mcpServers":{}}',
+  session: { buildMcpConfig: () => '{"mcpServers":{}}' },
 });
 
 describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)', () => {
@@ -132,7 +132,7 @@ describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)',
     const gateway = new EmberAnswerTransportClaudeGateway(sessionGateway, {
       homeDir,
       pollIntervalMs: 1,
-      buildMcpConfig: () => mcpConfig,
+      session: { buildMcpConfig: () => mcpConfig },
     });
     const { subscriber, finished } = settled();
 
@@ -154,7 +154,10 @@ describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)',
 
     const gateway = new EmberAnswerTransportClaudeGateway(sessionGateway, {
       ...FAST_OPTIONS(homeDir),
-      toolPolicy: { allowedTools: 'Read,Glob,Grep', disallowedTools: 'Edit,Write,WebFetch' },
+      session: {
+        buildMcpConfig: () => '{"mcpServers":{}}',
+        toolPolicy: { allowedTools: 'Read,Glob,Grep', disallowedTools: 'Edit,Write,WebFetch' },
+      },
     });
     const { subscriber, finished } = settled();
 
@@ -237,7 +240,7 @@ describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)',
     const gateway = new EmberAnswerTransportClaudeGateway(sessionGateway, {
       homeDir,
       pollIntervalMs: 1,
-      buildMcpConfig: () => '{"mcpServers":{}}',
+      session: { buildMcpConfig: () => '{"mcpServers":{}}' },
     });
     const { subscriber, finished } = settled();
 

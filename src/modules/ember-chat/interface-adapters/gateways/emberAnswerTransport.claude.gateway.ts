@@ -1,19 +1,16 @@
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
-
 import type { ClaudeSessionGateway } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
-import type { SessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
-import {
-  parseStreamJsonEvent,
-  extractText,
-  isTurnComplete,
-} from '@/modules/claude-invocation/interface-adapters/gateways/transcriptStreamJson.parser.js';
 import type {
   EmberAnswerStartOptions,
   EmberAnswerStartResult,
   EmberAnswerSubscriber,
   EmberAnswerTransportGateway,
 } from '@/modules/ember-chat/entities/emberAnswer/emberAnswerTransport.gateway.js';
+import {
+  EmberAnswerRunner,
+  type ClaudeSessionLabel,
+  type EmberAnswerRunSettings,
+  type EmberToolPolicy,
+} from '@/modules/ember-chat/interface-adapters/gateways/emberAnswerRunner.claude.js';
 
 /**
  * HUMBLE GLUE — NOT unit-tested. This is the single unverified mechanism in
@@ -52,16 +49,16 @@ import type {
  * STILL TO VERIFY MANUALLY: drive the chat end-to-end in a browser.
  */
 
-export interface EmberToolPolicy {
-  allowedTools: string;
-  disallowedTools: string;
-}
+export type EmberAnswerSessionConfiguration = {
+  buildMcpConfig: () => string;
+  toolPolicy?: EmberToolPolicy;
+  label?: ClaudeSessionLabel;
+};
 
 export interface EmberAnswerTransportClaudeGatewayOptions {
   homeDir: string;
   pollIntervalMs?: number;
-  buildMcpConfig: () => string;
-  toolPolicy?: EmberToolPolicy;
+  session: EmberAnswerSessionConfiguration;
 }
 
 const DEFAULT_POLL_INTERVAL_MS = 750;
@@ -70,6 +67,8 @@ const EMBER_TOOL_POLICY: EmberToolPolicy = {
   allowedTools: 'Read,Glob,Grep,mcp__review-progress__record_insight',
   disallowedTools: 'Edit,Write,Bash,Task',
 };
+
+const EMBER_SESSION_LABEL: ClaudeSessionLabel = { jobType: 'ember-chat', jobIdPrefix: 'ember' };
 
 export class EmberAnswerTransportClaudeGateway implements EmberAnswerTransportGateway {
   constructor(
@@ -81,199 +80,21 @@ export class EmberAnswerTransportClaudeGateway implements EmberAnswerTransportGa
     options: EmberAnswerStartOptions,
     subscriber: EmberAnswerSubscriber,
   ): EmberAnswerStartResult {
-    const run = new EmberAnswerRunner(
-      this.sessionGateway,
-      this.options.homeDir,
-      this.options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS,
-      this.options.buildMcpConfig(),
-      this.options.toolPolicy ?? EMBER_TOOL_POLICY,
-      options,
-      subscriber,
-    );
-    run.begin();
+    const run = new EmberAnswerRunner(this.sessionGateway, this.resolveRunSettings(), subscriber);
+    run.begin(options);
     return { status: 'started', run };
   }
-}
 
-const MAX_TAIL_ATTEMPTS = 240;
-
-class EmberAnswerRunner {
-  private cancelled = false;
-  private timer: NodeJS.Timeout | null = null;
-  private byteOffset = 0;
-  private pendingLine = '';
-  private transcriptPath: string | null = null;
-  private projectDir: string | null = null;
-  private shortSessionId: SessionId | null = null;
-  private attempts = 0;
-  private stopped = false;
-
-  constructor(
-    private readonly sessionGateway: ClaudeSessionGateway,
-    private readonly homeDir: string,
-    private readonly pollIntervalMs: number,
-    private readonly mcpConfigJson: string,
-    private readonly toolPolicy: EmberToolPolicy,
-    private readonly options: EmberAnswerStartOptions,
-    private readonly subscriber: EmberAnswerSubscriber,
-  ) {}
-
-  begin(): void {
-    void this.dispatchThenTail();
-  }
-
-  cancel(): void {
-    this.cancelled = true;
-    this.stopTimer();
-    this.stopSession();
-  }
-
-  private async dispatchThenTail(): Promise<void> {
-    const dispatch = await this.sessionGateway.dispatch({
-      prompt: this.options.question,
-      flags: {
-        model: 'sonnet',
-        permissionMode: 'auto',
-        systemPrompt: this.options.systemPrompt,
-        mcpConfigJson: this.mcpConfigJson,
-        allowedTools: this.toolPolicy.allowedTools,
-        disallowedTools: this.toolPolicy.disallowedTools,
+  private resolveRunSettings(): EmberAnswerRunSettings {
+    const { session } = this.options;
+    return {
+      homeDir: this.options.homeDir,
+      pollIntervalMs: this.options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS,
+      session: {
+        mcpConfigJson: session.buildMcpConfig(),
+        toolPolicy: session.toolPolicy ?? EMBER_TOOL_POLICY,
+        label: session.label ?? EMBER_SESSION_LABEL,
       },
-      localPath: this.options.projectPath,
-      jobId: `ember-${Date.now()}`,
-      jobType: 'ember-chat',
-    });
-
-    if (dispatch.status !== 'dispatched') {
-      this.fail('ember-answer-dispatch-failed');
-      return;
-    }
-
-    this.shortSessionId = dispatch.sessionId;
-    if (this.cancelled) {
-      this.stopSession();
-      return;
-    }
-
-    const slug = this.options.projectPath.replace(/\//g, '-');
-    this.projectDir = join(this.homeDir, '.claude', 'projects', slug);
-    this.scheduleTail();
-  }
-
-  private scheduleTail(): void {
-    if (this.cancelled) {
-      return;
-    }
-    this.timer = setTimeout(() => {
-      this.tailOnce();
-    }, this.pollIntervalMs);
-  }
-
-  private tailOnce(): void {
-    if (this.cancelled) {
-      return;
-    }
-    this.attempts += 1;
-
-    this.resolveTranscript();
-    const completed = this.readNewLines();
-    if (completed) {
-      this.finish();
-      return;
-    }
-
-    if (this.attempts >= MAX_TAIL_ATTEMPTS) {
-      this.fail('ember-answer-timeout');
-      return;
-    }
-
-    this.scheduleTail();
-  }
-
-  private resolveTranscript(): void {
-    if (this.transcriptPath !== null || this.projectDir === null || this.shortSessionId === null) {
-      return;
-    }
-    if (!existsSync(this.projectDir)) {
-      return;
-    }
-    const match = readdirSync(this.projectDir).find(
-      (name) => name.startsWith(this.shortSessionId ?? '') && name.endsWith('.jsonl'),
-    );
-    if (match !== undefined) {
-      this.transcriptPath = join(this.projectDir, match);
-    }
-  }
-
-  private readNewLines(): boolean {
-    if (this.transcriptPath === null || !existsSync(this.transcriptPath)) {
-      return false;
-    }
-
-    let raw: string;
-    try {
-      raw = readFileSync(this.transcriptPath, 'utf-8');
-    } catch {
-      this.fail('ember-answer-transcript-unreadable');
-      return false;
-    }
-
-    const fresh = raw.slice(this.byteOffset);
-    this.byteOffset = raw.length;
-    this.pendingLine += fresh;
-    const lines = this.pendingLine.split('\n');
-    this.pendingLine = lines.pop() ?? '';
-
-    let terminal = false;
-    for (const line of lines) {
-      if (line.trim().length === 0) {
-        continue;
-      }
-      const event = parseStreamJsonEvent(line);
-      if (event === null) {
-        continue;
-      }
-      const text = extractText(event);
-      if (text !== null) {
-        this.subscriber.onChunk(text);
-      }
-      if (isTurnComplete(event)) {
-        terminal = true;
-      }
-    }
-    return terminal;
-  }
-
-  private finish(): void {
-    if (this.cancelled) {
-      return;
-    }
-    this.readNewLines();
-    this.stopTimer();
-    this.stopSession();
-    this.subscriber.onDone();
-  }
-
-  private fail(message: string): void {
-    if (this.cancelled) {
-      return;
-    }
-    this.cancel();
-    this.subscriber.onError(message);
-  }
-
-  private stopSession(): void {
-    if (this.stopped || this.shortSessionId === null) {
-      return;
-    }
-    this.stopped = true;
-    void this.sessionGateway.stop(this.shortSessionId);
-  }
-
-  private stopTimer(): void {
-    if (this.timer !== null) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
+    };
   }
 }
