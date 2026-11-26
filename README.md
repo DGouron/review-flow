@@ -1,5 +1,3 @@
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/dgouron-review-flow-badge.png)](https://mseep.ai/app/dgouron-review-flow)
-
 # Reviewflow
 
 [![CI](https://github.com/DGouron/review-flow/actions/workflows/ci.yml/badge.svg)](https://github.com/DGouron/review-flow/actions/workflows/ci.yml)
