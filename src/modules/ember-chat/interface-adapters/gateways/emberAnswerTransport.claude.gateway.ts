@@ -149,9 +149,14 @@ class EmberAnswerRunner {
       return;
     }
 
+    this.shortSessionId = dispatch.sessionId;
+    if (this.cancelled) {
+      this.stopSession();
+      return;
+    }
+
     const slug = this.options.projectPath.replace(/\//g, '-');
     this.projectDir = join(this.homeDir, '.claude', 'projects', slug);
-    this.shortSessionId = dispatch.sessionId;
     this.scheduleTail();
   }
 
