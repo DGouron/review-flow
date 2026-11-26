@@ -67,6 +67,16 @@ function generationFailed(reason: string): ExplainReviewRequestResult {
   return { status: 'generation-failed', reason };
 }
 
+function generationKeyOf(cacheKey: ReviewBriefCacheKey): string {
+  return JSON.stringify([
+    cacheKey.localPath,
+    cacheKey.platform,
+    cacheKey.mrNumber,
+    cacheKey.headSha,
+    cacheKey.language,
+  ]);
+}
+
 function sizeOf(changedFiles: ChangedFile[]): ReviewBriefSize {
   return {
     additions: changedFiles.reduce((total, file) => total + file.additions, 0),
@@ -78,12 +88,14 @@ function sizeOf(changedFiles: ChangedFile[]): ReviewBriefSize {
 /**
  * Explains one tracked review request: reads its material from the platform and the review
  * reports, asks the model for a brief, validates it and caches it per head sha and language.
- * Never writes to the platform.
+ * Concurrent calls for the same cache key share one generation. Never writes to the platform.
  */
 export class ExplainReviewRequestUseCase implements UseCase<
   ExplainReviewRequestInput,
   Promise<ExplainReviewRequestResult>
 > {
+  private readonly generationsInFlight = new Map<string, Promise<ExplainReviewRequestResult>>();
+
   constructor(private readonly dependencies: ExplainReviewRequestDependencies) {}
 
   async execute(input: ExplainReviewRequestInput): Promise<ExplainReviewRequestResult> {
@@ -111,7 +123,29 @@ export class ExplainReviewRequestUseCase implements UseCase<
     if (cached !== null) {
       return { status: 'explained', brief: cached };
     }
-    return this.generate({ input, trackedRequest, overview, cacheKey });
+    return this.generateOnce({ input, trackedRequest, overview, cacheKey });
+  }
+
+  private generateOnce(context: GenerationContext): Promise<ExplainReviewRequestResult> {
+    const generationKey = generationKeyOf(context.cacheKey);
+    const inFlight = this.generationsInFlight.get(generationKey);
+    if (inFlight !== undefined) {
+      return inFlight;
+    }
+    const generation = this.generateThenForget(context, generationKey);
+    this.generationsInFlight.set(generationKey, generation);
+    return generation;
+  }
+
+  private async generateThenForget(
+    context: GenerationContext,
+    generationKey: string,
+  ): Promise<ExplainReviewRequestResult> {
+    try {
+      return await this.generate(context);
+    } finally {
+      this.generationsInFlight.delete(generationKey);
+    }
   }
 
   private async generate(context: GenerationContext): Promise<ExplainReviewRequestResult> {
