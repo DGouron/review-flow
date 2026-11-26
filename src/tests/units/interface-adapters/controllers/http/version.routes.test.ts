@@ -22,7 +22,7 @@ describe('version routes', () => {
     beforeEach(async () => {
       const packageVersionGateway = new StubPackageVersionGateway('2.0.0');
       const versionCache = new StubVersionCache(null, true);
-      const selfUpdateCommand = new StubSelfUpdateCommand(true);
+      const selfUpdateCommand = new StubSelfUpdateCommand();
 
       application = Fastify();
       await application.register(versionRoutes, {
@@ -63,7 +63,7 @@ describe('version routes', () => {
         currentVersion: '1.0.0',
         packageVersionGateway: new StubPackageVersionGateway('2.0.0'),
         versionCache: new StubVersionCache(null, true),
-        selfUpdateCommand: new StubSelfUpdateCommand(true),
+        selfUpdateCommand: new StubSelfUpdateCommand(),
         installTypeDetector: sourceCheckout,
         serverPort: 3000,
         queueActivityGateway: new StubQueueActivity(0),
@@ -79,7 +79,7 @@ describe('version routes', () => {
 
   describe('POST /api/version/update', () => {
     it('should return started on successful update', async () => {
-      const selfUpdateCommand = new StubSelfUpdateCommand(true);
+      const selfUpdateCommand = new StubSelfUpdateCommand();
 
       application = Fastify();
       await application.register(versionRoutes, {
@@ -108,7 +108,9 @@ describe('version routes', () => {
     });
 
     it('should return 500 on failed update', async () => {
-      const selfUpdateCommand = new StubSelfUpdateCommand(false, 'Permission denied');
+      const selfUpdateCommand = new StubSelfUpdateCommand({
+        installOutcome: { kind: 'failed', error: 'Permission denied' },
+      });
 
       application = Fastify();
       await application.register(versionRoutes, {
@@ -138,7 +140,9 @@ describe('version routes', () => {
     });
 
     it('should return 403 with command on permission denied', async () => {
-      const selfUpdateCommand = new StubSelfUpdateCommand(false, 'EACCES', true);
+      const selfUpdateCommand = new StubSelfUpdateCommand({
+        installOutcome: { kind: 'permission-denied' },
+      });
 
       application = Fastify();
       await application.register(versionRoutes, {
@@ -164,12 +168,59 @@ describe('version routes', () => {
       const body = JSON.parse(response.body);
       expect(response.statusCode).toBe(403);
       expect(body.status).toBe('permission-denied');
-      expect(body.command).toBe('sudo npm update -g reviewflow');
+      expect(body.command).toBe('sudo npm install -g reviewflow@2.0.0');
+    });
+
+    it('scenario #448: should refuse and keep the daemon running when npm did not install the new version', async () => {
+      let restartCalled = false;
+      const selfUpdateCommand = new StubSelfUpdateCommand({
+        installedVersionAfterInstall: '1.0.0',
+      });
+      Object.defineProperty(selfUpdateCommand, 'restartDaemon', {
+        value: async () => {
+          restartCalled = true;
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      application = Fastify();
+      await application.register(versionRoutes, {
+        checkVersion,
+        triggerSelfUpdate,
+        currentVersion: '1.0.0',
+        packageVersionGateway: new StubPackageVersionGateway('2.0.0'),
+        versionCache: new StubVersionCache(null, true),
+        selfUpdateCommand,
+        installTypeDetector,
+        serverPort: 3000,
+        queueActivityGateway: new StubQueueActivity(0),
+        sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
+      });
+      await application.ready();
+
+      const response = await application.inject({
+        method: 'POST',
+        url: '/api/version/update',
+        remoteAddress: LOCAL_ORIGIN,
+      });
+
+      const body = JSON.parse(response.body);
+      expect(body).toEqual({
+        status: 'refused',
+        motive: {
+          kind: 'install-not-applied',
+          expectedVersion: '2.0.0',
+          installedVersion: '1.0.0',
+        },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      expect(restartCalled).toBe(false);
     });
 
     it('should run the source-checkout sequence and restart the daemon on success', async () => {
       let restartCalled = false;
-      const selfUpdateCommand = new StubSelfUpdateCommand(true);
+      const selfUpdateCommand = new StubSelfUpdateCommand();
       Object.defineProperty(selfUpdateCommand, 'restartDaemon', {
         value: async () => {
           restartCalled = true;
@@ -214,7 +265,7 @@ describe('version routes', () => {
         currentVersion: '1.0.0',
         packageVersionGateway: new StubPackageVersionGateway('2.0.0'),
         versionCache: new StubVersionCache(null, true),
-        selfUpdateCommand: new StubSelfUpdateCommand(true),
+        selfUpdateCommand: new StubSelfUpdateCommand(),
         installTypeDetector,
         serverPort: 3000,
         queueActivityGateway: new StubQueueActivity(0),

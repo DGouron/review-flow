@@ -4,7 +4,10 @@ import { join } from 'node:path';
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-import { findReviewflowCheckoutRoot } from '@/modules/cli-configuration/interface-adapters/gateways/reviewflowCheckoutRoot.fs.js';
+import {
+  findReviewflowCheckoutRoot,
+  findReviewflowPackageRoot,
+} from '@/modules/cli-configuration/interface-adapters/gateways/reviewflowCheckoutRoot.fs.js';
 
 function writePackageManifest(directory: string, content: string): void {
   writeFileSync(join(directory, 'package.json'), content);
@@ -45,5 +48,32 @@ describe('findReviewflowCheckoutRoot', () => {
     writePackageManifest(tempRoot, '{ not json');
 
     expect(findReviewflowCheckoutRoot(tempRoot)).toBeNull();
+  });
+});
+
+describe('findReviewflowPackageRoot', () => {
+  let tempRoot: string;
+
+  beforeEach(() => {
+    tempRoot = mkdtempSync(join(tmpdir(), 'reviewflow-package-root-'));
+  });
+
+  afterEach(() => {
+    rmSync(tempRoot, { recursive: true, force: true });
+  });
+
+  it('returns the global npm install of reviewflow that contains the start path, without requiring .git', () => {
+    const packageRoot = join(tempRoot, 'lib', 'node_modules', 'reviewflow');
+    const startPath = join(packageRoot, 'dist', 'modules');
+    mkdirSync(startPath, { recursive: true });
+    writePackageManifest(packageRoot, JSON.stringify({ name: 'reviewflow', version: '3.56.2' }));
+
+    expect(findReviewflowPackageRoot(startPath)).toBe(packageRoot);
+  });
+
+  it('returns null when no reviewflow package encloses the start path', () => {
+    writePackageManifest(tempRoot, JSON.stringify({ name: 'another-package' }));
+
+    expect(findReviewflowPackageRoot(tempRoot)).toBeNull();
   });
 });

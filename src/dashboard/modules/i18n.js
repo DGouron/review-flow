@@ -486,6 +486,12 @@ const translations = {
     'version.refusal.fetchFailed': 'Fetching the latest changes failed',
     'version.refusal.rebuildFailed':
       'The build failed. The server keeps running on the previous version.',
+    'version.refusal.latestVersionUnavailable':
+      'Could not fetch the latest version from the npm registry. Try again later.',
+    'version.refusal.versionNotOnRegistry':
+      'v{{version}} is not available on the npm registry yet. Try again in a few minutes.',
+    'version.refusal.installNotApplied':
+      'npm did not install v{{expected}} (installed version: {{installed}}). The server keeps running on the current version.',
 
     // Worktree panel (SPEC-173)
     'worktree.section.title': 'Worktree pool',
@@ -990,6 +996,12 @@ const translations = {
     'version.refusal.fetchFailed': 'La récupération des modifications a échoué',
     'version.refusal.rebuildFailed':
       'La compilation a échoué. Le serveur continue de tourner sur la version précédente.',
+    'version.refusal.latestVersionUnavailable':
+      'Impossible de récupérer la dernière version depuis le registre npm. Réessayez plus tard.',
+    'version.refusal.versionNotOnRegistry':
+      "La v{{version}} n'est pas encore disponible sur le registre npm. Réessayez dans quelques minutes.",
+    'version.refusal.installNotApplied':
+      "npm n'a pas installé la v{{expected}} (version installée : {{installed}}). Le serveur continue de tourner sur la version actuelle.",
 
     // Worktree panel (SPEC-173)
     'worktree.section.title': 'Pool des worktrees',

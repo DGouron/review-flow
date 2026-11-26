@@ -1,8 +1,15 @@
 import { execFile } from 'node:child_process';
 import { spawn } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { basename, delimiter, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
-import type { SelfUpdateCommandPort } from '@/modules/cli-configuration/entities/packageVersion/selfUpdateCommand.gateway.js';
+import type {
+  GlobalInstallOutcome,
+  SelfUpdateCommandPort,
+} from '@/modules/cli-configuration/entities/packageVersion/selfUpdateCommand.gateway.js';
+import { findReviewflowPackageRoot } from '@/modules/cli-configuration/interface-adapters/gateways/reviewflowCheckoutRoot.fs.js';
 import { PID_FILE_PATH } from '@/shared/services/daemonPaths.js';
 import { readPidFile, removePidFile } from '@/shared/services/pidFileManager.js';
 
@@ -13,7 +20,11 @@ const RESTART_DELAY_SECONDS = 2;
 const EXIT_CODE_ASKING_SUPERVISOR_RESTART = 75;
 
 export interface SelfUpdateCliDependencies {
-  execFileAsync: (command: string, args: string[]) => Promise<{ stdout: string; stderr: string }>;
+  execFileAsync: (
+    command: string,
+    args: string[],
+    options: { env: NodeJS.ProcessEnv },
+  ) => Promise<{ stdout: string; stderr: string }>;
   killProcess: (pid: number, signal: string) => void;
   spawnDaemonDelayed: (port: number | undefined, delaySec: number) => void;
   /**
@@ -27,6 +38,10 @@ export interface SelfUpdateCliDependencies {
    */
   isSupervisedBySystemd: boolean;
   exitProcess: (code: number) => void;
+  nodeExecutablePath: string;
+  /** Root of the reviewflow package this process was loaded from. */
+  packageRoot: string;
+  environmentPath: string;
 }
 
 export function buildRestartArgs(port: number | undefined): string[] {
@@ -58,7 +73,35 @@ function createDefaultDependencies(): SelfUpdateCliDependencies {
     pidFilePath: PID_FILE_PATH,
     isSupervisedBySystemd: Boolean(process.env.INVOCATION_ID),
     exitProcess: (code) => process.exit(code),
+    nodeExecutablePath: process.execPath,
+    packageRoot: findReviewflowPackageRoot(fileURLToPath(new URL('.', import.meta.url))) ?? '',
+    environmentPath: process.env.PATH ?? '',
   };
+}
+
+function discoverNpmCommand(nodeExecutablePath: string): string {
+  const npmNextToNode = join(dirname(nodeExecutablePath), 'npm');
+  return existsSync(npmNextToNode) ? npmNextToNode : 'npm';
+}
+
+function discoverGlobalPrefix(packageRoot: string): string | null {
+  const nodeModulesDirectory = dirname(packageRoot);
+  if (basename(nodeModulesDirectory) !== 'node_modules') {
+    return null;
+  }
+  const parentDirectory = dirname(nodeModulesDirectory);
+  return basename(parentDirectory) === 'lib' ? dirname(parentDirectory) : parentDirectory;
+}
+
+function toInstallFailureOutcome(error: unknown): GlobalInstallOutcome {
+  const message = error instanceof Error ? error.message : 'Unknown error';
+  if (message.includes('EACCES')) {
+    return { kind: 'permission-denied' };
+  }
+  if (message.includes('ETARGET')) {
+    return { kind: 'version-not-on-registry' };
+  }
+  return { kind: 'failed', error: message };
 }
 
 export class SelfUpdateCliGateway implements SelfUpdateCommandPort {
@@ -68,18 +111,35 @@ export class SelfUpdateCliGateway implements SelfUpdateCommandPort {
     this.dependencies = dependencies ?? createDefaultDependencies();
   }
 
-  async runGlobalUpdate(): Promise<{
-    success: boolean;
-    error: string | null;
-    permissionDenied: boolean;
-  }> {
+  async installGlobalVersion(version: string): Promise<GlobalInstallOutcome> {
+    const { nodeExecutablePath, packageRoot, environmentPath } = this.dependencies;
+    const globalPrefix = discoverGlobalPrefix(packageRoot);
+    const prefixArgs = globalPrefix === null ? [] : ['--prefix', globalPrefix];
+    const args = ['install', '-g', `reviewflow@${version}`, '--prefer-online', ...prefixArgs];
+    const env = {
+      ...process.env,
+      PATH: `${dirname(nodeExecutablePath)}${delimiter}${environmentPath}`,
+    };
+
     try {
-      await this.dependencies.execFileAsync('npm', ['update', '-g', 'reviewflow']);
-      return { success: true, error: null, permissionDenied: false };
+      await this.dependencies.execFileAsync(discoverNpmCommand(nodeExecutablePath), args, { env });
+      return { kind: 'installed' };
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      const permissionDenied = error instanceof Error && error.message.includes('EACCES');
-      return { success: false, error: message, permissionDenied };
+      return toInstallFailureOutcome(error);
+    }
+  }
+
+  async readInstalledVersion(): Promise<string | null> {
+    try {
+      const manifest: unknown = JSON.parse(
+        readFileSync(join(this.dependencies.packageRoot, 'package.json'), 'utf-8'),
+      );
+      if (typeof manifest === 'object' && manifest !== null && 'version' in manifest) {
+        return typeof manifest.version === 'string' ? manifest.version : null;
+      }
+      return null;
+    } catch {
+      return null;
     }
   }
 
