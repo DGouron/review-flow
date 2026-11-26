@@ -1,7 +1,14 @@
+import { tmpdir } from 'node:os';
+
 import { describe, expect, it } from 'vitest';
 
+import { EmberAnswerTransportClaudeGateway } from '@/modules/ember-chat/interface-adapters/gateways/emberAnswerTransport.claude.gateway.js';
 import type { ReviewBriefModelRequest } from '@/modules/review-brief/entities/reviewBrief/reviewBriefModel.gateway.js';
-import { ReviewBriefModelEmberGateway } from '@/modules/review-brief/interface-adapters/gateways/reviewBriefModel.ember.gateway.js';
+import {
+  REVIEW_BRIEF_SESSION,
+  ReviewBriefModelEmberGateway,
+} from '@/modules/review-brief/interface-adapters/gateways/reviewBriefModel.ember.gateway.js';
+import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
 import { StubEmberAnswerTransportGateway } from '@/tests/stubs/emberAnswerTransport.stub.js';
 
 function request(overrides: Partial<ReviewBriefModelRequest> = {}): ReviewBriefModelRequest {
@@ -85,5 +92,22 @@ describe('ReviewBriefModelEmberGateway', () => {
     await waitFor(30);
 
     expect(transport.cancelCount).toBe(0);
+  });
+});
+
+describe('ReviewBriefModelEmberGateway over the Claude transport', () => {
+  it('dispatches the brief session under the review-brief job type and job id prefix', async () => {
+    const sessionGateway = new StubClaudeSessionGateway();
+    sessionGateway.setDispatchResult({ status: 'failed', rawStderr: 'not logged in' });
+    const transport = new EmberAnswerTransportClaudeGateway(sessionGateway, {
+      homeDir: tmpdir(),
+      session: REVIEW_BRIEF_SESSION,
+    });
+    const gateway = new ReviewBriefModelEmberGateway(transport);
+
+    await gateway.generate(request());
+
+    expect(sessionGateway.dispatchCalls[0].jobType).toBe('review-brief');
+    expect(sessionGateway.dispatchCalls[0].jobId).toMatch(/^review-brief-\d+$/);
   });
 });

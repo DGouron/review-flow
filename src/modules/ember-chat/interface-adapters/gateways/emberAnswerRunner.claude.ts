@@ -2,7 +2,10 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import type { ClaudeSessionGateway } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
-import type { SessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
+import type {
+  ClaudeSessionJobType,
+  SessionId,
+} from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
 import {
   parseStreamJsonEvent,
   extractText,
@@ -18,9 +21,15 @@ export type EmberToolPolicy = {
   disallowedTools: string;
 };
 
+export type ClaudeSessionLabel = {
+  jobType: ClaudeSessionJobType;
+  jobIdPrefix: string;
+};
+
 export type DispatchedSessionSettings = {
   mcpConfigJson: string;
   toolPolicy: EmberToolPolicy;
+  label: ClaudeSessionLabel;
 };
 
 export type EmberAnswerRunSettings = {
@@ -71,8 +80,8 @@ export class EmberAnswerRunner {
         disallowedTools: session.toolPolicy.disallowedTools,
       },
       localPath: options.projectPath,
-      jobId: `ember-${Date.now()}`,
-      jobType: 'ember-chat',
+      jobId: `${session.label.jobIdPrefix}-${Date.now()}`,
+      jobType: session.label.jobType,
     });
 
     if (dispatch.status !== 'dispatched') {

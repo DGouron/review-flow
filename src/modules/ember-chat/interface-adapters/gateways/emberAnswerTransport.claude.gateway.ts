@@ -7,6 +7,7 @@ import type {
 } from '@/modules/ember-chat/entities/emberAnswer/emberAnswerTransport.gateway.js';
 import {
   EmberAnswerRunner,
+  type ClaudeSessionLabel,
   type EmberAnswerRunSettings,
   type EmberToolPolicy,
 } from '@/modules/ember-chat/interface-adapters/gateways/emberAnswerRunner.claude.js';
@@ -51,6 +52,7 @@ import {
 export type EmberAnswerSessionConfiguration = {
   buildMcpConfig: () => string;
   toolPolicy?: EmberToolPolicy;
+  label?: ClaudeSessionLabel;
 };
 
 export interface EmberAnswerTransportClaudeGatewayOptions {
@@ -65,6 +67,8 @@ const EMBER_TOOL_POLICY: EmberToolPolicy = {
   allowedTools: 'Read,Glob,Grep,mcp__review-progress__record_insight',
   disallowedTools: 'Edit,Write,Bash,Task',
 };
+
+const EMBER_SESSION_LABEL: ClaudeSessionLabel = { jobType: 'ember-chat', jobIdPrefix: 'ember' };
 
 export class EmberAnswerTransportClaudeGateway implements EmberAnswerTransportGateway {
   constructor(
@@ -89,6 +93,7 @@ export class EmberAnswerTransportClaudeGateway implements EmberAnswerTransportGa
       session: {
         mcpConfigJson: session.buildMcpConfig(),
         toolPolicy: session.toolPolicy ?? EMBER_TOOL_POLICY,
+        label: session.label ?? EMBER_SESSION_LABEL,
       },
     };
   }
