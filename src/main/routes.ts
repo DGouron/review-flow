@@ -145,6 +145,11 @@ import {
 } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import { ListPendingReviewsUseCase } from '@/modules/review-execution/usecases/listPendingReviews.usecase.js';
 import { ResolveAuditScopeUseCase } from '@/modules/review-execution/usecases/resolveAuditScope.usecase.js';
+import { monitoringRoutes } from '@/modules/runtime-monitoring/interface-adapters/controllers/http/monitoring.routes.js';
+import { ProcessTableProcfsGateway } from '@/modules/runtime-monitoring/interface-adapters/gateways/processTable.procfs.gateway.js';
+import { ReviewSessionListingClaudeCliGateway } from '@/modules/runtime-monitoring/interface-adapters/gateways/reviewSessionListing.claude.cli.gateway.js';
+import { ServerRuntimeNodeGateway } from '@/modules/runtime-monitoring/interface-adapters/gateways/serverRuntime.node.gateway.js';
+import { GetMonitoringSnapshotUseCase } from '@/modules/runtime-monitoring/usecases/getMonitoringSnapshot.usecase.js';
 import { setupWizardRoutes } from '@/modules/setup-wizard/interface-adapters/controllers/http/setupWizard.routes.js';
 import { GitRemoteCliGateway } from '@/modules/setup-wizard/interface-adapters/gateways/gitRemote.cli.gateway.js';
 import { SetupProcessChildProcessGateway } from '@/modules/setup-wizard/interface-adapters/gateways/setupProcess.childProcess.gateway.js';
@@ -193,6 +198,7 @@ import { worktreeOverviewRoutes } from '@/modules/worktree-management/interface-
 import { detectDegradedWorktrees } from '@/modules/worktree-management/usecases/detectDegradedWorktrees.usecase.js';
 import { resolveTransportGuardConfig } from '@/security/transportGuardConfig.js';
 import { getConfigDir } from '@/shared/services/configDir.js';
+import { WORKTREE_BASE_DIR } from '@/shared/services/daemonPaths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -221,6 +227,20 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     getConfig: () => ({ version: currentVersion }),
     versionCache,
     supervisorStatusStore: deps.supervisorStatusStore,
+  });
+
+  const runClaude = defaultProcessRunner();
+  await app.register(monitoringRoutes, {
+    getMonitoringSnapshot: new GetMonitoringSnapshotUseCase({
+      serverRuntime: new ServerRuntimeNodeGateway(),
+      processTable: new ProcessTableProcfsGateway(),
+      reviewSessionListing: new ReviewSessionListingClaudeCliGateway(
+        () => runClaude({ args: ['agents', '--json'] }),
+        WORKTREE_BASE_DIR,
+      ),
+      supervisorStatusStore: deps.supervisorStatusStore,
+      version: currentVersion,
+    }),
   });
 
   await app.register(settingsRoutes, {
