@@ -13,6 +13,7 @@ import { createAddActionHandler } from '@/modules/review-execution/interface-ada
 import { createCompleteAgentHandler } from '@/modules/review-execution/interface-adapters/controllers/mcp/completeAgent.handler.js';
 import { createGetThreadsHandler } from '@/modules/review-execution/interface-adapters/controllers/mcp/getThreads.handler.js';
 import { createGetWorkflowHandler } from '@/modules/review-execution/interface-adapters/controllers/mcp/getWorkflow.handler.js';
+import { createRecordVerdictHandler } from '@/modules/review-execution/interface-adapters/controllers/mcp/recordVerdict.handler.js';
 import { createSetPhaseHandler } from '@/modules/review-execution/interface-adapters/controllers/mcp/setPhase.handler.js';
 import { createStartAgentHandler } from '@/modules/review-execution/interface-adapters/controllers/mcp/startAgent.handler.js';
 import { ReviewContextFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/reviewContext.fileSystem.gateway.js';
@@ -191,6 +192,45 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'record_verdict',
+    description:
+      'Record the final rulings of the review and get back its verdict, its grade, one level per dimension and the [REVIEW_STATS] marker to print as the last line of the report. Call it once, after every finding is ruled.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        jobId: { type: 'string', description: 'The job ID for the review' },
+        findings: {
+          type: 'array',
+          description:
+            'Every finding with its ruling. dimension: fiabilite | securite | conception | lisibilite | tests | sante. severity: blocking | important | suggestion | note. ruling: maintained | withdrawn | boy-scout | out-of-scope. origin: introduced (default) | preexisting.',
+          items: {
+            type: 'object',
+            properties: {
+              dimension: { type: 'string' },
+              severity: { type: 'string' },
+              ruling: { type: 'string' },
+              origin: { type: 'string' },
+              file: { type: 'string' },
+              line: { type: 'number' },
+            },
+            required: ['dimension', 'severity', 'ruling'],
+          },
+        },
+        health: {
+          type: 'string',
+          description: 'Grade A to E of the code health tally, when the review computed one',
+        },
+        outcome: {
+          type: 'string',
+          enum: ['completed', 'stopped', 'incomplete'],
+          description:
+            'stopped when the team gate refused the pull request, incomplete when a role never answered. Default completed.',
+        },
+      },
+      required: ['findings'],
+    },
+  },
+  {
     name: 'record_insight',
     description:
       "Record a recurring review finding Ember derived for the answered project into Ember's private per-project memory, so a later answer reuses it without recomputing. Use only for genuine recurring review findings, never arbitrary facts.",
@@ -253,6 +293,7 @@ export async function startMcpServer(): Promise<void> {
     get_threads: getThreadsHandler,
     add_action: addActionHandler,
     record_insight: recordInsightHandler,
+    record_verdict: createRecordVerdictHandler(),
   };
 
   const server = new Server(
