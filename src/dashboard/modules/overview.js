@@ -8,6 +8,7 @@
  */
 
 import { escapeHtml, sanitizeHttpUrl } from './html.js';
+import { t } from './i18n.js';
 
 const SPARKLINE_WIDTH = 96;
 const SPARKLINE_HEIGHT = 28;
@@ -144,7 +145,7 @@ function renderActiveReviewsSection(section) {
     : `<ul class="overview-active-list">${section.items.map(renderActiveReviewRow).join('')}</ul>`;
   return `
     <section class="overview-panel" data-section="active">
-      <div class="overview-panel-title">// ACTIVE REVIEWS</div>
+      <h2 class="overview-panel-title">${escapeHtml(t('overview.active'))}</h2>
       ${body}
     </section>
   `.trim();
@@ -158,7 +159,7 @@ function renderProjectExternalLink(externalLink) {
   if (typeof externalLink !== 'string' || externalLink.length === 0) return '';
   const safeHref = sanitizeHttpUrl(externalLink);
   if (safeHref === '#') return '';
-  return `<a class="project-card__external" href="${escapeHtml(safeHref)}" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir la documentation du projet">&#x2197;</a>`;
+  return `<a class="project-card__external" href="${escapeHtml(safeHref)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(t('overview.openDocs'))}">&#x2197;</a>`;
 }
 
 /**
@@ -177,8 +178,8 @@ function renderProjectCard(card) {
         ${externalAnchor}
       </div>
       <div class="overview-project-card-totals">
-        <span class="overview-project-card-count">${escapeHtml(String(card.totalReviews))} reviews</span>
-        <span class="overview-project-card-score">Prêtes ${escapeHtml(card.readyRateLabel)}</span>
+        <span class="overview-project-card-count">${escapeHtml(t('overview.reviewCount', { count: card.totalReviews }))}</span>
+        <span class="overview-project-card-score">${escapeHtml(t('overview.readyRate', { rate: card.readyRateLabel }))}</span>
       </div>
       <div class="overview-project-card-sparkline">${sparkline}</div>
     </button>
@@ -195,7 +196,7 @@ function renderProjectCardsSection(section) {
     : `<div class="overview-project-card-grid">${section.items.map(renderProjectCard).join('')}</div>`;
   return `
     <section class="overview-panel" data-section="projects">
-      <div class="overview-panel-title">// PROJECTS</div>
+      <h2 class="overview-panel-title">${escapeHtml(t('overview.projects'))}</h2>
       ${body}
     </section>
   `.trim();
@@ -225,7 +226,7 @@ function renderRecentReviewsSection(section) {
     : `<ul class="overview-recent-list">${section.items.map(renderRecentReviewRow).join('')}</ul>`;
   return `
     <section class="overview-panel" data-section="recent">
-      <div class="overview-panel-title">// RECENT REVIEWS</div>
+      <h2 class="overview-panel-title">${escapeHtml(t('overview.recent'))}</h2>
       ${body}
     </section>
   `.trim();

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { setLanguage } from '@/dashboard/modules/i18n.js';
 import {
   buildSettingsViewModel,
+  renderGlobalSettingsHtml,
   renderSettingsModalHtml,
   validateExternalLink,
   validateMaxDiffLines,
@@ -347,5 +349,52 @@ describe('settingsModal — renderSettingsModalHtml renders maxDiffLines input',
     expect(viewModel.maxDiffLines).toBe('1500');
     expect(html).toContain('name="maxDiffLines"');
     expect(html).toContain('value="1500"');
+  });
+});
+
+describe('settingsModal — renderGlobalSettingsHtml', () => {
+  const globalSettings = {
+    model: 'sonnet',
+    triggerMode: 'semi-auto',
+    reviewTimeout: { minutes: 45, min: 5, max: 480 },
+  };
+
+  it('gathers model, trigger mode and timeout, the review settings that left the header', () => {
+    const html = renderGlobalSettingsHtml(globalSettings);
+
+    expect(html).toContain('id="model-select"');
+    expect(html).toMatch(/<option value="sonnet" selected/);
+    expect(html).toContain('id="trigger-mode-select"');
+    expect(html).toMatch(/<option value="semi-auto" selected/);
+    expect(html).toContain('id="review-timeout-input"');
+    expect(html).toContain('value="45" min="5" max="480"');
+  });
+
+  it('speaks the dashboard language without "//" prefixes', () => {
+    setLanguage('fr');
+    const html = renderGlobalSettingsHtml(globalSettings);
+    setLanguage('en');
+
+    expect(html).toContain('Déclenchement');
+    expect(html).not.toContain('//');
+  });
+});
+
+describe('settingsModal — project title', () => {
+  it('titles the project section without a "//" prefix', () => {
+    const html = renderSettingsModalHtml({
+      language: 'fr',
+      defaultModel: 'sonnet',
+      reviewSkill: 'review-front',
+      reviewFollowupSkill: 'review-followup',
+      externalLink: '',
+      qualityThreshold: '',
+      maxConcurrentReviews: '2',
+      maxDiffLines: '',
+      projectName: 'frontend',
+    });
+
+    expect(html).toContain('Project: frontend');
+    expect(html).not.toContain('// SETTINGS');
   });
 });

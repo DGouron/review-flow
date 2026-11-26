@@ -49,6 +49,7 @@ function buildTrackedMr(overrides: Partial<TrackedMr>): TrackedMr {
     totalDurationMs: 0,
     autoFollowup: true,
     bypass: null,
+    author: null,
     sizeBlock: null,
   };
 }

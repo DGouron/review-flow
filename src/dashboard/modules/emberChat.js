@@ -13,6 +13,8 @@
  * Visual DNA: "Agentic OS" — see project_agentic_os_design_dna.md.
  */
 
+import { t } from './i18n.js';
+
 /**
  * @typedef {{ type: string } & Record<string, unknown>} EmberEvent
  */
@@ -79,6 +81,25 @@ export function shouldShowRetry(events) {
 }
 
 /**
+ * Prefixes the question with the pull request selected in the dashboard, so
+ * Ember answers about it without the user restating it.
+ *
+ * @param {string} question
+ * @param {{ prefix: string, mrNumber: number, subject: string } | null} selection
+ * @param {(key: string, params?: Record<string, string | number>) => string} translate
+ * @returns {string}
+ */
+export function contextualQuestion(question, selection, translate) {
+  if (selection === null) return question;
+  const context = translate('ember.contextPrompt', {
+    prefix: selection.prefix,
+    number: selection.mrNumber,
+    title: selection.subject,
+  });
+  return `${context}\n${question}`;
+}
+
+/**
  * Empty-input rule (R: empty input → nothing sent, field stays focused).
  *
  * @param {string} question
@@ -118,7 +139,7 @@ export async function connectEmberStream(options) {
   const body = response.body;
   if (body === null) {
     options.onAvatarState('error');
-    options.onAnnounce('// EMBER INDISPONIBLE — réessayer');
+    options.onAnnounce(t('ember.unavailable'));
     options.onRetryVisible(true);
     return;
   }
@@ -149,7 +170,7 @@ export async function connectEmberStream(options) {
     }
     if (event.type === 'error') {
       options.onAnnounce(
-        typeof event.message === 'string' ? event.message : '// EMBER INDISPONIBLE — réessayer',
+        typeof event.message === 'string' ? event.message : t('ember.unavailable'),
       );
     }
     options.onRetryVisible(shouldShowRetry(events));

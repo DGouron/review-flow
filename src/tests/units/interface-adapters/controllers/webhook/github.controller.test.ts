@@ -335,6 +335,25 @@ describe('handleGitHubWebhook', () => {
       );
     });
 
+    it('tracks the pull request author separately from whoever requested the review', async () => {
+      const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
+      event.pull_request.user = { login: 'pr-author' };
+      event.sender = { login: 'reviewer-who-requested' };
+
+      const request = {
+        body: event,
+        headers: {},
+      } as unknown as FastifyRequest;
+
+      await handleGitHubWebhook(request, mockReply, logger, mockDeps);
+
+      expect(mockDeps.trackAssignment.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          author: { username: 'pr-author', displayName: null },
+        }),
+      );
+    });
+
     it('should fallback to sender when no assignee is present', async () => {
       const event = GitHubEventFactory.createReviewRequestedPr('claude-bot');
       event.pull_request.assignees = [];

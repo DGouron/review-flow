@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   buildHeaderCapacityViewModel,
   renderHeaderCapacityBadgeHtml,
 } from '@/dashboard/modules/headerCapacityBadge.js';
+import { setLanguage } from '@/dashboard/modules/i18n.js';
 
 describe('headerCapacityBadge — buildHeaderCapacityViewModel', () => {
   it('builds a "running / total" label with isSaturated false when under load', () => {
@@ -50,31 +51,35 @@ describe('headerCapacityBadge — buildHeaderCapacityViewModel', () => {
 });
 
 describe('headerCapacityBadge — renderHeaderCapacityBadgeHtml', () => {
-  it('renders a span with the badge id and the formatted label', () => {
+  afterEach(() => setLanguage('en'));
+
+  it('renders "running/total in parallel" with the number in mono', () => {
+    setLanguage('fr');
     const html = renderHeaderCapacityBadgeHtml(
-      buildHeaderCapacityViewModel({ running: 2, max: 4 }),
+      buildHeaderCapacityViewModel({ running: 1, max: 5 }),
     );
 
     expect(html).toContain('id="header-capacity-badge"');
-    expect(html).toContain('// CAP 2 / 4');
-    expect(html).toContain('header-capacity-badge');
+    expect(html).toContain('<span class="mono">1/5</span>');
+    expect(html).toContain('en parallèle');
+    expect(html).not.toContain('//');
     expect(html).not.toContain('header-capacity-badge--saturated');
   });
 
-  it('adds the saturated modifier class when capacity is fully used', () => {
+  it('adds the saturated modifier class and explains it when capacity is fully used', () => {
     const html = renderHeaderCapacityBadgeHtml(
       buildHeaderCapacityViewModel({ running: 4, max: 4 }),
     );
 
     expect(html).toContain('header-capacity-badge--saturated');
-    expect(html).toContain('// CAP 4 / 4');
+    expect(html).toContain('title="Capacity reached');
   });
 
-  it('escapes the title attribute content', () => {
+  it('describes the badge in its title', () => {
     const html = renderHeaderCapacityBadgeHtml(
       buildHeaderCapacityViewModel({ running: 1, max: 2 }),
     );
 
-    expect(html).toMatch(/title="[^"]*Reviews en cours[^"]*"/);
+    expect(html).toMatch(/title="Reviews running across all projects[^"]*"/);
   });
 });
