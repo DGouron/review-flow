@@ -114,13 +114,8 @@
         </div>
 
         <div id="view-worktrees" class="view" data-view="worktrees" hidden>
-          <section id="worktree-section" aria-label="Worktree pool"></section>
-          <section class="card section" id="cleanup-section">
-            <div class="section-header">
-              <i data-lucide="trash-2"></i> <span id="i18n-section-cleanup"></span>
-            </div>
-            <div class="section-content" id="cleanup-content"></div>
-          </section>
+          <div class="view-header"><h2 id="i18n-view-worktrees"></h2></div>
+          <section id="worktree-section" class="worktree-view" aria-labelledby="i18n-view-worktrees"></section>
         </div>
       </main>
 
@@ -249,20 +244,19 @@
     import { collectReviewNotifications, createReviewNotificationState } from './modules/notifications.js';
     import { rankPendingFixForNowLane } from './modules/priority.js';
     import { createSessionMetricsState, trackSessionAction, updatePriorityItemTracking, getSessionMetricsSnapshot } from './modules/sessionMetrics.js';
-    import { renderCleanupSection, handleCleanupClick } from './modules/cleanup.js';
     import { renderVersionUpdateArea, setVersionCheckState, resolveRefusalWording } from './modules/versionUpdate.js';
     import { renderCollapsibleList, toggleCollapsibleList } from './modules/collapsibleList.js';
     import { renderMrSheetContent, drawGradeTimeline, drawIssuesBreakdown } from './modules/mrSheet.js';
     import { drawGradeTrendChart } from './modules/statsCharts.js';
     import { renderKeyInsightsHtml } from './modules/keyInsights.js';
-    import { renderTeamTab, fetchAndRenderTeamTab } from './modules/teamTab.js';
+    import { buildTeamViewModel, renderTeamViewHtml } from './modules/teamView.js';
+    import { renderWorktreeViewHtml } from './modules/worktreeView.js';
     import { renderDeveloperSheetContent, drawRadarChart } from './modules/developerSheet.js';
     import { buildInsightsReport } from './modules/insightsReport.js';
     import { fetchTokenUsageSummary, renderTokenUsageTile, startOfCurrentMonthUtc } from './modules/tokenUsage.js';
     import { fetchMergeRequestTokenUsage, renderMergeRequestTokenUsage } from './modules/mergeRequestTokenUsage.js';
     import { buildPendingReviewsModel, renderPendingReviewsHtml } from './modules/pendingReviews.js';
     import {
-      renderWorktreeSection,
       fetchWorktreeOverview,
       triggerManualSweep,
       triggerForceCleanup,
@@ -299,7 +293,7 @@
       renderHeaderCapacityBadgeHtml,
     } from './modules/headerCapacityBadge.js';
     import { connectEmberStream, contextualQuestion, shouldSendQuestion } from './modules/emberChat.js';
-    import { buildReviewQueueModel, projectSlugOf } from './modules/reviewQueue.js';
+    import { buildReviewQueueModel, parseConventionalTitle, projectSlugOf } from './modules/reviewQueue.js';
     import { renderReviewQueueHtml } from './modules/reviewQueueView.js';
     import { buildPrDetailModel, renderPanelTabsHtml, renderPrDetailHtml } from './modules/prDetailPanel.js';
     import { buildLiveReviewsModel, formatElapsed, renderLiveReviewsHtml } from './modules/liveReviews.js';
@@ -897,22 +891,16 @@
       const container = document.getElementById('team-tab-content');
       if (!container) return;
 
-      container.innerHTML = `<div class="empty-state team-loading">${icon('loader-circle', 'spinning')} ${t('team.loading')}</div>`;
-      refreshIcons();
+      if (!currentInsightsData) {
+        container.innerHTML = `<div class="card team-empty">${icon('loader-circle', 'spinning')} ${escapeHtml(t('team.loading'))}</div>`;
+        refreshIcons();
+      }
 
       try {
         const response = await fetch(`${API_URL}/api/insights?path=${encodeURIComponent(currentProjectPath)}`);
         const data = await response.json();
         currentInsightsData = data;
-
-        container.innerHTML = renderTeamTab(data, t);
-        refreshIcons();
-
-        setTimeout(() => {
-          container.querySelectorAll('.stat-bar-fill[data-target-width]').forEach((bar) => {
-            bar.style.width = bar.dataset.targetWidth;
-          });
-        }, 50);
+        renderTeamView();
       } catch (error) {
         console.error('Error fetching team insights:', error);
         container.innerHTML = `<div class="empty-state">${t('team.noData')}</div>`;
@@ -1659,7 +1647,8 @@
       if (activeTabId === 'overview') refreshOverviewSection();
       refreshHeaderCapacityBadge();
       refreshSizeBlockSection();
-      if (currentInsightsData) fetchTeamInsights();
+      if (currentInsightsData) renderTeamView();
+      if (lastWorktreePool) refreshWorktreeSection({ animate: false });
     }
 
     async function changeLanguage(language) {
@@ -1821,7 +1810,8 @@
       updateGitCliUI();
       fetchMrTracking();
       const teamContent = document.getElementById('team-tab-content');
-      if (teamContent) teamContent.innerHTML = `<div class="empty-state">${escapeHtml(t('team.noData'))}</div>`;
+      currentInsightsData = null;
+      if (teamContent) teamContent.innerHTML = `<div class="card team-empty">${escapeHtml(t('team.noData'))}</div>`;
       const statsSheetButton = document.getElementById('open-stats-sheet-btn');
       if (statsSheetButton) {
         statsSheetButton.setAttribute('disabled', '');
@@ -2396,7 +2386,7 @@
       setText('i18n-git-login-title', 'login.git.title');
       setText('i18n-section-team', 'team.title');
       setText('i18n-open-stats', 'section.stats');
-      setText('i18n-section-cleanup', 'cleanup.title');
+      setText('i18n-view-worktrees', 'shell.view.worktrees');
       setText('i18n-section-pending-reviews', 'section.pendingReviews');
       setText('i18n-section-completed-reviews', 'section.completedReviews');
       setText('i18n-section-claude-economics', 'section.claudeEconomics');
@@ -2634,6 +2624,7 @@
       renderViewNav();
       renderSidePanel();
       if (activeView === 'worktrees') refreshWorktreeSection({ animate: true });
+      if (activeView === 'team') renderTeamView();
     }
 
     function currentProjectAliases() {
@@ -2683,6 +2674,7 @@
       }
       renderViewNav();
       renderSidePanel();
+      if (activeView === 'team') renderTeamView();
     }
 
     function trackedMergeRequestById(mrId) {
@@ -2831,6 +2823,22 @@
         case 'recheck-claude':
           checkClaudeStatus();
           return true;
+        case 'filter-member':
+          showMemberQueue(element.dataset.author, element.dataset.lane);
+          return true;
+        case 'open-developer':
+          openDevSheet(encodeURIComponent(element.dataset.developer ?? ''));
+          return true;
+        case 'regenerate-analysis':
+          generateAiInsights();
+          return true;
+        case 'export-report':
+          exportInsightsPdf();
+          return true;
+        case 'purge-reports':
+          if (purgeArmed) purgeOldReports();
+          else armPurge();
+          return true;
         case 'ember-suggestion':
           askEmber(element.dataset.question ?? element.textContent ?? '');
           return true;
@@ -2866,6 +2874,65 @@
 
     let askEmber = () => {};
 
+    const REPORT_RETENTION_DAYS = 14;
+    let lastWorktreePool = null;
+    let purgeArmed = false;
+    let purgeArmedTimer = null;
+
+    function renderTeamView() {
+      const container = document.getElementById('team-tab-content');
+      if (!container || !currentInsightsData) return;
+      const model = buildTeamViewModel(currentInsightsData, lastQueueModel?.allRows ?? [], Date.now());
+      container.innerHTML = renderTeamViewHtml(model, t);
+      refreshIcons();
+    }
+
+    function worktreeTitleOf(projectPath, mrNumber) {
+      const tracked = [...currentData.pendingFix, ...currentData.pendingApproval]
+        .find((mergeRequest) => mergeRequest.project === projectPath && mergeRequest.mrNumber === mrNumber);
+      const job = currentData.activeReviews.find((review) => review.project === projectPath && review.mrNumber === mrNumber);
+      const title = tracked?.title ?? job?.title ?? null;
+      return title ? parseConventionalTitle(title).subject : null;
+    }
+
+    function showMemberQueue(author, lane) {
+      authorFilter = author || null;
+      activeLane = lane || 'approve';
+      selectedMrId = null;
+      panelTab = 'ember';
+      setActiveView('queue');
+      renderReviewQueue();
+    }
+
+    async function purgeOldReports() {
+      purgeArmed = false;
+      if (purgeArmedTimer) clearTimeout(purgeArmedTimer);
+      try {
+        const response = await fetch(`${API_URL}/api/reviews/cleanup`, { method: 'POST' });
+        const data = await response.json();
+        if (data.success) {
+          showToast(t('worktree.purge.done', { count: data.deletedCount ?? 0 }), 'success');
+          fetchReviewFiles();
+        } else {
+          showToast(t('worktree.purge.error'), 'error');
+        }
+      } catch (error) {
+        console.error('Error purging old reports:', error);
+        showToast(t('worktree.purge.error'), 'error');
+      }
+      refreshWorktreeSection({ animate: false });
+    }
+
+    function armPurge() {
+      purgeArmed = true;
+      if (purgeArmedTimer) clearTimeout(purgeArmedTimer);
+      purgeArmedTimer = setTimeout(() => {
+        purgeArmed = false;
+        refreshWorktreeSection({ animate: false });
+      }, 6000);
+      refreshWorktreeSection({ animate: false });
+    }
+
 
     // Expose functions to HTML onclick handlers
     window.checkForUpdates = checkForUpdates;
@@ -2891,7 +2958,6 @@
     window.confirmMarkAsMerged = confirmMarkAsMerged;
     window.onUsefulLinkAction = onUsefulLinkAction;
     window.activateOnKeydown = activateOnKeydown;
-    window.handleCleanupClick = handleCleanupClick;
     window.openMrSheet = openMrSheet;
     window.closeMrSheet = closeMrSheet;
     window.openDevSheet = openDevSheet;
@@ -2903,12 +2969,6 @@
     window.exportInsightsPdf = exportInsightsPdf;
     window.toggleTeamAnalysis = toggleTeamAnalysis;
     window.clearLogs = clearLogs;
-
-    // Init cleanup section
-    const cleanupContent = document.getElementById('cleanup-content');
-    if (cleanupContent) {
-      cleanupContent.innerHTML = renderCleanupSection(14);
-    }
 
     // Init
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
@@ -2977,8 +3037,8 @@
         if (button.dataset.busy === '1') return;
         button.dataset.busy = '1';
         const label = button.querySelector('.worktree-sweep-label');
-        const previousLabel = label?.textContent ?? 'SWEEP NOW';
-        if (label) label.textContent = 'SWEEPING…';
+        const previousLabel = label?.textContent ?? t('worktree.sweep.now');
+        if (label) label.textContent = t('worktree.button.sweeping');
         button.classList.add('worktree-sweep-pending');
 
         const anime = await loadAnimeApi();
@@ -3093,7 +3153,13 @@
         renderHealth();
         renderViewNav();
         const totals = snapshotTotals(viewModel);
-        worktreeSection.innerHTML = renderWorktreeSection(viewModel);
+        lastWorktreePool = viewModel;
+        worktreeSection.innerHTML = renderWorktreeViewHtml(viewModel, t, {
+          nowMs: Date.now(),
+          retentionDays: REPORT_RETENTION_DAYS,
+          titleOf: worktreeTitleOf,
+          purgeArmed: purgeArmed,
+        });
         bindWorktreeSweepButton();
         bindForceCleanupButtons();
         if (animate) animateWorktreeMetrics();
@@ -3101,7 +3167,7 @@
         lastWorktreeTotals = totals;
       } catch (error) {
         if (worktreeSection.childElementCount === 0) {
-          worktreeSection.innerHTML = '<div class="worktree-panel worktree-panel-error">// WORKTREE POOL · unavailable</div>';
+          worktreeSection.innerHTML = `<div class="card queue-empty">${escapeHtml(t('error.loading'))}</div>`;
         }
       }
     }
