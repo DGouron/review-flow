@@ -218,6 +218,39 @@ describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)',
     expect(sessionGateway.stopCalls).toEqual(['stub-session']);
   });
 
+  it('scenario #457: streams only the assistant answer, never the prompt or the context the transcript echoes', async () => {
+    const dir = projectDirFor(homeDir, homeDir);
+    const lines = [
+      JSON.stringify({
+        type: 'user',
+        message: {
+          content: [{ type: 'text', text: '<<<TITLE>>>\n{ "judge": true }\n<<<END TITLE>>>' }],
+        },
+      }),
+      JSON.stringify({
+        type: 'user',
+        message: { content: [{ type: 'text', text: 'SessionStart hook additional context' }] },
+      }),
+      JSON.stringify({
+        type: 'assistant',
+        message: {
+          content: [{ type: 'text', text: '{"what": "answer"}' }],
+          stop_reason: 'end_turn',
+        },
+      }),
+    ];
+    writeFileSync(join(dir, 'stub-session-echo.jsonl'), lines.join('\n') + '\n');
+
+    const gateway = new EmberAnswerTransportClaudeGateway(sessionGateway, FAST_OPTIONS(homeDir));
+    const { subscriber, finished } = settled();
+
+    gateway.start(startOptions(), subscriber);
+    await finished;
+
+    expect(subscriber.chunks).toEqual(['{"what": "answer"}']);
+    expect(subscriber.done).toBe(true);
+  });
+
   it('completes on a system turn_duration marker even without assistant stop_reason', async () => {
     const dir = projectDirFor(homeDir, homeDir);
     const lines = [

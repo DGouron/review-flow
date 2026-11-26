@@ -34,6 +34,7 @@ describe('extractText', () => {
   it('joins text parts from a message content array', () => {
     expect(
       extractText({
+        type: 'assistant',
         message: {
           content: [
             { type: 'text', text: 'a' },
@@ -47,6 +48,7 @@ describe('extractText', () => {
   it('ignores non-text content parts', () => {
     expect(
       extractText({
+        type: 'assistant',
         message: { content: [{ type: 'tool_use' }, { type: 'text', text: 'kept' }] },
       }),
     ).toBe('kept');
@@ -59,6 +61,24 @@ describe('extractText', () => {
   it('returns null when message content is a plain string (user line, not an array)', () => {
     expect(
       extractText({ type: 'user', message: { content: 'Quelle est ma question ?' } }),
+    ).toBeNull();
+  });
+
+  it('scenario #457: ignores the prompt echoed as a user line with a text content array', () => {
+    expect(
+      extractText({
+        type: 'user',
+        message: { content: [{ type: 'text', text: '<<<TITLE>>>\n{ "judge": true }' }] },
+      }),
+    ).toBeNull();
+  });
+
+  it('ignores text carried by any non-assistant message line, such as injected context', () => {
+    expect(
+      extractText({
+        type: 'system',
+        message: { content: [{ type: 'text', text: 'SessionStart hook additional context' }] },
+      }),
     ).toBeNull();
   });
 
