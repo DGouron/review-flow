@@ -206,7 +206,7 @@ describe('version routes', () => {
       expect(restartCalled).toBe(true);
     });
 
-    it('should refuse with a 200 status when the request does not come from the local machine', async () => {
+    it('should start the update when the request comes from another machine, such as a reverse proxy', async () => {
       application = Fastify();
       await application.register(versionRoutes, {
         checkVersion,
@@ -230,8 +230,7 @@ describe('version routes', () => {
 
       const body = JSON.parse(response.body);
       expect(response.statusCode).toBe(200);
-      expect(body.status).toBe('refused');
-      expect(body.motive).toEqual({ kind: 'local-only' });
+      expect(body.status).toBe('started');
     });
   });
 });

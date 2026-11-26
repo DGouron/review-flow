@@ -2,6 +2,18 @@
 
 ## Status: implemented
 
+## Amendment — #428 (2026-11-26)
+
+The "local machine only" precondition is removed. On a server reached through a reverse proxy (or a
+VPN), every dashboard request comes from another address, so the button was always refused and the
+dashboard could not update the server it runs on. The precondition protected nothing the rest of the
+API does not already expose: every other write route (`/api/repositories`, `/api/settings/*`,
+`/api/project-config`, `/api/ember/ask`) is reachable from the network without authentication, and the
+update only ever runs the owner's own published code (the checkout's default branch or the npm
+release) — a caller cannot choose what gets executed. Access control for the dashboard belongs to the
+network layer until the dashboard API is authenticated as a whole (still out of scope). The
+"no review running" precondition is unchanged.
+
 ## Context
 
 The dashboard's "Mettre à jour vers vX" button is inert on a source-checkout install: it only prints a
@@ -13,10 +25,10 @@ This feature makes the button actually perform the update — fetch the new code
 while refusing to run at all in any situation where doing so would break something. Every refusal is
 surfaced as a readable toast, never as a silent failure.
 
-Two of those refusals are not specific to a checkout and therefore guard **both** kinds of install: an
-update triggered from another machine, and an update triggered while reviews are running. A globally
-installed ReviewFlow could already be reinstalled and restarted mid-review by anyone on the network, so
-the same two guards apply there — that path otherwise keeps its current behaviour.
+One of those refusals is not specific to a checkout and therefore guards **both** kinds of install: an
+update triggered while reviews are running. A globally installed ReviewFlow could already be
+reinstalled and restarted mid-review, so the same guard applies there — that path otherwise keeps its
+current behaviour.
 
 ## Rules
 
@@ -27,17 +39,15 @@ the same two guards apply there — that path otherwise keeps its current behavi
 - before running any step, ReviewFlow evaluates every precondition below; the **first** unmet
   precondition refuses the update and nothing is executed
 - preconditions are evaluated in this fixed order, so a refusal is always reproducible:
-  1. the request comes from the local machine — **both install kinds**
-  2. no review is running or waiting — **both install kinds**
-  3. the checkout is on the repository's default branch — source-checkout only
-  4. the checkout has no uncommitted local changes — source-checkout only
-  5. the tools needed to fetch and rebuild are reachable — source-checkout only
-- preconditions 1 and 2 are evaluated **before** ReviewFlow decides which kind of install it is, so a
-  globally installed ReviewFlow is guarded by them too; preconditions 3 to 5 only make sense for a
-  checkout and are evaluated after that decision
-- the update is only ever triggered from the local machine: a request arriving from any other address
-  is refused, because the update executes code fetched from elsewhere and the server listens on all
-  network interfaces with no authentication on its API
+  1. no review is running or waiting — **both install kinds**
+  2. the checkout is on the repository's default branch — source-checkout only
+  3. the checkout has no uncommitted local changes — source-checkout only
+  4. the tools needed to fetch and rebuild are reachable — source-checkout only
+- precondition 1 is evaluated **before** ReviewFlow decides which kind of install it is, so a globally
+  installed ReviewFlow is guarded by it too; preconditions 2 to 4 only make sense for a checkout and are
+  evaluated after that decision
+- the update can be triggered from any address that reaches the dashboard, including through a reverse
+  proxy (amended by #428, see above)
 - an update is refused while any review is running or waiting, and the refusal states how many:
   rebuilding or reinstalling and then restarting mid-review changes the code under running jobs and
   their worktrees — this holds for a globally installed ReviewFlow just as much as for a checkout
@@ -76,18 +86,17 @@ the same two guards apply there — that path otherwise keeps its current behavi
 - while the sequence runs, the button is disabled and states that an update is in progress; it does not
   announce which individual step is running, since the whole sequence is one call
 - once the server is back up, the dashboard reloads so the new version is displayed
-- a global-install update keeps its current behaviour apart from the two shared preconditions and the
-  shared restart guarantee
+- a global-install update keeps its current behaviour apart from the shared precondition and the shared
+  restart guarantee
 
 ## Scenarios
 
-- nominal: {local request, no review, on `master`, clean checkout, tools reachable, remote has new
-  commits} → fetch then rebuild then restart + process identity rewritten + dashboard reloads on the
-  restarted server
+- nominal: {no review, on `master`, clean checkout, tools reachable, remote has new commits} → fetch
+  then rebuild then restart + process identity rewritten + dashboard reloads on the restarted server
 - already current: {all preconditions met, fetch brings no new commit} → rebuild and restart run all
   the same + dashboard reloads
-- remote request: {request from another machine on the network} → reject "Mise à jour autorisée
-  uniquement depuis la machine locale" + toast + nothing executed
+- remote request (amended by #428): {request from another machine, e.g. through a reverse proxy, all
+  preconditions met} → the update starts exactly like a local one
 - review running: {one review running, one waiting} → reject "2 reviews en cours. Réessayez une fois
   les reviews terminées." + toast + nothing executed
 - wrong branch: {on `feat/223-source-checkout-self-update`} → reject "Mise à jour possible uniquement
@@ -104,22 +113,19 @@ the same two guards apply there — that path otherwise keeps its current behavi
   continue de tourner sur la version précédente." + toast + no restart + server still answering
 - restarted server is controllable: {update completes} → status command reports the server running with
   its new process identity + stop command shuts it down
-- global install, nothing running: {install is a global package, local request, no review} → existing
-  global update path runs, unchanged, then restarts with its process identity rewritten
-- global install, review running: {install is a global package, local request, one review running} →
-  reject "1 review en cours. Réessayez une fois les reviews terminées." + toast + no reinstall + no
-  restart
-- global install, remote request: {install is a global package, request from another machine} → reject
-  "Mise à jour autorisée uniquement depuis la machine locale" + toast + nothing executed
+- global install, nothing running: {install is a global package, no review} → existing global update
+  path runs, unchanged, then restarts with its process identity rewritten
+- global install, review running: {install is a global package, one review running} → reject "1 review
+  en cours. Réessayez une fois les reviews terminées." + toast + no reinstall + no restart
 - refusal wording in English: {dashboard language is English, review running} → the toast shows the
   English wording of the same motive, with the same count
 
 ## Out of Scope
 
-- Changing the global-install update path beyond the shared restart fix and the two shared
-  preconditions (local machine, no running review)
-- Authenticating the dashboard API in general (only this operation is restricted to the local machine;
-  every other write route stays as it is today and is tracked separately)
+- Changing the global-install update path beyond the shared restart fix and the shared precondition
+  (no running review)
+- Authenticating the dashboard API in general (every write route, this one included, stays as it is
+  today and is tracked separately)
 - Binding the server to the loopback interface instead of all interfaces
 - Updating a checkout that is on a branch other than the default one
 - Stashing, committing or discarding uncommitted local changes on the user's behalf
@@ -137,7 +143,6 @@ the same two guards apply there — that path otherwise keeps its current behavi
 | precondition | A condition checked before the update starts; the first unmet one refuses the whole update and executes nothing |
 | default branch | The repository's main line of development (`master`), the only branch from which an update is allowed |
 | clean checkout | A checkout with no uncommitted local changes |
-| local machine | The machine running the server itself, as opposed to any other address on the network |
 | process identity | The recorded identity of the running server that the stop and status commands rely on to find it |
 | structured motive | A refusal expressed as an identifier plus its data (a count, a tool name), so the dashboard can word it in either language instead of displaying a sentence built by the server |
 
@@ -160,27 +165,26 @@ See `.claude/skills/product-manager/rules/dod.md`.
 
 ### Artefacts
 
-- **Entity (new)**: `entities/selfUpdateSequence/localOrigin.ts` — `isLocalOrigin(ip)`. Reuses
-  `isIpInCidr` for `127.0.0.0/8` and matches `::1` / `::ffff:127.0.0.1` explicitly, because
-  `isIpInCidr` is IPv4-only and macOS resolves `localhost` to IPv6 more often than not.
+- **Entity (removed by #428)**: `entities/selfUpdateSequence/localOrigin.ts` — `isLocalOrigin(ip)`.
 - **Entity (new)**: `entities/selfUpdateSequence/selfUpdateRefusalMotive.ts` — the structured motive as a
-  union discriminated on `kind`, 7 variants, each carrying exactly its own data and no optional field.
+  union discriminated on `kind`, 6 variants (the `local-only` one was removed by #428), each carrying
+  exactly its own data and no optional field.
 - **Gateway contracts (new)**: `entities/selfUpdateSequence/queueActivity.gateway.ts`
   (`countActiveOrWaiting`) and `entities/selfUpdateSequence/sourceCheckoutUpdate.gateway.ts`
   (`getCurrentBranch`, `hasUncommittedChanges`, `resolveToolPath`, `fetchLatest`, `rebuild`).
 - **Entity (modified)**: `packageVersion.ts` — gained `{ status: 'refused'; motive }`, lost
   `{ status: 'source-checkout'; manualCommand }`.
-- **Use case (new)**: `runSourceCheckoutSelfUpdate.usecase.ts` — preconditions 3 to 5 then fetch then
+- **Use case (new)**: `runSourceCheckoutSelfUpdate.usecase.ts` — preconditions 2 to 4 then fetch then
   rebuild, each step short-circuiting.
-- **Use case (modified)**: `triggerSelfUpdate.usecase.ts` — evaluates preconditions 1 and 2 for both
-  install kinds **before** `installTypeDetector.detect()`, then dispatches.
+- **Use case (modified)**: `triggerSelfUpdate.usecase.ts` — evaluates precondition 1 for both install
+  kinds **before** `installTypeDetector.detect()`, then dispatches. Takes no request origin since #428.
 - **Gateways (new)**: `queueActivity.pQueue.gateway.ts` (wraps `getQueueStats`, the only consumer of that
   framework module outside `health.routes.ts`) and `sourceCheckoutUpdate.cli.gateway.ts` (injectable
   checkout path and command runner, so no test touches the real repository or runs a real git/yarn).
 - **Gateway (fixed)**: `selfUpdate.cli.gateway.ts` — argument building extracted into the exported pure
   `buildRestartArgs(port)`, which now includes `--daemon`. Both restart paths share it.
-- **Controller (modified)**: `version.routes.ts` — forwards `request.ip` as `requestOrigin`, takes the two
-  new gateways, drops the `'source-checkout'` response branch, maps `'refused'` to HTTP 200.
+- **Controller (modified)**: `version.routes.ts` — takes the two new gateways (it forwarded `request.ip`
+  as `requestOrigin` until #428), drops the `'source-checkout'` response branch, maps `'refused'` to HTTP 200.
 - **Views (modified)**: `versionUpdate.js` — single unified button, `setVersionCheckState` now restores the
   button on any non-running state, and the new pure `resolveRefusalWording(motive, translate)` words each
   motive. `index.html` — explicit `'refused'` branch before the generic fallback, dead
@@ -196,9 +200,10 @@ See `.claude/skills/product-manager/rules/dod.md`.
 
 ### Decisions
 
-- Preconditions 1 and 2 sit in the dispatcher rather than in the source-checkout use case, so a globally
-  installed ReviewFlow is guarded by them too. `npm update -g` followed by a restart was previously
-  reachable from any machine on the network and during a running review.
+- Precondition 1 sits in the dispatcher rather than in the source-checkout use case, so a globally
+  installed ReviewFlow is guarded by it too: `npm update -g` followed by a restart was previously
+  reachable during a running review. A "local machine only" precondition also lived there until #428
+  removed it (see the amendment above).
 - A refusal carries a structured motive instead of a ready-made sentence: the dashboard is bilingual, and
   a server-built French string would have leaked into the English UI. An external tool's own output
   (`fetch-failed`) is the one thing passed through untranslated.

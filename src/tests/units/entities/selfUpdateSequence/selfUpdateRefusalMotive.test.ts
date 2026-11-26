@@ -3,12 +3,6 @@ import { describe, it, expect } from 'vitest';
 import type { SelfUpdateRefusalMotive } from '@/modules/cli-configuration/entities/selfUpdateSequence/selfUpdateRefusalMotive.js';
 
 describe('SelfUpdateRefusalMotive type', () => {
-  it('should represent a local-only refusal', () => {
-    const motive: SelfUpdateRefusalMotive = { kind: 'local-only' };
-
-    expect(motive.kind).toBe('local-only');
-  });
-
   it('should represent a reviews-in-progress refusal with a count', () => {
     const motive: SelfUpdateRefusalMotive = { kind: 'reviews-in-progress', count: 2 };
 
