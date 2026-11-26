@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     branches: [master]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,8 +24,11 @@ jobs:
   publish:
     name: Publish to npm
     needs: release
-    if: needs.release.outputs.release_created == 'true'
+    if: needs.release.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,9 +36,8 @@ jobs:
           node-version: 20
           cache: yarn
           registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@11
       - run: yarn install --frozen-lockfile
       - run: yarn build
       - run: yarn test:ci
-      - run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm stage publish --access public
