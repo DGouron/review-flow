@@ -119,6 +119,12 @@ import { ForwardedForClientIpResolver } from '@/modules/platform-integration/int
 import { GuardDiffSizeUseCase } from '@/modules/platform-integration/usecases/guardDiffSize.usecase.js';
 import { IsTrustedActorUseCase } from '@/modules/platform-integration/usecases/isTrustedActor.usecase.js';
 import { processWebhook } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
+import { reviewBriefRoutes } from '@/modules/review-brief/interface-adapters/controllers/http/reviewBrief.routes.js';
+import { ReviewBriefCacheFileSystemGateway } from '@/modules/review-brief/interface-adapters/gateways/reviewBriefCache.fileSystem.gateway.js';
+import { ReviewBriefModelEmberGateway } from '@/modules/review-brief/interface-adapters/gateways/reviewBriefModel.ember.gateway.js';
+import { GitHubReviewRequestOverviewFetchGateway } from '@/modules/review-brief/interface-adapters/gateways/reviewRequestOverview.github.gateway.js';
+import { GitLabReviewRequestOverviewFetchGateway } from '@/modules/review-brief/interface-adapters/gateways/reviewRequestOverview.gitlab.gateway.js';
+import { ExplainReviewRequestUseCase } from '@/modules/review-brief/usecases/explainReviewRequest/explainReviewRequest.usecase.js';
 import { pendingReviewsRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/pendingReviews.routes.js';
 import { reviewRoutes } from '@/modules/review-execution/interface-adapters/controllers/http/reviews.routes.js';
 import { ProjectPrinciplesFileSystemGateway } from '@/modules/review-execution/interface-adapters/gateways/fileSystem/projectPrinciples.fileSystem.gateway.js';
@@ -438,6 +444,39 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     noteCommentPostGatewayFactory,
     claudeInvokerDeps,
     gateClaudeInvocation,
+    logger: deps.logger,
+  });
+
+  const reviewBriefTransport = new EmberAnswerTransportClaudeGateway(
+    new ClaudeSessionCliGateway(defaultProcessRunner()),
+    {
+      homeDir: homedir(),
+      buildMcpConfig: () => '{"mcpServers":{}}',
+      toolPolicy: {
+        allowedTools: 'Read,Glob,Grep',
+        disallowedTools: 'Edit,Write,Bash,Task,WebFetch,WebSearch,NotebookEdit',
+      },
+    },
+  );
+  await app.register(reviewBriefRoutes, {
+    getRepositories: () => deps.config.repositories,
+    explainReviewRequest: new ExplainReviewRequestUseCase({
+      trackingGateway: deps.reviewRequestTrackingGateway,
+      overviewFetchFor: (platform) =>
+        platform === 'github'
+          ? new GitHubReviewRequestOverviewFetchGateway(defaultGitHubArgvExecutor)
+          : new GitLabReviewRequestOverviewFetchGateway(defaultGitLabArgvExecutor),
+      changedFilesFetchFor: (platform) =>
+        platform === 'github'
+          ? new GitHubChangedFilesFetchGateway(defaultGitHubExecutor)
+          : new GitLabChangedFilesFetchGateway(defaultGitLabExecutor),
+      threadFetchFor: threadFetchGatewayFactory,
+      reviewFileGateway: deps.reviewFileGateway,
+      modelGateway: new ReviewBriefModelEmberGateway(reviewBriefTransport),
+      cacheGateway: new ReviewBriefCacheFileSystemGateway({ homeDir: homedir() }),
+      now: () => new Date(),
+    }),
+    getLanguage: getDefaultLanguage,
     logger: deps.logger,
   });
 
