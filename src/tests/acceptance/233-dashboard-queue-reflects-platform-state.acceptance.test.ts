@@ -1,5 +1,5 @@
 /**
- * SPEC-226 — The dashboard queue reflects the real platform state
+ * SPEC-233 — The dashboard queue reflects the real platform state
  *
  * Outer-loop acceptance test (SDD): a full sync (POST /api/mr-tracking/sync) reconciles the
  * tracked pull requests with their state on GitHub, then GET /api/mr-tracking shows the
@@ -121,7 +121,7 @@ function numbersOf(bucket: Array<{ mrNumber: number }>): number[] {
   return bucket.map((mr) => mr.mrNumber).sort((left, right) => left - right);
 }
 
-describe('SPEC-226 — dashboard queue reflects the real platform state', () => {
+describe('SPEC-233 — dashboard queue reflects the real platform state', () => {
   let harness: Harness;
 
   beforeEach(async () => {
