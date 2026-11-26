@@ -88,6 +88,24 @@ describe('ReconcileWithPlatformUseCase', () => {
     expect(stateOf(id)?.state).toBe('pending-approval');
   });
 
+  it('sets the platform author on a tracked PR that has none', () => {
+    const id = track(1536, { author: null });
+    platform.givenOpenBy(1536, { username: 'jdoe', displayName: 'Jane Doe' });
+
+    reconcile.execute({ localPath, project });
+
+    expect(stateOf(id)?.author).toEqual({ username: 'jdoe', displayName: 'Jane Doe' });
+  });
+
+  it('replaces a tracked author that is not the creator of the PR', () => {
+    const id = track(1536, { author: { username: 'reviewer', displayName: null } });
+    platform.givenOpenBy(1536, { username: 'jdoe', displayName: 'Jane Doe' });
+
+    reconcile.execute({ localPath, project });
+
+    expect(stateOf(id)?.author).toEqual({ username: 'jdoe', displayName: 'Jane Doe' });
+  });
+
   it('only asks the platform about tracked PRs missing from the open list', () => {
     track(1536);
     track(1924);
@@ -122,7 +140,7 @@ describe('ReconcileWithPlatformUseCase', () => {
   it('does not count a PR reopened between the list and the state fetch', () => {
     const id = track(1700);
     platform.givenPlatformState(1700, 'open');
-    platform.listOpenNumbers = () => [];
+    platform.listOpen = () => [];
 
     const summary = reconcile.execute({ localPath, project });
 

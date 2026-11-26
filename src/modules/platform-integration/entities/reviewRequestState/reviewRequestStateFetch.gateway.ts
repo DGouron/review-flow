@@ -1,6 +1,11 @@
 import type { ReviewRequestState } from '@/modules/review-execution/entities/reviewRequest/reviewRequest.entity.js';
 
+export type OpenReviewRequest = {
+  number: number;
+  author: { username: string; displayName: string | null };
+};
+
 export interface ReviewRequestStateFetchGateway {
-  listOpenNumbers(project: string): number[];
+  listOpen(project: string): OpenReviewRequest[];
   fetchState(project: string, reviewRequestNumber: number): ReviewRequestState;
 }
