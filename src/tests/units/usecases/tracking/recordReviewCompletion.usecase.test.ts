@@ -16,6 +16,8 @@ describe('RecordReviewCompletionUseCase', () => {
     suggestions: 1,
     threadsOpened: 2,
     threadsClosed: 0,
+    verdict: 'changes' as const,
+    grade: 'D' as const,
   };
 
   it('should record review event and update aggregates', () => {
@@ -168,6 +170,8 @@ describe('RecordReviewCompletionUseCase', () => {
         warnings: 0,
         suggestions: 0,
         threadsClosed: 1,
+        verdict: 'ready',
+        grade: 'A',
       },
     });
 
@@ -217,7 +221,7 @@ describe('RecordReviewCompletionUseCase', () => {
     expect(result).toBeNull();
   });
 
-  it('should stay in pending-fix when score is below threshold even without blockers', () => {
+  it('should stay in pending-fix when the grade is below threshold even without blockers', () => {
     const gateway = new InMemoryReviewRequestTrackingGateway();
     const mr = TrackedMrFactory.create({ id: 'mr-1', state: 'pending-review', openThreads: 0 });
     gateway.create('/project', mr);
@@ -226,15 +230,21 @@ describe('RecordReviewCompletionUseCase', () => {
     const result = useCase.execute({
       projectPath: '/project',
       mrId: 'mr-1',
-      reviewData: { ...reviewData, score: 6, blocking: 0, threadsOpened: 0 },
-      qualityThreshold: 7,
+      reviewData: {
+        ...reviewData,
+        blocking: 0,
+        warnings: 0,
+        threadsOpened: 0,
+        verdict: 'ready',
+        grade: 'B',
+      },
+      qualityThreshold: 'A',
     });
 
     expect(result?.state).toBe('pending-fix');
-    expect(result?.latestScore).toBe(6);
   });
 
-  it('should transition to pending-approval when score meets threshold and no blockers', () => {
+  it('should transition to pending-approval when a ready review meets the threshold', () => {
     const gateway = new InMemoryReviewRequestTrackingGateway();
     const mr = TrackedMrFactory.create({ id: 'mr-1', state: 'pending-review', openThreads: 0 });
     gateway.create('/project', mr);
@@ -243,14 +253,21 @@ describe('RecordReviewCompletionUseCase', () => {
     const result = useCase.execute({
       projectPath: '/project',
       mrId: 'mr-1',
-      reviewData: { ...reviewData, score: 8, blocking: 0, threadsOpened: 0 },
-      qualityThreshold: 7,
+      reviewData: {
+        ...reviewData,
+        blocking: 0,
+        warnings: 0,
+        threadsOpened: 0,
+        verdict: 'ready',
+        grade: 'B',
+      },
+      qualityThreshold: 'B',
     });
 
     expect(result?.state).toBe('pending-approval');
   });
 
-  it('should stay in pending-fix when blockers are present even with score above threshold', () => {
+  it('should stay in pending-fix when the review gave no verdict', () => {
     const gateway = new InMemoryReviewRequestTrackingGateway();
     const mr = TrackedMrFactory.create({ id: 'mr-1', state: 'pending-review', openThreads: 0 });
     gateway.create('/project', mr);
@@ -259,8 +276,41 @@ describe('RecordReviewCompletionUseCase', () => {
     const result = useCase.execute({
       projectPath: '/project',
       mrId: 'mr-1',
-      reviewData: { ...reviewData, score: 9, blocking: 1, threadsOpened: 1 },
-      qualityThreshold: 7,
+      reviewData: {
+        ...reviewData,
+        blocking: 0,
+        warnings: 0,
+        threadsOpened: 0,
+        verdict: null,
+        grade: null,
+      },
+      qualityThreshold: 'B',
+    });
+
+    expect(result?.state).toBe('pending-fix');
+  });
+
+  it('should record the verdict and the grade on the review event', () => {
+    const gateway = new InMemoryReviewRequestTrackingGateway();
+    gateway.create('/project', TrackedMrFactory.create({ id: 'mr-1' }));
+    const useCase = new RecordReviewCompletionUseCase(gateway);
+
+    const result = useCase.execute({ projectPath: '/project', mrId: 'mr-1', reviewData });
+
+    expect(result?.reviews.at(-1)).toMatchObject({ verdict: 'changes', grade: 'D' });
+  });
+
+  it('should stay in pending-fix when blockers are present', () => {
+    const gateway = new InMemoryReviewRequestTrackingGateway();
+    const mr = TrackedMrFactory.create({ id: 'mr-1', state: 'pending-review', openThreads: 0 });
+    gateway.create('/project', mr);
+    const useCase = new RecordReviewCompletionUseCase(gateway);
+
+    const result = useCase.execute({
+      projectPath: '/project',
+      mrId: 'mr-1',
+      reviewData: { ...reviewData, blocking: 1, threadsOpened: 1 },
+      qualityThreshold: 'B',
     });
 
     expect(result?.state).toBe('pending-fix');
@@ -279,8 +329,15 @@ describe('RecordReviewCompletionUseCase', () => {
     const result = useCase.execute({
       projectPath: '/project',
       mrId: 'mr-1',
-      reviewData: { ...reviewData, score: 8, blocking: 0, threadsOpened: 0 },
-      qualityThreshold: 7,
+      reviewData: {
+        ...reviewData,
+        blocking: 0,
+        warnings: 0,
+        threadsOpened: 0,
+        verdict: 'ready',
+        grade: 'A',
+      },
+      qualityThreshold: 'B',
     });
 
     expect(result?.bypass).toBeNull();

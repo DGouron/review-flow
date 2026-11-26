@@ -2,6 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { vi } from 'vitest';
 
 import type { RepositoryConfig } from '@/config/loader.js';
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 
 const mockConfig = {
   server: { port: 3000 },
@@ -220,7 +221,7 @@ function buildBaseDeps(trackingGateway: ReturnType<typeof createMockTrackingGate
         checkFollowupNeeded,
         removeWorktree,
         handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGateway),
-        getQualityThreshold: (): number | null => null,
+        getQualityThreshold: (): QualityGrade | null => null,
         logger,
       }),
     enforceBudget: createAcceptAllEnforceBudget(),
@@ -232,7 +233,7 @@ function buildBaseDeps(trackingGateway: ReturnType<typeof createMockTrackingGate
     noteCommentPostGateway: new StubNoteCommentPostGateway(),
     handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGateway),
     approvalRevocationGateway: new StubApprovalRevocationGateway(),
-    getQualityThreshold: (): number | null => null,
+    getQualityThreshold: (): QualityGrade | null => null,
     guardDiffSize: new GuardDiffSizeUseCase({
       changedFilesFetchGateway: new StubChangedFilesFetchGateway(),
     }),

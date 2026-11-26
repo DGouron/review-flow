@@ -1679,7 +1679,7 @@
       const assigneeDisplay = mr.assignment?.displayName || assigneeUsername;
       const ownerLabel = t('lane.owner', { owner: assigneeDisplay });
       const qualityScore = typeof mr.latestScore === 'number' ? mr.latestScore : null;
-      const activeQualityTarget = currentProjectConfig?.qualityThreshold ?? QUALITY_TARGET_SCORE;
+      const activeQualityTarget = QUALITY_TARGET_SCORE;
       const qualityProgress = getQualityProgress(qualityScore, activeQualityTarget);
       const qualityTarget = qualityProgress.qualityTarget;
       const qualityDelta = qualityProgress.targetDelta;
@@ -1851,7 +1851,7 @@
 
       pendingFixSection.classList.remove('hidden');
       const rankedPendingFix = rankPendingFixForNowLane(currentData.pendingFix, {
-        qualityTarget: currentProjectConfig?.qualityThreshold ?? QUALITY_TARGET_SCORE,
+        qualityTarget: QUALITY_TARGET_SCORE,
       });
       const queueLanesModel = buildQueueLanesModel(rankedPendingFix, currentData.pendingApproval);
 
@@ -2706,7 +2706,7 @@
           return;
         }
         const requestBody = { ...payload };
-        requestBody.qualityThreshold = thresholdRaw === '' ? null : Number(thresholdRaw);
+        requestBody.qualityThreshold = thresholdRaw === '' ? null : thresholdRaw;
         requestBody.maxConcurrentReviews = Number(capRaw);
         requestBody.maxDiffLines = maxDiffLinesRaw === '' ? null : Number(maxDiffLinesRaw);
         try {

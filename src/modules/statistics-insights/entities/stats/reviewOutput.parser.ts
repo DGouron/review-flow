@@ -1,3 +1,12 @@
+import {
+  gradeOfCounts,
+  parseQualityGrade,
+  parseReviewVerdict,
+  type QualityGrade,
+  type ReviewVerdict,
+  verdictOfCounts,
+  worstGrade,
+} from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import type { CategoryBreakdown } from '@/modules/statistics-insights/entities/stats/bugCategory.js';
 import { normalizeBreakdown } from '@/modules/statistics-insights/entities/stats/categoryBreakdown.guard.js';
 
@@ -19,6 +28,11 @@ import { normalizeBreakdown } from '@/modules/statistics-insights/entities/stats
  * The structured stats line may carry an optional categories segment:
  *    [REVIEW_STATS:...:categories=security=3,logic=5,performance=1]
  * Absent segment yields a null breakdown (legacy / no category data).
+ *
+ * It may also carry the verdict, the overall grade and one level per dimension:
+ *    [REVIEW_STATS:...:verdict=changes:grade=C:levels=fiabilite=C,securite=A]
+ * A review written before verdicts gets both rebuilt from its counts. The inline
+ * fallback gets neither: an output that says nothing must never read as ready.
  */
 export interface ParsedReviewOutput {
   score: number | null;
@@ -26,6 +40,28 @@ export interface ParsedReviewOutput {
   warnings: number;
   suggestions: number;
   categoryBreakdown: CategoryBreakdown | null;
+  verdict: ReviewVerdict | null;
+  grade: QualityGrade | null;
+  levels: Record<string, QualityGrade> | null;
+}
+
+function parseLevelsSegment(statsStr: string): Record<string, QualityGrade> | null {
+  const levelsMatch = statsStr.match(/levels=([^:]+)/i);
+  if (!levelsMatch) return null;
+
+  const levels: Record<string, QualityGrade> = {};
+  for (const pair of levelsMatch[1].split(',')) {
+    const [dimension, letter] = pair.split('=');
+    const grade = letter ? parseQualityGrade(letter) : null;
+    if (dimension && grade) {
+      levels[dimension.trim()] = grade;
+    }
+  }
+  return levels;
+}
+
+function segmentValue(statsStr: string, name: string): string | null {
+  return statsStr.match(new RegExp(`${name}=([^:]+)`, 'i'))?.[1] ?? null;
 }
 
 function parseCategoriesSegment(statsStr: string): CategoryBreakdown | null {
@@ -65,12 +101,23 @@ export function parseReviewOutput(stdout: string): ParsedReviewOutput {
     if (suggestionsMatch) suggestions = Number.parseInt(suggestionsMatch[1], 10);
     if (scoreMatch) score = Number.parseFloat(scoreMatch[1]);
 
+    const counts = { blocking, warnings, suggestions };
+    const levels = parseLevelsSegment(statsStr);
+    const verdictValue = segmentValue(statsStr, 'verdict');
+    const gradeValue = segmentValue(statsStr, 'grade');
+
     return {
       score,
       blocking,
       warnings,
       suggestions,
       categoryBreakdown: parseCategoriesSegment(statsStr),
+      verdict: parseReviewVerdict(verdictValue ?? '') ?? verdictOfCounts(counts),
+      grade:
+        parseQualityGrade(gradeValue ?? '') ??
+        worstGrade(Object.values(levels ?? {})) ??
+        gradeOfCounts(counts),
+      levels,
     };
   }
 
@@ -99,7 +146,17 @@ export function parseReviewOutput(stdout: string): ParsedReviewOutput {
 
   // If summary format worked, return
   if (blockingSummary || warningsSummary || suggestionsSummary) {
-    return { score, blocking, warnings, suggestions, categoryBreakdown: null };
+    const counts = { blocking, warnings, suggestions };
+    return {
+      score,
+      blocking,
+      warnings,
+      suggestions,
+      categoryBreakdown: null,
+      verdict: verdictOfCounts(counts),
+      grade: gradeOfCounts(counts),
+      levels: null,
+    };
   }
 
   // Method 3: Fallback - count inline markers
@@ -142,5 +199,14 @@ export function parseReviewOutput(stdout: string): ParsedReviewOutput {
     }
   }
 
-  return { score, blocking, warnings, suggestions, categoryBreakdown: null };
+  return {
+    score,
+    blocking,
+    warnings,
+    suggestions,
+    categoryBreakdown: null,
+    verdict: null,
+    grade: null,
+    levels: null,
+  };
 }

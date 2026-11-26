@@ -49,7 +49,9 @@ import type { GateClaudeInvocationUseCase } from '@/modules/review-execution/use
 import type { HandleClose } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import type { ResolveAuditScopeUseCase } from '@/modules/review-execution/usecases/resolveAuditScope.usecase.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import type { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
+import type { QualityGateRejectionReason } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
 import { createTrackedMrId } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import type { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import type { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
@@ -88,7 +90,7 @@ export interface GitHubWebhookDependencies {
   noteCommentPostGateway: NoteCommentPostGateway;
   handlePlatformApproval: HandlePlatformApprovalUseCase;
   approvalRevocationGateway: ApprovalRevocationGateway;
-  getQualityThreshold: (projectPath: string) => number | null;
+  getQualityThreshold: (projectPath: string) => QualityGrade | null;
   guardDiffSize: GuardDiffSizeUseCase;
   getMaxDiffLines: (localPath: string) => number;
   now: () => string;
@@ -113,9 +115,15 @@ function computeSourceForkCloneUrl(pullRequest: {
   return headRepo.clone_url;
 }
 
-function shortDismissalLabel(reason: 'below-threshold' | 'blockers-present'): string {
-  if (reason === 'below-threshold') return 'Seuil qualité non atteint';
-  return 'Issues bloquantes non résolues';
+const DISMISSAL_LABELS: Record<QualityGateRejectionReason, string> = {
+  'verdict-missing': 'Aucun verdict de review',
+  'blockers-present': 'Issues bloquantes non résolues',
+  'not-ready': 'Review à reprendre',
+  'below-threshold': 'Niveau qualité non atteint',
+};
+
+function shortDismissalLabel(reason: QualityGateRejectionReason): string {
+  return DISMISSAL_LABELS[reason];
 }
 
 async function runGitHubReview(

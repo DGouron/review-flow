@@ -2,6 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { vi } from 'vitest';
 
 import type { GitHubWebhookDependencies } from '@/modules/platform-integration/interface-adapters/controllers/webhook/github.controller.js';
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 
 import type { RepositoryConfig } from '../../../../../config/loader.js';
 
@@ -105,7 +106,7 @@ function createMockDeps(): GitHubWebhookDependencies {
   const checkFollowupNeeded = { execute: vi.fn(() => false) };
   const removeWorktree = vi.fn(async () => ({ status: 'removed' as const }));
   const handlePlatformApproval = { execute: vi.fn(() => ({ kind: 'allowed' as const })) };
-  const getQualityThreshold = vi.fn((): number | null => null);
+  const getQualityThreshold = vi.fn((): QualityGrade | null => null);
   const handleClose = vi.fn(
     async (): Promise<HandleCloseResult> => ({
       status: 'cleaned',

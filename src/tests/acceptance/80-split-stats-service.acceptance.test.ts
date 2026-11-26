@@ -48,6 +48,9 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
         warnings: 3,
         suggestions: 1,
         categoryBreakdown: null,
+        verdict: 'changes',
+        grade: 'D',
+        levels: null,
       });
     });
 
@@ -80,6 +83,9 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
         warnings: 0,
         suggestions: 0,
         categoryBreakdown: null,
+        verdict: null,
+        grade: null,
+        levels: null,
       });
     });
   });
@@ -93,7 +99,16 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
         projectPath: '/project',
         mrNumber: 42,
         duration: 60000,
-        parsed: { score: 8, blocking: 1, warnings: 2, suggestions: 3, categoryBreakdown: null },
+        parsed: {
+          score: 8,
+          blocking: 1,
+          warnings: 2,
+          suggestions: 3,
+          categoryBreakdown: null,
+          verdict: null,
+          grade: null,
+          levels: null,
+        },
       });
 
       expect(review.mrNumber).toBe(42);
@@ -153,7 +168,16 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
         projectPath: '/project',
         mrNumber: 3,
         duration: 60000,
-        parsed: { score: null, blocking: 0, warnings: 0, suggestions: 0, categoryBreakdown: null },
+        parsed: {
+          score: null,
+          blocking: 0,
+          warnings: 0,
+          suggestions: 0,
+          categoryBreakdown: null,
+          verdict: null,
+          grade: null,
+          levels: null,
+        },
       });
 
       const stats = statsGateway.loadProjectStats('/project');

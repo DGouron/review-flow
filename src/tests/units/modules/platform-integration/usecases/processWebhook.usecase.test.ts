@@ -5,6 +5,7 @@ import {
   processWebhook,
   type ProcessWebhookDependencies,
 } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import type { HandlePlatformApprovalResult } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
 import type { TransitionStateResult } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
@@ -20,7 +21,7 @@ interface Harness {
   handlePlatformApprovalCalls: Array<{
     projectPath: string;
     mrId: string;
-    qualityThreshold: number | null;
+    qualityThreshold: QualityGrade | null;
   }>;
   getQualityThresholdCalls: string[];
 }
@@ -325,8 +326,6 @@ describe('processWebhook', () => {
           execute: (): HandlePlatformApprovalResult => ({
             kind: 'reverted',
             reason: 'below-threshold',
-            threshold: 8,
-            latestScore: 4,
             message: 'Approbation annulée',
           }),
         },

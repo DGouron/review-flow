@@ -1,37 +1,27 @@
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import {
   evaluateQualityGate,
   type QualityGateRejectionReason,
 } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
+import { latestReviewOutcomeOf } from '@/modules/tracking/entities/tracking/latestReviewOutcome.js';
 import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
 interface HandlePlatformApprovalInput {
   projectPath: string;
   mrId: string;
-  qualityThreshold: number | null;
+  qualityThreshold: QualityGrade | null;
 }
 
 export type HandlePlatformApprovalResult =
   | { kind: 'allowed' }
   | { kind: 'bypass-active' }
   | { kind: 'mr-not-found' }
-  | {
-      kind: 'reverted';
-      reason: QualityGateRejectionReason;
-      threshold: number;
-      latestScore: number;
-      message: string;
-    };
+  | { kind: 'reverted'; reason: QualityGateRejectionReason; message: string };
 
-function buildRevertMessage(
-  reason: QualityGateRejectionReason,
-  threshold: number,
-  latestScore: number,
-): string {
-  if (reason === 'below-threshold') {
-    return `Approbation annulée : seuil qualité ${threshold}/10 non atteint (${latestScore}/10). Utilisez \`/bypass-quality "raison"\` pour forcer.`;
-  }
-  return 'Approbation annulée : issues bloquantes non résolues. Utilisez `/bypass-quality "raison"` pour forcer.';
+function buildRevertMessage(gateMessage: string): string {
+  const cause = gateMessage.charAt(0).toLowerCase() + gateMessage.slice(1);
+  return `Approbation annulée : ${cause}. Utilisez \`/bypass-quality "raison"\` pour forcer.`;
 }
 
 export class HandlePlatformApprovalUseCase implements UseCase<
@@ -47,21 +37,17 @@ export class HandlePlatformApprovalUseCase implements UseCase<
     if (mr.bypass !== null) return { kind: 'bypass-active' };
 
     const gateResult = evaluateQualityGate({
-      latestScore: mr.latestScore,
+      ...latestReviewOutcomeOf(mr),
       blockingIssues: mr.openThreads,
       threshold: input.qualityThreshold,
     });
 
     if (gateResult.allowed) return { kind: 'allowed' };
 
-    const latestScore = mr.latestScore ?? 0;
-    const threshold = input.qualityThreshold ?? 0;
     return {
       kind: 'reverted',
       reason: gateResult.reason,
-      threshold,
-      latestScore,
-      message: buildRevertMessage(gateResult.reason, threshold, latestScore),
+      message: buildRevertMessage(gateResult.message),
     };
   }
 }

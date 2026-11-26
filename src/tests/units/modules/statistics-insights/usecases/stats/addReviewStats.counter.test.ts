@@ -82,7 +82,16 @@ describe('AddReviewStatsUseCase cumulative counters', () => {
       projectPath: PROJECT,
       mrNumber: 2,
       duration: 60000,
-      parsed: { score: null, blocking: 0, warnings: 0, suggestions: 0, categoryBreakdown: null },
+      parsed: {
+        score: null,
+        blocking: 0,
+        warnings: 0,
+        suggestions: 0,
+        categoryBreakdown: null,
+        verdict: null,
+        grade: null,
+        levels: null,
+      },
     });
 
     const stats = statsGateway.loadProjectStats(PROJECT);

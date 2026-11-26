@@ -7,10 +7,10 @@
  * Iteration A — internal quality gate only.
  *
  * In-scope scenarios from docs/specs/180-quality-threshold-block-approval.md:
- *   1: score above threshold, no blockers → 200 + approved
- *   2: score below threshold → 409 + "Seuil qualité non atteint (6/10 < 7/10)"
+ *   1: ready review within the grade threshold, no blockers → 200 + approved
+ *   2: grade below threshold → 409 + "Niveau qualité non atteint (B, seuil A)"
  *   3: blockers present → 409 + "Issues bloquantes non résolues"
- *   7: no completed review yet (latestScore=null) → 200 + approved
+ *   7: no review verdict yet → 409: a missing verdict never approves
  *   8: no threshold configured → 200 + approved
  *
  * Out of scope here (Iteration B / C): comment-based bypass, note webhook
@@ -20,9 +20,11 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import { mrTrackingRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTracking.routes.js';
 import type { RemoveResult } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
+import { ReviewEventFactory } from '@/tests/factories/reviewEvent.factory.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
 import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
 import { StubReviewContextGateway } from '@/tests/stubs/reviewContextGateway.stub.js';
@@ -30,7 +32,7 @@ import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewReques
 
 interface BuildAppOptions {
   gateway: InMemoryReviewRequestTrackingGateway;
-  qualityThreshold: number | null;
+  qualityThreshold: QualityGrade | null;
 }
 
 async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
@@ -64,15 +66,15 @@ describe('Acceptance — SPEC-180 Iteration A: Block approval below quality thre
     gateway = new InMemoryReviewRequestTrackingGateway();
   });
 
-  describe('Rule: approval gated by score + blockers vs threshold', () => {
-    it('scenario 1 — score above threshold, no blockers, no open threads → 200 + approved', async () => {
+  describe('Rule: approval gated by verdict, grade and blockers', () => {
+    it('scenario 1 — ready review within the threshold, no open threads → 200 + approved', async () => {
       seedMr(gateway, projectPath, {
         state: 'pending-approval',
-        latestScore: 8,
+        reviews: [ReviewEventFactory.create({ verdict: 'ready', grade: 'B' })],
         totalBlocking: 0,
         openThreads: 0,
       });
-      const app = await buildApp({ gateway, qualityThreshold: 7 });
+      const app = await buildApp({ gateway, qualityThreshold: 'B' });
 
       const response = await app.inject({
         method: 'POST',
@@ -88,14 +90,14 @@ describe('Acceptance — SPEC-180 Iteration A: Block approval below quality thre
       expect(updated?.approvedAt).not.toBeNull();
     });
 
-    it('scenario 2 — score below threshold blocks transition with French message', async () => {
+    it('scenario 2 — grade below threshold blocks transition with French message', async () => {
       seedMr(gateway, projectPath, {
         state: 'pending-approval',
-        latestScore: 6,
+        reviews: [ReviewEventFactory.create({ verdict: 'ready', grade: 'B' })],
         totalBlocking: 0,
         openThreads: 0,
       });
-      const app = await buildApp({ gateway, qualityThreshold: 7 });
+      const app = await buildApp({ gateway, qualityThreshold: 'A' });
 
       const response = await app.inject({
         method: 'POST',
@@ -106,7 +108,7 @@ describe('Acceptance — SPEC-180 Iteration A: Block approval below quality thre
       expect(response.statusCode).toBe(409);
       const body = response.json() as { success: boolean; error: string };
       expect(body.success).toBe(false);
-      expect(body.error).toBe('Seuil qualité non atteint (6/10 < 7/10)');
+      expect(body.error).toBe('Niveau qualité non atteint (B, seuil A)');
       const updated = gateway.getById(projectPath, 'mr-1');
       expect(updated?.state).toBe('pending-approval');
       expect(updated?.approvedAt).toBeNull();
@@ -115,11 +117,11 @@ describe('Acceptance — SPEC-180 Iteration A: Block approval below quality thre
     it('scenario 3 — open blockers block transition with French message', async () => {
       seedMr(gateway, projectPath, {
         state: 'pending-approval',
-        latestScore: 9,
+        reviews: [ReviewEventFactory.create({ verdict: 'ready', grade: 'A' })],
         totalBlocking: 0,
         openThreads: 2,
       });
-      const app = await buildApp({ gateway, qualityThreshold: 7 });
+      const app = await buildApp({ gateway, qualityThreshold: 'B' });
 
       const response = await app.inject({
         method: 'POST',
@@ -137,15 +139,15 @@ describe('Acceptance — SPEC-180 Iteration A: Block approval below quality thre
     });
   });
 
-  describe('Rule: missing data does not block (backward compatibility)', () => {
-    it('scenario 7 — no completed review yet (latestScore=null) allows approval', async () => {
+  describe('Rule: a missing verdict blocks, a missing threshold does not', () => {
+    it('scenario 7 — no review verdict yet blocks approval', async () => {
       seedMr(gateway, projectPath, {
         state: 'pending-approval',
-        latestScore: null,
+        reviews: [],
         totalBlocking: 0,
         openThreads: 0,
       });
-      const app = await buildApp({ gateway, qualityThreshold: 7 });
+      const app = await buildApp({ gateway, qualityThreshold: 'B' });
 
       const response = await app.inject({
         method: 'POST',
@@ -153,17 +155,17 @@ describe('Acceptance — SPEC-180 Iteration A: Block approval below quality thre
         payload: { mrId: 'mr-1', projectPath },
       });
 
-      expect(response.statusCode).toBe(200);
-      const body = response.json() as { success: boolean };
-      expect(body.success).toBe(true);
+      expect(response.statusCode).toBe(409);
+      const body = response.json() as { success: boolean; error: string };
+      expect(body.error).toBe('Aucun verdict de review : approbation impossible');
       const updated = gateway.getById(projectPath, 'mr-1');
-      expect(updated?.state).toBe('approved');
+      expect(updated?.state).toBe('pending-approval');
     });
 
-    it('scenario 8 — no threshold configured allows approval despite low score', async () => {
+    it('scenario 8 — no threshold configured allows approval despite a review to rework', async () => {
       seedMr(gateway, projectPath, {
         state: 'pending-approval',
-        latestScore: 6,
+        reviews: [ReviewEventFactory.create({ verdict: 'changes', grade: 'C' })],
         totalBlocking: 0,
         openThreads: 0,
       });

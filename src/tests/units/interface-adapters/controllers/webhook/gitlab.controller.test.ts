@@ -2,6 +2,8 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { vi } from 'vitest';
 
 import type { RepositoryConfig } from '@/config/loader.js';
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
+import { ReviewEventFactory } from '@/tests/factories/reviewEvent.factory.js';
 
 const mockConfig = {
   server: { port: 3000 },
@@ -189,7 +191,7 @@ function createAcceptAllEnforceBudget() {
 
 function createDefaultDeps(
   trackingGateway: ReturnType<typeof createMockTrackingGateway>,
-  qualityThreshold: number | null = null,
+  qualityThreshold: QualityGrade | null = null,
 ) {
   const threadFetchGateway = { fetchThreads: vi.fn(() => []) };
   const recordPush = new RecordPushUseCase(trackingGateway);
@@ -197,7 +199,7 @@ function createDefaultDeps(
   const checkFollowupNeeded = new CheckFollowupNeededUseCase(trackingGateway);
   const removeWorktree = vi.fn(async () => ({ status: 'removed' as const }));
   const handlePlatformApproval = new HandlePlatformApprovalUseCase(trackingGateway);
-  const getQualityThreshold = (): number | null => qualityThreshold;
+  const getQualityThreshold = (): QualityGrade | null => qualityThreshold;
   const handleClose = vi.fn(
     async (): Promise<HandleCloseResult> => ({
       status: 'cleaned',
@@ -1122,7 +1124,7 @@ describe('handleGitLabWebhook', () => {
         platform: 'gitlab',
         project: 'test-org/test-project',
         state: 'pending-review',
-        latestScore: 4,
+        reviews: [ReviewEventFactory.create({ verdict: 'changes', grade: 'C' })],
         openThreads: 0,
         bypass: null,
         ...overrides,
@@ -1135,7 +1137,7 @@ describe('handleGitLabWebhook', () => {
       const approvalRevocationGateway = new StubApprovalRevocationGateway();
       const noteCommentPostGateway = new StubNoteCommentPostGateway();
       const deps = {
-        ...createDefaultDeps(mockGateway, 8),
+        ...createDefaultDeps(mockGateway, 'B'),
         approvalRevocationGateway,
         noteCommentPostGateway,
       };
@@ -1159,7 +1161,7 @@ describe('handleGitLabWebhook', () => {
       approvalRevocationGateway.shouldThrow = true;
       const noteCommentPostGateway = new StubNoteCommentPostGateway();
       const deps = {
-        ...createDefaultDeps(mockGateway, 8),
+        ...createDefaultDeps(mockGateway, 'B'),
         approvalRevocationGateway,
         noteCommentPostGateway,
       };

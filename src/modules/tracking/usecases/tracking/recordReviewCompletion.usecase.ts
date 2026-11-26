@@ -1,5 +1,10 @@
 import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
+import type {
+  QualityGrade,
+  ReviewVerdict,
+} from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
+import { latestReviewOutcomeOf } from '@/modules/tracking/entities/tracking/latestReviewOutcome.js';
 import type { ReviewEvent } from '@/modules/tracking/entities/tracking/reviewEvent.js';
 import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
@@ -18,8 +23,10 @@ interface RecordReviewCompletionInput {
     threadsOpened?: number;
     threadsClosed?: number;
     diffStats?: DiffStats | null;
+    verdict: ReviewVerdict | null;
+    grade: QualityGrade | null;
   };
-  qualityThreshold?: number | null;
+  qualityThreshold?: QualityGrade | null;
 }
 
 export class RecordReviewCompletionUseCase implements UseCase<
@@ -49,6 +56,8 @@ export class RecordReviewCompletionUseCase implements UseCase<
       threadsOpened,
       threadsClosed,
       diffStats: reviewData.diffStats ?? null,
+      verdict: reviewData.verdict,
+      grade: reviewData.grade,
     };
 
     this.trackingGateway.recordReviewEvent(projectPath, mrId, event);
@@ -67,7 +76,7 @@ export class RecordReviewCompletionUseCase implements UseCase<
     const hasBlockingIssues = reviewData.blocking > 0 || openThreads > 0;
     const threshold = input.qualityThreshold ?? null;
     const gateResult = evaluateQualityGate({
-      latestScore,
+      ...latestReviewOutcomeOf(afterEvent),
       blockingIssues: reviewData.blocking + openThreads,
       threshold,
     });

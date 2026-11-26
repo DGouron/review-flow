@@ -205,10 +205,10 @@ const translations = {
     'settings.reviewFollowupSkill': 'Review followup skill',
     'settings.externalLink': 'External link (HTTPS)',
     'settings.externalLinkPlaceholder': 'https://notion.so/team/project',
-    'settings.qualityThreshold': 'Quality threshold (0-10)',
-    'settings.qualityThresholdPlaceholder': 'e.g. 7',
+    'settings.qualityThreshold': 'Quality threshold (grade)',
+    'settings.qualityThresholdNone': 'None',
     'settings.qualityThresholdHint':
-      'Approval is reverted when score falls below this threshold. Leave empty to disable.',
+      'Approval is reverted unless the review is ready at this grade or better. None disables it.',
     'settings.maxConcurrentReviews': 'Max concurrent reviews (1-10)',
     'settings.maxConcurrentReviewsHint':
       'How many reviews of this project can run at the same time. The header capacity total is the sum across all projects.',
@@ -706,10 +706,10 @@ const translations = {
     'settings.reviewFollowupSkill': 'Skill de review followup',
     'settings.externalLink': 'Lien externe (HTTPS)',
     'settings.externalLinkPlaceholder': 'https://notion.so/team/projet',
-    'settings.qualityThreshold': 'Seuil de qualité (0-10)',
-    'settings.qualityThresholdPlaceholder': 'ex. 7',
+    'settings.qualityThreshold': 'Seuil de qualité (niveau)',
+    'settings.qualityThresholdNone': 'Aucun',
     'settings.qualityThresholdHint':
-      "L'approbation est annulée si le score passe sous ce seuil. Laisser vide pour désactiver.",
+      "L'approbation est annulée si la review n'est pas prête à ce niveau ou mieux. Aucun la désactive.",
     'settings.maxConcurrentReviews': 'Reviews en parallèle max (1-10)',
     'settings.maxConcurrentReviewsHint':
       'Nombre de reviews de ce projet pouvant tourner simultanément. La capacité totale affichée dans le header est la somme inter-projets.',

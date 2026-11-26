@@ -209,7 +209,7 @@ describe('UpdateProjectConfigUseCase', () => {
     expect(observed[0].language).toBe('en');
   });
 
-  it('merges a valid qualityThreshold (7) into the persisted config', () => {
+  it('converts a legacy qualityThreshold (7) to its grade', () => {
     const gateway = new StubProjectConfigGateway();
     gateway.set('/repo/A', base());
     const usecase = new UpdateProjectConfigUseCase(gateway);
@@ -218,24 +218,37 @@ describe('UpdateProjectConfigUseCase', () => {
 
     expect(result.status).toBe('success');
     if (result.status === 'success') {
-      expect(result.config.qualityThreshold).toBe(7);
+      expect(result.config.qualityThreshold).toBe('C');
     }
   });
 
-  it('accepts 0 as a valid qualityThreshold', () => {
+  it('merges a grade letter as qualityThreshold', () => {
     const gateway = new StubProjectConfigGateway();
     gateway.set('/repo/A', base());
     const usecase = new UpdateProjectConfigUseCase(gateway);
 
-    const result = usecase.execute({ path: '/repo/A', patch: { qualityThreshold: 0 } });
+    const result = usecase.execute({ path: '/repo/A', patch: { qualityThreshold: 'b' } });
 
     expect(result.status).toBe('success');
     if (result.status === 'success') {
-      expect(result.config.qualityThreshold).toBe(0);
+      expect(result.config.qualityThreshold).toBe('B');
     }
   });
 
-  it('accepts 10 as a valid qualityThreshold', () => {
+  it('rejects a qualityThreshold letter outside the grades', () => {
+    const gateway = new StubProjectConfigGateway();
+    gateway.set('/repo/A', base());
+    const usecase = new UpdateProjectConfigUseCase(gateway);
+
+    const result = usecase.execute({ path: '/repo/A', patch: { qualityThreshold: 'F' } });
+
+    expect(result).toEqual({
+      status: 'invalid',
+      reason: 'qualityThreshold must be a grade from A to E',
+    });
+  });
+
+  it('converts a legacy qualityThreshold of 10 to A', () => {
     const gateway = new StubProjectConfigGateway();
     gateway.set('/repo/A', base());
     const usecase = new UpdateProjectConfigUseCase(gateway);
@@ -244,7 +257,7 @@ describe('UpdateProjectConfigUseCase', () => {
 
     expect(result.status).toBe('success');
     if (result.status === 'success') {
-      expect(result.config.qualityThreshold).toBe(10);
+      expect(result.config.qualityThreshold).toBe('A');
     }
   });
 
@@ -257,7 +270,7 @@ describe('UpdateProjectConfigUseCase', () => {
 
     expect(result).toEqual({
       status: 'invalid',
-      reason: 'qualityThreshold must be an integer between 0 and 10',
+      reason: 'qualityThreshold must be a grade from A to E',
     });
   });
 
@@ -270,7 +283,7 @@ describe('UpdateProjectConfigUseCase', () => {
 
     expect(result).toEqual({
       status: 'invalid',
-      reason: 'qualityThreshold must be an integer between 0 and 10',
+      reason: 'qualityThreshold must be a grade from A to E',
     });
   });
 
@@ -283,13 +296,13 @@ describe('UpdateProjectConfigUseCase', () => {
 
     expect(result).toEqual({
       status: 'invalid',
-      reason: 'qualityThreshold must be an integer between 0 and 10',
+      reason: 'qualityThreshold must be a grade from A to E',
     });
   });
 
   it('null qualityThreshold removes the key from the persisted config', () => {
     const gateway = new StubProjectConfigGateway();
-    gateway.set('/repo/A', base({ qualityThreshold: 7 }));
+    gateway.set('/repo/A', base({ qualityThreshold: 'C' }));
     const usecase = new UpdateProjectConfigUseCase(gateway);
 
     const result = usecase.execute({ path: '/repo/A', patch: { qualityThreshold: null } });

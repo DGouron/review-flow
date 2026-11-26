@@ -70,6 +70,7 @@ import type {
   GateClaudeInvocationResult,
 } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
 import { ResolveAuditScopeUseCase } from '@/modules/review-execution/usecases/resolveAuditScope.usecase.js';
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
@@ -211,7 +212,7 @@ function createDeps(
         checkFollowupNeeded,
         removeWorktree,
         handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGateway),
-        getQualityThreshold: (): number | null => null,
+        getQualityThreshold: (): QualityGrade | null => null,
         logger: createStubLogger(),
       }),
     enforceBudget: createAcceptAllEnforceBudget(),
@@ -223,7 +224,7 @@ function createDeps(
     noteCommentPostGateway: new StubNoteCommentPostGateway(),
     handlePlatformApproval: new HandlePlatformApprovalUseCase(trackingGateway),
     approvalRevocationGateway: new StubApprovalRevocationGateway(),
-    getQualityThreshold: (): number | null => null,
+    getQualityThreshold: (): QualityGrade | null => null,
     guardDiffSize: new GuardDiffSizeUseCase({
       changedFilesFetchGateway: new StubChangedFilesFetchGateway(),
     }),

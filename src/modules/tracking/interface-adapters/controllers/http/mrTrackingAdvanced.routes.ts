@@ -371,6 +371,8 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
               threadsOpened: 0,
               threadsClosed: threadResolveCount,
               diffStats,
+              verdict: parsed.verdict,
+              grade: parsed.grade,
             },
             qualityThreshold: loadProjectConfig(job.localPath)?.qualityThreshold ?? null,
           });

@@ -125,6 +125,8 @@ describe('Acceptance — SPEC-47: Capture git diff stats', () => {
           blocking: 1,
           warnings: 2,
           diffStats: fetched,
+          verdict: null,
+          grade: null,
         },
       });
 
@@ -292,6 +294,8 @@ describe('Acceptance — SPEC-47: Capture git diff stats', () => {
           blocking: 0,
           warnings: 1,
           diffStats: DiffStatsFactory.create({ commitsCount: 2, additions: 100, deletions: 20 }),
+          verdict: null,
+          grade: null,
         },
       });
 
@@ -305,6 +309,8 @@ describe('Acceptance — SPEC-47: Capture git diff stats', () => {
           blocking: 0,
           warnings: 0,
           diffStats: DiffStatsFactory.create({ commitsCount: 4, additions: 180, deletions: 35 }),
+          verdict: null,
+          grade: null,
         },
       });
 
