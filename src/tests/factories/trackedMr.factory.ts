@@ -29,6 +29,7 @@ export class TrackedMrFactory {
       totalSuggestions: 0,
       totalDurationMs: 0,
       autoFollowup: true,
+      author: null,
       bypass: null,
       sizeBlock: null,
       ...overrides,

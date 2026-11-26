@@ -8,6 +8,7 @@
  */
 
 import { escapeHtml } from './html.js';
+import { t } from './i18n.js';
 
 /**
  * @typedef {Object} HeaderCapacityInput
@@ -45,7 +46,7 @@ export function buildHeaderCapacityViewModel(input) {
 export function renderHeaderCapacityBadgeHtml(viewModel) {
   const saturatedClass = viewModel.isSaturated ? ' header-capacity-badge--saturated' : '';
   const titleText = viewModel.isSaturated
-    ? 'Capacité saturée — les prochaines reviews sont mises en attente'
-    : 'Reviews en cours / capacité totale (toutes projets confondus)';
-  return `<span id="header-capacity-badge" class="header-capacity-badge${saturatedClass}" title="${escapeHtml(titleText)}" aria-label="${escapeHtml(titleText)}">// CAP ${escapeHtml(viewModel.label)}</span>`;
+    ? t('shell.capacity.saturated')
+    : t('shell.capacity.title');
+  return `<span id="header-capacity-badge" class="pill pill-static header-capacity-badge${saturatedClass}" title="${escapeHtml(titleText)}"><span class="mono">${viewModel.runningCount}/${viewModel.totalCapacity}</span><span class="pill-hint">${escapeHtml(t('shell.capacity.parallel'))}</span></span>`;
 }

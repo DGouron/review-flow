@@ -13,6 +13,8 @@ export interface TrackedMr {
 
   assignment: AssignmentInfo;
 
+  author: MergeRequestAuthor | null;
+
   state: 'pending-review' | 'pending-fix' | 'pending-approval' | 'approved' | 'merged' | 'closed';
   openThreads: number;
   totalThreads: number;
@@ -37,6 +39,11 @@ export interface TrackedMr {
   bypass: BypassRecord | null;
 
   sizeBlock: SizeBlockRecord | null;
+}
+
+export interface MergeRequestAuthor {
+  username: string;
+  displayName: string | null;
 }
 
 export interface BypassRecord {

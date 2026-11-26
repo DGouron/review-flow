@@ -162,11 +162,13 @@ import { SummarizeTokenUsageUseCase } from '@/modules/token-accounting/usecases/
 import { UpdateBudgetUseCase } from '@/modules/token-accounting/usecases/updateBudget/updateBudget.usecase.js';
 import { mrTrackingRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTracking.routes.js';
 import { mrTrackingAdvancedRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTrackingAdvanced.routes.js';
+import { nudgeAuthorsRoutes } from '@/modules/tracking/interface-adapters/controllers/http/nudgeAuthors.routes.js';
 import { sizeBlocksRoutes } from '@/modules/tracking/interface-adapters/controllers/http/sizeBlocks.routes.js';
 import { SizeBlockListPresenter } from '@/modules/tracking/interface-adapters/presenters/sizeBlockList.presenter.js';
 import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import { ForceLaunchBlockedReviewUseCase } from '@/modules/tracking/usecases/tracking/forceLaunchBlockedReview.usecase.js';
 import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
+import { NudgeAuthorsUseCase } from '@/modules/tracking/usecases/tracking/nudgeAuthors.usecase.js';
 import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
 import { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
 import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
@@ -413,6 +415,14 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
   // model-authored text, so it carries nothing to scan (unlike note bodies).
   const gitLabReviewLabelGateway = new GitLabReviewLabelCliGateway(defaultGitLabExecutor);
   const gitHubReviewLabelGateway = new GitHubReviewLabelCliGateway(defaultGitHubExecutor);
+
+  await app.register(nudgeAuthorsRoutes, {
+    nudgeAuthors: new NudgeAuthorsUseCase(
+      deps.reviewRequestTrackingGateway,
+      noteCommentPostGatewayFactory,
+    ),
+    logger: deps.logger,
+  });
 
   await app.register(mrTrackingAdvancedRoutes, {
     getRepositories: () => deps.config.repositories,

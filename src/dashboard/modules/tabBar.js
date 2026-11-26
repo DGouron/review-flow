@@ -23,6 +23,7 @@ const OVERVIEW_TAB_LABEL = 'Overview';
  * @typedef {Object} TabBarBuildInput
  * @property {TabBarRepositoryInput[]} repositories
  * @property {string | null} activeTabId
+ * @property {string} [overviewLabel]
  */
 
 /**
@@ -51,7 +52,7 @@ export function buildTabBarModel(input) {
 
   const overviewTab = {
     id: OVERVIEW_TAB_ID,
-    label: OVERVIEW_TAB_LABEL,
+    label: typeof input.overviewLabel === 'string' ? input.overviewLabel : OVERVIEW_TAB_LABEL,
     isActive: effectiveActiveId === OVERVIEW_TAB_ID,
     enabled: true,
   };

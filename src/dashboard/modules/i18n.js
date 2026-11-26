@@ -1,3 +1,5 @@
+import { shellTranslations } from './shellTranslations.js';
+
 /** @type {'en' | 'fr'} */
 let currentLanguage = 'en';
 
@@ -160,8 +162,8 @@ const translations = {
     'section.queueLanes': 'Priority lanes',
     'section.completedReviews': 'Completed reviews',
     'section.claudeEconomics': 'Claude economics',
-    'economics.tokenUsage': '// TOKEN USAGE',
-    'economics.monthlyBudget': '// MONTHLY BUDGET',
+    'economics.tokenUsage': 'Token usage',
+    'economics.monthlyBudget': 'Monthly budget',
 
     // Token usage
     'sheet.tokenUsage': 'Token usage',
@@ -660,8 +662,8 @@ const translations = {
     'section.queueLanes': 'Priorité',
     'section.completedReviews': 'Reviews terminées',
     'section.claudeEconomics': 'Économie Claude',
-    'economics.tokenUsage': '// CONSOMMATION TOKENS',
-    'economics.monthlyBudget': '// BUDGET MENSUEL',
+    'economics.tokenUsage': 'Consommation de tokens',
+    'economics.monthlyBudget': 'Budget mensuel',
 
     // Consommation de tokens
     'sheet.tokenUsage': 'Consommation',
@@ -1005,6 +1007,9 @@ const translations = {
     'worktree.sweep.error': 'Le nettoyage a échoué.',
   },
 };
+
+Object.assign(translations.en, shellTranslations.en);
+Object.assign(translations.fr, shellTranslations.fr);
 
 /** @returns {'en' | 'fr'} */
 export function getLanguage() {

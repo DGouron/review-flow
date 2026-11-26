@@ -1,5 +1,8 @@
 import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
-import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
+import type {
+  MergeRequestAuthor,
+  TrackedMr,
+} from '@/modules/tracking/entities/tracking/trackedMr.js';
 import { createTrackedMrId } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
@@ -18,21 +21,22 @@ interface TrackAssignmentInput {
     username: string;
     displayName?: string;
   };
+  author: MergeRequestAuthor | null;
 }
 
 export class TrackAssignmentUseCase implements UseCase<TrackAssignmentInput, TrackedMr> {
   constructor(private readonly trackingGateway: ReviewRequestTrackingGateway) {}
 
   execute(input: TrackAssignmentInput): TrackedMr {
-    const { projectPath, mrInfo, assignedBy } = input;
+    const { projectPath, mrInfo, assignedBy, author } = input;
     const mrId = createTrackedMrId(mrInfo.platform, mrInfo.project, mrInfo.mrNumber);
     const existing = this.trackingGateway.getById(projectPath, mrId);
 
     if (existing) {
-      return this.updateExisting(projectPath, existing, mrInfo, assignedBy);
+      return this.updateExisting(projectPath, existing, mrInfo, assignedBy, author);
     }
 
-    return this.createNew(projectPath, mrId, mrInfo, assignedBy);
+    return this.createNew(projectPath, mrId, mrInfo, assignedBy, author);
   }
 
   private updateExisting(
@@ -40,6 +44,7 @@ export class TrackAssignmentUseCase implements UseCase<TrackAssignmentInput, Tra
     existing: TrackedMr,
     mrInfo: TrackAssignmentInput['mrInfo'],
     assignedBy: TrackAssignmentInput['assignedBy'],
+    author: MergeRequestAuthor | null,
   ): TrackedMr {
     const now = new Date().toISOString();
     const shouldResetState = existing.state === 'merged' || existing.state === 'closed';
@@ -51,6 +56,7 @@ export class TrackAssignmentUseCase implements UseCase<TrackAssignmentInput, Tra
         displayName: assignedBy.displayName,
         assignedAt: now,
       },
+      author: author ?? existing.author ?? null,
       ...(shouldResetState ? { state: 'pending-review' } : {}),
     });
 
@@ -62,6 +68,7 @@ export class TrackAssignmentUseCase implements UseCase<TrackAssignmentInput, Tra
     mrId: string,
     mrInfo: TrackAssignmentInput['mrInfo'],
     assignedBy: TrackAssignmentInput['assignedBy'],
+    author: MergeRequestAuthor | null,
   ): TrackedMr {
     const now = new Date().toISOString();
     const trackedMr: TrackedMr = {
@@ -78,6 +85,7 @@ export class TrackAssignmentUseCase implements UseCase<TrackAssignmentInput, Tra
         displayName: assignedBy.displayName,
         assignedAt: now,
       },
+      author,
       state: 'pending-review',
       openThreads: 0,
       totalThreads: 0,

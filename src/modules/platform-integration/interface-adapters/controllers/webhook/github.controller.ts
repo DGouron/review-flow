@@ -674,6 +674,7 @@ export async function handleGitHubWebhook(
       targetBranch: filterResult.targetBranch,
     },
     assignedBy,
+    author: prAuthorLogin ? { username: prAuthorLogin, displayName: null } : null,
   });
 
   logger.info(
