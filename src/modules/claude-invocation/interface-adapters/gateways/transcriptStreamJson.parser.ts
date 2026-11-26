@@ -29,7 +29,7 @@ export function extractText(event: StreamJsonEvent): string | null {
     return event.delta.text;
   }
   const content = event.message?.content;
-  if (Array.isArray(content)) {
+  if (event.type === 'assistant' && Array.isArray(content)) {
     const text = content
       .filter((part) => part.type === 'text' && typeof part.text === 'string')
       .map((part) => part.text ?? '')
