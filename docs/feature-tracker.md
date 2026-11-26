@@ -93,3 +93,4 @@
 | Restyle the Team and Worktrees views and link team members to the queue | [231-dashboard-team-and-worktree-views](specs/231-dashboard-team-and-worktree-views.md) — [report](reports/231-dashboard-team-and-worktree-views.report.md) | implemented | 2026-11-26 |
 | Explain a pull request from the review queue and the side panel | [232-dashboard-explain-pull-request](specs/232-dashboard-explain-pull-request.md) — [report](reports/232-dashboard-explain-pull-request.report.md) | implemented | 2026-11-26 |
 | Reconcile the dashboard queue with the real platform state | [233-dashboard-queue-reflects-platform-state](specs/233-dashboard-queue-reflects-platform-state.md) | implemented | 2026-11-26 |
+| Show a live Monitoring view of the server and its review sessions | [234-dashboard-monitoring-tab](specs/234-dashboard-monitoring-tab.md) — [plan](plans/234-dashboard-monitoring-tab.plan.md) — [report](reports/234-dashboard-monitoring-tab.report.md) | implemented | 2026-11-26 |

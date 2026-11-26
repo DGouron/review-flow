@@ -1,15 +1,15 @@
 /**
- * Dashboard module — the three top-level views (SPEC-230).
+ * Dashboard module — the top-level views (SPEC-230, SPEC-234).
  */
 
 import { escapeHtml } from './html.js';
 
-export const DASHBOARD_VIEWS = ['queue', 'team', 'worktrees'];
+export const DASHBOARD_VIEWS = ['queue', 'team', 'worktrees', 'monitoring'];
 const STORAGE_KEY_ACTIVE_VIEW = 'review-flow-active-view';
 
 /**
  * @param {string | null | undefined} view
- * @returns {'queue' | 'team' | 'worktrees'}
+ * @returns {'queue' | 'team' | 'worktrees' | 'monitoring'}
  */
 export function normalizeView(view) {
   return DASHBOARD_VIEWS.includes(view) ? view : 'queue';
@@ -29,7 +29,7 @@ export function renderViewNavHtml(activeView, badges, t) {
   }).join('');
 }
 
-/** @returns {'queue' | 'team' | 'worktrees'} */
+/** @returns {'queue' | 'team' | 'worktrees' | 'monitoring'} */
 export function readActiveView() {
   try {
     return normalizeView(localStorage.getItem(STORAGE_KEY_ACTIVE_VIEW));

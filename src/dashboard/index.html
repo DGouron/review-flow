@@ -117,6 +117,11 @@
           <div class="view-header"><h2 id="i18n-view-worktrees"></h2></div>
           <section id="worktree-section" class="worktree-view" aria-labelledby="i18n-view-worktrees"></section>
         </div>
+
+        <div id="view-monitoring" class="view" data-view="monitoring" hidden>
+          <div class="view-header"><h2 id="i18n-view-monitoring"></h2></div>
+          <section id="monitoring-section" class="worktree-view" aria-labelledby="i18n-view-monitoring" aria-live="polite"></section>
+        </div>
       </main>
 
       <aside class="card side-panel" id="side-panel" aria-label="Side panel">
@@ -251,6 +256,8 @@
     import { renderKeyInsightsHtml } from './modules/keyInsights.js';
     import { buildTeamViewModel, renderTeamViewHtml } from './modules/teamView.js';
     import { renderWorktreeViewHtml } from './modules/worktreeView.js';
+    import { createMonitoringPoller, fetchMonitoringSnapshot } from './modules/monitoringPolling.js';
+    import { buildMonitoringViewModel, renderMonitoringStatusHtml, renderMonitoringViewHtml } from './modules/monitoringView.js';
     import { briefToText, digDeeperQuestion, renderBriefHtml, requestBrief } from './modules/prBrief.js';
     import { renderDeveloperSheetContent, drawRadarChart } from './modules/developerSheet.js';
     import { buildInsightsReport } from './modules/insightsReport.js';
@@ -2389,6 +2396,8 @@
       setText('i18n-section-team', 'team.title');
       setText('i18n-open-stats', 'section.stats');
       setText('i18n-view-worktrees', 'shell.view.worktrees');
+      setText('i18n-view-monitoring', 'shell.view.monitoring');
+      renderMonitoringSection();
       setText('i18n-section-pending-reviews', 'section.pendingReviews');
       setText('i18n-section-completed-reviews', 'section.completedReviews');
       setText('i18n-section-claude-economics', 'section.claudeEconomics');
@@ -2628,6 +2637,35 @@
       renderSidePanel();
       if (activeView === 'worktrees') refreshWorktreeSection({ animate: true });
       if (activeView === 'team') renderTeamView();
+      if (activeView === 'monitoring') monitoringPoller.start();
+      else monitoringPoller.stop();
+    }
+
+    // SPEC-234 — Monitoring view, polled only while it is shown.
+    let lastMonitoringSnapshot = null;
+    let monitoringOffline = false;
+    const monitoringPoller = createMonitoringPoller({ refresh: refreshMonitoringSection });
+
+    function renderMonitoringSection() {
+      const section = document.getElementById('monitoring-section');
+      if (!section) return;
+      if (lastMonitoringSnapshot === null) {
+        section.innerHTML = renderMonitoringStatusHtml(t(monitoringOffline ? 'monitoring.offline' : 'monitoring.loading'));
+        return;
+      }
+      const offlineNotice = monitoringOffline ? renderMonitoringStatusHtml(t('monitoring.offline')) : '';
+      section.innerHTML = offlineNotice + renderMonitoringViewHtml(buildMonitoringViewModel(lastMonitoringSnapshot, t), t);
+    }
+
+    async function refreshMonitoringSection() {
+      try {
+        lastMonitoringSnapshot = await fetchMonitoringSnapshot();
+        monitoringOffline = false;
+      } catch {
+        monitoringOffline = true;
+      } finally {
+        renderMonitoringSection();
+      }
     }
 
     function currentProjectAliases() {

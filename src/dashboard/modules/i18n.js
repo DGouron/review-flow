@@ -1,3 +1,4 @@
+import { monitoringTranslations } from './monitoringTranslations.js';
 import { shellTranslations } from './shellTranslations.js';
 
 /** @type {'en' | 'fr'} */
@@ -1010,6 +1011,8 @@ const translations = {
 
 Object.assign(translations.en, shellTranslations.en);
 Object.assign(translations.fr, shellTranslations.fr);
+Object.assign(translations.en, monitoringTranslations.en);
+Object.assign(translations.fr, monitoringTranslations.fr);
 
 /** @returns {'en' | 'fr'} */
 export function getLanguage() {

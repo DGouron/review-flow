@@ -27,6 +27,15 @@ describe('renderViewNavHtml', () => {
     expect(html).toContain('Équipe</button>');
     expect(html).toContain('data-view="worktrees" aria-current="page"');
   });
+
+  it('offers the Monitoring view last, without a badge', () => {
+    const html = renderViewNavHtml('monitoring', { queue: 1 }, t);
+
+    expect(normalizeView('monitoring')).toBe('monitoring');
+    expect(html.endsWith('data-view="monitoring" aria-current="page">Monitoring</button>')).toBe(
+      true,
+    );
+  });
 });
 
 describe('active view storage', () => {
