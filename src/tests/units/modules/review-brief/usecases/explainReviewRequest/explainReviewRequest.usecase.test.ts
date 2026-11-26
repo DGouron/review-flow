@@ -230,6 +230,45 @@ describe('ExplainReviewRequestUseCase', () => {
     });
   });
 
+  describe('concurrent requests', () => {
+    it('shares one generation between two concurrent calls for the same key', async () => {
+      const [first, second] = await Promise.all([
+        useCase.execute(input()),
+        useCase.execute(input()),
+      ]);
+
+      expect(model.requests).toHaveLength(1);
+      if (first.status !== 'explained' || second.status !== 'explained') {
+        throw new Error('expected two briefs');
+      }
+      expect(second.brief).toBe(first.brief);
+    });
+
+    it('starts a new generation after a failed one', async () => {
+      model.failWith('review-brief-timeout');
+      await useCase.execute(input());
+      model.respondWith(JSON.stringify(ReviewBriefFactory.modelOutput({ what: 'Retried' })));
+
+      const retried = await useCase.execute(input());
+
+      expect(model.requests).toHaveLength(2);
+      if (retried.status !== 'explained') throw new Error('expected a brief');
+      expect(retried.brief.what).toBe('Retried');
+    });
+
+    it('starts a new generation after one that threw', async () => {
+      changedFiles.setFailure(MR_NUMBER);
+      await expect(useCase.execute(input())).rejects.toThrow();
+      changedFiles = new StubChangedFilesFetchGateway();
+      changedFiles.setResponse(MR_NUMBER, ChangedFilesFactory.list([{ path: 'src/retried.ts' }]));
+
+      const retried = await useCase.execute(input());
+
+      expect(retried.status).toBe('explained');
+      expect(model.requests).toHaveLength(1);
+    });
+  });
+
   describe('failures', () => {
     it('fails when the overview cannot be fetched', async () => {
       overview.setOverview(MR_NUMBER, null);
