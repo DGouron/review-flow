@@ -26,7 +26,6 @@ export function createEmptyStats(): ProjectStats {
   return {
     totalReviews: 0,
     totalDuration: 0,
-    averageScore: null,
     averageDuration: 0,
     totalBlocking: 0,
     totalWarnings: 0,

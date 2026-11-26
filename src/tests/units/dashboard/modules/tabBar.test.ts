@@ -100,6 +100,16 @@ describe('tabBar module', () => {
       expect(model.tabs.find((tab) => tab.id === '/repos/paused')?.enabled).toBe(false);
     });
 
+    it('names the overview tab in the dashboard language when given a label', () => {
+      const model = buildTabBarModel({
+        repositories: [],
+        activeTabId: null,
+        overviewLabel: 'Tous les projets',
+      });
+
+      expect(model.tabs[0]?.label).toBe('Tous les projets');
+    });
+
     it('treats Overview as always enabled', () => {
       const model = buildTabBarModel({
         repositories: [{ name: 'project', localPath: '/repos/project', enabled: false }],

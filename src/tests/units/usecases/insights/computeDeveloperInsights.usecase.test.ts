@@ -71,14 +71,16 @@ describe('computeDeveloperInsights', () => {
   });
 
   describe('category level computation', () => {
-    it('should compute quality level based on score relative to team average', () => {
+    it('should compute quality level based on readiness relative to team average', () => {
       const aliceReviews = createReviewsForDeveloper('alice', 5, {
-        score: 9,
+        verdict: 'ready',
+        grade: 'A',
         blocking: 0,
         warnings: 0,
       });
       const bobReviews = createReviewsForDeveloper('bob', 5, {
-        score: 5,
+        verdict: 'changes',
+        grade: 'D',
         blocking: 3,
         warnings: 5,
       });
@@ -176,7 +178,10 @@ describe('computeDeveloperInsights', () => {
           id: `alice-old-${index}`,
           assignedBy: 'alice',
           mrNumber: index + 1,
-          score: 5,
+          verdict: 'changes',
+          grade: 'C',
+          blocking: 0,
+          warnings: 1,
           timestamp: new Date(2024, 0, index + 1).toISOString(),
         }),
       );
@@ -185,7 +190,10 @@ describe('computeDeveloperInsights', () => {
           id: `alice-new-${index}`,
           assignedBy: 'alice',
           mrNumber: index + 11,
-          score: 9,
+          verdict: 'ready',
+          grade: 'A',
+          blocking: 0,
+          warnings: 0,
           timestamp: new Date(2024, 6, index + 1).toISOString(),
         }),
       );
@@ -203,8 +211,10 @@ describe('computeDeveloperInsights', () => {
           id: `alice-old-${index}`,
           assignedBy: 'alice',
           mrNumber: index + 1,
-          score: 9,
+          verdict: 'ready',
+          grade: 'A',
           blocking: 0,
+          warnings: 0,
           timestamp: new Date(2024, 0, index + 1).toISOString(),
         }),
       );
@@ -213,7 +223,8 @@ describe('computeDeveloperInsights', () => {
           id: `alice-new-${index}`,
           assignedBy: 'alice',
           mrNumber: index + 11,
-          score: 4,
+          verdict: 'changes',
+          grade: 'D',
           blocking: 5,
           timestamp: new Date(2024, 6, index + 1).toISOString(),
         }),
@@ -226,7 +237,7 @@ describe('computeDeveloperInsights', () => {
       expect(alice.categoryLevels.quality.trend).toBe('declining');
     });
 
-    it('should detect stable trend when scores are consistent', () => {
+    it('should detect stable trend when grades are consistent', () => {
       const reviews = Array.from({ length: 20 }, (_, index) =>
         ReviewStatsFactory.create({
           id: `alice-${index}`,
@@ -438,7 +449,7 @@ describe('computeDeveloperInsights', () => {
 
       const alice = result[0];
       expect(alice.metrics).toBeDefined();
-      expect(alice.metrics.averageScore).toBe(8);
+      expect(alice.metrics).not.toHaveProperty('averageScore');
       expect(alice.metrics.averageBlocking).toBe(1);
       expect(alice.metrics.averageWarnings).toBe(2);
       expect(alice.metrics.averageDuration).toBe(60000);
@@ -446,16 +457,36 @@ describe('computeDeveloperInsights', () => {
       expect(alice.metrics.averageDeletions).toBe(50);
     });
 
-    it('should exclude high-score reviews with blocking issues from quality rate', () => {
-      const cleanReviews = Array.from({ length: 3 }, (_, index) =>
+    it('should report the share of judged reviews ready at first review as quality rate', () => {
+      const readyReviews = createReviewsForDeveloper('alice', 3, { verdict: 'ready', grade: 'B' });
+      const changesReviews = Array.from({ length: 2 }, (_, index) =>
         ReviewStatsFactory.create({
-          id: `alice-clean-${index}`,
+          id: `alice-changes-${index}`,
           assignedBy: 'alice',
-          mrNumber: index + 1,
-          score: 8,
-          blocking: 0,
+          mrNumber: index + 4,
+          verdict: 'changes',
+          grade: 'C',
         }),
       );
+      const unjudgedReview = ReviewStatsFactory.create({
+        id: 'alice-unjudged',
+        assignedBy: 'alice',
+        mrNumber: 6,
+        score: null,
+      });
+
+      const result = computeDeveloperInsights([...readyReviews, ...changesReviews, unjudgedReview]);
+
+      const alice = result[0];
+      expect(alice.metrics.firstReviewQualityRate).toBe(0.6);
+    });
+
+    it('should count a legacy scored review with blocking findings as not ready', () => {
+      const cleanReviews = createReviewsForDeveloper('alice', 3, {
+        score: 8,
+        blocking: 0,
+        warnings: 0,
+      });
       const highScoreButBlocking = Array.from({ length: 2 }, (_, index) =>
         ReviewStatsFactory.create({
           id: `alice-blocking-${index}`,
@@ -463,6 +494,7 @@ describe('computeDeveloperInsights', () => {
           mrNumber: index + 4,
           score: 9,
           blocking: 1,
+          warnings: 0,
         }),
       );
 
@@ -472,34 +504,67 @@ describe('computeDeveloperInsights', () => {
       expect(alice.metrics.firstReviewQualityRate).toBe(0.6);
     });
 
-    it('should compute first review quality rate based on reviews with score >= 7', () => {
-      const goodReviews = Array.from({ length: 3 }, (_, index) =>
-        ReviewStatsFactory.create({
-          id: `alice-good-${index}`,
-          assignedBy: 'alice',
-          mrNumber: index + 1,
-          score: 8,
-          blocking: 0,
-        }),
-      );
-      const badReviews = Array.from({ length: 2 }, (_, index) =>
-        ReviewStatsFactory.create({
-          id: `alice-bad-${index}`,
-          assignedBy: 'alice',
-          mrNumber: index + 4,
-          score: 5,
-          blocking: 2,
-        }),
-      );
+    it('should report a zero quality rate when no review is judged', () => {
+      const reviews = createReviewsForDeveloper('alice', 5, { score: null });
 
-      const result = computeDeveloperInsights([...goodReviews, ...badReviews]);
+      const result = computeDeveloperInsights(reviews);
 
-      const alice = result[0];
-      expect(alice.metrics.firstReviewQualityRate).toBe(0.6);
+      expect(result[0].metrics.firstReviewQualityRate).toBe(0);
     });
   });
 
   describe('insight descriptions', () => {
+    it('should describe a quality strength by the ready rate against the team', () => {
+      const aliceReviews = createReviewsForDeveloper('alice', 10, {
+        verdict: 'ready',
+        grade: 'A',
+        blocking: 0,
+        warnings: 0,
+      });
+      const bobReviews = Array.from({ length: 10 }, (_, index) =>
+        ReviewStatsFactory.create({
+          id: `bob-${index}`,
+          assignedBy: 'bob',
+          mrNumber: index + 1,
+          verdict: index < 5 ? 'ready' : 'changes',
+          grade: index < 5 ? 'B' : 'D',
+          blocking: index < 5 ? 0 : 2,
+          warnings: 2,
+        }),
+      );
+
+      const result = computeDeveloperInsights([...aliceReviews, ...bobReviews]);
+
+      const alice = result.find((insight) => insight.developerName === 'alice');
+      const qualityStrength = alice?.insightDescriptions.find(
+        (description) => description.category === 'quality' && description.type === 'strength',
+      );
+      expect(qualityStrength).toEqual({
+        category: 'quality',
+        type: 'strength',
+        descriptionKey: 'insight.quality.highReadiness',
+        params: { readyRate: 100, teamReadyRate: 75, percent: 33 },
+      });
+    });
+
+    it('should describe the iteration strength by the ready share', () => {
+      const reviews = createReviewsForDeveloper('alice', 5, {
+        score: null,
+        verdict: 'ready',
+        grade: 'A',
+        blocking: 0,
+        warnings: 0,
+        suggestions: 0,
+      });
+
+      const result = computeDeveloperInsights(reviews);
+
+      const iterationStrength = result[0].insightDescriptions.find(
+        (description) => description.category === 'iteration' && description.type === 'strength',
+      );
+      expect(iterationStrength?.params).toEqual({ rate: 100 });
+    });
+
     it('should generate insight descriptions for strengths and weaknesses', () => {
       const aliceReviews = createReviewsForDeveloper('alice', 10, {
         score: 9,

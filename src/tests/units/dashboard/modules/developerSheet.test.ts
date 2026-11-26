@@ -30,7 +30,6 @@ function createDeveloperViewModel(overrides = {}) {
     topPriority: 'iteration',
     reviewCount: 12,
     metrics: {
-      averageScore: 7.5,
       averageBlocking: 0.3,
       averageWarnings: 1.2,
       averageDuration: 300,
@@ -244,7 +243,6 @@ describe('renderDeveloperSheetContent', () => {
   it('should render metrics as stat cards with values', () => {
     const developer = createDeveloperViewModel({
       metrics: {
-        averageScore: 8.3,
         averageBlocking: 0.1,
         averageWarnings: 1.4,
         averageDuration: 300,
@@ -258,8 +256,8 @@ describe('renderDeveloperSheetContent', () => {
     const html = renderDeveloperSheetContent(developer, translate);
 
     expect(html).toContain('sheet-stat-card');
-    expect(html).toContain('dev-score');
-    expect(html).toContain('8.3');
+    expect(html).not.toContain('dev-score"');
+    expect(html).not.toContain('/10</span>');
     expect(html).toContain('dev-blocking');
     expect(html).toContain('0.1');
     expect(html).toContain('dev-warnings');

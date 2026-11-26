@@ -47,9 +47,9 @@ function buildTrackedMr(overrides: Partial<TrackedMr>): TrackedMr {
     totalWarnings: 0,
     totalSuggestions: 0,
     totalDurationMs: 0,
-    latestScore: null,
     autoFollowup: true,
     bypass: null,
+    author: null,
     sizeBlock: null,
   };
 }

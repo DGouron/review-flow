@@ -8,6 +8,7 @@
  */
 
 import { escapeHtml, sanitizeHttpUrl } from './html.js';
+import { t } from './i18n.js';
 
 /**
  * @typedef {Object} SizeBlockApiRow
@@ -72,7 +73,7 @@ function renderRow(row) {
         data-action="force-launch"
         data-mr-id="${escapeHtml(row.mrId)}"
         data-project-path="${escapeHtml(row.projectPath)}"
-      >Lancer quand même</button>
+      >${escapeHtml(t('sizeBlock.force'))}</button>
     </div>
   `;
 }
@@ -87,7 +88,7 @@ export function renderSizeBlockPanelHtml(viewModel) {
   return `
     <div class="size-block-panel">
       <div class="size-block-panel-header">
-        <span class="size-block-panel-title">// MERGE REQUESTS BLOQUÉES POUR TAILLE · ${escapeHtml(String(viewModel.count))}</span>
+        <span class="size-block-panel-title">${escapeHtml(t('sizeBlock.title', { count: viewModel.count }))}</span>
       </div>
       <div class="size-block-panel-body">
         ${viewModel.rows.map(renderRow).join('')}

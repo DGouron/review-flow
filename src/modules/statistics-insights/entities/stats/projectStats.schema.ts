@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+import {
+  QUALITY_GRADES,
+  REVIEW_VERDICTS,
+} from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import { categoryBreakdownSchema } from '@/modules/statistics-insights/entities/stats/categoryBreakdown.schema.js';
 
 const diffStatsSchema = z.object({
@@ -20,12 +24,13 @@ export const reviewStatsSchema = z.object({
   assignedBy: z.string().optional(),
   diffStats: diffStatsSchema.nullable().optional(),
   categoryBreakdown: categoryBreakdownSchema.nullable().optional(),
+  verdict: z.enum(REVIEW_VERDICTS).nullable().optional(),
+  grade: z.enum(QUALITY_GRADES).nullable().optional(),
 });
 
 export const projectStatsSchema = z.object({
   totalReviews: z.number(),
   totalDuration: z.number(),
-  averageScore: z.number().nullable(),
   averageDuration: z.number(),
   totalBlocking: z.number(),
   totalWarnings: z.number(),
@@ -37,8 +42,6 @@ export const projectStatsSchema = z.object({
   averageDeletions: z.number().nullable(),
   totalCommits: z.number().optional(),
   averageCommits: z.number().nullable().optional(),
-  totalScoreSum: z.number().optional(),
-  scoredReviewCount: z.number().optional(),
   diffStatsReviewCount: z.number().optional(),
   categoryBreakdown: categoryBreakdownSchema.optional(),
 });

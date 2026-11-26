@@ -35,7 +35,6 @@ describe('RecordReviewCompletionUseCase', () => {
     expect(result?.totalWarnings).toBe(3);
     expect(result?.totalSuggestions).toBe(1);
     expect(result?.totalDurationMs).toBe(60000);
-    expect(result?.latestScore).toBe(8);
   });
 
   it('should transition to pending-fix when blocking issues exist', () => {
@@ -100,40 +99,7 @@ describe('RecordReviewCompletionUseCase', () => {
     expect(result?.totalReviews).toBe(0);
   });
 
-  it('should set latestScore to the most recent review score', () => {
-    const gateway = new InMemoryReviewRequestTrackingGateway();
-    const mr = TrackedMrFactory.create({
-      id: 'mr-1',
-      reviews: [
-        {
-          type: 'review',
-          timestamp: '2024-01-01T00:00:00Z',
-          durationMs: 1000,
-          score: 6,
-          blocking: 0,
-          warnings: 0,
-          suggestions: 0,
-          threadsClosed: 0,
-          threadsOpened: 0,
-          diffStats: null,
-        },
-      ],
-      totalReviews: 1,
-      latestScore: 6,
-    });
-    gateway.create('/project', mr);
-    const useCase = new RecordReviewCompletionUseCase(gateway);
-
-    const result = useCase.execute({
-      projectPath: '/project',
-      mrId: 'mr-1',
-      reviewData: { ...reviewData, score: 10 },
-    });
-
-    expect(result?.latestScore).toBe(10);
-  });
-
-  it('should update latestScore from followup', () => {
+  it('should let a followup that fixed everything ask for approval', () => {
     const gateway = new InMemoryReviewRequestTrackingGateway();
     const mr = TrackedMrFactory.create({
       id: 'mr-1',
@@ -152,7 +118,6 @@ describe('RecordReviewCompletionUseCase', () => {
         },
       ],
       totalReviews: 1,
-      latestScore: 5,
       openThreads: 1,
       totalThreads: 1,
     });
@@ -175,7 +140,8 @@ describe('RecordReviewCompletionUseCase', () => {
       },
     });
 
-    expect(result?.latestScore).toBe(8);
+    expect(result?.reviews.at(-1)).toMatchObject({ type: 'followup', verdict: 'ready' });
+    expect(result?.state).toBe('pending-approval');
   });
 
   it('should record diffStats in review event when provided', () => {

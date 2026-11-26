@@ -226,9 +226,9 @@
     import { refreshIcons } from './modules/icons.js';
     import { renderStatsPageHtml } from './modules/statsPage.js';
     import {
-      drawScoreTrendChart,
+      drawGradeTrendChart,
       drawReviewActivityChart,
-      drawScoreDistributionChart,
+      drawGradeDistributionChart,
       drawBugsByCategoryChart,
       drawReviewsPerMonthChart,
       animateCounter,
@@ -284,9 +284,9 @@
     function drawCharts(data) {
       requestAnimationFrame(() => {
         if (currentStatsReviews.length) {
-          drawScoreTrendChart('stats-score-trend', currentStatsReviews);
+          drawGradeTrendChart('stats-score-trend', currentStatsReviews);
           drawReviewActivityChart('stats-activity', currentStatsReviews);
-          drawScoreDistributionChart('stats-distribution', currentStatsReviews);
+          drawGradeDistributionChart('stats-distribution', currentStatsReviews);
         }
         if (data.bugsByCategory) {
           drawBugsByCategoryChart('stats-bugs-category', data.bugsByCategory);
@@ -336,7 +336,7 @@
         selectedDev === 'all'
           ? currentStatsReviews
           : currentStatsReviews.filter((review) => review.assignedBy === selectedDev);
-      drawScoreTrendChart('stats-score-trend', filtered);
+      drawGradeTrendChart('stats-score-trend', filtered);
     };
 
     window.recalculateStats = async function recalculateStats() {

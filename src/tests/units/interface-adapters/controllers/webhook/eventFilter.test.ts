@@ -22,6 +22,7 @@ import {
   filterGitHubEvent,
   filterGitHubLabelEvent,
   filterGitHubPrClose,
+  filterGitHubPrMerge,
   filterGitHubPrUpdate,
   filterGitHubPullRequestReviewEvent,
   REVIEW_TRIGGER_LABEL,
@@ -423,6 +424,46 @@ describe('filterGitHubPrClose', () => {
 
       expect(result.shouldProcess).toBe(false);
     });
+  });
+
+  describe('when PR was merged', () => {
+    it('should leave a merged PR to the merge filter', () => {
+      const event = GitHubEventFactory.createMergedPr();
+
+      const result = filterGitHubPrClose(event);
+
+      expect(result.shouldProcess).toBe(false);
+    });
+  });
+});
+
+describe('filterGitHubPrMerge', () => {
+  it('should detect a merged PR', () => {
+    const event = GitHubEventFactory.createMergedPr();
+
+    const result = filterGitHubPrMerge(event);
+
+    expect(result.shouldProcess).toBe(true);
+    if (result.shouldProcess) {
+      expect(result.mergeRequestNumber).toBe(123);
+      expect(result.projectPath).toBe('test-owner/test-repo');
+    }
+  });
+
+  it('should not process a PR closed without merge', () => {
+    const event = GitHubEventFactory.createClosedPr();
+
+    const result = filterGitHubPrMerge(event);
+
+    expect(result.shouldProcess).toBe(false);
+  });
+
+  it('should not process a non-closed action', () => {
+    const event = GitHubEventFactory.createPullRequestEvent({ action: 'opened' });
+
+    const result = filterGitHubPrMerge(event);
+
+    expect(result.shouldProcess).toBe(false);
   });
 });
 

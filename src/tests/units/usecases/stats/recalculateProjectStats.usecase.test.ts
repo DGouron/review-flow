@@ -5,7 +5,7 @@ import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/proje
 import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 
 describe('recalculateProjectStats', () => {
-  it('should recalculate averageScore correctly from reviews', () => {
+  it('should recalculate the review count from reviews', () => {
     const statsGateway = new InMemoryStatsGateway();
     const reviews = [
       ReviewStatsFactory.create({ id: 'r1', score: 6, mrNumber: 1 }),
@@ -14,7 +14,6 @@ describe('recalculateProjectStats', () => {
     ];
     const projectStats = ProjectStatsFactory.create({
       reviews,
-      averageScore: 0,
       totalReviews: 0,
     });
     statsGateway.saveProjectStats('/test/project', projectStats);
@@ -23,25 +22,7 @@ describe('recalculateProjectStats', () => {
       statsGateway,
     });
 
-    expect(result.averageScore).toBe(8);
     expect(result.totalReviews).toBe(3);
-  });
-
-  it('should exclude reviews with null scores from average', () => {
-    const statsGateway = new InMemoryStatsGateway();
-    const reviews = [
-      ReviewStatsFactory.create({ id: 'r1', score: 6, mrNumber: 1 }),
-      ReviewStatsFactory.create({ id: 'r2', score: null, mrNumber: 2 }),
-      ReviewStatsFactory.create({ id: 'r3', score: 10, mrNumber: 3 }),
-    ];
-    const projectStats = ProjectStatsFactory.create({ reviews });
-    statsGateway.saveProjectStats('/test/project', projectStats);
-
-    const result = recalculateProjectStats('/test/project', {
-      statsGateway,
-    });
-
-    expect(result.averageScore).toBe(8);
   });
 
   it('should compute diff stat aggregates from reviews with diffStats', () => {
@@ -111,7 +92,6 @@ describe('recalculateProjectStats', () => {
     });
 
     expect(result.totalReviews).toBe(0);
-    expect(result.averageScore).toBeNull();
     expect(result.totalDuration).toBe(0);
     expect(result.averageDuration).toBe(0);
     expect(result.totalBlocking).toBe(0);
@@ -166,12 +146,12 @@ describe('recalculateProjectStats', () => {
   it('should save the recalculated stats', () => {
     const statsGateway = new InMemoryStatsGateway();
     const reviews = [ReviewStatsFactory.create({ id: 'r1', score: 7, mrNumber: 1 })];
-    const projectStats = ProjectStatsFactory.create({ reviews, averageScore: 0 });
+    const projectStats = ProjectStatsFactory.create({ reviews });
     statsGateway.saveProjectStats('/test/project', projectStats);
 
     recalculateProjectStats('/test/project', { statsGateway });
 
     const saved = statsGateway.loadProjectStats('/test/project');
-    expect(saved?.averageScore).toBe(7);
+    expect(saved?.totalReviews).toBe(1);
   });
 });

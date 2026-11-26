@@ -280,4 +280,28 @@ describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)',
     expect(subscriber.done).toBe(false);
     expect(subscriber.error).toBeNull();
   });
+
+  it('stops the dispatched session without tailing it when cancelled before the dispatch returns', async () => {
+    const dir = projectDirFor(homeDir, homeDir);
+    writeFileSync(
+      join(dir, 'stub-session-cancelled.jsonl'),
+      JSON.stringify({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: 'late answer' }], stop_reason: 'end_turn' },
+      }) + '\n',
+    );
+    const gateway = new EmberAnswerTransportClaudeGateway(sessionGateway, FAST_OPTIONS(homeDir));
+    const subscriber = collectingSubscriber(() => undefined);
+
+    const result = gateway.start(startOptions(), subscriber);
+    if (result.status === 'started') {
+      result.run.cancel();
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(sessionGateway.stopCalls).toEqual(['stub-session']);
+    expect(subscriber.chunks).toEqual([]);
+    expect(subscriber.done).toBe(false);
+  });
 });

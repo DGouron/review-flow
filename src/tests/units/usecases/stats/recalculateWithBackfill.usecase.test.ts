@@ -25,7 +25,6 @@ describe('recalculateWithBackfill', () => {
       '/test/project',
       ProjectStatsFactory.create({
         reviews,
-        averageScore: 0,
       }),
     );
 
@@ -49,8 +48,6 @@ describe('recalculateWithBackfill', () => {
     await vi.runAllTimersAsync();
     await promise;
 
-    const saved = statsGateway.loadProjectStats('/test/project');
-    expect(saved?.averageScore).toBe(7);
     expect(progressUpdates.at(-1)?.status).toBe('completed');
   });
 

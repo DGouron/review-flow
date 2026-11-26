@@ -89,9 +89,14 @@ export class EmberAnswerRunner {
       return;
     }
 
+    this.shortSessionId = dispatch.sessionId;
+    if (this.cancelled) {
+      this.stopSession();
+      return;
+    }
+
     const slug = options.projectPath.replace(/\//g, '-');
     this.projectDir = join(this.settings.homeDir, '.claude', 'projects', slug);
-    this.shortSessionId = dispatch.sessionId;
     this.scheduleTail();
   }
 

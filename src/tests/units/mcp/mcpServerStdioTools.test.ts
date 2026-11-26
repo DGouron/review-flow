@@ -21,4 +21,12 @@ describe('mcpServerStdio TOOL_DEFINITIONS', () => {
     expect(tool?.inputSchema.properties.insight?.type).toBe('string');
     expect(tool?.inputSchema.required).toEqual(['projectPath', 'insight']);
   });
+
+  it('exposes a record_verdict tool taking the arbiter findings', () => {
+    const tool = TOOL_DEFINITIONS.find((definition) => definition.name === 'record_verdict');
+
+    expect(tool).toBeDefined();
+    expect(tool?.inputSchema.properties.findings?.type).toBe('array');
+    expect(tool?.inputSchema.required).toEqual(['findings']);
+  });
 });

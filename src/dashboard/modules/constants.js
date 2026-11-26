@@ -5,4 +5,5 @@ export const STORAGE_KEY_CURRENT = 'review-flow-current-project';
 export const STORAGE_KEY_FOCUS_STRIP_MODE = 'review-flow-focus-strip-mode';
 export const STORAGE_KEY_NOW_LANE_COLLAPSED = 'review-flow-now-lane-collapsed';
 export const STORAGE_KEY_ACTIVE_TAB = 'review-flow-active-tab';
-export const QUALITY_TARGET_SCORE = 8;
+/** Target grade the dashboard shows when the project sets no threshold. */
+export const DEFAULT_TARGET_GRADE = 'B';

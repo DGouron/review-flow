@@ -226,9 +226,9 @@ describe('Acceptance — SPEC-170: Pre-built Worktree Lifecycle', () => {
         totalWarnings: 0,
         totalSuggestions: 0,
         totalDurationMs: 0,
-        latestScore: null,
         autoFollowup: true,
         bypass: null,
+        author: null,
         sizeBlock: null,
       };
     }

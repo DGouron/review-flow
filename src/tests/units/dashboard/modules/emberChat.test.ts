@@ -1,12 +1,14 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  contextualQuestion,
   parseEmberEvent,
   foldAnswer,
   avatarStateFromEvent,
   shouldShowRetry,
   shouldSendQuestion,
 } from '@/dashboard/modules/emberChat.js';
+import { t } from '@/dashboard/modules/i18n.js';
 
 describe('parseEmberEvent', () => {
   it('parses a chunk event', () => {
@@ -84,5 +86,23 @@ describe('shouldSendQuestion', () => {
 
   it('sends a non-empty question', () => {
     expect(shouldSendQuestion('Quel projet a le pire score ?')).toBe(true);
+  });
+});
+
+describe('contextualQuestion', () => {
+  it('keeps the question untouched without a selected pull request', () => {
+    expect(contextualQuestion('Which pull requests wait?', null, t)).toBe(
+      'Which pull requests wait?',
+    );
+  });
+
+  it('puts the selected pull request in front of the question', () => {
+    const question = contextualQuestion(
+      'What are the risky parts?',
+      { prefix: '#', mrNumber: 2029, subject: 'Build packages' },
+      t,
+    );
+
+    expect(question).toBe('About pull request #2029 "Build packages":\nWhat are the risky parts?');
   });
 });
