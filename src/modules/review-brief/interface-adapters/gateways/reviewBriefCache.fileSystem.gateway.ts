@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -16,10 +17,15 @@ function safeSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, '_');
 }
 
+function projectFolderName(localPath: string): string {
+  return createHash('sha256').update(localPath).digest('hex');
+}
+
 /**
- * Briefs cached under ~/.claude-review/review-briefs/<project-slug>/, one file per platform,
- * request number, head sha and language — never inside the reviewed repository. A corrupted or
- * invalid file is a miss, so the brief is simply regenerated.
+ * Briefs cached under ~/.claude-review/review-briefs/<sha256 of the project path>/, one file per
+ * platform, request number, head sha and language — never inside the reviewed repository. A
+ * corrupted or invalid file is a miss, so the brief is simply regenerated. Folders named by the
+ * former path slug are never read again: their briefs are regenerated on the next request.
  */
 export class ReviewBriefCacheFileSystemGateway implements ReviewBriefCacheGateway {
   private readonly directory: string;
@@ -48,7 +54,7 @@ export class ReviewBriefCacheFileSystemGateway implements ReviewBriefCacheGatewa
   }
 
   private projectDirectoryFor(key: ReviewBriefCacheKey): string {
-    return join(this.directory, safeSegment(key.localPath));
+    return join(this.directory, projectFolderName(key.localPath));
   }
 
   private fileFor(key: ReviewBriefCacheKey): string {

@@ -66,6 +66,15 @@ describe('ReviewBriefCacheFileSystemGateway', () => {
     },
   );
 
+  it('keeps two project paths that only differ by a slash or an underscore in two folders', async () => {
+    await gateway.save(cacheKey({ localPath: '/a_b' }), ReviewBriefFactory.create({ what: 'A_B' }));
+    await gateway.save(cacheKey({ localPath: '/a/b' }), ReviewBriefFactory.create({ what: 'A/B' }));
+
+    expect(readdirSync(join(homeDir, '.claude-review', 'review-briefs'))).toHaveLength(2);
+    expect((await gateway.load(cacheKey({ localPath: '/a_b' })))?.what).toBe('A_B');
+    expect((await gateway.load(cacheKey({ localPath: '/a/b' })))?.what).toBe('A/B');
+  });
+
   it('replaces the brief saved for the same key', async () => {
     await gateway.save(cacheKey(), ReviewBriefFactory.create({ what: 'First' }));
     await gateway.save(cacheKey(), ReviewBriefFactory.create({ what: 'Second' }));
