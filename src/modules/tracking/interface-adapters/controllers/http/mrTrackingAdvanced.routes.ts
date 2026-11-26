@@ -29,6 +29,7 @@ import { parseReviewOutput } from '@/modules/statistics-insights/entities/stats/
 import type { GitHubDiffStatsFetchGateway } from '@/modules/statistics-insights/interface-adapters/gateways/diffStatsFetch.github.gateway.js';
 import type { GitLabDiffStatsFetchGateway } from '@/modules/statistics-insights/interface-adapters/gateways/diffStatsFetch.gitlab.gateway.js';
 import type { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
+import type { SyncSummary } from '@/modules/tracking/entities/platformSync/syncSummary.js';
 import type { ReviewRequestTrackingGateway } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import type { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
@@ -51,6 +52,8 @@ export interface MrTrackingAdvancedRoutesOptions {
     platform: Platform,
   ) => GitHubDiffStatsFetchGateway | GitLabDiffStatsFetchGateway;
   createSyncThreadsUseCase: (platform: Platform) => SyncThreadsUseCase;
+  /** Reconciles the tracked review requests with their platform state; null when the platform is not supported. */
+  syncWithPlatform?: (projectPath: string) => SyncSummary | null;
   recordReviewCompletion: RecordReviewCompletionUseCase;
   enforceBudget: Pick<EnforceBudgetUseCase, 'execute'>;
   broadcastBudgetExceeded: (payload: BudgetExceededPayload) => void;
@@ -93,6 +96,7 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
     diffMetadataFetchGatewayFactory,
     diffStatsFetchGatewayFactory,
     createSyncThreadsUseCase,
+    syncWithPlatform,
     recordReviewCompletion,
     enforceBudget,
     broadcastBudgetExceeded,
@@ -102,6 +106,17 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
     gateClaudeInvocation,
     logger,
   } = opts;
+
+  function reconcileWithPlatformBestEffort(projectPath: string): SyncSummary | null {
+    if (!syncWithPlatform) return null;
+    try {
+      return syncWithPlatform(projectPath);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logError('Platform reconciliation failed', { projectPath, error: message });
+      return null;
+    }
+  }
 
   fastify.post<{ Body: { mrId?: string; projectPath?: string } }>(
     '/api/mr-tracking/followup',
@@ -571,6 +586,7 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
           return { success: false, error: 'MR/PR not found' };
         }
 
+        const sync = reconcileWithPlatformBestEffort(validation.path);
         const activeMrs = reviewRequestTrackingGateway.getActiveMrs(validation.path);
         for (const activeMr of activeMrs) {
           try {
@@ -582,8 +598,8 @@ export const mrTrackingAdvancedRoutes: FastifyPluginAsync<MrTrackingAdvancedRout
         }
         const data = reviewRequestTrackingGateway.loadTracking(validation.path);
         const mrs = data?.mrs ?? [];
-        logInfo('All MRs/PRs synced', { count: mrs.length });
-        return { success: true, mrs };
+        logInfo('All MRs/PRs synced', { count: mrs.length, sync });
+        return { success: true, mrs, sync };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         logError('Sync failed', { error: message });

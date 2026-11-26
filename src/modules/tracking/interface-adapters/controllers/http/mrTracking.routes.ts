@@ -5,6 +5,7 @@ import { logInfo, logError } from '@/frameworks/logging/logBuffer.js';
 import type { ReviewContextGateway } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js';
 import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
+import type { SyncSummary } from '@/modules/tracking/entities/platformSync/syncSummary.js';
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
 import { latestReviewOutcomeOf } from '@/modules/tracking/entities/tracking/latestReviewOutcome.js';
 import type {
@@ -20,6 +21,7 @@ interface MrTrackingRoutesOptions {
   reviewRequestTrackingGateway: ReviewRequestTrackingGateway;
   getQualityThreshold?: (projectPath: string) => QualityGrade | null;
   statsGateway?: StatsGateway;
+  getSyncSummary?: (projectPath: string) => SyncSummary | null;
   reviewContextGateway: ReviewContextGateway;
   cancelJob: (jobId: string) => boolean;
   buildJobId: (platform: Platform, projectPath: string, mrNumber: number) => string;
@@ -50,6 +52,7 @@ export const mrTrackingRoutes: FastifyPluginAsync<MrTrackingRoutesOptions> = asy
     reviewRequestTrackingGateway,
     getQualityThreshold,
     statsGateway,
+    getSyncSummary,
     reviewContextGateway,
     cancelJob,
     buildJobId,
@@ -81,6 +84,7 @@ export const mrTrackingRoutes: FastifyPluginAsync<MrTrackingRoutesOptions> = asy
         pendingApproval: mrDiffStatsPresenter.present(pendingApproval, stats),
         merged: mrDiffStatsPresenter.present(merged, stats),
         closed: mrDiffStatsPresenter.present(closed, stats),
+        sync: getSyncSummary?.(validation.path) ?? null,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

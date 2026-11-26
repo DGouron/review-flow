@@ -88,3 +88,4 @@
 | Update a source-checkout install from the dashboard | [223-source-checkout-self-update](specs/223-source-checkout-self-update.md) — [plan](plans/223-source-checkout-self-update.plan.md) — [report](reports/223-source-checkout-self-update.report.md) | implemented | 2026-08-05 |
 | Apply the review labels on follow-up reviews too | [224-followup-review-labels](specs/224-followup-review-labels.md) — [report](reports/224-followup-review-labels.report.md) | implemented | 2026-08-06 |
 | Carry the whole thread conversation into the review context | [225-carry-thread-conversation](specs/225-carry-thread-conversation.md) — [report](reports/225-carry-thread-conversation.report.md) | implemented | 2026-08-06 |
+| Reconcile the dashboard queue with the real platform state | [226-dashboard-queue-reflects-platform-state](specs/226-dashboard-queue-reflects-platform-state.md) | implemented | 2026-11-26 |

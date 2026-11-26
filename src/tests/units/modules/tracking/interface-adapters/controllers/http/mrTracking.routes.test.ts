@@ -305,3 +305,19 @@ describe('mrTrackingRoutes — GET /api/mr-tracking diff stats enrichment', () =
     expect(body.pendingFix[0].reviews.at(-1)?.diffStats).toBeNull();
   });
 });
+
+describe('mrTrackingRoutes — GET /api/mr-tracking sync summary', () => {
+  it('reports no sync summary when no platform sync is wired', async () => {
+    const app = await buildApp({
+      gateway: new InMemoryReviewRequestTrackingGateway(),
+      qualityThreshold: null,
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/mr-tracking?path=${encodeURIComponent('/repo/project')}`,
+    });
+
+    expect(response.json()).toMatchObject({ success: true, sync: null });
+  });
+});

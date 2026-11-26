@@ -29,6 +29,7 @@ vi.mock('@/frameworks/logging/logBuffer.js', () => ({
 import Fastify, { type FastifyInstance } from 'fastify';
 
 import { enqueueReview } from '@/frameworks/queue/pQueueAdapter.js';
+import type { SyncSummary } from '@/modules/tracking/entities/platformSync/syncSummary.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import { mrTrackingAdvancedRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTrackingAdvanced.routes.js';
 import { TrackedMrFactory, MrTrackingDataFactory } from '@/tests/factories/trackedMr.factory.js';
@@ -77,6 +78,7 @@ interface BuildAppOptions {
   tracking?: TrackingGatewayOverrides;
   createSyncThreadsExecute?: ReturnType<typeof vi.fn>;
   gateResult?: GateResult | null;
+  syncWithPlatform?: (projectPath: string) => SyncSummary | null;
 }
 
 interface AppBundle {
@@ -137,6 +139,7 @@ async function buildApp(options: BuildAppOptions): Promise<AppBundle> {
     diffMetadataFetchGatewayFactory: () => ({ fetchDiffMetadata: vi.fn(() => undefined) }) as never,
     diffStatsFetchGatewayFactory: () => ({ fetchDiffStats: vi.fn(() => null) }) as never,
     createSyncThreadsUseCase: () => ({ execute: createSyncThreadsExecute }) as never,
+    syncWithPlatform: options.syncWithPlatform,
     recordReviewCompletion: { execute: vi.fn() } as never,
     enforceBudget: { execute: enforceBudgetExecute } as never,
     broadcastBudgetExceeded,
@@ -828,7 +831,7 @@ describe('mrTrackingAdvancedRoutes POST /api/mr-tracking/sync', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ success: true, mrs: [] });
+    expect(response.json()).toEqual({ success: true, mrs: [], sync: null });
 
     await app.close();
   });
@@ -851,7 +854,62 @@ describe('mrTrackingAdvancedRoutes POST /api/mr-tracking/sync', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ success: true, mrs: [] });
+    expect(response.json()).toEqual({ success: true, mrs: [], sync: null });
+
+    await app.close();
+  });
+
+  it('reconciles with the platform and returns the sync summary on a full sync', async () => {
+    const summary: SyncSummary = {
+      syncedAt: '2026-11-26T10:00:00.000Z',
+      removedClosed: 36,
+      untrackedOpen: 40,
+    };
+    const reconciledPaths: string[] = [];
+    const { app } = await buildApp({
+      enforceBudgetAccepted: true,
+      syncWithPlatform: (projectPath) => {
+        reconciledPaths.push(projectPath);
+        return summary;
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/mr-tracking/sync',
+      payload: { projectPath: '/home/user/projects/test' },
+    });
+
+    expect(reconciledPaths).toEqual(['/home/user/projects/test']);
+    expect(response.json()).toEqual({ success: true, mrs: [], sync: summary });
+
+    await app.close();
+  });
+
+  it('still syncs threads when the platform reconciliation fails', async () => {
+    const createSyncThreadsExecute = vi.fn();
+    const { app } = await buildApp({
+      enforceBudgetAccepted: true,
+      createSyncThreadsExecute,
+      tracking: {
+        getActiveMrs: vi.fn(() => [
+          TrackedMrFactory.create({ id: 'gitlab-test-org/test-project-42' }),
+        ]),
+      },
+      syncWithPlatform: () => {
+        throw new Error('gh: not authenticated');
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/mr-tracking/sync',
+      payload: { projectPath: '/home/user/projects/test' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ success: true, mrs: [], sync: null });
+    expect(createSyncThreadsExecute).toHaveBeenCalledTimes(1);
 
     await app.close();
   });
