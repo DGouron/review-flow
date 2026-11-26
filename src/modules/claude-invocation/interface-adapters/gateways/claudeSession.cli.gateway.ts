@@ -159,7 +159,7 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
   }
 
   async stop(sessionId: SessionId): Promise<CleanupResult> {
-    const result = await this.runner({ args: ['stop', sessionId] });
+    const result = await this.runWithoutRejecting(['stop', sessionId]);
     if (result.exitCode === 0) {
       return { success: true, warning: null };
     }
@@ -167,7 +167,7 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
   }
 
   async remove(sessionId: SessionId): Promise<CleanupResult> {
-    const result = await this.runner({ args: ['rm', sessionId] });
+    const result = await this.runWithoutRejecting(['rm', sessionId]);
     if (result.exitCode === 0) {
       return { success: true, warning: null };
     }
@@ -175,7 +175,7 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
   }
 
   async listAgents(): Promise<AgentStatusEntry[]> {
-    const result = await this.runner({ args: ['agents', '--json'] });
+    const result = await this.runWithoutRejecting(['agents', '--json']);
     if (result.exitCode !== 0) return [];
     try {
       const parsed: unknown = JSON.parse(result.stdout);
@@ -191,7 +191,7 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
   }
 
   async daemonStatus(): Promise<DaemonStatus> {
-    const result = await this.runner({ args: ['daemon', 'status'] });
+    const result = await this.runWithoutRejecting(['daemon', 'status']);
     if (result.exitCode === 0) {
       return { reachable: true, reason: null };
     }
@@ -199,13 +199,25 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
   }
 
   async usage(): Promise<UsageReport> {
-    const result = await this.runner({ args: ['usage'] });
+    const result = await this.runWithoutRejecting(['usage']);
     const raw = result.stdout || result.stderr;
     if (result.exitCode !== 0) {
       return { usesApiPool: false, raw };
     }
     const usesApiPool = /\bAPI\b/i.test(raw) && /(token|cost|charge|pool)/i.test(raw);
     return { usesApiPool, raw };
+  }
+
+  private async runWithoutRejecting(args: string[]): Promise<ClaudeProcessRunResult> {
+    try {
+      return await this.runner({ args });
+    } catch (error) {
+      return {
+        stdout: '',
+        stderr: error instanceof Error ? error.message : String(error),
+        exitCode: -1,
+      };
+    }
   }
 
   async getSessionUsage(sessionId: SessionId, cwd: string): Promise<SessionUsageSnapshot | null> {
