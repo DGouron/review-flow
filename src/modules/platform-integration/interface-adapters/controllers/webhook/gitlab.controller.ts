@@ -707,6 +707,7 @@ export async function handleGitLabWebhook(
       targetBranch: filterResult.targetBranch,
     },
     assignedBy,
+    author: null,
   });
 
   logger.info(

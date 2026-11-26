@@ -22,7 +22,12 @@ describe('TrackAssignmentUseCase', () => {
     const gateway = new InMemoryReviewRequestTrackingGateway();
     const useCase = new TrackAssignmentUseCase(gateway);
 
-    const result = useCase.execute({ projectPath: '/my/project', mrInfo, assignedBy });
+    const result = useCase.execute({
+      projectPath: '/my/project',
+      mrInfo,
+      assignedBy,
+      author: null,
+    });
 
     expect(result.id).toBe('gitlab-my/project-42');
     expect(result.state).toBe('pending-review');
@@ -43,7 +48,12 @@ describe('TrackAssignmentUseCase', () => {
     gateway.create('/my/project', existing);
     const useCase = new TrackAssignmentUseCase(gateway);
 
-    const result = useCase.execute({ projectPath: '/my/project', mrInfo, assignedBy });
+    const result = useCase.execute({
+      projectPath: '/my/project',
+      mrInfo,
+      assignedBy,
+      author: null,
+    });
 
     expect(result.state).toBe('pending-fix');
     expect(result.assignment.username).toBe('alice');
@@ -61,7 +71,12 @@ describe('TrackAssignmentUseCase', () => {
     gateway.create('/my/project', merged);
     const useCase = new TrackAssignmentUseCase(gateway);
 
-    const result = useCase.execute({ projectPath: '/my/project', mrInfo, assignedBy });
+    const result = useCase.execute({
+      projectPath: '/my/project',
+      mrInfo,
+      assignedBy,
+      author: null,
+    });
 
     expect(result.state).toBe('pending-review');
   });
@@ -78,8 +93,71 @@ describe('TrackAssignmentUseCase', () => {
     gateway.create('/my/project', closed);
     const useCase = new TrackAssignmentUseCase(gateway);
 
-    const result = useCase.execute({ projectPath: '/my/project', mrInfo, assignedBy });
+    const result = useCase.execute({
+      projectPath: '/my/project',
+      mrInfo,
+      assignedBy,
+      author: null,
+    });
 
     expect(result.state).toBe('pending-review');
+  });
+
+  it('records the merge request author, not the person who requested the review', () => {
+    const gateway = new InMemoryReviewRequestTrackingGateway();
+    const useCase = new TrackAssignmentUseCase(gateway);
+
+    const result = useCase.execute({
+      projectPath: '/my/project',
+      mrInfo,
+      assignedBy,
+      author: { username: 'carol', displayName: 'Carol' },
+    });
+
+    expect(result.author).toEqual({ username: 'carol', displayName: 'Carol' });
+    expect(result.assignment.username).toBe('alice');
+  });
+
+  it('records no author when the platform did not send one', () => {
+    const gateway = new InMemoryReviewRequestTrackingGateway();
+    const useCase = new TrackAssignmentUseCase(gateway);
+
+    const result = useCase.execute({
+      projectPath: '/my/project',
+      mrInfo,
+      assignedBy,
+      author: null,
+    });
+
+    expect(result.author).toBeNull();
+  });
+
+  it('fills the author of an already tracked merge request and keeps it when none is sent', () => {
+    const gateway = new InMemoryReviewRequestTrackingGateway();
+    gateway.create(
+      '/my/project',
+      TrackedMrFactory.create({
+        id: 'gitlab-my/project-42',
+        mrNumber: 42,
+        project: 'my/project',
+        author: null,
+      }),
+    );
+    const useCase = new TrackAssignmentUseCase(gateway);
+
+    useCase.execute({
+      projectPath: '/my/project',
+      mrInfo,
+      assignedBy,
+      author: { username: 'carol', displayName: 'Carol' },
+    });
+    const result = useCase.execute({
+      projectPath: '/my/project',
+      mrInfo,
+      assignedBy,
+      author: null,
+    });
+
+    expect(result.author).toEqual({ username: 'carol', displayName: 'Carol' });
   });
 });
