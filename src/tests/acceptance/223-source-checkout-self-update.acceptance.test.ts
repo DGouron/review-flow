@@ -38,15 +38,12 @@ async function buildVersionRoutesApplication(): Promise<FastifyInstance> {
 describe('SPEC-223 source-checkout self-update (acceptance)', () => {
   describe('usecase-level — trigger and gating', () => {
     it('scenario: nominal — fetches, rebuilds and starts on a clean checkout with new commits', async () => {
-      const result = await triggerSelfUpdate(
-        { requestOrigin: LOCAL_ORIGIN },
-        {
-          selfUpdateCommand: new StubSelfUpdateCommand(true),
-          installTypeDetector: new StubInstallTypeDetector('source-checkout'),
-          queueActivityGateway: new StubQueueActivity(0),
-          sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
-        },
-      );
+      const result = await triggerSelfUpdate({
+        selfUpdateCommand: new StubSelfUpdateCommand(true),
+        installTypeDetector: new StubInstallTypeDetector('source-checkout'),
+        queueActivityGateway: new StubQueueActivity(0),
+        sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
+      });
 
       expect(result).toEqual({ status: 'started' });
     });
@@ -62,35 +59,13 @@ describe('SPEC-223 source-checkout self-update (acceptance)', () => {
       expect(sourceCheckoutUpdateGateway.calls).toContain('rebuild');
     });
 
-    it('scenario: remote request — refuses "local machine only" and executes nothing', async () => {
-      const queueActivityGateway = new StubQueueActivity(0);
-      const installTypeDetector = new StubInstallTypeDetector('source-checkout');
-
-      const result = await triggerSelfUpdate(
-        { requestOrigin: REMOTE_ORIGIN },
-        {
-          selfUpdateCommand: new StubSelfUpdateCommand(true),
-          installTypeDetector,
-          queueActivityGateway,
-          sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
-        },
-      );
-
-      expect(result).toEqual({ status: 'refused', motive: { kind: 'local-only' } });
-      expect(queueActivityGateway.calls).toBe(0);
-      expect(installTypeDetector.calls).toBe(0);
-    });
-
     it('scenario: review running — refuses with the total count of running and waiting reviews', async () => {
-      const result = await triggerSelfUpdate(
-        { requestOrigin: LOCAL_ORIGIN },
-        {
-          selfUpdateCommand: new StubSelfUpdateCommand(true),
-          installTypeDetector: new StubInstallTypeDetector('source-checkout'),
-          queueActivityGateway: new StubQueueActivity(2),
-          sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
-        },
-      );
+      const result = await triggerSelfUpdate({
+        selfUpdateCommand: new StubSelfUpdateCommand(true),
+        installTypeDetector: new StubInstallTypeDetector('source-checkout'),
+        queueActivityGateway: new StubQueueActivity(2),
+        sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
+      });
 
       expect(result).toEqual({
         status: 'refused',
@@ -183,15 +158,12 @@ describe('SPEC-223 source-checkout self-update (acceptance)', () => {
 
   describe('usecase-level — global-install path shares the two preconditions', () => {
     it('scenario: global install, nothing running — existing update path runs unchanged', async () => {
-      const result = await triggerSelfUpdate(
-        { requestOrigin: LOCAL_ORIGIN },
-        {
-          selfUpdateCommand: new StubSelfUpdateCommand(true),
-          installTypeDetector: new StubInstallTypeDetector('global-npm'),
-          queueActivityGateway: new StubQueueActivity(0),
-          sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
-        },
-      );
+      const result = await triggerSelfUpdate({
+        selfUpdateCommand: new StubSelfUpdateCommand(true),
+        installTypeDetector: new StubInstallTypeDetector('global-npm'),
+        queueActivityGateway: new StubQueueActivity(0),
+        sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
+      });
 
       expect(result).toEqual({ status: 'started' });
     });
@@ -199,34 +171,17 @@ describe('SPEC-223 source-checkout self-update (acceptance)', () => {
     it('scenario: global install, review running — refuses without reinstalling', async () => {
       const selfUpdateCommand = new StubSelfUpdateCommand(true);
 
-      const result = await triggerSelfUpdate(
-        { requestOrigin: LOCAL_ORIGIN },
-        {
-          selfUpdateCommand,
-          installTypeDetector: new StubInstallTypeDetector('global-npm'),
-          queueActivityGateway: new StubQueueActivity(1),
-          sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
-        },
-      );
+      const result = await triggerSelfUpdate({
+        selfUpdateCommand,
+        installTypeDetector: new StubInstallTypeDetector('global-npm'),
+        queueActivityGateway: new StubQueueActivity(1),
+        sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
+      });
 
       expect(result).toEqual({
         status: 'refused',
         motive: { kind: 'reviews-in-progress', count: 1 },
       });
-    });
-
-    it('scenario: global install, remote request — refuses "local machine only"', async () => {
-      const result = await triggerSelfUpdate(
-        { requestOrigin: REMOTE_ORIGIN },
-        {
-          selfUpdateCommand: new StubSelfUpdateCommand(true),
-          installTypeDetector: new StubInstallTypeDetector('global-npm'),
-          queueActivityGateway: new StubQueueActivity(0),
-          sourceCheckoutUpdateGateway: new StubSourceCheckoutUpdate(),
-        },
-      );
-
-      expect(result).toEqual({ status: 'refused', motive: { kind: 'local-only' } });
     });
   });
 
@@ -244,7 +199,7 @@ describe('SPEC-223 source-checkout self-update (acceptance)', () => {
       expect(body.status).toBe('started');
     });
 
-    it('scenario: remote request — a request from another machine never reaches any gateway', async () => {
+    it('scenario: remote request (amended by #428) — a request from another machine starts the update like a local one', async () => {
       const application = await buildVersionRoutesApplication();
 
       const response = await application.inject({
@@ -253,10 +208,9 @@ describe('SPEC-223 source-checkout self-update (acceptance)', () => {
         remoteAddress: REMOTE_ORIGIN,
       });
 
-      const body: { status: string; motive?: { kind: string } } = JSON.parse(response.body);
+      const body: { status: string } = JSON.parse(response.body);
       expect(response.statusCode).toBe(200);
-      expect(body.status).toBe('refused');
-      expect(body.motive).toEqual({ kind: 'local-only' });
+      expect(body.status).toBe('started');
     });
   });
 

@@ -95,12 +95,6 @@ describe('resolveRefusalWording', () => {
     setLanguage('fr');
   });
 
-  it('words the local-only motive in French', () => {
-    expect(resolveRefusalWording({ kind: 'local-only' }, t)).toBe(
-      'Mise à jour autorisée uniquement depuis la machine locale',
-    );
-  });
-
   it('words the reviews-in-progress motive in French with the singular count', () => {
     expect(resolveRefusalWording({ kind: 'reviews-in-progress', count: 1 }, t)).toBe(
       '1 review en cours. Réessayez une fois les reviews terminées.',
