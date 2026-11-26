@@ -17,19 +17,35 @@ function executorReturning(output: string): {
 }
 
 describe('GitHubReviewRequestStateFetchGateway', () => {
-  describe('listOpenNumbers', () => {
-    it('returns the numbers of the open pull requests of the repository', () => {
-      const { executor } = executorReturning('[{"number":1536},{"number":2001}]');
+  describe('listOpen', () => {
+    it('returns the open pull requests of the repository with their author', () => {
+      const { executor } = executorReturning(
+        '[{"number":1536,"author":{"login":"jdoe","name":"Jane Doe"}},{"number":2001,"author":{"login":"rroe","name":"Richard Roe"}}]',
+      );
       const gateway = new GitHubReviewRequestStateFetchGateway(executor);
 
-      expect(gateway.listOpenNumbers('acme/app')).toEqual([1536, 2001]);
+      expect(gateway.listOpen('acme/app')).toEqual([
+        { number: 1536, author: { username: 'jdoe', displayName: 'Jane Doe' } },
+        { number: 2001, author: { username: 'rroe', displayName: 'Richard Roe' } },
+      ]);
     });
 
-    it('asks gh for the open pull requests of the given repository without a shell', () => {
+    it('has no display name when the author has no name on GitHub', () => {
+      const { executor } = executorReturning(
+        '[{"number":1536,"author":{"login":"jdoe","name":""}}]',
+      );
+      const gateway = new GitHubReviewRequestStateFetchGateway(executor);
+
+      expect(gateway.listOpen('acme/app')).toEqual([
+        { number: 1536, author: { username: 'jdoe', displayName: null } },
+      ]);
+    });
+
+    it('asks gh for the open pull requests and their author without a shell', () => {
       const { executor, calls } = executorReturning('[]');
       const gateway = new GitHubReviewRequestStateFetchGateway(executor);
 
-      gateway.listOpenNumbers('acme/app');
+      gateway.listOpen('acme/app');
 
       expect(calls).toEqual([
         {
@@ -42,7 +58,7 @@ describe('GitHubReviewRequestStateFetchGateway', () => {
             '--state',
             'open',
             '--json',
-            'number',
+            'number,author',
             '--limit',
             '1000',
           ],
@@ -54,7 +70,7 @@ describe('GitHubReviewRequestStateFetchGateway', () => {
       const { executor } = executorReturning('{"message":"Not Found"}');
       const gateway = new GitHubReviewRequestStateFetchGateway(executor);
 
-      expect(() => gateway.listOpenNumbers('acme/app')).toThrow(/githubOpenPullRequests/);
+      expect(() => gateway.listOpen('acme/app')).toThrow(/githubOpenPullRequests/);
     });
   });
 

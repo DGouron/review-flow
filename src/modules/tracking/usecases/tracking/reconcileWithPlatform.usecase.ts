@@ -1,4 +1,7 @@
-import type { ReviewRequestStateFetchGateway } from '@/modules/platform-integration/entities/reviewRequestState/reviewRequestStateFetch.gateway.js';
+import type {
+  OpenReviewRequest,
+  ReviewRequestStateFetchGateway,
+} from '@/modules/platform-integration/entities/reviewRequestState/reviewRequestStateFetch.gateway.js';
 import type { SyncSummaryGateway } from '@/modules/tracking/entities/platformSync/syncSummary.gateway.js';
 import type { SyncSummary } from '@/modules/tracking/entities/platformSync/syncSummary.js';
 import type {
@@ -31,10 +34,15 @@ export class ReconcileWithPlatformUseCase implements UseCase<
     const { trackingGateway, reviewRequestStateFetchGateway, syncSummaryGateway, platform } =
       this.dependencies;
     const syncedAt = this.dependencies.now().toISOString();
-    const openNumbers = new Set(reviewRequestStateFetchGateway.listOpenNumbers(input.project));
+    const openReviewRequests = reviewRequestStateFetchGateway.listOpen(input.project);
+    const openNumbers = new Set(
+      openReviewRequests.map((openReviewRequest) => openReviewRequest.number),
+    );
     const activeMrs = trackingGateway
       .getActiveMrs(input.localPath)
       .filter((mr) => mr.platform === platform);
+
+    this.alignAuthorsWithPlatform(input.localPath, activeMrs, openReviewRequests);
 
     const removedClosed = activeMrs
       .filter((mr) => !openNumbers.has(mr.mrNumber))
@@ -46,6 +54,18 @@ export class ReconcileWithPlatformUseCase implements UseCase<
     const summary: SyncSummary = { syncedAt, removedClosed, untrackedOpen };
     syncSummaryGateway.save(input.localPath, summary);
     return summary;
+  }
+
+  private alignAuthorsWithPlatform(
+    localPath: string,
+    activeMrs: TrackedMr[],
+    openReviewRequests: OpenReviewRequest[],
+  ): void {
+    for (const { number, author } of openReviewRequests) {
+      const mr = activeMrs.find((candidate) => candidate.mrNumber === number);
+      if (!mr || isSameAuthor(mr.author, author)) continue;
+      this.dependencies.trackingGateway.update(localPath, mr.id, { author });
+    }
   }
 
   private fileUnderPlatformState(localPath: string, mr: TrackedMr, syncedAt: string): boolean {
@@ -69,4 +89,11 @@ export class ReconcileWithPlatformUseCase implements UseCase<
 
     return false;
   }
+}
+
+function isSameAuthor(
+  tracked: TrackedMr['author'],
+  platform: OpenReviewRequest['author'],
+): boolean {
+  return tracked?.username === platform.username && tracked.displayName === platform.displayName;
 }

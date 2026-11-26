@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
-import type { ReviewRequestStateFetchGateway } from '@/modules/platform-integration/entities/reviewRequestState/reviewRequestStateFetch.gateway.js';
+import type {
+  OpenReviewRequest,
+  ReviewRequestStateFetchGateway,
+} from '@/modules/platform-integration/entities/reviewRequestState/reviewRequestStateFetch.gateway.js';
 import type { ReviewRequestState } from '@/modules/review-execution/entities/reviewRequest/reviewRequest.entity.js';
 import type { ArgvCommandExecutor } from '@/shared/foundation/commandExecutor.js';
 import { createGuard } from '@/shared/foundation/guard.base.js';
@@ -8,7 +11,12 @@ import { createGuard } from '@/shared/foundation/guard.base.js';
 const OPEN_PULL_REQUEST_LIMIT = 1000;
 
 const openPullRequestsGuard = createGuard(
-  z.array(z.object({ number: z.number().int().positive() })),
+  z.array(
+    z.object({
+      number: z.number().int().positive(),
+      author: z.object({ login: z.string(), name: z.string() }),
+    }),
+  ),
   'githubOpenPullRequests',
 );
 
@@ -26,7 +34,7 @@ const STATE_BY_GITHUB_STATE: Record<'OPEN' | 'CLOSED' | 'MERGED', ReviewRequestS
 export class GitHubReviewRequestStateFetchGateway implements ReviewRequestStateFetchGateway {
   constructor(private readonly executor: ArgvCommandExecutor) {}
 
-  listOpenNumbers(project: string): number[] {
+  listOpen(project: string): OpenReviewRequest[] {
     const output = this.executor('gh', [
       'pr',
       'list',
@@ -35,11 +43,14 @@ export class GitHubReviewRequestStateFetchGateway implements ReviewRequestStateF
       '--state',
       'open',
       '--json',
-      'number',
+      'number,author',
       '--limit',
       String(OPEN_PULL_REQUEST_LIMIT),
     ]);
-    return openPullRequestsGuard.parse(JSON.parse(output)).map((pullRequest) => pullRequest.number);
+    return openPullRequestsGuard.parse(JSON.parse(output)).map((pullRequest) => ({
+      number: pullRequest.number,
+      author: { username: pullRequest.author.login, displayName: pullRequest.author.name || null },
+    }));
   }
 
   fetchState(project: string, reviewRequestNumber: number): ReviewRequestState {
