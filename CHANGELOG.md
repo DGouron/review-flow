@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.58.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.57.1...reviewflow-v3.58.0) (2026-11-26)
+
+
+### Added
+
+* **dashboard:** implement spec-234 monitoring tab ([#450](https://github.com/DGouron/review-flow/issues/450)) ([aa2f286](https://github.com/DGouron/review-flow/commit/aa2f28634676e57e967f80f1fdc2f2d80d2ece89))
+
+
+### Fixed
+
+* [#452](https://github.com/DGouron/review-flow/issues/452) review queue shows the creator of each GitHub pull request ([#454](https://github.com/DGouron/review-flow/issues/454)) ([aba49b7](https://github.com/DGouron/review-flow/commit/aba49b74f717899d393fe64b09bd2281ee7d7471))
+* [#453](https://github.com/DGouron/review-flow/issues/453) dispatch never crashes the daemon on a large prompt ([#456](https://github.com/DGouron/review-flow/issues/456)) ([acdae12](https://github.com/DGouron/review-flow/commit/acdae12d32b0caf0e7a0b53a072d2a972d8ef2d2))
+* [#457](https://github.com/DGouron/review-flow/issues/457) transcript reader keeps only the assistant answer ([#460](https://github.com/DGouron/review-flow/issues/460)) ([b2ce7cc](https://github.com/DGouron/review-flow/commit/b2ce7cc6b8fe53c03ccc4dad909113615f151a93))
+* [#458](https://github.com/DGouron/review-flow/issues/458) transcript readers find the folder Claude writes for any project path ([#461](https://github.com/DGouron/review-flow/issues/461)) ([0bbf31a](https://github.com/DGouron/review-flow/commit/0bbf31a9e142656862a5d1418e9f46c9f5b0c0b9))
+* [#459](https://github.com/DGouron/review-flow/issues/459) claude session gateway never rejects when claude cannot be spawned ([#462](https://github.com/DGouron/review-flow/issues/462)) ([aacd6fb](https://github.com/DGouron/review-flow/commit/aacd6fb709229e4c7751be39c67c9abf9902d497))
+
+
+### Changed
+
+* **ember:** group transport session settings and label brief sessions ([#455](https://github.com/DGouron/review-flow/issues/455)) ([ebf0c0a](https://github.com/DGouron/review-flow/commit/ebf0c0afa3888d5a1ec451ce0cad53e3f9fb2208))
+
 ## [3.57.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.57.0...reviewflow-v3.57.1) (2026-11-26)
 
 
