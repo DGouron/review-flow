@@ -451,10 +451,12 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
     new ClaudeSessionCliGateway(defaultProcessRunner()),
     {
       homeDir: homedir(),
-      buildMcpConfig: () => '{"mcpServers":{}}',
-      toolPolicy: {
-        allowedTools: 'Read,Glob,Grep',
-        disallowedTools: 'Edit,Write,Bash,Task,WebFetch,WebSearch,NotebookEdit',
+      session: {
+        buildMcpConfig: () => '{"mcpServers":{}}',
+        toolPolicy: {
+          allowedTools: 'Read,Glob,Grep',
+          disallowedTools: 'Edit,Write,Bash,Task,WebFetch,WebSearch,NotebookEdit',
+        },
       },
     },
   );
@@ -873,7 +875,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Dependencies): 
   });
   const emberAnswerTransport = new EmberAnswerTransportClaudeGateway(
     new ClaudeSessionCliGateway(defaultProcessRunner()),
-    { homeDir: homedir(), buildMcpConfig: buildMcpConfigJson },
+    { homeDir: homedir(), session: { buildMcpConfig: buildMcpConfigJson } },
   );
   const emberMemory = new EmberMemoryFileSystemGateway({ homeDir: homedir() });
 
