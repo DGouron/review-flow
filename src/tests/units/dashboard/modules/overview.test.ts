@@ -43,16 +43,17 @@ describe('renderOverviewHtml', () => {
     expect(html).toContain('href="#"');
   });
 
-  it('renders the three sections with their LABEL prefix headings', () => {
+  it('renders the three sections with plain headings, without "//" prefixes', () => {
     const html = renderOverviewHtml({
       activeReviews: { items: [], isEmpty: true, emptyMessage: 'Aucune review en cours' },
       projectCards: { items: [], isEmpty: true, emptyMessage: 'Aucun projet configuré' },
       recentReviewsFeed: { items: [], isEmpty: true, emptyMessage: 'Aucune review récente' },
     });
 
-    expect(html).toContain('// ACTIVE REVIEWS');
-    expect(html).toContain('// PROJECTS');
-    expect(html).toContain('// RECENT REVIEWS');
+    expect(html).toContain('Active reviews');
+    expect(html).toContain('Projects');
+    expect(html).toContain('Recent reviews');
+    expect(html).not.toContain('//');
   });
 
   it('renders the empty message for each section when isEmpty is true', () => {
@@ -119,7 +120,7 @@ describe('renderOverviewHtml', () => {
     expect(html).toContain('data-project-path="/repos/frontend"');
     expect(html).toContain('frontend');
     expect(html).toContain('24 reviews');
-    expect(html).toContain('Prêtes 72%');
+    expect(html).toContain('Ready 72%');
     expect(html).toContain('<polyline');
   });
 
@@ -146,7 +147,7 @@ describe('renderOverviewHtml', () => {
 
     expect(html).not.toContain('<polyline');
     expect(html).toContain('0 reviews');
-    expect(html).toContain('Prêtes -');
+    expect(html).toContain('Ready -');
   });
 
   it('renders an external-link anchor on the project card when externalLink is an HTTPS url (SPEC-179)', () => {

@@ -32,66 +32,21 @@ describe('SPEC-178 — Reposition Project Tabs Above Cards + Project-Contextual 
     stylesCss = readFileSync(STYLES_CSS_PATH, 'utf-8');
   });
 
-  describe('Layout — markup moved out of sidebar into project-bar', () => {
-    it('dashboard-tabs is NOT inside dashboard-sidebar', () => {
-      const sidebarMatch = indexHtml.match(/<aside class="dashboard-sidebar"[\s\S]*?<\/aside>/);
-      expect(sidebarMatch).not.toBeNull();
-      const sidebarBlock = sidebarMatch?.[0] ?? '';
-      expect(sidebarBlock).not.toMatch(/id="dashboard-tabs"/);
+  // SPEC-230 superseded the project bar and the card counters: the project tabs
+  // now live in the header project switcher and the queue tabs are the only counters.
+  describe('Layout — project tabs stay together, outside any sidebar', () => {
+    it('dashboard-tabs, manage-projects-toggle and manage-panel sit in the project switcher', () => {
+      const switcherStart = indexHtml.indexOf('<div id="project-switcher-panel"');
+      const switcherEnd = indexHtml.indexOf('<nav id="view-nav"');
+      const switcherBlock = indexHtml.slice(switcherStart, switcherEnd);
+      expect(switcherStart).toBeGreaterThan(-1);
+      expect(switcherBlock).toMatch(/id="dashboard-tabs"/);
+      expect(switcherBlock).toMatch(/id="manage-projects-toggle"/);
+      expect(switcherBlock).toMatch(/id="manage-panel"/);
     });
 
-    it('dashboard-tabs is inside project-bar', () => {
-      const projectBarMatch = indexHtml.match(
-        /<div class="project-bar"[\s\S]*?<\/div>\s*(?=<div|<section|<main|<aside)/,
-      );
-      expect(projectBarMatch).not.toBeNull();
-      expect(projectBarMatch?.[0]).toMatch(/id="dashboard-tabs"/);
-    });
-
-    it('manage-projects-toggle and manage-panel are co-located inside project-bar', () => {
-      const projectBarMatch = indexHtml.match(
-        /<div class="project-bar"[\s\S]*?<\/div>\s*(?=<div|<section|<main|<aside)/,
-      );
-      const projectBarBlock = projectBarMatch?.[0] ?? '';
-      expect(projectBarBlock).toMatch(/id="manage-projects-toggle"/);
-      expect(projectBarBlock).toMatch(/id="manage-panel"/);
-    });
-
-    it('sidebar is slimmed: no dashboard-tabs, manage-projects-toggle, or manage-panel inside it', () => {
-      const sidebarMatch = indexHtml.match(/<aside class="dashboard-sidebar"[\s\S]*?<\/aside>/);
-      expect(sidebarMatch).not.toBeNull();
-      const sidebarBlock = sidebarMatch?.[0] ?? '';
-      expect(sidebarBlock).not.toMatch(/id="dashboard-tabs"/);
-      expect(sidebarBlock).not.toMatch(/id="manage-projects-toggle"/);
-      expect(sidebarBlock).not.toMatch(/id="manage-panel"/);
-    });
-
-    it('exactly one project-bar container exists in index.html', () => {
-      const matches = indexHtml.match(/class="project-bar"/g) ?? [];
-      expect(matches.length).toBe(1);
-    });
-  });
-
-  describe('Scope marker — present and defaults to TOUS LES PROJETS', () => {
-    it('cards-scope-marker element is present in index.html', () => {
-      expect(indexHtml).toMatch(/id="cards-scope-marker"/);
-    });
-
-    it('cards-scope-marker initial label is "TOUS LES PROJETS"', () => {
-      const markerMatch = indexHtml.match(/id="cards-scope-marker"[\s\S]*?<\/div>/);
-      expect(markerMatch).not.toBeNull();
-      expect(markerMatch?.[0]).toMatch(/TOUS LES PROJETS/);
-    });
-  });
-
-  describe('Script wiring — helper imported and called', () => {
-    it('renderCardCounters is wired and computeCardCounters is referenced', () => {
-      expect(indexHtml).toMatch(/renderCardCounters\(/);
-      expect(indexHtml).toMatch(/computeCardCounters/);
-    });
-
-    it('cardCounters helper is imported via relative path', () => {
-      expect(indexHtml).toMatch(/from\s+['"]\.\/modules\/cardCounters\.js['"]/);
+    it('declares the project tabs exactly once', () => {
+      expect(indexHtml.match(/id="dashboard-tabs"/g) ?? []).toHaveLength(1);
     });
   });
 

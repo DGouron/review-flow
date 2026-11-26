@@ -140,15 +140,43 @@ function renderUiLanguageSelect() {
 }
 
 /**
+ * Review settings shared by every project: they used to sit in the header.
+ *
+ * @param {{ model: string, triggerMode: string, reviewTimeout: { minutes: number, min: number, max: number } }} settings
+ * @returns {string}
+ */
+export function renderGlobalSettingsHtml(settings) {
+  const option = (value, labelKey, current) =>
+    `<option value="${escapeHtml(value)}"${value === current ? ' selected' : ''}>${escapeHtml(t(labelKey))}</option>`;
+  const timeout = settings.reviewTimeout;
+  return `
+    <fieldset class="settings-modal__field settings-modal__global">
+      <legend class="settings-modal__legend">${escapeHtml(t('settings.global.title'))}</legend>
+      <label class="settings-modal__field">
+        <span class="settings-modal__label">${escapeHtml(t('settings.global.model'))}</span>
+        <select id="model-select" class="settings-modal__select">${option('opus', 'model.opus', settings.model)}${option('sonnet', 'model.sonnet', settings.model)}</select>
+      </label>
+      <label class="settings-modal__field">
+        <span class="settings-modal__label">${escapeHtml(t('settings.global.trigger'))}</span>
+        <select id="trigger-mode-select" class="settings-modal__select">${option('full-auto', 'triggerMode.fullAuto', settings.triggerMode)}${option('semi-auto', 'triggerMode.semiAuto', settings.triggerMode)}</select>
+      </label>
+      <label class="settings-modal__field">
+        <span class="settings-modal__label">${escapeHtml(t('settings.global.timeout'))}</span>
+        <input id="review-timeout-input" class="settings-modal__input" type="number" step="5" value="${escapeHtml(String(timeout.minutes))}" min="${escapeHtml(String(timeout.min))}" max="${escapeHtml(String(timeout.max))}" />
+      </label>
+      ${renderUiLanguageSelect()}
+    </fieldset>
+  `.trim();
+}
+
+/**
  * @param {SettingsModalViewModel} viewModel
  * @returns {string}
  */
 export function renderSettingsModalHtml(viewModel) {
   return `
     <form class="settings-modal__form" method="dialog">
-      <h2 class="settings-modal__title" id="settings-modal-title">// SETTINGS — ${escapeHtml(viewModel.projectName)}</h2>
-
-      ${renderUiLanguageSelect()}
+      <h2 class="settings-modal__title" id="settings-modal-title">${escapeHtml(t('settings.project.title', { name: viewModel.projectName }))}</h2>
 
       <fieldset class="settings-modal__field">
         <legend class="settings-modal__legend">${escapeHtml(t('settings.claudePromptsLanguage'))}</legend>

@@ -6,293 +6,155 @@
   <title>Reviewflow Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="shell.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body>
-  <div class="container">
-    <header>
-      <div class="logo" aria-label="Reviewflow">
-        <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect class="logo-frame" x="2" y="2" width="40" height="40" rx="10"/>
-          <line class="logo-line" x1="10" y1="14" x2="26" y2="14"/>
-          <line class="logo-line logo-line--accent" x1="10" y1="22" x2="20" y2="22"/>
-          <line class="logo-line" x1="10" y1="30" x2="24" y2="30"/>
-          <path class="logo-check" d="M28 26 L31 29 L36 22"/>
-          <circle class="logo-pulse" cx="20" cy="22" r="1.7"/>
-        </svg>
+<body class="shell">
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </span>
+        <h1>Reviewflow</h1>
       </div>
-      <h1>Reviewflow</h1>
-      <div class="header-actions">
-        <div class="version-update-wrapper">
-          <div id="version-update-area" class="version-update-area"></div>
+      <div class="project-switcher">
+        <button type="button" id="project-switcher-toggle" class="btn btn-ghost" data-action="toggle-projects" aria-expanded="false" aria-controls="project-switcher-panel">
+          <span id="project-switcher-label" class="project-switcher-label"></span>
+          <i data-lucide="chevron-down"></i>
+        </button>
+        <div id="project-switcher-panel" class="popover popover-start" hidden>
+          <nav id="dashboard-tabs" class="dashboard-tab-bar-wrapper" aria-label="Projects"></nav>
+          <a href="/setup" class="setup-cta" id="setup-cta"><span id="i18n-setup-cta"></span></a>
+          <button type="button" id="manage-projects-toggle" class="manage-projects-toggle" aria-expanded="false" aria-controls="manage-panel">
+            <span class="manage-projects-toggle-label" id="i18n-manage-projects"></span>
+            <i data-lucide="chevron-down" class="manage-projects-toggle-icon"></i>
+          </button>
+          <section id="manage-panel" class="manage-panel" aria-label="Manage projects" data-open="false"></section>
+        </div>
+      </div>
+      <span class="separator" aria-hidden="true"></span>
+      <nav id="view-nav" class="view-nav" aria-label="Views"></nav>
+      <div class="grow"></div>
+      <div class="health">
+        <button type="button" id="health-pill" class="pill" data-action="toggle-health" aria-expanded="false" aria-controls="health-popover"></button>
+        <div id="health-popover" class="popover" role="dialog" aria-labelledby="health-popover-title" hidden>
+          <div class="popover-title" id="health-popover-title"></div>
+          <div id="health-lines"></div>
+          <div class="health-actions">
+            <button type="button" id="recheck-claude-btn" class="btn btn-ghost" data-action="recheck-claude"></button>
+            <div id="version-update-area" class="version-update-area"></div>
+          </div>
           <div id="version-manual-update-container"></div>
         </div>
-        <button id="check-claude-btn" class="btn btn-primary" onclick="checkClaudeStatus()">
-          <i data-lucide="search"></i> <span id="i18n-check-claude"></span>
-        </button>
-        <button id="toggle-logs-btn" class="btn btn-secondary" onclick="toggleLogs()">
-          <i data-lucide="scroll-text"></i> <span id="i18n-logs-btn"></span>
-        </button>
-        <span id="header-capacity-badge-slot"></span>
-        <div id="server-status" class="status-indicator connecting">
-          <span class="status-dot"></span>
-          <span id="i18n-server-status"></span>
-        </div>
       </div>
-    </header>
+      <span id="header-capacity-badge-slot"></span>
+      <button type="button" id="toggle-logs-btn" class="btn btn-icon" onclick="toggleLogs()"><i data-lucide="scroll-text"></i></button>
+      <button type="button" id="open-economics-sheet-btn" class="btn btn-icon" onclick="openEconomicsSheet()"><i data-lucide="circuit-board"></i></button>
+      <button type="button" id="open-settings-modal-btn" class="btn btn-icon"><i data-lucide="sliders-horizontal"></i></button>
+    </div>
+  </header>
 
-    <div class="project-bar" role="region" aria-label="Project navigation">
-      <a href="/setup" class="setup-cta" id="setup-cta">
-        <span class="setup-cta-label">// SETUP REQUIRED</span>
-        <span class="setup-cta-action">Lancer le wizard</span>
-      </a>
-      <button type="button" id="manage-projects-toggle" class="manage-projects-toggle" aria-expanded="false" aria-controls="manage-panel">
-        <span class="manage-projects-toggle-label">// MANAGE PROJECTS</span>
-        <i data-lucide="chevron-down" class="manage-projects-toggle-icon"></i>
-      </button>
-      <section id="manage-panel" class="manage-panel" aria-label="Manage projects" data-open="false"></section>
-      <nav id="dashboard-tabs" class="dashboard-tab-bar-wrapper" aria-label="Project tabs"></nav>
-      <div class="context-chips" aria-label="Toolchain status">
-        <div class="toolchain-chip">
-          <span class="toolchain-chip-label" id="i18n-card-claude-cli"></span>
-          <div id="claude-status" class="card-claude checking">
-            <span class="status" id="i18n-claude-checking"></span>
-            <span class="version"></span>
-          </div>
-        </div>
-        <div class="toolchain-chip" id="git-cli-card">
-          <span class="toolchain-chip-label" id="git-cli-label"></span>
-          <div id="git-cli-status" class="card-claude checking">
-            <span class="status" id="i18n-git-load-project"></span>
-            <span class="version"></span>
-          </div>
-        </div>
-        <div class="toolchain-chip toolchain-chip-model">
-          <span class="toolchain-chip-label" id="i18n-card-model"></span>
-          <select id="model-select" class="model-select" onchange="changeModel(this.value)">
-            <option value="opus" id="i18n-model-opus"></option>
-            <option value="sonnet" id="i18n-model-sonnet"></option>
-          </select>
-        </div>
-        <div class="toolchain-chip toolchain-chip-model">
-          <span class="toolchain-chip-label" id="i18n-card-trigger-mode"></span>
-          <select id="trigger-mode-select" class="model-select" onchange="changeTriggerMode(this.value)">
-            <option value="full-auto" id="i18n-trigger-mode-full-auto"></option>
-            <option value="semi-auto" id="i18n-trigger-mode-semi-auto"></option>
-          </select>
-        </div>
-        <div class="toolchain-chip toolchain-chip-model">
-          <span class="toolchain-chip-label" id="i18n-card-review-timeout"></span>
-          <input id="review-timeout-input" class="model-select" type="number" min="5" max="480" step="5" onchange="changeReviewTimeout(this.value)" />
-        </div>
-      </div>
+  <div class="wrap shell-main">
+    <div id="claude-login-section" class="notice notice-danger hidden">
+      <strong><i data-lucide="alert-triangle"></i> <span id="i18n-claude-login-title"></span></strong>
+      <p id="i18n-claude-login-instruction"></p>
+      <p><code>claude login</code></p>
+      <p id="i18n-claude-login-reload"></p>
     </div>
 
-    <div id="cards-scope-marker" class="cards-scope-marker" data-scope-kind="overview">
-      <span class="cards-scope-prefix">// SCOPE</span>
-      <span class="cards-scope-label">TOUS LES PROJETS</span>
+    <div id="git-login-section" class="notice notice-danger hidden">
+      <strong id="git-login-title"><i data-lucide="alert-triangle"></i> <span id="i18n-git-login-title"></span></strong>
+      <div id="git-login-instructions"></div>
     </div>
 
-    <div class="cards">
-      <div class="card card-priority">
-        <div class="card-label" id="i18n-card-running"></div>
-        <div id="running-count" class="card-value running">-</div>
-      </div>
-      <div class="card card-priority">
-        <div class="card-label" id="i18n-card-queued"></div>
-        <div id="queued-count" class="card-value queued">-</div>
-      </div>
-      <div class="card">
-        <div class="card-label" id="i18n-card-completed"></div>
-        <div id="completed-count" class="card-value">-</div>
-      </div>
-    </div>
+    <div class="shell-body">
+      <main class="shell-content">
+        <div id="view-queue" class="view" data-view="queue">
+          <div id="live-reviews" class="live-reviews"></div>
 
-    <div class="dashboard-layout">
-      <aside class="dashboard-sidebar" aria-label="Project tools">
-        <div class="sidebar-tool-buttons">
-          <button type="button" id="open-settings-modal-btn" class="sidebar-settings-button" hidden>
-            <span class="sidebar-settings-button__prefix">// SETTINGS</span>
-          </button>
-          <button type="button" id="open-economics-sheet-btn" class="sidebar-settings-button" onclick="openEconomicsSheet()">
-            <span class="sidebar-settings-button__prefix">// ECONOMICS</span>
-          </button>
-          <button type="button" id="open-stats-sheet-btn" class="sidebar-settings-button" onclick="openStatsSheet()" disabled aria-disabled="true">
-            <span class="sidebar-settings-button__prefix">// STATS</span>
-          </button>
-        </div>
-
-        <span id="config-status" class="config-status hidden"></span>
-
-        <section id="ember-chat-panel" class="ember-chat-panel" aria-label="Ember">
-          <div class="ember-chat-panel__header">
-            <span class="ember-chat-panel__prefix">// EMBER</span>
-            <canvas id="ember-avatar" class="ember-chat-panel__avatar" width="360" height="360" aria-hidden="true"></canvas>
-          </div>
-          <div id="ember-thread" class="ember-chat-panel__thread" role="log" aria-live="polite" aria-label="Conversation Ember"></div>
-          <div id="ember-status" class="ember-chat-panel__status visually-hidden" role="status" aria-live="polite"></div>
-          <button type="button" id="ember-retry" class="ember-chat-panel__retry" hidden>// RÉESSAYER</button>
-          <form id="ember-form" class="ember-chat-panel__form" autocomplete="off">
-            <label class="visually-hidden" for="ember-question">Posez une question à Ember</label>
-            <input
-              type="text"
-              id="ember-question"
-              class="ember-chat-panel__input"
-              placeholder="Posez une question sur vos reviews…"
-            />
-          </form>
-        </section>
-
-        <section id="worktree-section" aria-label="Worktree pool"></section>
-      </aside>
-
-      <main class="dashboard-main">
-        <div id="team-section" class="section hidden">
-          <div class="section-header clickable" onclick="toggleTeamSection()" role="button" tabindex="0" onkeydown="activateOnKeydown(event)">
-            <i data-lucide="users"></i> <span id="i18n-section-team"></span>
-            <span id="team-toggle" class="toggle-icon collapsed"><i data-lucide="chevron-down"></i></span>
-          </div>
-          <div id="team-tab-content" class="section-content hidden">
-            <div class="empty-state" id="i18n-empty-team"></div>
-          </div>
-        </div>
-
-        <div class="focus-strip attention-strip" aria-label="Attention indicators">
-          <div class="focus-chip focus-now">
-            <div class="focus-copy">
-              <span class="focus-label" id="i18n-strip-now"></span>
-              <span class="focus-meta" id="i18n-strip-now-meta"></span>
+          <div class="card section hidden" id="pending-reviews-section">
+            <div class="section-header">
+              <i data-lucide="hourglass"></i> <span id="i18n-section-pending-reviews"></span>
+              <span id="pending-reviews-count" class="count hidden">0</span>
             </div>
-            <span class="focus-value" id="focus-now-count">-</span>
+            <div id="pending-reviews" class="section-content"></div>
           </div>
-          <div class="focus-chip focus-next">
-            <div class="focus-copy">
-              <span class="focus-label" id="i18n-strip-next"></span>
-              <span class="focus-meta" id="i18n-strip-next-meta"></span>
+
+          <section id="size-block-section" class="size-block-section" aria-label="Merge requests blocked for size"></section>
+
+          <section id="overview-section" class="overview-section" aria-label="Multi-project overview"></section>
+
+          <section id="review-queue" class="card review-queue"></section>
+
+          <details id="completed-reviews-section" class="card completed-reviews">
+            <summary><i data-lucide="file-check"></i> <span id="i18n-section-completed-reviews"></span></summary>
+            <div id="merged-reviews" class="section-content"></div>
+            <div id="recent-reviews" class="section-content"></div>
+          </details>
+
+          <div id="data-loading-state" class="data-loading hidden" role="status" aria-live="polite">
+            <i data-lucide="loader-circle"></i>
+            <span id="i18n-loading-data"></span>
+          </div>
+        </div>
+
+        <div id="view-team" class="view" data-view="team" hidden>
+          <div id="team-section" class="team-view">
+            <div class="view-header">
+              <h2 id="i18n-section-team"></h2>
+              <button type="button" id="open-stats-sheet-btn" class="btn btn-ghost" onclick="openStatsSheet()" disabled aria-disabled="true"><i data-lucide="bar-chart-3"></i> <span id="i18n-open-stats"></span></button>
             </div>
-            <span class="focus-value" id="focus-next-count">-</span>
-          </div>
-          <div class="focus-chip focus-blocked">
-            <div class="focus-copy">
-              <span class="focus-label" id="i18n-strip-blocked"></span>
-              <span class="focus-meta" id="i18n-strip-blocked-meta"></span>
+            <div id="team-tab-content" class="section-content">
+              <div class="empty-state" id="i18n-empty-team"></div>
             </div>
-            <span class="focus-value" id="focus-blocked-count">-</span>
-          </div>
-          <button id="focus-strip-toggle" class="focus-toggle-btn" onclick="toggleFocusStripMode()"></button>
-        </div>
-
-        <section id="size-block-section" class="size-block-section" aria-label="Merge requests blocked for size"></section>
-
-        <section id="overview-section" class="overview-section" aria-label="Multi-project overview"></section>
-
-        <div id="data-loading-state" class="data-loading hidden" role="status" aria-live="polite">
-          <i data-lucide="loader-circle"></i>
-          <span id="i18n-loading-data"></span>
-        </div>
-
-        <div id="config-info" class="config-info hidden"></div>
-
-        <div id="claude-login-section" class="login-instructions hidden">
-          <strong><i data-lucide="alert-triangle"></i> <span id="i18n-claude-login-title"></span></strong>
-          <p style="margin-top: 0.5rem;" id="i18n-claude-login-instruction"></p>
-          <p style="margin-top: 0.5rem;"><code>claude login</code></p>
-          <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #a1a1aa;" id="i18n-claude-login-reload"></p>
-        </div>
-
-        <div id="git-login-section" class="login-instructions hidden">
-          <strong id="git-login-title"><i data-lucide="alert-triangle"></i> <span id="i18n-git-login-title"></span></strong>
-          <div style="margin-top: 0.75rem;" id="git-login-instructions"></div>
-        </div>
-
-        <div class="section hidden" id="pending-reviews-section">
-          <div class="section-header">
-            <i data-lucide="hourglass"></i> <span id="i18n-section-pending-reviews"></span>
-            <span id="pending-reviews-count" class="badge-count hidden">0</span>
-          </div>
-          <div id="pending-reviews" class="section-content"></div>
-        </div>
-
-        <div id="logs-section" class="section hidden">
-          <div class="section-header">
-            <i data-lucide="scroll-text"></i> <span id="i18n-section-logs"></span>
-            <span id="error-count" class="badge-count hidden"></span>
-          </div>
-          <div id="logs-content" class="section-content logs">
-            <div class="empty-state" id="i18n-empty-logs"></div>
           </div>
         </div>
 
-        <div class="section hidden" id="active-reviews-section">
-          <div class="section-header">
-            <i data-lucide="file-search"></i> <span id="i18n-section-active-reviews"></span>
-            <span id="active-reviews-count" class="badge-count hidden">0</span>
-          </div>
-          <div id="active-reviews" class="section-content"></div>
-        </div>
-
-        <div class="section hidden" id="active-followups-section">
-          <div class="section-header clickable" onclick="toggleSection('active-followups-section')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)">
-            <i data-lucide="refresh-cw"></i> <span id="i18n-section-active-followups"></span>
-            <span id="active-followups-count" class="badge-count hidden">0</span>
-            <span class="section-toggle collapsed"><i data-lucide="chevron-down"></i></span>
-          </div>
-          <div id="active-followups" class="section-content">
-            <div class="empty-state" id="i18n-empty-active-followups"></div>
-          </div>
-        </div>
-
-        <div class="section hidden" id="pending-fix-section">
-          <div class="section-header">
-            <i data-lucide="wrench"></i> <span id="i18n-section-pending-fix"></span>
-            <span id="pending-fix-count" class="badge-count hidden">0</span>
-            <button id="sync-threads-btn" class="btn-icon btn-sync" onclick="syncGitLabThreads()">
-              <i data-lucide="refresh-cw"></i>
-            </button>
-          </div>
-          <div id="pending-fix-reviews" class="section-content">
-            <div class="empty-state" id="i18n-empty-pending-fix"></div>
-          </div>
-        </div>
-
-        <div class="section hidden" id="pending-approval-section">
-          <div class="section-header clickable" onclick="toggleSection('pending-approval-section')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)">
-            <i data-lucide="circle-check"></i> <span id="i18n-section-pending-approval"></span>
-            <span id="pending-approval-count" class="badge-count hidden">0</span>
-            <span class="section-toggle collapsed"><i data-lucide="chevron-down"></i></span>
-          </div>
-          <div id="pending-approval-reviews" class="section-content">
-            <div class="empty-state" id="i18n-empty-pending-approval"></div>
-          </div>
-        </div>
-
-        <div class="section" id="completed-reviews-section">
-          <div class="section-header clickable" onclick="toggleSection('completed-reviews-section')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)">
-            <i data-lucide="file-check"></i> <span id="i18n-section-completed-reviews"></span>
-            <span class="section-toggle collapsed"><i data-lucide="chevron-down"></i></span>
-          </div>
-          <div id="merged-reviews" class="section-content"></div>
-          <div id="recent-reviews" class="section-content">
-            <div class="empty-state" id="i18n-empty-loading"></div>
-          </div>
-        </div>
-
-        <div class="section" id="cleanup-section">
-          <div class="section-header">
-            <i data-lucide="trash-2"></i> <span>Nettoyage</span>
-          </div>
-          <div class="section-content" id="cleanup-content"></div>
-        </div>
-
-        <div class="refresh-info">
-          <span id="connection-mode"></span> • <span id="i18n-connection-fallback"></span>
-          <span class="refresh-separator"> • </span>
-          <span id="session-metrics"></span>
+        <div id="view-worktrees" class="view" data-view="worktrees" hidden>
+          <section id="worktree-section" aria-label="Worktree pool"></section>
+          <section class="card section" id="cleanup-section">
+            <div class="section-header">
+              <i data-lucide="trash-2"></i> <span id="i18n-section-cleanup"></span>
+            </div>
+            <div class="section-content" id="cleanup-content"></div>
+          </section>
         </div>
       </main>
+
+      <aside class="card side-panel" id="side-panel" aria-label="Side panel">
+        <div id="panel-tabs" class="segments" role="tablist"></div>
+        <div id="panel-pr" class="panel-pr" role="tabpanel"></div>
+        <section id="ember-chat-panel" class="ember-chat-panel" role="tabpanel" aria-label="Ember" hidden>
+          <div class="ember-chat-panel__header">
+            <canvas id="ember-avatar" class="ember-chat-panel__avatar" width="360" height="360" aria-hidden="true"></canvas>
+            <div>
+              <div class="ember-chat-panel__name" id="i18n-ember-title"></div>
+              <div class="ember-chat-panel__subtitle" id="i18n-ember-subtitle"></div>
+            </div>
+          </div>
+          <div id="ember-thread" class="ember-chat-panel__thread" role="log" aria-live="polite" aria-label="Ember"></div>
+          <div id="ember-suggestions" class="ember-chat-panel__suggestions"></div>
+          <div id="ember-status" class="ember-chat-panel__status visually-hidden" role="status" aria-live="polite"></div>
+          <button type="button" id="ember-retry" class="btn btn-ghost ember-chat-panel__retry" hidden></button>
+          <form id="ember-form" class="ember-chat-panel__form" autocomplete="off">
+            <span id="ember-context" class="ember-context" hidden></span>
+            <label class="visually-hidden" for="ember-question" id="i18n-ember-input-label"></label>
+            <input type="text" id="ember-question" class="ember-chat-panel__input" />
+            <button type="submit" class="btn btn-primary" id="i18n-ember-send"></button>
+          </form>
+        </section>
+      </aside>
     </div>
+
+    <footer class="shell-footer">
+      <span class="footer-item"><span id="connection-dot" class="dot dot-checking" aria-hidden="true"></span><span id="connection-mode"></span></span>
+      <span id="config-status" class="config-status hidden"></span>
+      <div id="config-info" class="config-info hidden"></div>
+      <span id="session-metrics" class="footer-item"></span>
+    </footer>
   </div>
 
   <div id="cancel-modal" class="modal-overlay hidden" onclick="closeCancelModal(event)">
@@ -364,10 +226,8 @@
     </div>
   </div>
 
-
   <dialog id="settings-modal" class="settings-modal" aria-labelledby="settings-modal-title"></dialog>
 
-  <!-- UI language select — kept in DOM for JS wiring; visual control lives in settings modal -->
   <select id="language-select" style="display:none" aria-hidden="true" onchange="changeLanguage(this.value)">
     <option value="en">English</option>
     <option value="fr">Français</option>
@@ -376,36 +236,18 @@
   <script type="module">
     import { t, setLanguage, getLanguage } from './modules/i18n.js';
     import { formatTime, formatDuration, formatPhase, formatLogTime } from './modules/formatting.js';
-    import {
-      reducedMotion,
-      animateMount,
-      animateCounter as animateCounterValue,
-      slideTabUnderline,
-      heartbeat,
-      pulseLive,
-      springIn,
-      liftCard,
-      unliftCard,
-      pulseStatusDot,
-      breatheLogo,
-      crossFadeTab,
-      toggleHeight,
-    } from './modules/animations.js';
+    import { springIn } from './modules/animations.js';
     import { escapeHtml, markdownToHtml, sanitizeHttpUrl } from './modules/html.js';
     import { getAgentIcon, icon, refreshIcons } from './modules/icons.js';
-    import { MAX_RECONNECT_ATTEMPTS, RECONNECT_DELAY, STORAGE_KEY_CURRENT, STORAGE_KEY_FOCUS_STRIP_MODE, STORAGE_KEY_NOW_LANE_COLLAPSED, DEFAULT_TARGET_GRADE } from './modules/constants.js';
+    import { MAX_RECONNECT_ATTEMPTS, RECONNECT_DELAY, STORAGE_KEY_CURRENT, DEFAULT_TARGET_GRADE } from './modules/constants.js';
     import { buildTabBarModel, renderTabBarHtml, readActiveTab, writeActiveTab } from './modules/tabBar.js';
     import { buildManagePanelModel, renderManagePanelHtml, buildOptimisticAddedRow, validateLocalPathInput } from './modules/managePanel.js';
     import { renderOverviewHtml } from './modules/overview.js';
     import { getDesktopNotificationPayload, shouldNotifyDesktop } from './modules/desktopNotifications.js';
     import { getLoadingPresentation, getQuietRefreshSectionIdentifiers } from './modules/loading.js';
-    import { shouldHideActiveReviewsSection, shouldHidePendingReviewsSection } from './modules/sectionVisibility.js';
-    import { computeCardCounters, extractGithubSlug } from './modules/cardCounters.js';
+    import { shouldHidePendingReviewsSection } from './modules/sectionVisibility.js';
     import { collectReviewNotifications, createReviewNotificationState } from './modules/notifications.js';
-    import { resolveReviewAssigneeDisplay } from './modules/assignee.js';
-    import { buildQueueLanesModel } from './modules/queueLanes.js';
     import { rankPendingFixForNowLane } from './modules/priority.js';
-    import { outcomeOfReviewEvent, latestOutcomeOf, qualityViewOf } from './modules/quality.js';
     import { createSessionMetricsState, trackSessionAction, updatePriorityItemTracking, getSessionMetricsSnapshot } from './modules/sessionMetrics.js';
     import { renderCleanupSection, handleCleanupClick } from './modules/cleanup.js';
     import { renderVersionUpdateArea, setVersionCheckState, resolveRefusalWording } from './modules/versionUpdate.js';
@@ -426,6 +268,7 @@
       triggerForceCleanup,
       snapshotTotals,
       computeChangedMetricKeys,
+      formatBytes,
     } from './modules/worktreePanel.js';
     import {
       parseBudgetStatusMessage,
@@ -437,6 +280,7 @@
     } from './modules/budgetSettings.js';
     import {
       buildSettingsViewModel,
+      renderGlobalSettingsHtml,
       renderSettingsModalHtml,
       validateExternalLink,
       validateQualityThreshold,
@@ -454,7 +298,13 @@
       buildHeaderCapacityViewModel,
       renderHeaderCapacityBadgeHtml,
     } from './modules/headerCapacityBadge.js';
-    import { connectEmberStream, shouldSendQuestion } from './modules/emberChat.js';
+    import { connectEmberStream, contextualQuestion, shouldSendQuestion } from './modules/emberChat.js';
+    import { buildReviewQueueModel, projectSlugOf } from './modules/reviewQueue.js';
+    import { renderReviewQueueHtml } from './modules/reviewQueueView.js';
+    import { buildPrDetailModel, renderPanelTabsHtml, renderPrDetailHtml } from './modules/prDetailPanel.js';
+    import { buildLiveReviewsModel, formatElapsed, renderLiveReviewsHtml } from './modules/liveReviews.js';
+    import { buildHealthModel, renderHealthLinesHtml, renderHealthPillHtml } from './modules/healthPill.js';
+    import { normalizeView, readActiveView, renderViewNavHtml, writeActiveView } from './modules/viewNavigation.js';
     import { mountEmberAvatar } from './modules/emberAvatarRenderer.js';
 
     const API_URL = window.location.origin;
@@ -469,20 +319,10 @@
     const mrDataStore = new Map();
     let loadedReviews = {};
     let currentStatsReviews = [];
-    let focusStripCompact = false;
-    let teamCollapsed = true;
     let currentInsightsData = null;
     const loadingState = { status: 0, reviewFiles: 0, stats: 0, mrTracking: 0 };
     let hasLoadedStatusOnce = false;
-    const secondarySections = ['active-followups-section', 'pending-approval-section', 'completed-reviews-section'];
-    const sectionExpandedState = Object.fromEntries(secondarySections.map((sectionIdentifier) => [sectionIdentifier, false]));
-    let nowLaneCollapsed = false;
-    const quietRefreshSections = [
-      'active-reviews-section',
-      'active-followups-section',
-      'completed-reviews-section',
-      'pending-fix-section',
-    ];
+    const quietRefreshSections = ['review-queue', 'completed-reviews-section'];
     const loadingLabelBySource = {
       status: 'loading.status',
       reviewFiles: 'loading.reviewFiles',
@@ -497,77 +337,6 @@
 
     let sessionMetrics = createSessionMetricsState(Date.now());
     let reviewNotificationState = createReviewNotificationState();
-
-    function applyFocusStripMode() {
-      const strip = document.querySelector('.focus-strip');
-      if (strip) {
-        strip.classList.toggle('compact', focusStripCompact);
-      }
-      document.body.classList.toggle('compact-density', focusStripCompact);
-      const toggleBtn = document.getElementById('focus-strip-toggle');
-      if (toggleBtn) {
-        toggleBtn.textContent = focusStripCompact ? t('strip.modeDetailed') : t('strip.modeCompact');
-        toggleBtn.setAttribute('aria-pressed', focusStripCompact ? 'true' : 'false');
-      }
-    }
-
-    function loadFocusStripMode() {
-      const mode = localStorage.getItem(STORAGE_KEY_FOCUS_STRIP_MODE);
-      focusStripCompact = mode === 'compact';
-      applyFocusStripMode();
-    }
-
-    function toggleFocusStripMode() {
-      focusStripCompact = !focusStripCompact;
-      localStorage.setItem(STORAGE_KEY_FOCUS_STRIP_MODE, focusStripCompact ? 'compact' : 'detailed');
-      applyFocusStripMode();
-    }
-
-    function applySectionExpansion(sectionIdentifier) {
-      const section = document.getElementById(sectionIdentifier);
-      if (!section) return;
-      const content = section.querySelector('.section-content');
-      const toggle = section.querySelector('.section-toggle');
-      if (!content) return;
-
-      const expanded = sectionExpandedState[sectionIdentifier] === true;
-      content.classList.toggle('hidden', !expanded);
-      section.classList.toggle('section-collapsed', !expanded);
-      if (toggle) {
-        toggle.classList.toggle('collapsed', !expanded);
-      }
-    }
-
-    function toggleSection(sectionIdentifier) {
-      if (!(sectionIdentifier in sectionExpandedState)) return;
-      sectionExpandedState[sectionIdentifier] = !sectionExpandedState[sectionIdentifier];
-      applySectionExpansion(sectionIdentifier);
-      refreshIcons();
-    }
-
-    function applyNowLaneCollapsed() {
-      const lane = document.getElementById('queue-lane-now');
-      if (!lane) return;
-      const body = document.getElementById('queue-lane-now-body');
-      const header = lane.querySelector('.queue-lane-header');
-      const toggle = lane.querySelector('.queue-lane-toggle');
-      if (body) body.classList.toggle('hidden', nowLaneCollapsed);
-      if (toggle) toggle.classList.toggle('collapsed', nowLaneCollapsed);
-      if (header) header.setAttribute('aria-expanded', nowLaneCollapsed ? 'false' : 'true');
-    }
-
-    function loadNowLaneCollapsed() {
-      const value = localStorage.getItem(STORAGE_KEY_NOW_LANE_COLLAPSED);
-      nowLaneCollapsed = value === 'collapsed';
-      applyNowLaneCollapsed();
-    }
-
-    function toggleNowLane() {
-      nowLaneCollapsed = !nowLaneCollapsed;
-      localStorage.setItem(STORAGE_KEY_NOW_LANE_COLLAPSED, nowLaneCollapsed ? 'collapsed' : 'expanded');
-      applyNowLaneCollapsed();
-      refreshIcons();
-    }
 
     function setLoadingFlag(source, isLoading) {
       if (!(source in loadingState)) return;
@@ -773,128 +542,6 @@
       });
     }
 
-    function renderAgentTimeline(progress) {
-      if (!progress?.agents?.length) return '';
-      const allowedAgentStatuses = new Set(['running', 'completed', 'failed', 'pending', 'queued']);
-      const agentsHtml = progress.agents.map(agent => `
-        <div class="agent-box ${allowedAgentStatuses.has(agent.status) ? agent.status : 'queued'}" title="${escapeHtml(agent.displayName)}: ${escapeHtml(agent.status)}">
-          <span class="agent-icon">${getAgentIcon(agent.status)}</span>
-          <span class="agent-name">${escapeHtml(agent.displayName)}</span>
-        </div>
-      `).join('');
-      return `<div class="agent-timeline">${agentsHtml}</div>`;
-    }
-
-    function renderProgressBar(progress) {
-      if (!progress) return '';
-      const overallProgress = typeof progress.overallProgress === 'number'
-        ? Math.max(0, Math.min(100, progress.overallProgress))
-        : 0;
-      return `
-        <div class="progress-container">
-          <div class="progress-bar-wrapper">
-            <div class="progress-bar">
-              <div class="progress-bar-fill" style="width: ${overallProgress}%"></div>
-            </div>
-            <span class="progress-percent">${overallProgress}%</span>
-          </div>
-          <div class="progress-phase">${formatPhase(progress.currentPhase)}</div>
-        </div>
-      `;
-    }
-
-    function getReviewStatusPresentation(status) {
-      const statusMap = {
-        running: { icon: 'activity', label: t('review.status.running') },
-        queued: { icon: 'clock-3', label: t('review.status.queued') },
-        completed: { icon: 'check-circle-2', label: t('review.status.completed') },
-        failed: { icon: 'triangle-alert', label: t('review.status.failed') },
-      };
-      return statusMap[status] || { icon: 'circle-help', label: status };
-    }
-
-    function renderReview(review, isActive) {
-      const statusClass = typeof review.status === 'string' ? review.status : 'queued';
-      const safeStatusClass = ['running', 'queued', 'completed', 'failed'].includes(statusClass) ? statusClass : 'queued';
-      const statusPresentation = getReviewStatusPresentation(statusClass);
-      const mrNumber = review.mrNumber;
-      const project = typeof review.project === 'string' ? review.project.split('/').pop() : '';
-      const reviewId = typeof review.id === 'string' ? review.id : '';
-      const reviewIsGitHub = reviewId.startsWith('github');
-      const mrPrefix = reviewIsGitHub ? '#' : '!';
-      const mrLabel = getMrLabel(reviewIsGitHub ? 'github' : 'gitlab');
-      const safeMrUrl = sanitizeHttpUrl(typeof review.mrUrl === 'string' ? review.mrUrl : null);
-
-      const progressHtml = isActive && review.progress ? `
-        ${renderAgentTimeline(review.progress)}
-        ${renderProgressBar(review.progress)}
-      ` : '';
-
-      const trackedMergeRequests = [...currentData.pendingFix, ...currentData.pendingApproval];
-      const assignerDisplay = resolveReviewAssigneeDisplay(review, trackedMergeRequests);
-      const assignerInitial = assignerDisplay.charAt(0).toUpperCase();
-      const safeReviewAccordionId = reviewId.replace(/[^a-zA-Z0-9-]/g, '-');
-      const safeJobType = review.jobType === 'followup' ? 'followup' : 'review';
-
-      const descriptionHtml = isActive && review.description ? `
-        <div class="review-description-accordion">
-          <div class="review-description-toggle" onclick="toggleReviewDescription('${safeReviewAccordionId}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)">
-            <i data-lucide="chevron-right"></i> ${t('review.description')}
-          </div>
-          <div class="review-description-content" id="review-desc-${safeReviewAccordionId}">
-            <div class="review-description-text">${escapeHtml(review.description)}</div>
-          </div>
-        </div>
-      ` : '';
-
-      const displayTitle = review.title || project;
-
-      return `
-        <div class="review-item" data-job-id="${escapeHtml(reviewId)}">
-          <div class="review-header">
-            <div class="review-status ${safeStatusClass}" title="${escapeHtml(statusPresentation.label)}"></div>
-            <div class="review-info">
-              <div class="review-title">
-                <a href="${safeMrUrl}" target="_blank" rel="noopener noreferrer">${mrPrefix}${mrNumber}</a> - ${escapeHtml(displayTitle)}
-              </div>
-              <div class="review-meta">
-                <span class="badge ${safeStatusClass}"><i data-lucide="${statusPresentation.icon}"></i> ${escapeHtml(statusPresentation.label)}</span>
-                ${isActive ? `<i data-lucide="clock"></i> ${formatDuration(review.startedAt)}` : ''}
-              </div>
-              ${review.error ? `<div class="error-message">${escapeHtml(review.error)}</div>` : ''}
-            </div>
-            ${isActive ? `<button class="btn-cancel-review" onclick="event.stopPropagation(); showCancelModal('${encodeURIComponent(reviewId)}', ${mrNumber}, '${safeJobType}')" title="${t('button.cancel')}"><i data-lucide="x"></i> ${t('button.cancel')}</button>` : ''}
-            <div class="review-assigner">
-              <div class="review-assigner-info">
-                <span class="review-assigner-name">${escapeHtml(assignerDisplay)}</span>
-                <span class="review-assigner-time">${isActive ? formatTime(review.startedAt) : formatTime(review.completedAt)}</span>
-              </div>
-              <div class="review-avatar" title="${escapeHtml(assignerDisplay)}">${escapeHtml(assignerInitial)}</div>
-            </div>
-          </div>
-          ${descriptionHtml}
-          ${progressHtml}
-        </div>
-      `;
-    }
-
-    function toggleReviewDescription(reviewId) {
-      const safeId = reviewId.replace(/[^a-zA-Z0-9-]/g, '-');
-      const content = document.getElementById(`review-desc-${safeId}`);
-      const toggle = content?.previousElementSibling;
-      if (!content || !toggle) return;
-
-      const isOpen = content.classList.contains('open');
-      if (isOpen) {
-        content.classList.remove('open');
-        toggle.classList.remove('open');
-      } else {
-        content.classList.add('open');
-        toggle.classList.add('open');
-        refreshIcons();
-      }
-    }
-
     function renderLog(log) {
       const dataStr = log.data ? escapeHtml(JSON.stringify(log.data, null, 2)) : '';
       const logLevel = typeof log.level === 'string' ? log.level : 'info';
@@ -912,55 +559,8 @@
     }
 
     function updateUI() {
-      const reviews = currentData.activeReviews.filter(r => r.jobType !== 'followup');
-      const followups = currentData.activeReviews.filter(r => r.jobType === 'followup');
-
-      renderCardCounters();
-      const blocked = currentData.pendingFix.length;
-      const running = currentData.activeReviews.filter(r => r.status === 'running').length;
-      const queued = currentData.activeReviews.filter(r => r.status === 'queued').length;
-      const nowCount = running + blocked;
-      const nextCount = queued + currentData.pendingApproval.length;
-      document.getElementById('focus-now-count').textContent = String(nowCount);
-      document.getElementById('focus-next-count').textContent = String(nextCount);
-      document.getElementById('focus-blocked-count').textContent = String(blocked);
-
-      const chipNow = document.querySelector('.focus-chip.focus-now');
-      const chipNext = document.querySelector('.focus-chip.focus-next');
-      const chipBlocked = document.querySelector('.focus-chip.focus-blocked');
-      if (chipNow) chipNow.dataset.active = nowCount > 0 ? 'true' : 'false';
-      if (chipNext) chipNext.dataset.active = nextCount > 0 ? 'true' : 'false';
-      if (chipBlocked) chipBlocked.dataset.active = blocked > 0 ? 'critical' : 'false';
-
-      const activeReviewsSection = document.getElementById('active-reviews-section');
-      const activeReviewsEl = document.getElementById('active-reviews');
-      const activeReviewsCount = document.getElementById('active-reviews-count');
-
-      if (shouldHideActiveReviewsSection({ activeReviews: currentData.activeReviews })) {
-        activeReviewsSection.classList.add('hidden');
-        activeReviewsEl.innerHTML = '';
-        activeReviewsCount.classList.add('hidden');
-      } else {
-        activeReviewsSection.classList.remove('hidden');
-        activeReviewsEl.innerHTML = reviews.map(r => renderReview(r, true)).join('');
-        activeReviewsCount.textContent = reviews.length;
-        activeReviewsCount.classList.remove('hidden');
-      }
-
-      const activeFollowupsSection = document.getElementById('active-followups-section');
-      const activeFollowupsEl = document.getElementById('active-followups');
-      const activeFollowupsCount = document.getElementById('active-followups-count');
-
-      if (followups.length === 0) {
-        activeFollowupsSection.classList.add('hidden');
-      } else {
-        activeFollowupsSection.classList.remove('hidden');
-        activeFollowupsEl.innerHTML = followups.map(r => renderReview(r, true)).join('');
-        activeFollowupsCount.textContent = followups.length;
-        activeFollowupsCount.classList.remove('hidden');
-        applySectionExpansion('active-followups-section');
-      }
-
+      renderLiveReviews();
+      renderReviewQueue();
       refreshIcons();
     }
 
@@ -975,16 +575,17 @@
       }
     }
 
-    function updateConnectionStatus(status, textKey, textFallback) {
-      const statusEl = document.getElementById('server-status');
-      statusEl.className = `status-indicator ${status}`;
-      const displayText = textKey ? t(textKey) : textFallback;
-      statusEl.innerHTML = `<span class="status-dot"></span><span>${escapeHtml(String(displayText ?? ''))}</span>`;
-
+    function updateConnectionStatus(status) {
+      connectionState = status === 'offline' ? 'offline' : status === 'online' && wsConnected ? 'websocket' : 'polling';
       const modeEl = document.getElementById('connection-mode');
-      modeEl.textContent = status === 'online' && wsConnected
-        ? t('connection.websocket')
-        : status === 'online' ? t('connection.polling') : t('connection.disconnected');
+      if (modeEl) {
+        modeEl.textContent = connectionState === 'websocket'
+          ? t('shell.footer.live')
+          : connectionState === 'polling' ? t('shell.footer.polling') : t('shell.footer.offline');
+      }
+      const dot = document.getElementById('connection-dot');
+      if (dot) dot.className = `dot ${connectionState === 'offline' ? 'dot-error' : connectionState === 'polling' ? 'dot-warn' : 'dot-ok'}`;
+      renderHealth();
     }
 
     function renderReviewFile(review) {
@@ -1088,21 +689,15 @@
 
     function updateReviewFilesUI() {
       const recentEl = document.getElementById('recent-reviews');
-      const completedSection = document.getElementById('completed-reviews-section');
-
+      if (!recentEl) return;
       if (currentData.reviewFiles.length === 0) {
-        completedSection?.classList.remove('hidden');
         recentEl.innerHTML = `<div class="empty-state">${loadingState.reviewFiles ? t('loading.section') : t('empty.reviewFiles')}</div>`;
-        applySectionExpansion('completed-reviews-section');
         return;
       }
-
-      completedSection?.classList.remove('hidden');
       recentEl.innerHTML = renderCollapsibleList(
         currentData.reviewFiles.map(renderReviewFile),
         'completed-reviews', t
       );
-      applySectionExpansion('completed-reviews-section');
       refreshIcons();
     }
 
@@ -1131,58 +726,41 @@
     }
 
     async function checkClaudeStatus() {
-      const claudeEl = document.getElementById('claude-status');
       const loginSection = document.getElementById('claude-login-section');
-
-      claudeEl.className = 'card-claude checking';
-      claudeEl.innerHTML = `<span class="status">${t('status.checking')}</span>`;
-
+      claudeHealth = { state: 'checking', detail: null };
+      renderHealth();
       try {
         const response = await fetch(`${API_URL}/api/claude/status`);
         const data = await response.json();
-
         if (data.available) {
-          claudeEl.className = 'card-claude available';
-          claudeEl.innerHTML = `
-            <span class="status"><i data-lucide="check-circle"></i> ${t('status.operational')}</span>
-            <span class="version">${escapeHtml(String(data.version ?? ''))}</span>
-          `;
+          claudeHealth = { state: 'ok', detail: String(data.version ?? '') };
           loginSection.classList.add('hidden');
-          refreshIcons();
         } else {
-          claudeEl.className = 'card-claude unavailable';
-          claudeEl.innerHTML = `
-            <span class="status"><i data-lucide="x-circle"></i> ${escapeHtml(String(data.message ?? ''))}</span>
-          `;
-          refreshIcons();
-          if (data.message.includes('authentifié') || data.message.includes('login') || data.message.includes('authenticated')) {
+          const message = String(data.message ?? '');
+          claudeHealth = { state: 'error', detail: message };
+          if (message.includes('authentifié') || message.includes('login') || message.includes('authenticated')) {
             loginSection.classList.remove('hidden');
           }
         }
       } catch (error) {
-        claudeEl.className = 'card-claude unavailable';
-        claudeEl.innerHTML = `<span class="status"><i data-lucide="x-circle"></i> ${t('error.checkStatus')}</span>`;
-        refreshIcons();
+        claudeHealth = { state: 'error', detail: t('error.checkStatus') };
       }
+      renderHealth();
     }
 
     let activePlatform = null;
 
     function updateGitCliUI() {
-      const labelEl = document.getElementById('git-cli-label');
-      const statusEl = document.getElementById('git-cli-status');
       const loginSection = document.getElementById('git-login-section');
 
       if (!activePlatform) {
-        labelEl.textContent = t('card.gitCli');
-        statusEl.className = 'card-claude checking';
-        statusEl.innerHTML = `<span class="status">${t('status.loadProject')}</span>`;
+        platformHealth = { kind: null, state: 'checking', detail: null };
         loginSection.classList.add('hidden');
+        renderHealth();
         return;
       }
 
       const isGitlab = activePlatform === 'gitlab';
-      labelEl.textContent = isGitlab ? t('card.gitlabCli') : t('card.githubCli');
 
       const titleEl = document.getElementById('git-login-title');
       const instructionsEl = document.getElementById('git-login-instructions');
@@ -1220,43 +798,25 @@
 
     async function checkGitCliStatus() {
       if (!activePlatform) return;
-
-      const statusEl = document.getElementById('git-cli-status');
       const loginSection = document.getElementById('git-login-section');
       const isGitlab = activePlatform === 'gitlab';
       const endpoint = isGitlab ? '/api/gitlab/status' : '/api/github/status';
-
-      statusEl.className = 'card-claude checking';
-      statusEl.innerHTML = `<span class="status">${t('status.checking')}</span>`;
-
+      platformHealth = { kind: activePlatform, state: 'checking', detail: null };
+      renderHealth();
       try {
         const response = await fetch(`${API_URL}${endpoint}`);
         const data = await response.json();
-
         if (data.available && data.authenticated) {
-          statusEl.className = 'card-claude available';
-          statusEl.innerHTML = `
-            <span class="status"><i data-lucide="check-circle"></i> ${t('status.operational')}</span>
-            <span class="version">@${escapeHtml(String(data.username ?? ''))}</span>
-          `;
+          platformHealth = { kind: activePlatform, state: 'ok', detail: `@${String(data.username ?? '')}` };
           loginSection.classList.add('hidden');
-          refreshIcons();
-        } else if (data.available && !data.authenticated) {
-          statusEl.className = 'card-claude unavailable';
-          statusEl.innerHTML = `<span class="status"><i data-lucide="x-circle"></i> ${escapeHtml(String(data.message ?? ''))}</span>`;
-          loginSection.classList.remove('hidden');
-          refreshIcons();
         } else {
-          statusEl.className = 'card-claude unavailable';
-          statusEl.innerHTML = `<span class="status"><i data-lucide="x-circle"></i> ${escapeHtml(String(data.message ?? ''))}</span>`;
+          platformHealth = { kind: activePlatform, state: 'error', detail: String(data.message ?? '') };
           loginSection.classList.remove('hidden');
-          refreshIcons();
         }
       } catch (error) {
-        statusEl.className = 'card-claude unavailable';
-        statusEl.innerHTML = `<span class="status"><i data-lucide="x-circle"></i> ${t('error.checkStatus')}</span>`;
-        refreshIcons();
+        platformHealth = { kind: activePlatform, state: 'error', detail: t('error.checkStatus') };
       }
+      renderHealth();
     }
 
     function toggleLogs() {
@@ -1312,20 +872,6 @@
     function clearLogs() {
       currentData.logs = [];
       updateLogs();
-    }
-
-    function toggleTeamSection() {
-      teamCollapsed = !teamCollapsed;
-      const content = document.getElementById('team-tab-content');
-      const toggle = document.getElementById('team-toggle');
-
-      if (teamCollapsed) {
-        content.classList.add('hidden');
-        toggle.classList.add('collapsed');
-      } else {
-        content.classList.remove('hidden');
-        toggle.classList.remove('collapsed');
-      }
     }
 
     let teamAnalysisCollapsed = false;
@@ -1566,238 +1112,6 @@
       }, 250);
     }
 
-    function renderMrItem(mr, type) {
-      const mrPrefix = mr.platform === 'github' ? '#' : '!';
-      const encodedMrId = encodeURIComponent(String(mr.id ?? ''));
-      const threadInfo = type === 'pending-fix'
-        ? `<span class="mr-threads has-open"><i data-lucide="message-circle"></i> ${t('mr.threads.openAction', { count: mr.openThreads })}</span>`
-        : (type === 'pending-approval' && mr.totalWarnings > 0)
-          ? `<span class="mr-threads has-warnings"><i data-lucide="alert-triangle"></i> ${t('mr.threads.warningAction', { count: mr.totalWarnings })}</span>`
-          : `<span class="mr-threads all-resolved"><i data-lucide="check-circle"></i> ${t('mr.threads.resolvedAction')}</span>`;
-
-      const openBtn = `<a href="${sanitizeHttpUrl(mr.url)}" target="_blank" rel="noopener noreferrer" class="btn-action open" onclick="return onUsefulLinkAction()"><i data-lucide="external-link"></i> ${t('button.open')}</a>`;
-      const autoFollowupChecked = mr.autoFollowup !== false ? 'checked' : '';
-      const showFollowupActions = type === 'pending-fix' ||
-        (type === 'pending-approval' && mr.totalWarnings > 0);
-      const markMergedBtn = (type === 'pending-fix' || type === 'pending-approval')
-        ? `<button class="btn-action" onclick="showMarkMergedModal('${encodedMrId}', ${mr.mrNumber})"><i data-lucide="git-merge"></i> ${t('button.markAsMerged')}</button>`
-        : '';
-
-      const actions = showFollowupActions
-        ? `<label class="auto-followup-toggle" onclick="event.stopPropagation()" title="${t('button.autoFollowup')}">
-             <input type="checkbox" ${autoFollowupChecked} onchange="toggleAutoFollowup('${encodedMrId}', this.checked)">
-             ${t('button.autoFollowup')}
-           </label>
-           <button class="btn-action" onclick="triggerFollowup('${encodedMrId}')"><i data-lucide="refresh-cw"></i> ${t('button.followup')}</button>${markMergedBtn}${openBtn}`
-        : `${markMergedBtn}${openBtn}`;
-
-      const statsBadges = [];
-      if (mr.totalBlocking > 0) statsBadges.push(`<span class="stat-badge blocking"><i data-lucide="octagon-alert"></i> ${mr.totalBlocking}</span>`);
-      if (mr.totalWarnings > 0) statsBadges.push(`<span class="stat-badge warning"><i data-lucide="alert-triangle"></i> ${mr.totalWarnings}</span>`);
-      if (mr.totalFollowups > 0) statsBadges.push(`<span class="stat-badge followup"><i data-lucide="refresh-cw"></i> ${mr.totalFollowups}</span>`);
-      const latestOutcome = latestOutcomeOf(mr);
-      if (latestOutcome.verdict !== null) statsBadges.push(`<span class="stat-badge score verdict-${latestOutcome.verdict}"><i data-lucide="star"></i> ${outcomeLabel(latestOutcome)}</span>`);
-
-      const durationFormatted = mr.totalDurationMs ? formatDuration(null, null, mr.totalDurationMs) : '';
-
-      const assignerUsername = mr.assignment?.username || 'unknown';
-      const assignerDisplay = mr.assignment?.displayName || assignerUsername;
-      const assignerInitial = assignerDisplay.charAt(0).toUpperCase();
-      const assignedAt = mr.assignment?.assignedAt ? formatTime(mr.assignment.assignedAt) : '';
-
-      const accordionId = mr.id.replace(/[^a-zA-Z0-9-]/g, '-');
-
-      return `
-        <div class="mr-item-accordion" data-mr-id="${mr.id}">
-          <div class="mr-item-header" onclick="openMrSheet('${encodedMrId}')" role="button" tabindex="0" onkeydown="activateOnKeydown(event)">
-            <div class="review-status ${type === 'pending-fix' ? 'running' : (type === 'pending-approval' && mr.totalWarnings > 0) ? 'warnings' : 'completed'}"></div>
-            <div class="mr-info">
-              <div class="mr-title">
-                <a href="${sanitizeHttpUrl(mr.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">${mrPrefix}${mr.mrNumber}</a> - ${escapeHtml(String(mr.title ?? ''))}
-              </div>
-              <div class="mr-meta">
-                ${threadInfo}
-                ${statsBadges.join('')}
-                <span><i data-lucide="clock"></i> ${durationFormatted || '-'}</span>
-              </div>
-            </div>
-            <div class="mr-assigner">
-              <div class="mr-assigner-info">
-                <span class="mr-assigner-name">${escapeHtml(assignerDisplay)}</span>
-                <span class="mr-assigner-time">${assignedAt}</span>
-              </div>
-              <div class="mr-avatar" title="${escapeHtml(assignerDisplay)}">${escapeHtml(assignerInitial)}</div>
-            </div>
-            <div class="mr-toggle"><i data-lucide="chevron-down"></i></div>
-          </div>
-          <div class="mr-item-content" id="mr-content-${accordionId}">
-            <div class="mr-details">
-              <div class="mr-detail-row">
-                <span class="mr-detail-label"><i data-lucide="git-branch"></i> ${t('mr.detail.source')}</span>
-                <span class="mr-detail-value">${escapeHtml(String(mr.sourceBranch ?? ''))}</span>
-              </div>
-              <div class="mr-detail-row">
-                <span class="mr-detail-label"><i data-lucide="git-merge"></i> ${t('mr.detail.target')}</span>
-                <span class="mr-detail-value">${escapeHtml(String(mr.targetBranch ?? ''))}</span>
-              </div>
-              <div class="mr-detail-row">
-                <span class="mr-detail-label"><i data-lucide="calendar"></i> ${t('mr.detail.created')}</span>
-                <span class="mr-detail-value">${formatTime(mr.createdAt)}</span>
-              </div>
-              ${mr.lastReviewAt ? `
-              <div class="mr-detail-row">
-                <span class="mr-detail-label"><i data-lucide="file-search"></i> ${t('mr.detail.lastReview')}</span>
-                <span class="mr-detail-value">${formatTime(mr.lastReviewAt)}</span>
-              </div>
-              ` : ''}
-              ${mr.reviews?.length ? `
-              <div class="mr-reviews-history">
-                <div class="mr-detail-label"><i data-lucide="history"></i> ${t('mr.detail.history', { count: mr.reviews.length })}</div>
-                <div class="mr-reviews-list">
-                  ${mr.reviews.slice(-5).reverse().map(r => `
-                    <div class="mr-review-event ${r.type}">
-                      <span class="review-event-type">${r.type === 'review' ? t('review.type.review') : t('review.type.followup')}</span>
-                      <span class="review-event-time">${formatTime(r.timestamp)}</span>
-                      ${outcomeOfReviewEvent(r).verdict !== null ? `<span class="review-event-score">${outcomeLabel(outcomeOfReviewEvent(r))}</span>` : ''}
-                      ${r.blocking > 0 ? `<span class="review-event-blocking">${t('mr.review.blocking', { count: r.blocking })}</span>` : ''}
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-              ` : ''}
-            </div>
-            <div class="mr-item-actions" onclick="event.stopPropagation()">
-              ${actions}
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderNowLane(mr) {
-      const mrPrefix = mr.platform === 'github' ? '#' : '!';
-      const assigneeUsername = mr.assignment?.username || 'unknown';
-      const assigneeDisplay = mr.assignment?.displayName || assigneeUsername;
-      const ownerLabel = t('lane.owner', { owner: assigneeDisplay });
-      const qualityView = qualityViewOf(mr, activeTargetGrade());
-      const qualityState = qualityView.state;
-      const qualityLabel = qualityView.verdict === null
-        ? t('quality.notAvailable')
-        : t(`verdict.${qualityView.verdict}`);
-      const qualityTrend = qualityView.trend;
-      const qualityTrendLabel = qualityTrend.direction === 'up'
-        ? t('quality.trendUp', { delta: qualityTrend.label })
-        : qualityTrend.direction === 'down'
-          ? t('quality.trendDown', { delta: qualityTrend.label })
-          : qualityTrend.direction === 'flat'
-            ? t('quality.trendFlat')
-            : t('quality.trendUnknown');
-      const qualityTrendIcon = qualityTrend.direction === 'up'
-        ? 'trending-up'
-        : qualityTrend.direction === 'down'
-          ? 'trending-down'
-          : qualityTrend.direction === 'flat'
-            ? 'minus'
-            : 'circle-help';
-
-      return `
-        <div class="now-lane">
-          <div class="now-lane-copy">
-            <span class="now-lane-kicker">${t('lane.nowKicker')}</span>
-            <div class="now-lane-title">${mrPrefix}${mr.mrNumber} - ${escapeHtml(String(mr.title ?? ''))}</div>
-            <div class="now-lane-meta">${t('lane.nowMeta', { count: mr.openThreads })}</div>
-            <div class="now-lane-owner">${escapeHtml(ownerLabel)}</div>
-          </div>
-          <div class="now-lane-quality ${qualityState}">
-            <span class="quality-kicker">${t('quality.kicker')}</span>
-            <div class="quality-main">
-              <span class="quality-score">${qualityView.grade ?? '-'}</span>
-            </div>
-            <div class="quality-label">${qualityLabel}</div>
-            <div class="quality-target">${t('quality.target', { target: qualityView.targetGrade })}</div>
-            <div class="quality-trend ${qualityTrend.direction}">
-              <i data-lucide="${qualityTrendIcon}"></i>
-              <span>${qualityTrendLabel}</span>
-            </div>
-            <div class="now-lane-actions">
-              <button class="btn-action" onclick="triggerFollowup('${encodeURIComponent(String(mr.id ?? ''))}')"><i data-lucide="refresh-cw"></i> ${t('button.followup')}</button>
-              <button class="btn-action" onclick="showMarkMergedModal('${encodeURIComponent(String(mr.id ?? ''))}', ${mr.mrNumber})"><i data-lucide="git-merge"></i> ${t('button.markAsMerged')}</button>
-              <a href="${sanitizeHttpUrl(mr.url)}" target="_blank" rel="noopener noreferrer" class="btn-action open" onclick="return onUsefulLinkAction()"><i data-lucide="external-link"></i> ${t('button.open')}</a>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderQueueLanes(queueLanesModel) {
-      const nowLaneContent = queueLanesModel.nowLaneItem
-        ? renderNowLane(queueLanesModel.nowLaneItem)
-        : `<div class="empty-state">${t('queueLane.emptyNow')}</div>`;
-      const needsFixContent = queueLanesModel.needsFixItems.length > 0
-        ? renderCollapsibleList(
-            queueLanesModel.needsFixItems.map((mergeRequest) => renderMrItem(mergeRequest, 'pending-fix')),
-            'needs-fix', t
-          )
-        : `<div class="empty-state">${t('queueLane.emptyNeedsFix')}</div>`;
-      const readyToApproveContent = queueLanesModel.readyToApproveItems.length > 0
-        ? renderCollapsibleList(
-            queueLanesModel.readyToApproveItems.map((mergeRequest) => renderMrItem(mergeRequest, 'pending-approval')),
-            'ready-to-approve', t
-          )
-        : `<div class="empty-state">${t('queueLane.emptyReadyToApprove')}</div>`;
-
-      const nowLaneCollapsedClass = nowLaneCollapsed ? 'collapsed' : '';
-      return `
-        <div class="queue-lanes-grid">
-          <div class="queue-lane" id="queue-lane-now">
-            <div class="queue-lane-header clickable" onclick="toggleNowLane()" role="button" tabindex="0" aria-expanded="${nowLaneCollapsed ? 'false' : 'true'}" aria-controls="queue-lane-now-body" onkeydown="activateOnKeydown(event)">
-              <span class="queue-lane-title">${t('queueLane.now')}</span>
-              <span class="queue-lane-header-right">
-                <span class="queue-lane-count">${queueLanesModel.nowLaneCount}</span>
-                <span class="queue-lane-toggle ${nowLaneCollapsedClass}"><i data-lucide="chevron-down"></i></span>
-              </span>
-            </div>
-            <div class="queue-lane-body ${nowLaneCollapsed ? 'hidden' : ''}" id="queue-lane-now-body">${nowLaneContent}</div>
-          </div>
-          <div class="queue-lane">
-            <div class="queue-lane-header">
-              <span class="queue-lane-title">${t('queueLane.needsFix')}</span>
-              <span class="queue-lane-count">${queueLanesModel.needsFixCount}</span>
-            </div>
-            <div class="queue-lane-body">${needsFixContent}</div>
-          </div>
-          <div class="queue-lane">
-            <div class="queue-lane-header">
-              <span class="queue-lane-title">${t('queueLane.readyToApprove')}</span>
-              <span class="queue-lane-count">${queueLanesModel.readyToApproveCount}</span>
-            </div>
-            <div class="queue-lane-body">${readyToApproveContent}</div>
-          </div>
-        </div>
-      `;
-    }
-
-    function toggleMrAccordion(accordionId) {
-      const content = document.getElementById(`mr-content-${accordionId}`);
-      const accordion = content?.closest('.mr-item-accordion');
-      if (!content || !accordion) return;
-
-      const isOpen = accordion.classList.contains('open');
-
-      document.querySelectorAll('.mr-item-accordion.open').forEach(el => {
-        if (el !== accordion) {
-          el.classList.remove('open');
-        }
-      });
-
-      if (isOpen) {
-        accordion.classList.remove('open');
-      } else {
-        accordion.classList.add('open');
-        refreshIcons();
-      }
-    }
-
     function renderMergedReviews(mergedList) {
       const container = document.getElementById('merged-reviews');
       if (!container) return;
@@ -1820,41 +1134,18 @@
     }
 
     function updateMrTrackingUI() {
-      const pendingFixSection = document.getElementById('pending-fix-section');
-      const pendingFixEl = document.getElementById('pending-fix-reviews');
-      const pendingApprovalSection = document.getElementById('pending-approval-section');
-      const pendingFixCount = document.getElementById('pending-fix-count');
-      const pendingApprovalCount = document.getElementById('pending-approval-count');
-
-      pendingFixSection.classList.remove('hidden');
-      const rankedPendingFix = rankPendingFixForNowLane(currentData.pendingFix, {
-        targetGrade: activeTargetGrade(),
-      });
-      const queueLanesModel = buildQueueLanesModel(rankedPendingFix, currentData.pendingApproval);
-
       mrDataStore.clear();
-      if (queueLanesModel.nowLaneItem) mrDataStore.set(queueLanesModel.nowLaneItem.id, { ...queueLanesModel.nowLaneItem, _sheetType: 'pending-fix' });
-      queueLanesModel.needsFixItems.forEach(mr => mrDataStore.set(mr.id, { ...mr, _sheetType: 'pending-fix' }));
-      queueLanesModel.readyToApproveItems.forEach(mr => mrDataStore.set(mr.id, { ...mr, _sheetType: 'pending-approval' }));
+      currentData.pendingFix.forEach((mergeRequest) => mrDataStore.set(mergeRequest.id, { ...mergeRequest, _sheetType: 'pending-fix' }));
+      currentData.pendingApproval.forEach((mergeRequest) => mrDataStore.set(mergeRequest.id, { ...mergeRequest, _sheetType: 'pending-approval' }));
+      const rankedPendingFix = rankPendingFixForNowLane(currentData.pendingFix, { targetGrade: activeTargetGrade() });
       sessionMetrics = updatePriorityItemTracking(sessionMetrics, {
-        nowLaneItemId: queueLanesModel.nowLaneItem?.id ?? null,
+        nowLaneItemId: rankedPendingFix[0]?.id ?? null,
         pendingFixIds: rankedPendingFix.map((mergeRequest) => String(mergeRequest.id)),
         nowMs: Date.now(),
       });
       updateSessionMetricsUI();
-      if (queueLanesModel.nowLaneCount + queueLanesModel.needsFixCount + queueLanesModel.readyToApproveCount === 0) {
-        pendingFixEl.innerHTML = `<div class="empty-state">${loadingState.mrTracking ? t('loading.section') : t('empty.pendingFix')}</div>`;
-      } else {
-        pendingFixEl.innerHTML = renderQueueLanes(queueLanesModel);
-      }
-      pendingFixCount.textContent = String(queueLanesModel.nowLaneCount + queueLanesModel.needsFixCount + queueLanesModel.readyToApproveCount);
-      pendingFixCount.classList.remove('hidden');
-
-      pendingApprovalSection.classList.add('hidden');
-      pendingApprovalCount.classList.add('hidden');
-
+      renderReviewQueue();
       renderMergedReviews([...(currentData.merged ?? []), ...(currentData.closed ?? [])]);
-
       refreshIcons();
     }
 
@@ -1972,9 +1263,8 @@
         currentData.pendingApproval = [];
         currentData.merged = [];
         currentData.closed = [];
-        document.getElementById('pending-fix-section').classList.add('hidden');
-        document.getElementById('pending-approval-section').classList.add('hidden');
         setLoadingFlag('mrTracking', false);
+        updateMrTrackingUI();
         return;
       }
 
@@ -2059,19 +1349,15 @@
       }
     }
 
-    async function syncGitLabThreads() {
+    async function syncGitLabThreads(button) {
       if (!currentProjectPath) {
-        alert(t('error.projectNotLoaded'));
+        showToast(t('error.projectNotLoaded'), 'error');
         return;
       }
       trackUsefulAction('syncThreads');
-
-      const btn = document.getElementById('sync-threads-btn');
-      const iconEl = btn.querySelector('i');
-
-      btn.disabled = true;
-      iconEl.classList.add('spinning');
-
+      const iconEl = button?.querySelector('[data-lucide], svg');
+      if (button) button.disabled = true;
+      iconEl?.classList.add('spinning');
       try {
         const response = await fetch(`${API_URL}/api/mr-tracking/sync`, {
           method: 'POST',
@@ -2081,16 +1367,15 @@
         const data = await response.json();
         if (data.success) {
           await fetchMrTracking();
-          console.log('Threads synchronized successfully');
         } else {
-          alert(t('error.syncThreads') + ': ' + data.error);
+          showToast(`${t('error.syncThreads')}: ${data.error}`, 'error');
         }
       } catch (error) {
         console.error('Error syncing threads:', error);
-        alert(t('error.syncThreads'));
+        showToast(t('error.syncThreads'), 'error');
       } finally {
-        btn.disabled = false;
-        iconEl.classList.remove('spinning');
+        if (button) button.disabled = false;
+        iconEl?.classList.remove('spinning');
       }
     }
 
@@ -2212,7 +1497,7 @@
         ws.onclose = () => {
           wsConnected = false;
           ws = null;
-          updateConnectionStatus('offline', 'connection.offline');
+          updateConnectionStatus(hasLoadedStatusOnce ? 'online' : 'connecting');
           if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
             reconnectAttempts++;
             setTimeout(connectWebSocket, RECONNECT_DELAY);
@@ -2241,25 +1526,18 @@
         currentData.activeReviews = data.jobs?.active || [];
         currentData.recentReviews = data.jobs?.recent || [];
         dispatchReviewNotifications(currentData.activeReviews, currentData.recentReviews);
+        versionHealth = { current: data.version || '?', latest: data.latestVersion || null, updateAvailable: data.updateAvailable || false };
         const versionUpdateArea = document.getElementById('version-update-area');
-        if (versionUpdateArea) {
+        if (versionUpdateArea && versionUpdateArea.dataset.state !== 'busy') {
           versionUpdateArea.innerHTML = renderVersionUpdateArea(
-            { currentVersion: data.version || '?', updateAvailable: data.updateAvailable || false, latestVersion: data.latestVersion || null },
+            { currentVersion: versionHealth.current, updateAvailable: versionHealth.updateAvailable, latestVersion: versionHealth.latest },
             t
           );
-          if (typeof lucide !== 'undefined') lucide.createIcons();
         }
-        if (!wsConnected) updateConnectionStatus('online', 'connection.onlinePolling');
+        if (!wsConnected) updateConnectionStatus('online');
         updateUI();
       } catch (error) {
-        if (!wsConnected) {
-          updateConnectionStatus('offline', 'connection.offline');
-          document.getElementById('running-count').textContent = '-';
-          document.getElementById('queued-count').textContent = '-';
-          document.getElementById('completed-count').textContent = '-';
-          document.getElementById('active-reviews').innerHTML = `<div class="empty-state">${t('empty.serverNotAccessible')}</div>`;
-          document.getElementById('recent-reviews').innerHTML = `<div class="empty-state">${t('empty.serverNotAccessible')}</div>`;
-        }
+        if (!wsConnected) updateConnectionStatus('offline');
       } finally {
         hasLoadedStatusOnce = true;
         setLoadingFlag('status', false);
@@ -2270,10 +1548,7 @@
       try {
         const response = await fetch(`${API_URL}/api/settings/model`);
         const data = await response.json();
-        const select = document.getElementById('model-select');
-        if (select && data.model) {
-          select.value = data.model;
-        }
+        if (data.model) globalSettings.model = data.model;
       } catch (error) {
         console.error('Error loading model setting:', error);
       }
@@ -2287,9 +1562,7 @@
           body: JSON.stringify({ model })
         });
         const data = await response.json();
-        if (data.success) {
-          console.log('Model changed to:', model);
-        }
+        if (data.success) globalSettings.model = model;
       } catch (error) {
         console.error('Error changing model:', error);
       }
@@ -2299,10 +1572,7 @@
       try {
         const response = await fetch(`${API_URL}/api/settings/triggerMode`);
         const data = await response.json();
-        const select = document.getElementById('trigger-mode-select');
-        if (select && data.triggerMode) {
-          select.value = data.triggerMode;
-        }
+        if (data.triggerMode) globalSettings.triggerMode = data.triggerMode;
       } catch (error) {
         console.error('Error loading trigger mode setting:', error);
       }
@@ -2316,9 +1586,7 @@
           body: JSON.stringify({ triggerMode })
         });
         const data = await response.json();
-        if (data.success) {
-          console.log('Trigger mode changed to:', triggerMode);
-        }
+        if (data.success) globalSettings.triggerMode = triggerMode;
       } catch (error) {
         console.error('Error changing trigger mode:', error);
       }
@@ -2328,12 +1596,15 @@
       try {
         const response = await fetch(`${API_URL}/api/settings/reviewTimeout`);
         const data = await response.json();
-        const input = document.getElementById('review-timeout-input');
-        if (input && data.reviewTimeoutMinutes) {
-          input.value = data.reviewTimeoutMinutes;
-          if (data.minMinutes) input.min = data.minMinutes;
-          if (data.maxMinutes) input.max = data.maxMinutes;
+        if (data.reviewTimeoutMinutes) {
+          globalSettings.reviewTimeout = {
+            minutes: data.reviewTimeoutMinutes,
+            min: data.minMinutes ?? globalSettings.reviewTimeout.min,
+            max: data.maxMinutes ?? globalSettings.reviewTimeout.max,
+          };
         }
+        const input = document.getElementById('review-timeout-input');
+        if (input && data.reviewTimeoutMinutes) input.value = data.reviewTimeoutMinutes;
       } catch (error) {
         console.error('Error loading review timeout setting:', error);
       }
@@ -2349,7 +1620,7 @@
         });
         const data = await response.json();
         if (data.success) {
-          console.log('Review timeout changed to:', data.reviewTimeoutMinutes, 'min');
+          globalSettings.reviewTimeout = { ...globalSettings.reviewTimeout, minutes: data.reviewTimeoutMinutes };
         } else {
           console.error('Review timeout rejected:', data.error);
           await loadReviewTimeoutSetting();
@@ -2364,28 +1635,35 @@
       try {
         const response = await fetch(`${API_URL}/api/settings`);
         const data = await response.json();
-        const select = document.getElementById('language-select');
-        if (select && data.language) {
-          select.value = data.language;
-          setLanguage(data.language);
-          document.documentElement.lang = data.language;
-          renderStaticLabels();
-        }
+        if (data.language) applyLanguage(data.language);
       } catch (error) {
         console.error('Error loading language setting:', error);
       }
     }
 
-    async function changeLanguage(language) {
+    function applyLanguage(language) {
       setLanguage(language);
       document.documentElement.lang = language;
+      const select = document.getElementById('language-select');
+      if (select) select.value = language;
       renderStaticLabels();
-      // Re-render all dynamic content
       updateUI();
       updateLogs();
       updateReviewFilesUI();
       updateMrTrackingUI();
       updateGitCliUI();
+      renderDashboardTabs();
+      renderEmberSuggestions();
+      renderHealth();
+      updateConnectionStatus(connectionState === 'offline' ? 'offline' : 'online');
+      if (activeTabId === 'overview') refreshOverviewSection();
+      refreshHeaderCapacityBadge();
+      refreshSizeBlockSection();
+      if (currentInsightsData) fetchTeamInsights();
+    }
+
+    async function changeLanguage(language) {
+      applyLanguage(language);
       // Also persist on server
       try {
         const response = await fetch(`${API_URL}/api/settings/language`, {
@@ -2403,10 +1681,6 @@
     }
 
     let currentProjectConfig = null;
-
-    function outcomeLabel(outcome) {
-      return `${escapeHtml(outcome.grade ?? '-')} · ${escapeHtml(t(`verdict.${outcome.verdict}`))}`;
-    }
 
     function activeTargetGrade() {
       return currentProjectConfig?.qualityThreshold ?? DEFAULT_TARGET_GRADE;
@@ -2435,11 +1709,7 @@
           refreshIcons();
 
           if (data.config.defaultModel) {
-            const modelSelect = document.getElementById('model-select');
-            if (modelSelect) {
-              modelSelect.value = data.config.defaultModel;
-              changeModel(data.config.defaultModel);
-            }
+            changeModel(data.config.defaultModel);
           }
 
           activePlatform = data.config.gitlab ? 'gitlab' : (data.config.github ? 'github' : null);
@@ -2451,7 +1721,6 @@
           fetchTeamInsights();
           refreshTokenUsageTile();
 
-          document.getElementById('team-section').classList.remove('hidden');
           const statsSheetButton = document.getElementById('open-stats-sheet-btn');
           if (statsSheetButton) {
             statsSheetButton.removeAttribute('disabled');
@@ -2511,54 +1780,24 @@
       cta.classList.toggle('hidden', availableRepositories.length > 0);
     }
 
-    function renderCardCounters() {
-      let scope;
-      if (activeTabId === 'overview') {
-        scope = { kind: 'overview' };
-      } else {
-        const repository = availableRepositories.find((r) => r.localPath === activeTabId);
-        const projectName = repository?.name ?? activeTabId.split('/').filter(Boolean).pop() ?? activeTabId;
-        const aliases = [];
-        const slug = extractGithubSlug(repository?.remoteUrl);
-        if (slug) aliases.push(slug);
-        if (repository?.name) aliases.push(repository.name);
-        scope = { kind: 'project', localPath: activeTabId, projectName, aliases };
-      }
-      const counters = computeCardCounters({
-        activeReviews: currentData.activeReviews,
-        reviewFiles: currentData.reviewFiles,
-        scope,
-      });
-      const runningEl = document.getElementById('running-count');
-      const queuedEl = document.getElementById('queued-count');
-      const completedEl = document.getElementById('completed-count');
-      if (runningEl) runningEl.textContent = counters.running;
-      if (queuedEl) queuedEl.textContent = counters.queued;
-      if (completedEl) completedEl.textContent = counters.completed;
-      const markerEl = document.getElementById('cards-scope-marker');
-      if (markerEl) {
-        markerEl.dataset.scopeKind = counters.markerKind;
-        const labelEl = markerEl.querySelector('.cards-scope-label');
-        if (labelEl) labelEl.textContent = counters.markerLabel;
-      }
-    }
-
     function renderDashboardTabs() {
       const container = document.getElementById('dashboard-tabs');
       if (!container) return;
       const model = buildTabBarModel({
         repositories: availableRepositories,
         activeTabId: activeTabId === 'overview' ? null : activeTabId,
+        overviewLabel: t('shell.project.all'),
       });
       container.innerHTML = renderTabBarHtml(model);
       container.querySelectorAll('.dashboard-tab').forEach((button) => {
         button.addEventListener('click', () => {
           const tabId = button.dataset.tabId;
           if (!tabId) return;
+          projectSwitcherOpen = false;
           handleTabClick(tabId);
         });
       });
-      setupTabUnderline();
+      renderProjectSwitcher();
     }
 
     function handleTabClick(tabId) {
@@ -2575,9 +1814,14 @@
       document.body.classList.add('overview-tab-active');
       const overviewSection = document.getElementById('overview-section');
       if (overviewSection) overviewSection.classList.remove('hidden');
+      currentProjectPath = null;
+      activePlatform = null;
+      selectedMrId = null;
       renderDashboardTabs();
-      renderCardCounters();
-      syncSettingsButtonVisibility();
+      updateGitCliUI();
+      fetchMrTracking();
+      const teamContent = document.getElementById('team-tab-content');
+      if (teamContent) teamContent.innerHTML = `<div class="empty-state">${escapeHtml(t('team.noData'))}</div>`;
       const statsSheetButton = document.getElementById('open-stats-sheet-btn');
       if (statsSheetButton) {
         statsSheetButton.setAttribute('disabled', '');
@@ -2592,20 +1836,11 @@
       document.body.classList.remove('overview-tab-active');
       const overviewSection = document.getElementById('overview-section');
       if (overviewSection) overviewSection.classList.add('hidden');
+      selectedMrId = null;
+      authorFilter = null;
       renderDashboardTabs();
-      renderCardCounters();
-      syncSettingsButtonVisibility();
+      renderReviewQueue();
       loadProjectConfigFromPath(projectPath);
-    }
-
-    function syncSettingsButtonVisibility() {
-      const button = document.getElementById('open-settings-modal-btn');
-      if (!button) return;
-      if (activeTabId === 'overview') {
-        button.hidden = true;
-      } else {
-        button.hidden = false;
-      }
     }
 
     function resolveActiveProjectName() {
@@ -2616,16 +1851,23 @@
     }
 
     async function openSettingsModal() {
-      if (activeTabId === 'overview') return;
       const dialog = document.getElementById('settings-modal');
       if (!dialog || typeof dialog.showModal !== 'function') return;
+      const globalHtml = renderGlobalSettingsHtml(globalSettings);
+      if (activeTabId === 'overview') {
+        dialog.innerHTML = `<form method="dialog" class="settings-modal__form">${globalHtml}<p class="settings-modal__hint">${escapeHtml(t('settings.project.none'))}</p><div class="settings-modal__actions"><button type="submit" class="settings-modal__cancel">${escapeHtml(t('settings.cancel'))}</button></div></form>`;
+        bindGlobalSettingsControls(dialog);
+        dialog.showModal();
+        return;
+      }
       try {
         const response = await fetch(
           `${API_URL}/api/project-config?path=${encodeURIComponent(activeTabId)}`,
         );
         const payload = await response.json();
         if (!payload?.success) {
-          dialog.innerHTML = `<form method="dialog" class="settings-modal__form"><p class="settings-modal__error">${escapeHtml(payload?.error || 'Configuration projet illisible')}</p><div class="settings-modal__actions"><button type="submit" class="settings-modal__cancel">Fermer</button></div></form>`;
+          dialog.innerHTML = `<form method="dialog" class="settings-modal__form">${globalHtml}<p class="settings-modal__error">${escapeHtml(payload?.error || 'Configuration projet illisible')}</p><div class="settings-modal__actions"><button type="submit" class="settings-modal__cancel">${escapeHtml(t('settings.cancel'))}</button></div></form>`;
+          bindGlobalSettingsControls(dialog);
           dialog.showModal();
           return;
         }
@@ -2633,17 +1875,21 @@
           config: payload.config,
           projectName: resolveActiveProjectName(),
         });
-        dialog.innerHTML = renderSettingsModalHtml(viewModel);
+        dialog.innerHTML = `<div class="settings-modal__global-wrapper">${globalHtml}</div>${renderSettingsModalHtml(viewModel)}`;
+        bindGlobalSettingsControls(dialog);
         bindSettingsModalForm(dialog);
-        const uiLangSelect = dialog.querySelector('#settings-modal-ui-language');
-        if (uiLangSelect) {
-          const hiddenSelect = document.getElementById('language-select');
-          uiLangSelect.value = hiddenSelect ? hiddenSelect.value : getLanguage();
-        }
         dialog.showModal();
       } catch (error) {
         showToast(t('toast.error') || 'Erreur', 'error');
       }
+    }
+
+    function bindGlobalSettingsControls(dialog) {
+      const uiLangSelect = dialog.querySelector('#settings-modal-ui-language');
+      if (uiLangSelect) uiLangSelect.value = getLanguage();
+      dialog.querySelector('#model-select')?.addEventListener('change', (event) => changeModel(event.target.value));
+      dialog.querySelector('#trigger-mode-select')?.addEventListener('change', (event) => changeTriggerMode(event.target.value));
+      dialog.querySelector('#review-timeout-input')?.addEventListener('change', (event) => changeReviewTimeout(event.target.value));
     }
 
     function closeSettingsModal() {
@@ -3042,8 +2288,6 @@
         const data = await response.json();
 
         if (data.success) {
-          const card = document.querySelector(`.review-item[data-job-id="${jobId}"]`);
-          if (card) card.remove();
           showToast(t('success.reviewCancelled'), 'success');
           fetchStatus();
         } else if (data.status === 'already-completed') {
@@ -3095,10 +2339,13 @@
         const data = await response.json();
 
         if (data.success) {
-          const card = document.querySelector(`.mr-item-accordion[data-mr-id="${mrId}"]`);
-          if (card) card.remove();
+          if (selectedMrId === mrId) {
+            selectedMrId = null;
+            panelTab = 'ember';
+          }
           showToast(t('success.markedAsMerged'), 'success');
           fetchStatus();
+          fetchMrTracking();
         } else {
           showToast(data.error || t('error.markAsMerged'), 'error');
         }
@@ -3124,185 +2371,54 @@
     }
 
     function renderStaticLabels() {
-      // Header buttons
-      const checkClaudeSpan = document.getElementById('i18n-check-claude');
-      if (checkClaudeSpan) checkClaudeSpan.textContent = t('header.checkClaude');
-
-      const logsBtnSpan = document.getElementById('i18n-logs-btn');
-      if (logsBtnSpan) logsBtnSpan.textContent = logsVisible ? t('header.hideLogs') : t('header.logs');
-
-      const serverStatusSpan = document.getElementById('i18n-server-status');
-      if (serverStatusSpan) serverStatusSpan.textContent = t('status.connecting');
-
-      // Cards
-      const cardRunning = document.getElementById('i18n-card-running');
-      if (cardRunning) cardRunning.textContent = t('card.running');
-
-      const cardQueued = document.getElementById('i18n-card-queued');
-      if (cardQueued) cardQueued.textContent = t('card.queued');
-
-      const cardCompleted = document.getElementById('i18n-card-completed');
-      if (cardCompleted) cardCompleted.textContent = t('card.completed');
-
-      const cardClaudeCli = document.getElementById('i18n-card-claude-cli');
-      if (cardClaudeCli) cardClaudeCli.textContent = t('card.claudeCli');
-
-      const claudeChecking = document.getElementById('i18n-claude-checking');
-      if (claudeChecking) claudeChecking.textContent = t('status.checking');
-
-      const gitLoadProject = document.getElementById('i18n-git-load-project');
-      if (gitLoadProject) gitLoadProject.textContent = t('status.loadProject');
-
-      const gitCliLabel = document.getElementById('git-cli-label');
-      if (gitCliLabel && !activePlatform) gitCliLabel.textContent = t('card.gitCli');
-
-      const cardModel = document.getElementById('i18n-card-model');
-      if (cardModel) cardModel.textContent = t('card.model');
-
-      const cardTriggerMode = document.getElementById('i18n-card-trigger-mode');
-      if (cardTriggerMode) cardTriggerMode.textContent = t('card.triggerMode');
-
-      const cardReviewTimeout = document.getElementById('i18n-card-review-timeout');
-      if (cardReviewTimeout) cardReviewTimeout.textContent = t('card.reviewTimeout');
-
-      const cardLanguage = document.getElementById('i18n-card-language');
-      if (cardLanguage) cardLanguage.textContent = t('card.language');
-
-      const stripNow = document.getElementById('i18n-strip-now');
-      if (stripNow) stripNow.textContent = t('strip.now');
-      const stripNowMeta = document.getElementById('i18n-strip-now-meta');
-      if (stripNowMeta) stripNowMeta.textContent = t('strip.nowMeta');
-
-      const stripNext = document.getElementById('i18n-strip-next');
-      if (stripNext) stripNext.textContent = t('strip.next');
-      const stripNextMeta = document.getElementById('i18n-strip-next-meta');
-      if (stripNextMeta) stripNextMeta.textContent = t('strip.nextMeta');
-
-      const stripBlocked = document.getElementById('i18n-strip-blocked');
-      if (stripBlocked) stripBlocked.textContent = t('strip.blocked');
-      const stripBlockedMeta = document.getElementById('i18n-strip-blocked-meta');
-      if (stripBlockedMeta) stripBlockedMeta.textContent = t('strip.blockedMeta');
-      applyFocusStripMode();
-
-      const loadingDataLabel = document.getElementById('i18n-loading-data');
-      if (loadingDataLabel) loadingDataLabel.textContent = t(getLoadingMessageKey());
+      const setText = (id, key) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = t(key);
+      };
+      const setLabel = (id, key) => {
+        const element = document.getElementById(id);
+        if (!element) return;
+        element.setAttribute('aria-label', t(key));
+        element.setAttribute('title', t(key));
+      };
+      setLabel('toggle-logs-btn', 'shell.logs');
+      setLabel('open-economics-sheet-btn', 'shell.costs');
+      setLabel('open-settings-modal-btn', 'shell.settings');
+      setLabel('project-switcher-toggle', 'shell.project.switch');
+      setText('i18n-manage-projects', 'shell.project.manage');
+      setText('i18n-setup-cta', 'shell.project.setup');
+      setText('health-popover-title', 'health.title');
+      setText('recheck-claude-btn', 'health.recheckClaude');
+      setText('i18n-loading-data', getLoadingMessageKey());
+      setText('i18n-claude-login-title', 'login.claude.title');
+      setText('i18n-claude-login-instruction', 'login.claude.instruction');
+      setText('i18n-claude-login-reload', 'login.claude.reload');
+      setText('i18n-git-login-title', 'login.git.title');
+      setText('i18n-section-team', 'team.title');
+      setText('i18n-open-stats', 'section.stats');
+      setText('i18n-section-cleanup', 'cleanup.title');
+      setText('i18n-section-pending-reviews', 'section.pendingReviews');
+      setText('i18n-section-completed-reviews', 'section.completedReviews');
+      setText('i18n-section-claude-economics', 'section.claudeEconomics');
+      setText('i18n-economics-token-usage', 'economics.tokenUsage');
+      setText('i18n-economics-monthly-budget', 'economics.monthlyBudget');
+      setText('i18n-empty-team', 'team.noData');
+      setText('i18n-ember-title', 'ember.title');
+      setText('i18n-ember-subtitle', 'ember.subtitle');
+      setText('i18n-ember-input-label', 'ember.inputLabel');
+      setText('i18n-ember-send', 'ember.send');
+      setText('ember-retry', 'ember.retry');
+      const emberInput = document.getElementById('ember-question');
+      if (emberInput) emberInput.placeholder = t('ember.placeholder');
+      setText('i18n-modal-message', 'modal.cancel.message');
+      setText('i18n-modal-back', 'modal.back');
+      setText('cancel-modal-confirm', 'modal.confirm');
+      setText('i18n-mark-merged-modal-message', 'modal.markMerged.message');
+      setText('i18n-mark-merged-modal-back', 'modal.markMerged.back');
+      setText('mark-merged-modal-confirm', 'modal.markMerged.confirm');
+      const sidePanel = document.getElementById('side-panel');
+      if (sidePanel) sidePanel.setAttribute('aria-label', t('panel.label'));
       updateSessionMetricsUI();
-
-      // Model options
-      const modelOpus = document.getElementById('i18n-model-opus');
-      if (modelOpus) modelOpus.textContent = t('model.opus');
-
-      const modelSonnet = document.getElementById('i18n-model-sonnet');
-      if (modelSonnet) modelSonnet.textContent = t('model.sonnet');
-
-      // Trigger mode options
-      const triggerModeFullAuto = document.getElementById('i18n-trigger-mode-full-auto');
-      if (triggerModeFullAuto) triggerModeFullAuto.textContent = t('triggerMode.fullAuto');
-
-      const triggerModeSemiAuto = document.getElementById('i18n-trigger-mode-semi-auto');
-      if (triggerModeSemiAuto) triggerModeSemiAuto.textContent = t('triggerMode.semiAuto');
-
-      // Login sections
-      const claudeLoginTitle = document.getElementById('i18n-claude-login-title');
-      if (claudeLoginTitle) claudeLoginTitle.textContent = t('login.claude.title');
-
-      const claudeLoginInstruction = document.getElementById('i18n-claude-login-instruction');
-      if (claudeLoginInstruction) claudeLoginInstruction.textContent = t('login.claude.instruction');
-
-      const claudeLoginReload = document.getElementById('i18n-claude-login-reload');
-      if (claudeLoginReload) claudeLoginReload.textContent = t('login.claude.reload');
-
-      const gitLoginTitle = document.getElementById('i18n-git-login-title');
-      if (gitLoginTitle) gitLoginTitle.textContent = t('login.git.title');
-
-      // Section headers
-      const sectionLogs = document.getElementById('i18n-section-logs');
-      if (sectionLogs) sectionLogs.textContent = t('section.logs');
-
-      const sectionStats = document.getElementById('i18n-section-stats');
-      if (sectionStats) sectionStats.textContent = t('section.stats');
-
-      const recalculateLabel = document.getElementById('recalculate-label');
-      if (recalculateLabel) recalculateLabel.textContent = t('stats.recalculate');
-
-      const sectionTeam = document.getElementById('i18n-section-team');
-      if (sectionTeam) sectionTeam.textContent = t('team.title');
-
-      const sectionPendingReviews = document.getElementById('i18n-section-pending-reviews');
-      if (sectionPendingReviews) sectionPendingReviews.textContent = t('section.pendingReviews');
-
-      const sectionActiveReviews = document.getElementById('i18n-section-active-reviews');
-      if (sectionActiveReviews) sectionActiveReviews.textContent = t('section.activeReviews');
-
-      const sectionActiveFollowups = document.getElementById('i18n-section-active-followups');
-      if (sectionActiveFollowups) sectionActiveFollowups.textContent = t('section.activeFollowups');
-
-      const sectionPendingFix = document.getElementById('i18n-section-pending-fix');
-      if (sectionPendingFix) sectionPendingFix.textContent = t('section.queueLanes');
-
-      const sectionPendingApproval = document.getElementById('i18n-section-pending-approval');
-      if (sectionPendingApproval) sectionPendingApproval.textContent = t('section.pendingApproval');
-
-      const sectionCompletedReviews = document.getElementById('i18n-section-completed-reviews');
-      if (sectionCompletedReviews) sectionCompletedReviews.textContent = t('section.completedReviews');
-
-      const sectionClaudeEconomics = document.getElementById('i18n-section-claude-economics');
-      if (sectionClaudeEconomics) sectionClaudeEconomics.textContent = t('section.claudeEconomics');
-
-      const economicsTokenUsage = document.getElementById('i18n-economics-token-usage');
-      if (economicsTokenUsage) economicsTokenUsage.textContent = t('economics.tokenUsage');
-
-      const economicsMonthlyBudget = document.getElementById('i18n-economics-monthly-budget');
-      if (economicsMonthlyBudget) economicsMonthlyBudget.textContent = t('economics.monthlyBudget');
-
-      // Empty states
-      const emptyLogs = document.getElementById('i18n-empty-logs');
-      if (emptyLogs) emptyLogs.textContent = t('empty.logs');
-
-      const emptyStats = document.getElementById('i18n-empty-stats');
-      if (emptyStats) emptyStats.textContent = t('empty.stats');
-
-      const emptyActiveFollowups = document.getElementById('i18n-empty-active-followups');
-      if (emptyActiveFollowups) emptyActiveFollowups.textContent = t('empty.activeFollowups');
-
-      const emptyPendingFix = document.getElementById('i18n-empty-pending-fix');
-      if (emptyPendingFix) emptyPendingFix.textContent = t('empty.pendingFix');
-
-      const emptyPendingApproval = document.getElementById('i18n-empty-pending-approval');
-      if (emptyPendingApproval) emptyPendingApproval.textContent = t('empty.pendingApproval');
-
-      const emptyTeam = document.getElementById('i18n-empty-team');
-      if (emptyTeam) emptyTeam.textContent = t('team.noData');
-
-      const emptyLoading = document.getElementById('i18n-empty-loading');
-      if (emptyLoading) emptyLoading.textContent = t('status.loading');
-
-      // Sync threads button
-      const syncThreadsBtn = document.getElementById('sync-threads-btn');
-      if (syncThreadsBtn) syncThreadsBtn.title = t('button.syncThreads');
-
-      // Connection footer
-      const connectionFallback = document.getElementById('i18n-connection-fallback');
-      if (connectionFallback) connectionFallback.textContent = t('connection.fallback');
-
-      // Modal
-      const modalMessage = document.getElementById('i18n-modal-message');
-      if (modalMessage) modalMessage.textContent = t('modal.cancel.message');
-
-      const modalBack = document.getElementById('i18n-modal-back');
-      if (modalBack) modalBack.textContent = t('modal.back');
-
-      const modalConfirm = document.getElementById('cancel-modal-confirm');
-      if (modalConfirm) modalConfirm.textContent = t('modal.confirm');
-
-      const markMergedModalMessage = document.getElementById('i18n-mark-merged-modal-message');
-      if (markMergedModalMessage) markMergedModalMessage.textContent = t('modal.markMerged.message');
-
-      const markMergedModalBack = document.getElementById('i18n-mark-merged-modal-back');
-      if (markMergedModalBack) markMergedModalBack.textContent = t('modal.markMerged.back');
-
-      const markMergedModalConfirm = document.getElementById('mark-merged-modal-confirm');
-      if (markMergedModalConfirm) markMergedModalConfirm.textContent = t('modal.markMerged.confirm');
     }
 
     async function checkForUpdates() {
@@ -3439,12 +2555,317 @@
       logsVisible = false;
     }
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closeMrSheet();
-        closeDevSheet();
-      }
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      closeMrSheet();
+      closeDevSheet();
+      closeEconomicsSheet();
+      closePopovers();
     });
+
+    // SPEC-230 — redesigned shell: views, review queue by actor, side panel.
+    let activeView = readActiveView();
+    let activeLane = 'approve';
+    let authorFilter = null;
+    let selectedMrId = null;
+    let panelTab = 'ember';
+    let armedNudge = null;
+    let armedNudgeTimer = null;
+    let healthOpen = false;
+    let projectSwitcherOpen = false;
+    let connectionState = 'polling';
+    let claudeHealth = { state: 'checking', detail: null };
+    let platformHealth = { kind: null, state: 'checking', detail: null };
+    let worktreeHealth = null;
+    let versionHealth = { current: '?', latest: null, updateAvailable: false };
+    let globalSettings = { model: 'opus', triggerMode: 'full-auto', reviewTimeout: { minutes: 30, min: 5, max: 480 } };
+    let lastQueueModel = null;
+    let emberSelection = null;
+
+    function renderHealth() {
+      const model = buildHealthModel({
+        claude: claudeHealth,
+        platform: platformHealth,
+        connection: connectionState,
+        worktrees: worktreeHealth,
+        version: versionHealth,
+      });
+      const pill = document.getElementById('health-pill');
+      if (pill) {
+        pill.innerHTML = renderHealthPillHtml(model, t);
+        pill.setAttribute('aria-expanded', healthOpen ? 'true' : 'false');
+      }
+      const lines = document.getElementById('health-lines');
+      if (lines) lines.innerHTML = renderHealthLinesHtml(model, t);
+      const popover = document.getElementById('health-popover');
+      if (popover) popover.hidden = !healthOpen;
+    }
+
+    function renderProjectSwitcher() {
+      const toggle = document.getElementById('project-switcher-toggle');
+      const panel = document.getElementById('project-switcher-panel');
+      const label = document.getElementById('project-switcher-label');
+      if (toggle) toggle.setAttribute('aria-expanded', projectSwitcherOpen ? 'true' : 'false');
+      if (panel) panel.hidden = !projectSwitcherOpen;
+      if (label) label.textContent = activeTabId === 'overview' ? t('shell.project.all') : resolveActiveProjectName();
+    }
+
+    function closePopovers() {
+      healthOpen = false;
+      projectSwitcherOpen = false;
+      renderHealth();
+      renderProjectSwitcher();
+    }
+
+    function renderViewNav() {
+      const nav = document.getElementById('view-nav');
+      if (!nav) return;
+      const approveCount = lastQueueModel?.lanes.find((lane) => lane.key === 'approve')?.count ?? 0;
+      nav.setAttribute('aria-label', t('shell.views'));
+      nav.innerHTML = renderViewNavHtml(activeView, { queue: approveCount, worktrees: worktreeHealth?.active ?? 0 }, t);
+    }
+
+    function setActiveView(view) {
+      activeView = normalizeView(view);
+      writeActiveView(activeView);
+      document.querySelectorAll('.view').forEach((element) => {
+        element.hidden = element.dataset.view !== activeView;
+      });
+      renderViewNav();
+      renderSidePanel();
+      if (activeView === 'worktrees') refreshWorktreeSection({ animate: true });
+    }
+
+    function currentProjectAliases() {
+      const repository = availableRepositories.find((candidate) => candidate.localPath === currentProjectPath);
+      const aliases = new Set();
+      const slug = projectSlugOf(repository?.remoteUrl);
+      if (slug) aliases.add(slug);
+      [...currentData.pendingFix, ...currentData.pendingApproval].forEach((mergeRequest) => {
+        if (typeof mergeRequest.project === 'string') aliases.add(mergeRequest.project);
+      });
+      return [...aliases];
+    }
+
+    function renderLiveReviews() {
+      const container = document.getElementById('live-reviews');
+      if (!container) return;
+      container.innerHTML = renderLiveReviewsHtml(buildLiveReviewsModel(currentData.activeReviews, Date.now()), t);
+    }
+
+    function renderReviewQueue() {
+      const container = document.getElementById('review-queue');
+      if (!container) return;
+      const isOverview = activeTabId === 'overview';
+      container.hidden = isOverview;
+      const completedSection = document.getElementById('completed-reviews-section');
+      if (completedSection) completedSection.hidden = isOverview;
+      const overviewSection = document.getElementById('overview-section');
+      if (overviewSection) overviewSection.hidden = !isOverview;
+      if (isOverview) {
+        lastQueueModel = null;
+      } else {
+        lastQueueModel = buildReviewQueueModel({
+          pendingFix: currentData.pendingFix,
+          pendingApproval: currentData.pendingApproval,
+          activeJobs: currentData.activeReviews,
+          projectAliases: currentProjectAliases(),
+          nowMs: Date.now(),
+          activeLane,
+          authorFilter,
+        });
+        container.setAttribute('aria-label', t('queue.lanesLabel'));
+        container.innerHTML = renderReviewQueueHtml(lastQueueModel, t, {
+          selectedId: selectedMrId,
+          armedNudge,
+          isLoading: loadingState.mrTracking > 0,
+        });
+      }
+      renderViewNav();
+      renderSidePanel();
+    }
+
+    function trackedMergeRequestById(mrId) {
+      return [...currentData.pendingFix, ...currentData.pendingApproval].find((mergeRequest) => mergeRequest.id === mrId) ?? null;
+    }
+
+    function selectedQueueRow() {
+      if (activeView !== 'queue' || selectedMrId === null) return null;
+      return lastQueueModel?.allRows.find((row) => row.id === selectedMrId) ?? null;
+    }
+
+    function renderSidePanel() {
+      const row = selectedQueueRow();
+      const showPr = panelTab === 'pr' && row !== null;
+      const tabs = document.getElementById('panel-tabs');
+      if (tabs) {
+        tabs.setAttribute('aria-label', t('panel.label'));
+        tabs.innerHTML = renderPanelTabsHtml({ activeTab: showPr ? 'pr' : 'ember', selection: row }, t);
+      }
+      const prPanel = document.getElementById('panel-pr');
+      const emberPanel = document.getElementById('ember-chat-panel');
+      if (prPanel) {
+        prPanel.hidden = !showPr;
+        prPanel.innerHTML = showPr ? renderPrDetailHtml(buildPrDetailModel(row, trackedMergeRequestById(row.id)), t) : '';
+      }
+      if (emberPanel) emberPanel.hidden = showPr;
+      emberSelection = row ? { prefix: row.prefix, mrNumber: row.mrNumber, subject: row.subject } : null;
+      const contextChip = document.getElementById('ember-context');
+      if (contextChip) {
+        contextChip.hidden = emberSelection === null;
+        contextChip.textContent = emberSelection ? t('ember.context', { prefix: emberSelection.prefix, number: emberSelection.mrNumber }) : '';
+      }
+      refreshIcons();
+    }
+
+    function selectMergeRequest(mrId) {
+      selectedMrId = mrId;
+      panelTab = 'pr';
+      renderReviewQueue();
+    }
+
+    function disarmNudge() {
+      armedNudge = null;
+      if (armedNudgeTimer) clearTimeout(armedNudgeTimer);
+      armedNudgeTimer = null;
+    }
+
+    function armNudge(key) {
+      disarmNudge();
+      armedNudge = key;
+      armedNudgeTimer = setTimeout(() => {
+        armedNudge = null;
+        renderReviewQueue();
+      }, 6000);
+      renderReviewQueue();
+    }
+
+    async function nudgeAuthors(mrIds) {
+      disarmNudge();
+      renderReviewQueue();
+      if (!currentProjectPath || mrIds.length === 0) return;
+      trackUsefulAction('other');
+      try {
+        const response = await fetch(`${API_URL}/api/mr-tracking/nudge`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectPath: currentProjectPath, mrIds, language: getLanguage() }),
+        });
+        const data = await response.json();
+        const nudged = Array.isArray(data?.nudged) ? data.nudged.length : 0;
+        if (nudged > 0) showToast(t('queue.toast.nudged', { count: nudged }), 'success');
+        if (!data?.success || (Array.isArray(data?.failed) && data.failed.length > 0)) {
+          showToast(t('queue.toast.nudgeFailed'), 'error');
+        }
+      } catch (error) {
+        console.error('Error nudging authors:', error);
+        showToast(t('queue.toast.nudgeFailed'), 'error');
+      }
+    }
+
+    function handleShellAction(action, element) {
+      const mrId = element.dataset.mrId ?? '';
+      switch (action) {
+        case 'view':
+          setActiveView(element.dataset.view);
+          return true;
+        case 'lane':
+          activeLane = element.dataset.lane;
+          disarmNudge();
+          renderReviewQueue();
+          return true;
+        case 'author':
+          authorFilter = element.dataset.author || null;
+          renderReviewQueue();
+          return true;
+        case 'select':
+          selectMergeRequest(mrId);
+          return true;
+        case 'close-detail':
+          selectedMrId = null;
+          panelTab = 'ember';
+          renderReviewQueue();
+          return true;
+        case 'panel-tab':
+          panelTab = element.dataset.tab === 'pr' ? 'pr' : 'ember';
+          renderSidePanel();
+          return true;
+        case 'followup':
+          triggerFollowup(encodeURIComponent(mrId));
+          return true;
+        case 'cancel':
+          showCancelModal(encodeURIComponent(element.dataset.jobId ?? ''), Number(element.dataset.mrNumber), element.dataset.jobType ?? 'review');
+          return true;
+        case 'nudge':
+          if (armedNudge === mrId) nudgeAuthors([mrId]);
+          else armNudge(mrId);
+          return true;
+        case 'nudge-all':
+          if (armedNudge === 'all') nudgeAuthors(lastQueueModel?.dormantIds ?? []);
+          else armNudge('all');
+          return true;
+        case 'sync-threads':
+          syncGitLabThreads(element);
+          return true;
+        case 'mark-merged':
+          showMarkMergedModal(encodeURIComponent(mrId), Number(element.dataset.mrNumber));
+          return true;
+        case 'open-history':
+          openMrSheet(encodeURIComponent(mrId));
+          return true;
+        case 'approve':
+          trackUsefulAction('approve');
+          return false;
+        case 'toggle-health':
+          healthOpen = !healthOpen;
+          projectSwitcherOpen = false;
+          renderHealth();
+          renderProjectSwitcher();
+          return true;
+        case 'toggle-projects':
+          projectSwitcherOpen = !projectSwitcherOpen;
+          healthOpen = false;
+          renderHealth();
+          renderProjectSwitcher();
+          return true;
+        case 'recheck-claude':
+          checkClaudeStatus();
+          return true;
+        case 'ember-suggestion':
+          askEmber(element.dataset.question ?? element.textContent ?? '');
+          return true;
+        default:
+          return false;
+      }
+    }
+
+    function bindShellEvents() {
+      document.addEventListener('click', (event) => {
+        const origin = event.target instanceof Element ? event.target : null;
+        if (origin && !origin.closest('.health') && !origin.closest('.project-switcher') && (healthOpen || projectSwitcherOpen)) {
+          closePopovers();
+        }
+        const actionElement = origin?.closest('[data-action]');
+        if (!actionElement || actionElement.tagName === 'INPUT') return;
+        handleShellAction(actionElement.dataset.action, actionElement);
+      });
+      document.addEventListener('change', (event) => {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement) || input.dataset.action !== 'toggle-auto-followup') return;
+        toggleAutoFollowup(encodeURIComponent(input.dataset.mrId ?? ''), input.checked);
+      });
+    }
+
+    function renderEmberSuggestions() {
+      const container = document.getElementById('ember-suggestions');
+      if (!container) return;
+      container.innerHTML = ['ember.suggestion.oldest', 'ember.suggestion.followups', 'ember.suggestion.week']
+        .map((key) => `<button type="button" class="suggestion" data-action="ember-suggestion">${escapeHtml(t(key))}</button>`)
+        .join('');
+    }
+
+    let askEmber = () => {};
+
 
     // Expose functions to HTML onclick handlers
     window.checkForUpdates = checkForUpdates;
@@ -3458,22 +2879,16 @@
     window.changeReviewTimeout = changeReviewTimeout;
     window.changeLanguage = changeLanguage;
     window.toggleReviewAccordion = toggleReviewAccordion;
-    window.toggleReviewDescription = toggleReviewDescription;
     window.deleteReviewFile = deleteReviewFile;
-    window.toggleMrAccordion = toggleMrAccordion;
     window.triggerFollowup = triggerFollowup;
     window.toggleAutoFollowup = toggleAutoFollowup;
     window.approveMr = approveMr;
-    window.syncGitLabThreads = syncGitLabThreads;
     window.showCancelModal = showCancelModal;
     window.closeCancelModal = closeCancelModal;
     window.confirmCancelReview = confirmCancelReview;
     window.showMarkMergedModal = showMarkMergedModal;
     window.closeMarkMergedModal = closeMarkMergedModal;
     window.confirmMarkAsMerged = confirmMarkAsMerged;
-    window.toggleFocusStripMode = toggleFocusStripMode;
-    window.toggleSection = toggleSection;
-    window.toggleNowLane = toggleNowLane;
     window.onUsefulLinkAction = onUsefulLinkAction;
     window.activateOnKeydown = activateOnKeydown;
     window.handleCleanupClick = handleCleanupClick;
@@ -3487,7 +2902,6 @@
     window.generateAiInsights = generateAiInsights;
     window.exportInsightsPdf = exportInsightsPdf;
     window.toggleTeamAnalysis = toggleTeamAnalysis;
-    window.toggleTeamSection = toggleTeamSection;
     window.clearLogs = clearLogs;
 
     // Init cleanup section
@@ -3500,9 +2914,11 @@
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {});
     }
-    loadFocusStripMode();
-    loadNowLaneCollapsed();
+    bindShellEvents();
+    setActiveView(activeView);
     renderStaticLabels();
+    renderHealth();
+    renderEmberSuggestions();
     updateSessionMetricsUI();
     connectWebSocket();
     fetchStatus();
@@ -3530,17 +2946,9 @@
     fetchPendingReviews();
 
     setInterval(() => {
-      document.querySelectorAll('.review-item').forEach(el => {
-        const jobId = el.dataset.jobId;
-        const review = currentData.activeReviews.find(r => r.id === jobId);
-        if (review?.startedAt) {
-          const metaEl = el.querySelector('.review-meta');
-          if (metaEl) {
-            const badge = metaEl.querySelector('.badge');
-            metaEl.innerHTML = `${badge?.outerHTML || ''} ${icon('clock')} ${formatDuration(review.startedAt)}`;
-            refreshIcons();
-          }
-        }
+      document.querySelectorAll('[data-elapsed-for]').forEach((element) => {
+        const review = currentData.activeReviews.find((candidate) => candidate.id === element.dataset.elapsedFor);
+        if (review?.startedAt) element.textContent = formatElapsed(Date.now() - Date.parse(review.startedAt));
       });
     }, 1000);
 
@@ -3677,6 +3085,13 @@
       if (worktreeSection === null) return;
       try {
         const viewModel = await fetchWorktreeOverview();
+        worktreeHealth = {
+          active: viewModel.activeCount ?? 0,
+          disk: formatBytes(viewModel.totalSizeBytes ?? 0),
+          failed: viewModel.degradedCount ?? 0,
+        };
+        renderHealth();
+        renderViewNav();
         const totals = snapshotTotals(viewModel);
         worktreeSection.innerHTML = renderWorktreeSection(viewModel);
         bindWorktreeSweepButton();
@@ -3738,62 +3153,11 @@
 
     // === Operator's Console boot animations ===
 
-    let heartbeatStop = null;
 
     async function bootAnimations() {
       const anime = await loadAnimeApi();
       if (!anime) return;
-
-      // Logo breath — daemon-alive signal
-      const logo = document.querySelector('.logo');
-      if (logo) breatheLogo(logo, { animeApi: anime });
-
-      // Online status dot pulse
-      const statusDot = document.querySelector('.status-dot');
-      if (statusDot) pulseStatusDot(statusDot, { animeApi: anime });
-
-      // Metric cards stagger mount
-      const cards = document.querySelectorAll('.cards > .card');
-      if (cards.length > 0) animateMount(cards, { animeApi: anime });
-
-      // Sidebar slide-in
-      const sidebar = document.querySelector('.dashboard-sidebar');
-      if (sidebar && !reducedMotion()) {
-        anime.animate(sidebar, {
-          opacity: [{ from: 0, to: 1 }],
-          translateX: [{ from: -8, to: 0 }],
-          duration: 280,
-          easing: 'easeOutCubic',
-        });
-      }
-
-      // Attention strip mount (focus-strip promoted to main)
-      const focusChips = document.querySelectorAll('.focus-chip');
-      if (focusChips.length > 0) animateMount(focusChips, { animeApi: anime, staggerMs: 40, yOffset: 8 });
-
-      // Heartbeat on pending-reviews empty state
-      startHeartbeat(anime);
-
-      // Card hover lift — wire to existing cards
-      wireCardHovers(anime);
-
-      // Settings modal spring-in
       wireSettingsModal(anime);
-    }
-
-    function startHeartbeat(anime) {
-      const container = document.getElementById('heartbeat-line');
-      if (!container) return;
-      if (heartbeatStop) heartbeatStop.stop();
-      heartbeatStop = heartbeat(container, { animeApi: anime });
-    }
-
-    function wireCardHovers(anime) {
-      const cards = document.querySelectorAll('.cards > .card');
-      for (const card of cards) {
-        card.addEventListener('mouseenter', () => liftCard(card, { animeApi: anime }));
-        card.addEventListener('mouseleave', () => unliftCard(card, { animeApi: anime }));
-      }
     }
 
     function wireSettingsModal(anime) {
@@ -3802,87 +3166,9 @@
       modal.addEventListener('animationsjs-open', () => springIn(modal, { animeApi: anime }));
     }
 
-    // Tab underline glide — set up after tab bar renders
-    let tabUnderlineEl = null;
 
-    function setupTabUnderline() {
-      const tabBar = document.querySelector('.dashboard-tab-bar');
-      if (!tabBar) return;
-
-      if (!tabUnderlineEl) {
-        tabUnderlineEl = document.createElement('div');
-        tabUnderlineEl.className = 'tab-underline-indicator';
-        tabBar.style.position = 'relative';
-        tabBar.appendChild(tabUnderlineEl);
-      }
-
-      const activeTab = tabBar.querySelector('.is-active');
-      if (activeTab) {
-        loadAnimeApi().then((anime) => {
-          if (anime && tabUnderlineEl) slideTabUnderline(tabUnderlineEl, activeTab, { animeApi: anime });
-        }).catch(() => {});
-      }
-    }
-
-    // Counter animation — wrap renderCardCounters and focus strip to animate changes
-    const originalCounterIds = ['running-count', 'queued-count', 'completed-count', 'focus-now-count', 'focus-next-count', 'focus-blocked-count'];
-    const previousCounterValues = {};
-
-    function animateCounterChanges(anime) {
-      for (const id of originalCounterIds) {
-        const el = document.getElementById(id);
-        if (!el) continue;
-        if (el.dataset.animating === 'true') continue;
-        const currentText = el.textContent;
-        const currentVal = parseInt(currentText, 10);
-        const prevVal = previousCounterValues[id];
-        if (!Number.isNaN(currentVal) && prevVal !== undefined && prevVal !== currentVal) {
-          el.dataset.animating = 'true';
-          animateCounterValue(el, prevVal, currentVal, {
-            animeApi: anime,
-            onComplete: () => {
-              el.dataset.animating = 'false';
-              previousCounterValues[id] = currentVal;
-            },
-          });
-        } else if (!Number.isNaN(currentVal)) {
-          previousCounterValues[id] = currentVal;
-        }
-      }
-    }
 
     // Observe counter element changes
-    async function observeCounters() {
-      const anime = await loadAnimeApi();
-      if (!anime) return;
-
-      // Snapshot initial values
-      for (const id of originalCounterIds) {
-        const el = document.getElementById(id);
-        if (el) {
-          const val = parseInt(el.textContent, 10);
-          if (!Number.isNaN(val)) previousCounterValues[id] = val;
-        }
-      }
-
-      const observer = new MutationObserver(() => animateCounterChanges(anime));
-      for (const id of originalCounterIds) {
-        const el = document.getElementById(id);
-        if (el) observer.observe(el, { childList: true, characterData: true, subtree: true });
-      }
-    }
-
-    // Visibility change — pause/resume heartbeat to save battery
-    document.addEventListener('visibilitychange', () => {
-      loadAnimeApi().then((anime) => {
-        if (!anime) return;
-        if (document.hidden) {
-          if (heartbeatStop) heartbeatStop.stop();
-        } else {
-          startHeartbeat(anime);
-        }
-      }).catch(() => {});
-    });
 
     // Ember read-only chat (SPEC-189). The pure decisions + SSE fold live in
     // emberChat.js; this humble init just binds DOM and the reused avatar.
@@ -3914,6 +3200,8 @@
           input.focus();
           return;
         }
+        panelTab = 'ember';
+        renderSidePanel();
         lastQuestion = question;
         panel?.classList.add('ember-chat-panel--active');
         status.textContent = '';
@@ -3926,7 +3214,7 @@
         answerBubble.innerHTML = '<span class="ember-typing" aria-hidden="true"><i></i><i></i><i></i></span>';
         let errored = false;
         await connectEmberStream({
-          question,
+          question: contextualQuestion(question, emberSelection, t),
           onAnswer: (text) => { answerBubble.innerHTML = markdownToHtml(text); thread.scrollTop = thread.scrollHeight; },
           onAvatarState: (state) => { avatar.setState(state); if (state === 'error') errored = true; },
           onAnnounce: (text) => {
@@ -3941,6 +3229,7 @@
         input.disabled = false;
         input.focus();
       };
+      askEmber = (question) => { void ask(question); };
 
       form.addEventListener('submit', (event) => {
         event.preventDefault();
@@ -3955,7 +3244,6 @@
       if (__animationsBooted) return;
       __animationsBooted = true;
       bootAnimations();
-      observeCounters();
       initEmberChat();
     }
     if (document.readyState !== 'loading') {
