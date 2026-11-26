@@ -144,13 +144,15 @@ Reviewflow no longer streams Claude's output via `-p`. Each review runs as a **d
 claude --bg \
   --model <sonnet|opus|haiku> \
   --permission-mode auto \
-  --append-system-prompt "<job context + MCP directives>" \
+  --append-system-prompt-file <tmp file: job context + MCP directives> \
   --mcp-config <inline-json> \
   --strict-mcp-config \
   --allowedTools "Read,Glob,Grep,Bash,Edit,Task,Skill,Write,LSP,mcp__review-progress__*" \
   --disallowedTools "EnterPlanMode,AskUserQuestion" \
-  -- "/<skill> <MR_NUMBER>"
+  -- < prompt-on-stdin   # e.g. "/<skill> <MR_NUMBER>"
 ```
+
+- **Prompts stay out of argv**: the prompt is written to stdin and the system prompt to a `0600` temp file, removed as soon as `claude --bg` returns (the CLI reads it before returning). One argv string is capped at 128 KiB on Linux, so a large prompt in argv made `spawn` throw `E2BIG` (#453). A dispatch that cannot start resolves to `{ status: 'failed' }`, never a rejection.
 
 - **CWD**: The pre-built worktree at `~/.reviewflow/worktrees/<platform>-<slug>-<mrNumber>` — see [Worktree Lifecycle](./worktree-lifecycle.md)
 - **Completion signals** (first wins):

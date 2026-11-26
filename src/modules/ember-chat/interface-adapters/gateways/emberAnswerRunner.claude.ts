@@ -1,7 +1,10 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import type { ClaudeSessionGateway } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
+import type {
+  ClaudeSessionGateway,
+  DispatchResult,
+} from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
 import type {
   ClaudeSessionJobType,
   SessionId,
@@ -68,21 +71,7 @@ export class EmberAnswerRunner {
   }
 
   private async dispatchThenTail(options: EmberAnswerStartOptions): Promise<void> {
-    const { session } = this.settings;
-    const dispatch = await this.sessionGateway.dispatch({
-      prompt: options.question,
-      flags: {
-        model: 'sonnet',
-        permissionMode: 'auto',
-        systemPrompt: options.systemPrompt,
-        mcpConfigJson: session.mcpConfigJson,
-        allowedTools: session.toolPolicy.allowedTools,
-        disallowedTools: session.toolPolicy.disallowedTools,
-      },
-      localPath: options.projectPath,
-      jobId: `${session.label.jobIdPrefix}-${Date.now()}`,
-      jobType: session.label.jobType,
-    });
+    const dispatch = await this.dispatchSafely(options);
 
     if (dispatch.status !== 'dispatched') {
       this.fail('ember-answer-dispatch-failed');
@@ -98,6 +87,31 @@ export class EmberAnswerRunner {
     const slug = options.projectPath.replace(/\//g, '-');
     this.projectDir = join(this.settings.homeDir, '.claude', 'projects', slug);
     this.scheduleTail();
+  }
+
+  private async dispatchSafely(options: EmberAnswerStartOptions): Promise<DispatchResult> {
+    const { session } = this.settings;
+    try {
+      return await this.sessionGateway.dispatch({
+        prompt: options.question,
+        flags: {
+          model: 'sonnet',
+          permissionMode: 'auto',
+          systemPrompt: options.systemPrompt,
+          mcpConfigJson: session.mcpConfigJson,
+          allowedTools: session.toolPolicy.allowedTools,
+          disallowedTools: session.toolPolicy.disallowedTools,
+        },
+        localPath: options.projectPath,
+        jobId: `${session.label.jobIdPrefix}-${Date.now()}`,
+        jobType: session.label.jobType,
+      });
+    } catch (error) {
+      return {
+        status: 'failed',
+        rawStderr: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   private scheduleTail(): void {
@@ -207,7 +221,15 @@ export class EmberAnswerRunner {
       return;
     }
     this.stopped = true;
-    void this.sessionGateway.stop(this.shortSessionId);
+    void this.stopSessionSafely(this.shortSessionId);
+  }
+
+  private async stopSessionSafely(sessionId: SessionId): Promise<void> {
+    try {
+      await this.sessionGateway.stop(sessionId);
+    } catch {
+      return;
+    }
   }
 
   private stopTimer(): void {
