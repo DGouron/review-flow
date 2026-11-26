@@ -9,6 +9,8 @@ type AnswerBuilder = (question: string, systemPrompt: string) => Promise<string>
 
 export class StubEmberAnswerTransportGateway implements EmberAnswerTransportGateway {
   startCount = 0;
+  cancelCount = 0;
+  startedWith: EmberAnswerStartOptions[] = [];
   private shouldFailStart = false;
   private shouldFailMidStream = false;
   private answerBuilder: AnswerBuilder = async (question) => `Réponse à : ${question}`;
@@ -19,6 +21,10 @@ export class StubEmberAnswerTransportGateway implements EmberAnswerTransportGate
 
   failMidStream(): void {
     this.shouldFailMidStream = true;
+  }
+
+  neverAnswer(): void {
+    this.answerBuilder = () => new Promise<string>(() => undefined);
   }
 
   respondWith(builder: AnswerBuilder): void {
@@ -42,8 +48,16 @@ export class StubEmberAnswerTransportGateway implements EmberAnswerTransportGate
       return { status: 'failed', reason: 'stub-start-failed' };
     }
     this.startCount += 1;
+    this.startedWith.push(options);
     void this.deliver(options, subscriber);
-    return { status: 'started', run: { cancel: () => undefined } };
+    return {
+      status: 'started',
+      run: {
+        cancel: () => {
+          this.cancelCount += 1;
+        },
+      },
+    };
   }
 
   private async deliver(
