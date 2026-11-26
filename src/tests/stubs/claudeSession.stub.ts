@@ -37,6 +37,7 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
   private sessionUsageResult: SessionUsageSnapshot | null = null;
   private stopResult: CleanupResult = { success: true, warning: null };
   private removeResult: CleanupResult = { success: true, warning: null };
+  private dispatchError: unknown = null;
   private stopError: unknown = null;
   private removeError: unknown = null;
 
@@ -64,6 +65,10 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
     this.removeResult = result;
   }
 
+  setDispatchError(error: unknown): void {
+    this.dispatchError = error;
+  }
+
   setStopError(error: unknown): void {
     this.stopError = error;
   }
@@ -86,6 +91,9 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
 
   async dispatch(input: DispatchInput): Promise<DispatchResult> {
     this.dispatchCalls.push(input);
+    if (this.dispatchError !== null) {
+      throw this.dispatchError;
+    }
     return this.dispatchResult;
   }
 

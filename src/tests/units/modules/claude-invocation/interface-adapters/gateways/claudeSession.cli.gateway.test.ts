@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,14 +19,18 @@ function noopRunner(): ClaudeProcessRunner {
   return async () => ({ stdout: '', stderr: '', exitCode: 0 });
 }
 
+type RecordedRun = { args: string[]; localPath: string | null; stdin: string | null };
+
+const LINUX_SINGLE_ARGUMENT_LIMIT_BYTES = 128 * 1024;
+
 function createRunner(scripted: ClaudeProcessRunResult[]): {
   runner: ClaudeProcessRunner;
-  calls: Array<{ args: string[]; localPath: string | null }>;
+  calls: RecordedRun[];
 } {
-  const calls: Array<{ args: string[]; localPath: string | null }> = [];
+  const calls: RecordedRun[] = [];
   let index = 0;
-  const runner: ClaudeProcessRunner = async ({ args, cwd }) => {
-    calls.push({ args, localPath: cwd ?? null });
+  const runner: ClaudeProcessRunner = async ({ args, cwd, stdin }) => {
+    calls.push({ args, localPath: cwd ?? null, stdin: stdin ?? null });
     const next = scripted[index] ?? { stdout: '', stderr: '', exitCode: 0 };
     index += 1;
     return next;
@@ -127,6 +131,76 @@ describe('ClaudeSessionCliGateway.dispatch', () => {
     if (result.status === 'failed') {
       expect(result.rawStderr).toBe('boom');
     }
+  });
+
+  it('sends the prompt through stdin so a prompt larger than the argv limit never reaches argv', async () => {
+    const largePrompt = 'x'.repeat(LINUX_SINGLE_ARGUMENT_LIMIT_BYTES * 2);
+    const { runner, calls } = createRunner([
+      { stdout: 'backgrounded · 7c5dcf5d', stderr: '', exitCode: 0 },
+    ]);
+    const gateway = new ClaudeSessionCliGateway(runner);
+
+    await gateway.dispatch({ ...baseDispatchInput, prompt: largePrompt });
+
+    expect(calls[0]?.stdin).toBe(largePrompt);
+    expect(calls[0]?.args).not.toContain(largePrompt);
+  });
+
+  it('passes the system prompt through a file so a large system prompt never reaches argv', async () => {
+    const largeSystemPrompt = 'y'.repeat(LINUX_SINGLE_ARGUMENT_LIMIT_BYTES * 2);
+    let systemPromptSeenByClaude: string | null = null;
+    const runner: ClaudeProcessRunner = async ({ args }) => {
+      const systemPromptPath = args[args.indexOf('--append-system-prompt-file') + 1];
+      systemPromptSeenByClaude = readFileSync(systemPromptPath, 'utf-8');
+      expect(args).not.toContain(largeSystemPrompt);
+      return { stdout: 'backgrounded · 7c5dcf5d', stderr: '', exitCode: 0 };
+    };
+    const gateway = new ClaudeSessionCliGateway(runner);
+
+    await gateway.dispatch({
+      ...baseDispatchInput,
+      flags: { ...baseDispatchInput.flags, systemPrompt: largeSystemPrompt },
+    });
+
+    expect(systemPromptSeenByClaude).toBe(largeSystemPrompt);
+  });
+
+  it('removes the system prompt file once claude --bg has returned', async () => {
+    const { runner, calls } = createRunner([
+      { stdout: 'backgrounded · 7c5dcf5d', stderr: '', exitCode: 0 },
+    ]);
+    const gateway = new ClaudeSessionCliGateway(runner);
+
+    await gateway.dispatch(baseDispatchInput);
+
+    const args = calls[0]?.args ?? [];
+    const systemPromptPath = args[args.indexOf('--append-system-prompt-file') + 1];
+    expect(existsSync(systemPromptPath)).toBe(false);
+  });
+
+  it('returns "failed" instead of rejecting when the claude process cannot be spawned', async () => {
+    const runner: ClaudeProcessRunner = async () => {
+      throw Object.assign(new Error('spawn E2BIG'), { code: 'E2BIG' });
+    };
+    const gateway = new ClaudeSessionCliGateway(runner);
+
+    const result = await gateway.dispatch(baseDispatchInput);
+
+    expect(result).toEqual({ status: 'failed', rawStderr: 'spawn E2BIG' });
+  });
+
+  it('removes the system prompt file when the claude process cannot be spawned', async () => {
+    let systemPromptPath = '';
+    const runner: ClaudeProcessRunner = async ({ args }) => {
+      systemPromptPath = args[args.indexOf('--append-system-prompt-file') + 1];
+      throw Object.assign(new Error('spawn E2BIG'), { code: 'E2BIG' });
+    };
+    const gateway = new ClaudeSessionCliGateway(runner);
+
+    await gateway.dispatch(baseDispatchInput);
+
+    expect(systemPromptPath).not.toBe('');
+    expect(existsSync(systemPromptPath)).toBe(false);
   });
 
   it('returns "failed" when stdout has no parseable session id', async () => {

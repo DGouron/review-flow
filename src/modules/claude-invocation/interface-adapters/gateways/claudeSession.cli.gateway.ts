@@ -1,5 +1,6 @@
-import { readFileSync, existsSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { randomUUID } from 'node:crypto';
+import { readFileSync, existsSync, rmSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { z } from 'zod';
@@ -7,6 +8,7 @@ import { z } from 'zod';
 import type {
   AgentStatusEntry,
   AgentStatusValue,
+  ClaudeDispatchFlags,
   ClaudeSessionGateway,
   CleanupResult,
   DaemonStatus,
@@ -25,6 +27,7 @@ export interface ClaudeProcessRunArgs {
   args: string[];
   cwd?: string;
   env?: Record<string, string>;
+  stdin?: string;
 }
 
 export interface ClaudeProcessRunResult {
@@ -78,6 +81,48 @@ function classifyAgentStatus(raw: string | undefined): AgentStatusValue {
   return 'unknown';
 }
 
+function backgroundSessionArgs(flags: ClaudeDispatchFlags, systemPromptPath: string): string[] {
+  return [
+    '--bg',
+    '--model',
+    flags.model,
+    '--permission-mode',
+    flags.permissionMode,
+    '--append-system-prompt-file',
+    systemPromptPath,
+    '--mcp-config',
+    flags.mcpConfigJson,
+    '--strict-mcp-config',
+    '--allowedTools',
+    flags.allowedTools,
+    '--disallowedTools',
+    flags.disallowedTools,
+    '--',
+  ];
+}
+
+function classifyDispatchOutput(result: ClaudeProcessRunResult): DispatchResult {
+  if (
+    RATE_LIMIT_DETECTION_REGEX.test(result.stderr) ||
+    RATE_LIMIT_DETECTION_REGEX.test(result.stdout)
+  ) {
+    return { status: 'rate-limited', rawStderr: result.stderr || result.stdout };
+  }
+
+  if (result.exitCode !== 0) {
+    return { status: 'failed', rawStderr: result.stderr };
+  }
+
+  const match = stripAnsi(result.stdout).match(SESSION_ID_REGEX);
+  if (!match) {
+    return {
+      status: 'failed',
+      rawStderr: `unable to parse session id from stdout: ${result.stdout}`,
+    };
+  }
+  return { status: 'dispatched', sessionId: parseSessionId(match[1]) };
+}
+
 export interface ClaudeSessionCliGatewayOptions {
   homeDir?: string;
 }
@@ -93,55 +138,24 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
   }
 
   async dispatch(input: DispatchInput): Promise<DispatchResult> {
-    const args = [
-      '--bg',
-      '--model',
-      input.flags.model,
-      '--permission-mode',
-      input.flags.permissionMode,
-      '--append-system-prompt',
-      input.flags.systemPrompt,
-      '--mcp-config',
-      input.flags.mcpConfigJson,
-      '--strict-mcp-config',
-      '--allowedTools',
-      input.flags.allowedTools,
-      '--disallowedTools',
-      input.flags.disallowedTools,
-      // `--allowedTools` and `--disallowedTools` are variadic flags that
-      // slurp every following positional arg until the next flag. Without
-      // an explicit `--` terminator, claude CLI swallows the prompt into
-      // the disallowedTools list and the session is dispatched with no
-      // prompt, leaving the background agent idle forever. Verified with
-      // `claude --print ... --allowedTools Read -- "say hi"` (responds)
-      // vs. `claude --print ... --allowedTools Read "say hi"`
-      // (fails: "Input must be provided either through stdin or as a
-      // prompt argument when using --print").
-      '--',
-      input.prompt,
-    ];
-
-    const result = await this.runner({ args, cwd: input.localPath });
-
-    if (
-      RATE_LIMIT_DETECTION_REGEX.test(result.stderr) ||
-      RATE_LIMIT_DETECTION_REGEX.test(result.stdout)
-    ) {
-      return { status: 'rate-limited', rawStderr: result.stderr || result.stdout };
-    }
-
-    if (result.exitCode !== 0) {
-      return { status: 'failed', rawStderr: result.stderr };
-    }
-
-    const match = stripAnsi(result.stdout).match(SESSION_ID_REGEX);
-    if (!match) {
+    const systemPromptPath = join(tmpdir(), `reviewflow-system-prompt-${randomUUID()}.txt`);
+    try {
+      // Prompts stay out of argv: one argv string is capped at 128 KiB on Linux (spawn E2BIG).
+      writeFileSync(systemPromptPath, input.flags.systemPrompt, { encoding: 'utf-8', mode: 0o600 });
+      const result = await this.runner({
+        args: backgroundSessionArgs(input.flags, systemPromptPath),
+        cwd: input.localPath,
+        stdin: input.prompt,
+      });
+      return classifyDispatchOutput(result);
+    } catch (error) {
       return {
         status: 'failed',
-        rawStderr: `unable to parse session id from stdout: ${result.stdout}`,
+        rawStderr: error instanceof Error ? error.message : String(error),
       };
+    } finally {
+      rmSync(systemPromptPath, { force: true });
     }
-    return { status: 'dispatched', sessionId: parseSessionId(match[1]) };
   }
 
   async stop(sessionId: SessionId): Promise<CleanupResult> {

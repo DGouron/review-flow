@@ -135,19 +135,24 @@ export function buildSpawnEnv(
   };
 }
 
+/** An EPIPE here means claude exited before reading stdin; its exit code and stderr still arrive on 'close'. */
+function ignoreStdinClosedEarly(): void {}
+
 /**
  * Default process runner used by createDefaultClaudeInvocationDeps when the
  * composition root does not provide one. Wraps node:child_process.spawn so
  * tests can inject a fake runner instead.
  */
 export function defaultProcessRunner(): ClaudeProcessRunner {
-  return async ({ args, cwd, env }) =>
+  return async ({ args, cwd, env, stdin }) =>
     new Promise((resolve, reject) => {
       const child = spawn(resolveClaudePath(), args, {
         cwd,
         env: buildSpawnEnv(process.env, env),
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: [stdin === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
       });
+      child.stdin?.on('error', ignoreStdinClosedEarly);
+      child.stdin?.end(stdin);
       let stdout = '';
       let stderr = '';
       child.stdout?.on('data', (chunk) => {

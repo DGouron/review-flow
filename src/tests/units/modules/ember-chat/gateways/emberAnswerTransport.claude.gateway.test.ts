@@ -183,6 +183,41 @@ describe('EmberAnswerTransportClaudeGateway (integration with real filesystem)',
     expect(sessionGateway.stopCalls).toEqual([]);
   });
 
+  it('reports ember-answer-dispatch-failed instead of crashing when dispatch rejects', async () => {
+    sessionGateway.setDispatchError(Object.assign(new Error('spawn E2BIG'), { code: 'E2BIG' }));
+
+    const gateway = new EmberAnswerTransportClaudeGateway(sessionGateway, FAST_OPTIONS(homeDir));
+    const { subscriber, finished } = settled();
+
+    gateway.start(startOptions(), subscriber);
+    await finished;
+
+    expect(subscriber.error).toBe('ember-answer-dispatch-failed');
+    expect(subscriber.done).toBe(false);
+  });
+
+  it('still completes the answer without crashing when stopping the session rejects', async () => {
+    const dir = projectDirFor(homeDir, homeDir);
+    writeFileSync(
+      join(dir, 'stub-session-stop-rejects.jsonl'),
+      JSON.stringify({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn' },
+      }) + '\n',
+    );
+    sessionGateway.setStopError(Object.assign(new Error('spawn EAGAIN'), { code: 'EAGAIN' }));
+
+    const gateway = new EmberAnswerTransportClaudeGateway(sessionGateway, FAST_OPTIONS(homeDir));
+    const { subscriber, finished } = settled();
+
+    gateway.start(startOptions(), subscriber);
+    await finished;
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(subscriber.done).toBe(true);
+    expect(sessionGateway.stopCalls).toEqual(['stub-session']);
+  });
+
   it('completes on a system turn_duration marker even without assistant stop_reason', async () => {
     const dir = projectDirFor(homeDir, homeDir);
     const lines = [
