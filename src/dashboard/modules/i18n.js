@@ -476,7 +476,6 @@ const translations = {
     'version.permissionDenied': 'Permission denied. Run this command manually:',
     'version.copyCommand': 'Copy command',
     'version.commandCopied': 'Command copied!',
-    'version.refusal.localOnly': 'Update is only allowed from the local machine',
     'version.refusal.reviewsInProgress':
       'review{{plural}} in progress. Try again once the reviews are done.',
     'version.refusal.wrongBranch': 'Update is only possible from the master branch',
@@ -980,7 +979,6 @@ const translations = {
     'version.permissionDenied': 'Permission refusée. Exécutez cette commande manuellement :',
     'version.copyCommand': 'Copier la commande',
     'version.commandCopied': 'Commande copiée !',
-    'version.refusal.localOnly': 'Mise à jour autorisée uniquement depuis la machine locale',
     'version.refusal.reviewsInProgress':
       'review{{plural}} en cours. Réessayez une fois les reviews terminées.',
     'version.refusal.wrongBranch': 'Mise à jour possible uniquement depuis la branche master',

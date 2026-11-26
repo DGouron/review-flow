@@ -1,14 +1,9 @@
 import type { InstallTypeDetector } from '@/modules/cli-configuration/entities/packageVersion/installTypeDetector.gateway.js';
 import type { SelfUpdateResult } from '@/modules/cli-configuration/entities/packageVersion/packageVersion.js';
 import type { SelfUpdateCommandPort } from '@/modules/cli-configuration/entities/packageVersion/selfUpdateCommand.gateway.js';
-import { isLocalOrigin } from '@/modules/cli-configuration/entities/selfUpdateSequence/localOrigin.js';
 import type { QueueActivityGateway } from '@/modules/cli-configuration/entities/selfUpdateSequence/queueActivity.gateway.js';
 import type { SourceCheckoutUpdateGateway } from '@/modules/cli-configuration/entities/selfUpdateSequence/sourceCheckoutUpdate.gateway.js';
 import { runSourceCheckoutSelfUpdate } from '@/modules/cli-configuration/usecases/version/runSourceCheckoutSelfUpdate.usecase.js';
-
-export interface TriggerSelfUpdateInput {
-  requestOrigin: string;
-}
 
 export interface TriggerSelfUpdateDependencies {
   selfUpdateCommand: SelfUpdateCommandPort;
@@ -34,7 +29,6 @@ async function triggerGlobalNpmUpdate(
 }
 
 export async function triggerSelfUpdate(
-  input: TriggerSelfUpdateInput,
   dependencies: TriggerSelfUpdateDependencies,
 ): Promise<SelfUpdateResult> {
   const {
@@ -43,10 +37,6 @@ export async function triggerSelfUpdate(
     queueActivityGateway,
     sourceCheckoutUpdateGateway,
   } = dependencies;
-
-  if (!isLocalOrigin(input.requestOrigin)) {
-    return { status: 'refused', motive: { kind: 'local-only' } };
-  }
 
   const activeOrWaitingCount = queueActivityGateway.countActiveOrWaiting();
   if (activeOrWaitingCount > 0) {

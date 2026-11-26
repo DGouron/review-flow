@@ -1,10 +1,10 @@
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 import type { SourceCheckoutUpdateGateway } from '@/modules/cli-configuration/entities/selfUpdateSequence/sourceCheckoutUpdate.gateway.js';
+import { findReviewflowCheckoutRoot } from '@/modules/cli-configuration/interface-adapters/gateways/reviewflowCheckoutRoot.fs.js';
 
 type ExecFileOptions = { cwd?: string; env?: NodeJS.ProcessEnv };
 type ExecFileAsync = (
@@ -25,17 +25,8 @@ async function defaultExecFileAsync(
 }
 
 function defaultCheckoutPath(): string {
-  let current = fileURLToPath(new URL('.', import.meta.url));
-  while (true) {
-    if (existsSync(join(current, '.git'))) {
-      return current;
-    }
-    const parent = dirname(current);
-    if (parent === current) {
-      return current;
-    }
-    current = parent;
-  }
+  const startPath = fileURLToPath(new URL('.', import.meta.url));
+  return findReviewflowCheckoutRoot(startPath) ?? startPath;
 }
 
 const TOOL_CANDIDATE_PATHS: Record<'git' | 'yarn', string[]> = {

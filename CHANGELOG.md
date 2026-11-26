@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.56.2](https://github.com/DGouron/review-flow/compare/reviewflow-v3.56.1...reviewflow-v3.56.2) (2026-11-26)
+
+
+### Fixed
+
+* [#427](https://github.com/DGouron/review-flow/issues/427) detect source checkout only from a reviewflow git repository ([#430](https://github.com/DGouron/review-flow/issues/430)) ([11e46fa](https://github.com/DGouron/review-flow/commit/11e46fa9cb5835016d0d893a8d5bf55346bc4f25))
+* [#428](https://github.com/DGouron/review-flow/issues/428) allow the dashboard update from any address that reaches it ([#431](https://github.com/DGouron/review-flow/issues/431)) ([5a3cd30](https://github.com/DGouron/review-flow/commit/5a3cd30f09798534401127cc9372dde97dcd580f))
+* [#429](https://github.com/DGouron/review-flow/issues/429) hand the post-update restart over to systemd ([#432](https://github.com/DGouron/review-flow/issues/432)) ([0f0bfc2](https://github.com/DGouron/review-flow/commit/0f0bfc202e1a68d739a93b009bddb2837409141c))
+
+## [3.56.1](https://github.com/DGouron/review-flow/compare/reviewflow-v3.56.0...reviewflow-v3.56.1) (2026-11-26)
+
+
+### Fixed
+
+* **release:** stage npm releases via trusted publishing (OIDC) ([#425](https://github.com/DGouron/review-flow/issues/425)) ([d8cbe9e](https://github.com/DGouron/review-flow/commit/d8cbe9e0dbc8dea09871dde8e6850955a6b1a258))
+
+## [3.56.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.55.0...reviewflow-v3.56.0) (2026-11-26)
+
+
+### Added
+
+* **review:** gate approval on the review verdict ([#422](https://github.com/DGouron/review-flow/issues/422)) ([fbd19c6](https://github.com/DGouron/review-flow/commit/fbd19c69601828fc48de45f97376d98a54765812))
+
 ## [3.55.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.54.1...reviewflow-v3.55.0) (2026-11-25)
 
 

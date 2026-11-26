@@ -63,8 +63,7 @@ export function setVersionCheckState(status, translate) {
 }
 
 /**
- * @typedef {{ kind: 'local-only' }
- *   | { kind: 'reviews-in-progress', count: number }
+ * @typedef {{ kind: 'reviews-in-progress', count: number }
  *   | { kind: 'wrong-branch' }
  *   | { kind: 'dirty-checkout' }
  *   | { kind: 'missing-tool', tool: 'git' | 'yarn' }
@@ -79,8 +78,6 @@ export function setVersionCheckState(status, translate) {
  */
 export function resolveRefusalWording(motive, translate) {
   switch (motive.kind) {
-    case 'local-only':
-      return translate('version.refusal.localOnly');
     case 'reviews-in-progress': {
       const plural = motive.count === 1 ? '' : 's';
       return `${motive.count} ${translate('version.refusal.reviewsInProgress', { plural })}`;
