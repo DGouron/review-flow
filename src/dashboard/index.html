@@ -393,7 +393,7 @@
     } from './modules/animations.js';
     import { escapeHtml, markdownToHtml, sanitizeHttpUrl } from './modules/html.js';
     import { getAgentIcon, icon, refreshIcons } from './modules/icons.js';
-    import { MAX_RECONNECT_ATTEMPTS, RECONNECT_DELAY, STORAGE_KEY_CURRENT, STORAGE_KEY_FOCUS_STRIP_MODE, STORAGE_KEY_NOW_LANE_COLLAPSED, QUALITY_TARGET_SCORE } from './modules/constants.js';
+    import { MAX_RECONNECT_ATTEMPTS, RECONNECT_DELAY, STORAGE_KEY_CURRENT, STORAGE_KEY_FOCUS_STRIP_MODE, STORAGE_KEY_NOW_LANE_COLLAPSED, DEFAULT_TARGET_GRADE } from './modules/constants.js';
     import { buildTabBarModel, renderTabBarHtml, readActiveTab, writeActiveTab } from './modules/tabBar.js';
     import { buildManagePanelModel, renderManagePanelHtml, buildOptimisticAddedRow, validateLocalPathInput } from './modules/managePanel.js';
     import { renderOverviewHtml } from './modules/overview.js';
@@ -405,13 +405,13 @@
     import { resolveReviewAssigneeDisplay } from './modules/assignee.js';
     import { buildQueueLanesModel } from './modules/queueLanes.js';
     import { rankPendingFixForNowLane } from './modules/priority.js';
-    import { getQualityProgress, getQualityTrend } from './modules/quality.js';
+    import { outcomeOfReviewEvent, latestOutcomeOf, qualityViewOf } from './modules/quality.js';
     import { createSessionMetricsState, trackSessionAction, updatePriorityItemTracking, getSessionMetricsSnapshot } from './modules/sessionMetrics.js';
     import { renderCleanupSection, handleCleanupClick } from './modules/cleanup.js';
     import { renderVersionUpdateArea, setVersionCheckState, resolveRefusalWording } from './modules/versionUpdate.js';
     import { renderCollapsibleList, toggleCollapsibleList } from './modules/collapsibleList.js';
-    import { renderMrSheetContent, drawScoreTimeline, drawIssuesBreakdown } from './modules/mrSheet.js';
-    import { drawScoreTrendChart } from './modules/statsCharts.js';
+    import { renderMrSheetContent, drawGradeTimeline, drawIssuesBreakdown } from './modules/mrSheet.js';
+    import { drawGradeTrendChart } from './modules/statsCharts.js';
     import { renderKeyInsightsHtml } from './modules/keyInsights.js';
     import { renderTeamTab, fetchAndRenderTeamTab } from './modules/teamTab.js';
     import { renderDeveloperSheetContent, drawRadarChart } from './modules/developerSheet.js';
@@ -1501,7 +1501,7 @@
         const developerReviews = currentStatsReviews.filter(
           (review) => review.assignedBy === developerName
         );
-        drawScoreTrendChart('dev-score-trend-canvas', developerReviews);
+        drawGradeTrendChart('dev-score-trend-canvas', developerReviews);
         contentEl.querySelectorAll('.stat-bar-fill[data-target-width]').forEach((bar) => {
           setTimeout(() => { bar.style.width = bar.dataset.targetWidth; }, 50);
         });
@@ -1595,7 +1595,8 @@
       if (mr.totalBlocking > 0) statsBadges.push(`<span class="stat-badge blocking"><i data-lucide="octagon-alert"></i> ${mr.totalBlocking}</span>`);
       if (mr.totalWarnings > 0) statsBadges.push(`<span class="stat-badge warning"><i data-lucide="alert-triangle"></i> ${mr.totalWarnings}</span>`);
       if (mr.totalFollowups > 0) statsBadges.push(`<span class="stat-badge followup"><i data-lucide="refresh-cw"></i> ${mr.totalFollowups}</span>`);
-      if (mr.latestScore !== null) statsBadges.push(`<span class="stat-badge score"><i data-lucide="star"></i> ${mr.latestScore.toFixed(1)}/10</span>`);
+      const latestOutcome = latestOutcomeOf(mr);
+      if (latestOutcome.verdict !== null) statsBadges.push(`<span class="stat-badge score verdict-${latestOutcome.verdict}"><i data-lucide="star"></i> ${outcomeLabel(latestOutcome)}</span>`);
 
       const durationFormatted = mr.totalDurationMs ? formatDuration(null, null, mr.totalDurationMs) : '';
 
@@ -1657,7 +1658,7 @@
                     <div class="mr-review-event ${r.type}">
                       <span class="review-event-type">${r.type === 'review' ? t('review.type.review') : t('review.type.followup')}</span>
                       <span class="review-event-time">${formatTime(r.timestamp)}</span>
-                      ${r.score !== null ? `<span class="review-event-score">${r.score}/10</span>` : ''}
+                      ${outcomeOfReviewEvent(r).verdict !== null ? `<span class="review-event-score">${outcomeLabel(outcomeOfReviewEvent(r))}</span>` : ''}
                       ${r.blocking > 0 ? `<span class="review-event-blocking">${t('mr.review.blocking', { count: r.blocking })}</span>` : ''}
                     </div>
                   `).join('')}
@@ -1678,29 +1679,12 @@
       const assigneeUsername = mr.assignment?.username || 'unknown';
       const assigneeDisplay = mr.assignment?.displayName || assigneeUsername;
       const ownerLabel = t('lane.owner', { owner: assigneeDisplay });
-      const qualityScore = typeof mr.latestScore === 'number' ? mr.latestScore : null;
-      const activeQualityTarget = QUALITY_TARGET_SCORE;
-      const qualityProgress = getQualityProgress(qualityScore, activeQualityTarget);
-      const qualityTarget = qualityProgress.qualityTarget;
-      const qualityDelta = qualityProgress.targetDelta;
-      const qualityState = qualityScore === null
-        ? 'unknown'
-        : qualityScore >= activeQualityTarget
-          ? 'excellent'
-          : qualityScore >= 6
-            ? 'warning'
-            : 'critical';
-      const qualityLabel = qualityScore === null
+      const qualityView = qualityViewOf(mr, activeTargetGrade());
+      const qualityState = qualityView.state;
+      const qualityLabel = qualityView.verdict === null
         ? t('quality.notAvailable')
-        : qualityScore >= 10
-          ? t('quality.perfect')
-          : qualityScore >= activeQualityTarget
-            ? t('quality.onTarget')
-            : qualityScore >= 6
-              ? t('quality.belowTarget')
-              : t('quality.lovableQuality');
-      const deltaLabel = qualityProgress.targetDeltaLabel;
-      const qualityTrend = getQualityTrend(mr);
+        : t(`verdict.${qualityView.verdict}`);
+      const qualityTrend = qualityView.trend;
       const qualityTrendLabel = qualityTrend.direction === 'up'
         ? t('quality.trendUp', { delta: qualityTrend.label })
         : qualityTrend.direction === 'down'
@@ -1727,17 +1711,10 @@
           <div class="now-lane-quality ${qualityState}">
             <span class="quality-kicker">${t('quality.kicker')}</span>
             <div class="quality-main">
-              <span class="quality-score">${qualityScore !== null ? qualityScore.toFixed(1) : '-'}</span>
-              <span class="quality-over">/10</span>
-            </div>
-            <div class="quality-target">${t('quality.target', { target: qualityTarget })} ${deltaLabel ? `(${deltaLabel})` : ''}</div>
-            <div class="quality-progress">
-              <div class="quality-progress-track">
-                <div class="quality-progress-fill ${qualityState}" style="width: ${qualityProgress.clampedProgressPercent}%"></div>
-              </div>
-              <span class="quality-progress-value">${qualityProgress.progressPercent !== null ? `${qualityProgress.clampedProgressPercent.toFixed(0)}%` : '-'}</span>
+              <span class="quality-score">${qualityView.grade ?? '-'}</span>
             </div>
             <div class="quality-label">${qualityLabel}</div>
+            <div class="quality-target">${t('quality.target', { target: qualityView.targetGrade })}</div>
             <div class="quality-trend ${qualityTrend.direction}">
               <i data-lucide="${qualityTrendIcon}"></i>
               <span>${qualityTrendLabel}</span>
@@ -1851,7 +1828,7 @@
 
       pendingFixSection.classList.remove('hidden');
       const rankedPendingFix = rankPendingFixForNowLane(currentData.pendingFix, {
-        qualityTarget: QUALITY_TARGET_SCORE,
+        targetGrade: activeTargetGrade(),
       });
       const queueLanesModel = buildQueueLanesModel(rankedPendingFix, currentData.pendingApproval);
 
@@ -2426,6 +2403,14 @@
     }
 
     let currentProjectConfig = null;
+
+    function outcomeLabel(outcome) {
+      return `${escapeHtml(outcome.grade ?? '-')} · ${escapeHtml(t(`verdict.${outcome.verdict}`))}`;
+    }
+
+    function activeTargetGrade() {
+      return currentProjectConfig?.qualityThreshold ?? DEFAULT_TARGET_GRADE;
+    }
     let currentProjectPath = null;
 
     async function loadProjectConfigFromPath(projectPath) {
@@ -3418,7 +3403,7 @@
       if (!mr) return;
 
       const contentEl = document.getElementById('mr-sheet-content');
-      contentEl.innerHTML = renderMrSheetContent(mr, t, mr._sheetType);
+      contentEl.innerHTML = renderMrSheetContent(mr, t, mr._sheetType, activeTargetGrade());
 
       document.getElementById('mr-sheet-overlay').classList.add('open');
       document.getElementById('mr-sheet').classList.add('open');
@@ -3429,7 +3414,7 @@
 
       requestAnimationFrame(() => {
         if (mr.reviews?.length) {
-          drawScoreTimeline('sheet-score-canvas', mr.reviews);
+          drawGradeTimeline('sheet-score-canvas', mr.reviews, activeTargetGrade());
         }
         const totalResolved = (mr.openThreads ?? 0) === 0 ? 1 : 0;
         drawIssuesBreakdown('sheet-issues-canvas', mr.totalBlocking || 0, mr.totalWarnings || 0, totalResolved);

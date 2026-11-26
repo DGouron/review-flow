@@ -7,6 +7,11 @@ import type { InsightCategory } from '@/modules/statistics-insights/entities/ins
 import { INSIGHT_CATEGORIES } from '@/modules/statistics-insights/entities/insight/insightCategory.js';
 import type { InsightTrend } from '@/modules/statistics-insights/entities/insight/insightTrend.js';
 import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
+import {
+  gradeRank,
+  outcomeOfReviewStats,
+  readinessOf,
+} from '@/modules/statistics-insights/entities/stats/reviewReadiness.js';
 
 export const MINIMUM_REVIEWS_THRESHOLD = 5;
 const RELATIVE_WEIGHT = 0.8;
@@ -17,18 +22,21 @@ const WEAKNESS_THRESHOLD = 4;
 const STRENGTH_TREND_THRESHOLD = 5;
 const WEAKNESS_TREND_THRESHOLD = 6;
 const BALANCED_SPREAD_THRESHOLD = 2;
+export const NEUTRAL_READY_RATE = 0.5;
+const UNGRADED_RANK = 2;
 
 export interface DeveloperMetrics {
-  averageScore: number;
+  /** Share (0..1) of judged reviews whose verdict is ready. */
+  readyRate: number;
   averageBlocking: number;
   averageWarnings: number;
   averageDuration: number;
   averageCodeVolume: number;
-  codeVolumeScoreCorrelation: number;
+  codeVolumeGradeCorrelation: number;
 }
 
 export interface TeamMetrics {
-  averageScore: number;
+  readyRate: number;
   averageBlocking: number;
   averageWarnings: number;
   averageDuration: number;
@@ -36,7 +44,7 @@ export interface TeamMetrics {
 }
 
 export const ABSOLUTE_BENCHMARKS: TeamMetrics = {
-  averageScore: 7,
+  readyRate: 0.6,
   averageBlocking: 1,
   averageWarnings: 2,
   averageDuration: 120000,
@@ -48,10 +56,17 @@ export function average(values: number[]): number {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-export function averageOfScores(reviews: ReviewStats[]): number {
-  const withScore = reviews.filter((review) => review.score !== null);
-  if (withScore.length === 0) return 5;
-  return average(withScore.map((review) => review.score ?? 0));
+export function readyRateOf(
+  reviews: readonly ReviewStats[],
+  whenNothingJudged = NEUTRAL_READY_RATE,
+): number {
+  const { judged, ready } = readinessOf(reviews);
+  return judged === 0 ? whenNothingJudged : ready / judged;
+}
+
+/** Share of judged reviews ready at first review; 0 when nothing is judged. */
+export function firstReviewQualityRateOf(reviews: readonly ReviewStats[]): number {
+  return readyRateOf(reviews, 0);
 }
 
 export function averageCodeVolume(reviews: ReviewStats[]): number {
@@ -275,10 +290,11 @@ export function computeOverallLevel(categoryLevels: CategoryLevels): number {
 }
 
 function extractQualityMetric(review: ReviewStats): number {
-  const score = review.score ?? 5;
+  const { grade } = outcomeOfReviewStats(review);
+  const rank = grade === null ? UNGRADED_RANK : gradeRank(grade);
   const blockingPenalty = review.blocking * 0.5;
   const warningsPenalty = review.warnings * 0.2;
-  return score - blockingPenalty - warningsPenalty;
+  return rank - blockingPenalty - warningsPenalty;
 }
 
 function extractDurationMetric(review: ReviewStats): number {
@@ -302,47 +318,45 @@ export function computeDeveloperMetrics(reviews: ReviewStats[]): DeveloperMetric
         )
       : 0;
 
-  const correlation = computeVolumeScoreCorrelation(reviews);
-
   return {
-    averageScore: averageOfScores(reviews),
+    readyRate: readyRateOf(reviews),
     averageBlocking: average(reviews.map((review) => review.blocking)),
     averageWarnings: average(reviews.map((review) => review.warnings)),
     averageDuration: average(reviews.map((review) => review.duration)),
     averageCodeVolume: averageVolume,
-    codeVolumeScoreCorrelation: correlation,
+    codeVolumeGradeCorrelation: computeVolumeGradeCorrelation(reviews),
   };
 }
 
-function computeVolumeScoreCorrelation(reviews: ReviewStats[]): number {
-  const reviewsWithBoth = reviews.filter(
-    (review) =>
-      review.score !== null && review.diffStats !== null && review.diffStats !== undefined,
-  );
+/** Pearson correlation between code volume and grade rank, over graded reviews with diff stats. */
+export function computeVolumeGradeCorrelation(reviews: readonly ReviewStats[]): number {
+  const ranks: number[] = [];
+  const volumes: number[] = [];
+  for (const review of reviews) {
+    const { grade } = outcomeOfReviewStats(review);
+    if (grade === null || !review.diffStats) continue;
+    ranks.push(gradeRank(grade));
+    volumes.push(review.diffStats.additions + review.diffStats.deletions);
+  }
 
-  if (reviewsWithBoth.length < 3) return 0;
+  if (ranks.length < 3) return 0;
 
-  const scores = reviewsWithBoth.map((review) => review.score ?? 0);
-  const volumes = reviewsWithBoth.map(
-    (review) => (review.diffStats?.additions ?? 0) + (review.diffStats?.deletions ?? 0),
-  );
-
-  const avgScore = average(scores);
-  const avgVolume = average(volumes);
+  const averageRank = average(ranks);
+  const averageVolume = average(volumes);
 
   let numerator = 0;
-  let denominatorScore = 0;
+  let denominatorRank = 0;
   let denominatorVolume = 0;
 
-  for (let index = 0; index < reviewsWithBoth.length; index++) {
-    const scoreDiff = scores[index] - avgScore;
-    const volumeDiff = volumes[index] - avgVolume;
-    numerator += scoreDiff * volumeDiff;
-    denominatorScore += scoreDiff * scoreDiff;
+  for (let index = 0; index < ranks.length; index++) {
+    const rankDiff = ranks[index] - averageRank;
+    const volumeDiff = volumes[index] - averageVolume;
+    numerator += rankDiff * volumeDiff;
+    denominatorRank += rankDiff * rankDiff;
     denominatorVolume += volumeDiff * volumeDiff;
   }
 
-  const denominator = Math.sqrt(denominatorScore * denominatorVolume);
+  const denominator = Math.sqrt(denominatorRank * denominatorVolume);
   if (denominator === 0) return 0;
 
   return numerator / denominator;
@@ -355,7 +369,7 @@ export function computeTeamMetrics(reviewsByDeveloper: Map<string, ReviewStats[]
   }
 
   return {
-    averageScore: averageOfScores(allReviews),
+    readyRate: readyRateOf(allReviews),
     averageBlocking: average(allReviews.map((review) => review.blocking)),
     averageWarnings: average(allReviews.map((review) => review.warnings)),
     averageDuration: average(allReviews.map((review) => review.duration)),
@@ -381,14 +395,11 @@ function computeQualityLevel(
   metrics: DeveloperMetrics,
   teamMetrics: TeamMetrics,
 ): CategoryLevel {
-  // Absolute score component: score is already 0-10, map directly to 0-1
-  const absoluteScoreComponent = metrics.averageScore / 10;
-
-  // Relative components: how dev compares to team
-  const relativeScoreComponent = normalizeHigherIsBetter(
-    metrics.averageScore,
-    teamMetrics.averageScore,
-    10,
+  const absoluteReadinessComponent = metrics.readyRate;
+  const relativeReadinessComponent = normalizeHigherIsBetter(
+    metrics.readyRate,
+    teamMetrics.readyRate,
+    1,
   );
   const blockingComponent = normalizeLowerIsBetter(
     metrics.averageBlocking,
@@ -399,9 +410,9 @@ function computeQualityLevel(
     teamMetrics.averageWarnings,
   );
 
-  // Blend absolute (40%) and relative (60%) for score
-  const scoreComponent = absoluteScoreComponent * 0.4 + relativeScoreComponent * 0.6;
-  const relativeScore = scoreComponent * 0.5 + blockingComponent * 0.3 + warningsComponent * 0.2;
+  const readinessComponent = absoluteReadinessComponent * 0.4 + relativeReadinessComponent * 0.6;
+  const relativeScore =
+    readinessComponent * 0.5 + blockingComponent * 0.3 + warningsComponent * 0.2;
 
   const trend = computeTrendForMetric(reviews, extractQualityMetric);
   const trendScore = trendToScore(trend);
@@ -446,7 +457,7 @@ function computeCodeVolumeLevel(
       : 0.5;
 
   const correlationBonus =
-    metrics.codeVolumeScoreCorrelation > 0 ? metrics.codeVolumeScoreCorrelation * 0.2 : 0;
+    metrics.codeVolumeGradeCorrelation > 0 ? metrics.codeVolumeGradeCorrelation * 0.2 : 0;
 
   const relativeScore = Math.min(1, volumeScore + correlationBonus);
 

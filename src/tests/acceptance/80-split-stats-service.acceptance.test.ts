@@ -115,7 +115,6 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
 
       const stats = statsGateway.loadProjectStats('/project');
       expect(stats?.totalReviews).toBe(1);
-      expect(stats?.averageScore).toBe(8);
       expect(stats?.totalBlocking).toBe(1);
       expect(stats?.totalWarnings).toBe(2);
     });
@@ -129,9 +128,6 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
         '/project',
         ProjectStatsFactory.create({
           totalReviews: 100,
-          totalScoreSum: 700,
-          scoredReviewCount: 100,
-          averageScore: 7,
           reviews,
         }),
       );
@@ -154,9 +150,6 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
         '/project',
         ProjectStatsFactory.create({
           totalReviews: 2,
-          totalScoreSum: 14,
-          scoredReviewCount: 2,
-          averageScore: 7,
           reviews: [
             ReviewStatsFactory.create({ id: 'r1', score: 6 }),
             ReviewStatsFactory.create({ id: 'r2', score: 8 }),
@@ -181,7 +174,6 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
       });
 
       const stats = statsGateway.loadProjectStats('/project');
-      expect(stats?.averageScore).toBe(7);
       expect(stats?.totalReviews).toBe(3);
     });
   });
@@ -199,18 +191,18 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
       expect(summary.averageTime).toBe('2m');
     });
 
-    it('score trend up: recent reviews clearly beat the previous window', () => {
+    it('readiness trend up: recent reviews are ready more often than the previous window', () => {
       const previous = Array.from({ length: 5 }, (_, index) =>
-        ReviewStatsFactory.create({ id: `p${index}`, score: 6, blocking: 1 }),
+        ReviewStatsFactory.create({ id: `p${index}`, verdict: 'changes', grade: 'C' }),
       );
       const recent = Array.from({ length: 5 }, (_, index) =>
-        ReviewStatsFactory.create({ id: `r${index}`, score: 8, blocking: 1 }),
+        ReviewStatsFactory.create({ id: `r${index}`, verdict: 'ready', grade: 'B' }),
       );
       const stats = ProjectStatsFactory.withReviews([...previous, ...recent]);
 
       const summary = new StatsSummaryPresenter().present(stats);
 
-      expect(summary.trend.score).toBe('up');
+      expect(summary.trend.readiness).toBe('up');
     });
 
     it('insufficient data: keeps both trends stable', () => {
@@ -221,7 +213,7 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
 
       const summary = new StatsSummaryPresenter().present(stats);
 
-      expect(summary.trend.score).toBe('stable');
+      expect(summary.trend.readiness).toBe('stable');
       expect(summary.trend.blocking).toBe('stable');
     });
   });
@@ -244,7 +236,6 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
       const legacyStats = {
         totalReviews: 2,
         totalDuration: 120000,
-        averageScore: 7,
         averageDuration: 60000,
         totalBlocking: 1,
         totalWarnings: 3,
@@ -299,7 +290,7 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
         after ?? loaded ?? ProjectStatsFactory.create(),
       );
       expect(summary.totalReviews).toBe(3);
-      expect(typeof summary.averageScore).toBe('string');
+      expect(typeof summary.readyRate).toBe('string');
     });
   });
 
@@ -316,7 +307,6 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
         '/known/project',
         ProjectStatsFactory.create({
           totalReviews: 5,
-          averageScore: 7.5,
           reviews: [
             ReviewStatsFactory.create({ id: 'a', score: 7 }),
             ReviewStatsFactory.create({ id: 'b', score: 8 }),
@@ -334,7 +324,6 @@ describe('Acceptance — SPEC-80: Split statsService into Clean Architecture lay
       const body = response.json();
       expect(body.stats.totalReviews).toBe(5);
       expect(body.summary.totalReviews).toBe(5);
-      expect(body.summary.averageScore).toBe('7.5');
     });
 
     it('absent project: returns { stats: null, summary: null }', async () => {

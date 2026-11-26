@@ -1,5 +1,13 @@
 import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
+import {
+  QUALITY_GRADES,
+  type QualityGrade,
+} from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import type { ReviewStats } from '@/modules/statistics-insights/entities/stats/projectStats.js';
+import {
+  outcomeOfReviewStats,
+  readinessOf,
+} from '@/modules/statistics-insights/entities/stats/reviewReadiness.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 
 interface DeveloperData {
@@ -51,11 +59,17 @@ function groupTrackedMrsByDeveloper(trackedMrs: TrackedMr[]): Map<string, Tracke
   return grouped;
 }
 
-function computeAverageScore(reviews: ReviewStats[]): string {
-  const scored = reviews.filter((review) => review.score !== null);
-  if (scored.length === 0) return 'N/A';
-  const average = scored.reduce((sum, review) => sum + (review.score ?? 0), 0) / scored.length;
-  return average.toFixed(1);
+function formatReadyRate(readyRate: number | null): string {
+  return readyRate === null ? 'N/A' : `${readyRate}%`;
+}
+
+function formatGrades(grades: Record<QualityGrade, number>): string {
+  return QUALITY_GRADES.map((grade) => `${grade} ${grades[grade]}`).join(', ');
+}
+
+function formatOutcome(review: ReviewStats): string {
+  const { verdict, grade } = outcomeOfReviewStats(review);
+  return `verdict: ${verdict ?? 'N/A'}, grade: ${grade ?? 'N/A'}`;
 }
 
 function computeAverageBlocking(reviews: ReviewStats[]): string {
@@ -78,14 +92,6 @@ function formatDuration(milliseconds: number): string {
   return `${hours}h ${remainingMinutes}min`;
 }
 
-function computeFirstPassQualityRate(reviews: ReviewStats[]): string {
-  const scored = reviews.filter((review) => review.score !== null);
-  if (scored.length === 0) return 'N/A';
-  const highQuality = scored.filter((review) => (review.score ?? 0) >= 7);
-  const rate = (highQuality.length / scored.length) * 100;
-  return `${rate.toFixed(0)}%`;
-}
-
 function extractReviewExcerpt(content: string): string {
   const sections: string[] = [];
 
@@ -93,12 +99,6 @@ function extractReviewExcerpt(content: string): string {
   const summaryMatch = content.match(/## Synth[èe]se Ex[ée]cutive[\s\S]*?(?=\n## )/);
   if (summaryMatch) {
     sections.push(summaryMatch[0].trim());
-  }
-
-  // Extract score line
-  const scoreMatch = content.match(/\*\*Score Global\s*:.*?\*\*/);
-  if (scoreMatch) {
-    sections.push(scoreMatch[0]);
   }
 
   // Extract blocking corrections titles only
@@ -137,14 +137,13 @@ function buildDeveloperSection(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 
-  const averageScore = computeAverageScore(reviews);
+  const readiness = readinessOf(reviews);
   const averageBlocking = computeAverageBlocking(reviews);
   const averageWarnings = computeAverageWarnings(reviews);
   const averageDuration =
     reviews.length > 0
       ? formatDuration(reviews.reduce((sum, review) => sum + review.duration, 0) / reviews.length)
       : 'N/A';
-  const firstPassRate = computeFirstPassQualityRate(reviews);
   const totalAdditions = reviews.reduce(
     (sum, review) => sum + (review.diffStats?.additions ?? 0),
     0,
@@ -155,11 +154,11 @@ function buildDeveloperSection(
   );
 
   let section = `### Developer: ${name} (${reviews.length} reviews)\n`;
-  section += `- Average score: ${averageScore}/10\n`;
+  section += `- Ready at first review: ${formatReadyRate(readiness.readyRate)} (${readiness.ready} of ${readiness.judged} judged reviews)\n`;
+  section += `- Grades: ${formatGrades(readiness.grades)}\n`;
   section += `- Average blocking issues: ${averageBlocking}/review\n`;
   section += `- Average warnings: ${averageWarnings}/review\n`;
   section += `- Average review duration: ${averageDuration}\n`;
-  section += `- First-pass quality rate: ${firstPassRate} (reviews scoring >= 7 on first try)\n`;
   section += `- Total additions: ${totalAdditions}, deletions: ${totalDeletions}\n`;
 
   const reviewExcerpts: string[] = [];
@@ -170,9 +169,7 @@ function buildDeveloperSection(
     if (content) {
       const excerpt = extractReviewExcerpt(content);
       if (excerpt.length > 0) {
-        reviewExcerpts.push(
-          `--- MR ${review.mrNumber} (score: ${review.score ?? 'N/A'}) ---\n${excerpt}`,
-        );
+        reviewExcerpts.push(`--- MR ${review.mrNumber} (${formatOutcome(review)}) ---\n${excerpt}`);
       }
     }
   }
@@ -199,11 +196,11 @@ function buildDeveloperSection(
 }
 
 function buildTeamSection(reviews: ReviewStats[], developerCount: number): string {
-  const averageScore = computeAverageScore(reviews);
+  const { readyRate } = readinessOf(reviews);
   const averageBlocking = computeAverageBlocking(reviews);
 
   let section = '### Team Statistics:\n';
-  section += `- Team average score: ${averageScore}/10\n`;
+  section += `- Team ready at first review: ${formatReadyRate(readyRate)}\n`;
   section += `- Team average blocking: ${averageBlocking}/review\n`;
   section += `- Total reviews: ${reviews.length}\n`;
   section += `- Developers: ${developerCount}\n`;
@@ -277,11 +274,12 @@ You MUST return a valid JSON object matching this EXACT schema. Every field is R
 1. Language: ALL text in ${language === 'fr' ? 'French' : 'English'}
 2. Every developer listed above MUST appear in "developers" array with EXACT username
 3. "strengths", "weaknesses", "recommendations" arrays must each have AT LEAST 1 item
-4. Reference specific data points: scores, percentages, blocking counts, durations
+4. Reference specific data points: ready rates, grades, percentages, blocking counts, durations
 5. Be direct and honest -- do not sugarcoat weaknesses
 6. Titles must be creative and unique per developer (no two developers share the same title)
 7. Recommendations must be actionable (NOT "improve quality" but "review architecture before implementation to reduce the 1.3 blocking issues/review")
-8. "summary" must mention the developer's average score and key characteristic
+8. "summary" must mention the developer's ready-at-first-review rate and key characteristic
+9. Express quality through the ready rate and the A to E grades, never as a mark out of 10
 
 ## OUTPUT
 

@@ -30,7 +30,6 @@ export class ProjectStatsFactory {
     return {
       totalReviews: 0,
       totalDuration: 0,
-      averageScore: null,
       averageDuration: 0,
       totalBlocking: 0,
       totalWarnings: 0,
@@ -46,12 +45,6 @@ export class ProjectStatsFactory {
 
   static withReviews(reviews: ReviewStats[]): ProjectStats {
     const totalDuration = reviews.reduce((sum, r) => sum + r.duration, 0);
-    const reviewsWithScore = reviews.filter((r) => r.score !== null);
-    const averageScore =
-      reviewsWithScore.length > 0
-        ? reviewsWithScore.reduce((sum, r) => sum + (r.score ?? 0), 0) / reviewsWithScore.length
-        : null;
-
     const reviewsWithDiffStats = reviews.filter((r) => r.diffStats != null);
     const totalAdditions = reviewsWithDiffStats.reduce(
       (sum, r) => sum + (r.diffStats?.additions ?? 0),
@@ -69,7 +62,6 @@ export class ProjectStatsFactory {
     return this.create({
       totalReviews: reviews.length,
       totalDuration,
-      averageScore,
       averageDuration: reviews.length > 0 ? totalDuration / reviews.length : 0,
       totalBlocking: reviews.reduce((sum, r) => sum + r.blocking, 0),
       totalWarnings: reviews.reduce((sum, r) => sum + r.warnings, 0),

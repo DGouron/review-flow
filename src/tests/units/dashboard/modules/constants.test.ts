@@ -7,7 +7,7 @@ import {
   STORAGE_KEY_CURRENT,
   STORAGE_KEY_FOCUS_STRIP_MODE,
   STORAGE_KEY_ACTIVE_TAB,
-  QUALITY_TARGET_SCORE,
+  DEFAULT_TARGET_GRADE,
 } from '@/dashboard/modules/constants.js';
 
 describe('constants', () => {
@@ -24,6 +24,6 @@ describe('constants', () => {
   });
 
   it('should export quality score target', () => {
-    expect(QUALITY_TARGET_SCORE).toBe(8);
+    expect(DEFAULT_TARGET_GRADE).toBe('B');
   });
 });

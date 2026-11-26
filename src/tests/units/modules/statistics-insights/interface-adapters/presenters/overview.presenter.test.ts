@@ -216,7 +216,8 @@ describe('OverviewPresenter', () => {
           id: `r-${index}`,
           timestamp: new Date(NOW.getTime() - (12 - index) * 60_000).toISOString(),
           mrNumber: index,
-          score: index + 1,
+          verdict: index % 2 === 0 ? 'ready' : 'changes',
+          grade: index % 2 === 0 ? 'B' : 'C',
         }),
       );
 
@@ -230,7 +231,7 @@ describe('OverviewPresenter', () => {
             project: 'frontend',
             path: '/repos/frontend',
             totalReviews: 12,
-            averageScore: 7.2,
+            readyRate: 50,
             reviews,
           }),
         ],
@@ -242,14 +243,14 @@ describe('OverviewPresenter', () => {
       expect(card?.projectName).toBe('frontend');
       expect(card?.projectPath).toBe('/repos/frontend');
       expect(card?.totalReviews).toBe(12);
-      expect(card?.averageScoreLabel).toBe('7.2');
+      expect(card?.readyRateLabel).toBe('50%');
       expect(card?.sparklinePoints).toHaveLength(10);
       expect(card?.sparklinePoints[0]).toBe(3);
-      expect(card?.sparklinePoints[9]).toBe(12);
+      expect(card?.sparklinePoints[9]).toBe(2);
       expect(card?.isEmptyHistory).toBe(false);
     });
 
-    it('renders a card with 0 reviews, score "-", and empty sparkline when a project has no history', () => {
+    it('renders a card with 0 reviews, ready rate "-", and empty sparkline when a project has no history', () => {
       const presenter = new OverviewPresenter({ now: () => NOW });
 
       const viewModel = presenter.present({
@@ -262,7 +263,7 @@ describe('OverviewPresenter', () => {
             project: 'new-project',
             path: '/repos/new',
             totalReviews: 0,
-            averageScore: null,
+            readyRate: null,
             reviews: [],
           }),
         ],
@@ -271,7 +272,7 @@ describe('OverviewPresenter', () => {
 
       const card = viewModel.projectCards.items[0];
       expect(card?.totalReviews).toBe(0);
-      expect(card?.averageScoreLabel).toBe('-');
+      expect(card?.readyRateLabel).toBe('-');
       expect(card?.sparklinePoints).toEqual([]);
       expect(card?.isEmptyHistory).toBe(true);
     });
@@ -290,10 +291,10 @@ describe('OverviewPresenter', () => {
 
       expect(viewModel.projectCards.items).toHaveLength(1);
       expect(viewModel.projectCards.items[0]?.totalReviews).toBe(0);
-      expect(viewModel.projectCards.items[0]?.averageScoreLabel).toBe('-');
+      expect(viewModel.projectCards.items[0]?.readyRateLabel).toBe('-');
     });
 
-    it('ignores scores that are null when building sparkline points', () => {
+    it('plots the grade rank of judged reviews only in the sparkline', () => {
       const presenter = new OverviewPresenter({ now: () => NOW });
 
       const viewModel = presenter.present({
@@ -306,12 +307,13 @@ describe('OverviewPresenter', () => {
             project: 'frontend',
             path: '/repos/frontend',
             totalReviews: 3,
-            averageScore: 7,
+            readyRate: 50,
             reviews: [
               ReviewStatsFactory.create({
                 id: 'a',
                 timestamp: '2026-05-25T11:58:00.000Z',
-                score: 6,
+                verdict: 'ready',
+                grade: 'A',
               }),
               ReviewStatsFactory.create({
                 id: 'b',
@@ -321,7 +323,8 @@ describe('OverviewPresenter', () => {
               ReviewStatsFactory.create({
                 id: 'c',
                 timestamp: '2026-05-25T12:00:00.000Z',
-                score: 8,
+                verdict: 'changes',
+                grade: 'D',
               }),
             ],
           }),
@@ -329,7 +332,7 @@ describe('OverviewPresenter', () => {
         recentReviews: [],
       });
 
-      expect(viewModel.projectCards.items[0]?.sparklinePoints).toEqual([6, 8]);
+      expect(viewModel.projectCards.items[0]?.sparklinePoints).toEqual([4, 1]);
     });
   });
 
@@ -541,7 +544,7 @@ describe('OverviewPresenter', () => {
             project: 'frontend',
             path: '/repos/frontend',
             totalReviews: 1,
-            averageScore: 8,
+            readyRate: 100,
             reviews: [
               ReviewStatsFactory.create({
                 id: 'r1',

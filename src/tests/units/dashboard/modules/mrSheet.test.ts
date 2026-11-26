@@ -43,4 +43,51 @@ describe('renderMrSheetContent', () => {
 
     expect(html.indexOf('id="sheet-token-usage"')).toBeLessThan(html.indexOf('sheet-score-canvas'));
   });
+
+  it('shows the verdict and the grade of the latest review against the target grade', () => {
+    const judged = {
+      ...mr,
+      reviews: [
+        {
+          type: 'review',
+          timestamp: '2026-11-25T10:00:00Z',
+          verdict: 'changes',
+          grade: 'C',
+          blocking: 0,
+        },
+        {
+          type: 'followup',
+          timestamp: '2026-11-25T12:00:00Z',
+          verdict: 'ready',
+          grade: 'B',
+          blocking: 0,
+        },
+      ],
+    };
+
+    const html = renderMrSheetContent(judged, translate, 'review', 'A');
+
+    expect(html).toContain('verdict.ready');
+    expect(html).toMatch(/class="sheet-stat-value">B/);
+    expect(html).not.toContain('sheet.outOf10');
+  });
+
+  it('lists each review with its own grade and verdict', () => {
+    const judged = {
+      ...mr,
+      reviews: [
+        {
+          type: 'review',
+          timestamp: '2026-11-25T10:00:00Z',
+          verdict: 'changes',
+          grade: 'C',
+          blocking: 0,
+        },
+      ],
+    };
+
+    const html = renderMrSheetContent(judged, translate, 'review', 'B');
+
+    expect(html).toMatch(/sheet-event-score">C · verdict\.changes/);
+  });
 });

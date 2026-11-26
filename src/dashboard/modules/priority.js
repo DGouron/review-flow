@@ -1,4 +1,5 @@
-import { QUALITY_TARGET_SCORE } from './constants.js';
+import { DEFAULT_TARGET_GRADE } from './constants.js';
+import { gradeRank, latestOutcomeOf } from './quality.js';
 
 const HOUR_IN_MILLISECONDS = 60 * 60 * 1000;
 
@@ -28,13 +29,13 @@ function getReferenceTimestamp(mergeRequest) {
 
 /**
  * @param {Record<string, unknown>} mergeRequest
- * @param {number} qualityTarget
+ * @param {'A' | 'B' | 'C' | 'D' | 'E'} targetGrade
  * @param {number} nowTimestamp
  * @returns {number}
  */
-function computeUrgencyScore(mergeRequest, qualityTarget, nowTimestamp) {
+function computeUrgencyScore(mergeRequest, targetGrade, nowTimestamp) {
   const openThreads = toNullableNumber(mergeRequest.openThreads) ?? 0;
-  const latestScore = toNullableNumber(mergeRequest.latestScore);
+  const { grade } = latestOutcomeOf(mergeRequest);
   const referenceTimestamp = getReferenceTimestamp(mergeRequest);
   const ageHours =
     referenceTimestamp === Number.MAX_SAFE_INTEGER
@@ -42,7 +43,7 @@ function computeUrgencyScore(mergeRequest, qualityTarget, nowTimestamp) {
       : Math.max(0, (nowTimestamp - referenceTimestamp) / HOUR_IN_MILLISECONDS);
 
   const threadScore = openThreads * 12;
-  const qualityGap = latestScore === null ? 2 : Math.max(0, qualityTarget - latestScore);
+  const qualityGap = grade === null ? 2 : Math.max(0, gradeRank(targetGrade) - gradeRank(grade));
   const qualityScore = qualityGap * 6;
   const ageScore = Math.min(12, ageHours * 0.2);
 
@@ -51,24 +52,17 @@ function computeUrgencyScore(mergeRequest, qualityTarget, nowTimestamp) {
 
 /**
  * @param {Array<Record<string, unknown>>} pendingFix
- * @param {{ nowIsoDate?: string, qualityTarget?: number }} [options]
+ * @param {{ nowIsoDate?: string, targetGrade?: 'A' | 'B' | 'C' | 'D' | 'E' }} [options]
  * @returns {Array<Record<string, unknown>>}
  */
 export function rankPendingFixForNowLane(pendingFix, options = {}) {
   const nowTimestamp = options.nowIsoDate ? Date.parse(options.nowIsoDate) : Date.now();
   const normalizedNowTimestamp = Number.isFinite(nowTimestamp) ? nowTimestamp : Date.now();
-  const qualityTarget =
-    typeof options.qualityTarget === 'number' && Number.isFinite(options.qualityTarget)
-      ? options.qualityTarget
-      : QUALITY_TARGET_SCORE;
+  const targetGrade = options.targetGrade ?? DEFAULT_TARGET_GRADE;
 
   return [...pendingFix].toSorted((leftMergeRequest, rightMergeRequest) => {
-    const leftScore = computeUrgencyScore(leftMergeRequest, qualityTarget, normalizedNowTimestamp);
-    const rightScore = computeUrgencyScore(
-      rightMergeRequest,
-      qualityTarget,
-      normalizedNowTimestamp,
-    );
+    const leftScore = computeUrgencyScore(leftMergeRequest, targetGrade, normalizedNowTimestamp);
+    const rightScore = computeUrgencyScore(rightMergeRequest, targetGrade, normalizedNowTimestamp);
 
     if (leftScore !== rightScore) {
       return rightScore - leftScore;

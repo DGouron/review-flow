@@ -47,10 +47,12 @@ describe('buildAiInsightsPrompt', () => {
     expect(prompt).toContain('alice');
   });
 
-  it('should include average score for each developer', () => {
+  it('should include the ready rate and the grades of each developer', () => {
     const reviews: ReviewStats[] = [
-      ReviewStatsFactory.create({ id: 'r1', assignedBy: 'alice', mrNumber: 1, score: 8 }),
-      ReviewStatsFactory.create({ id: 'r2', assignedBy: 'alice', mrNumber: 2, score: 6 }),
+      ReviewStatsFactory.create({ id: 'r1', assignedBy: 'alice', verdict: 'ready', grade: 'A' }),
+      ReviewStatsFactory.create({ id: 'r2', assignedBy: 'alice', verdict: 'changes', grade: 'C' }),
+      ReviewStatsFactory.create({ id: 'r3', assignedBy: 'alice', verdict: 'ready', grade: 'B' }),
+      ReviewStatsFactory.create({ id: 'r4', assignedBy: 'alice', verdict: 'stopped', grade: 'E' }),
     ];
 
     const prompt = buildAiInsightsPrompt({
@@ -60,7 +62,40 @@ describe('buildAiInsightsPrompt', () => {
       language: 'fr',
     });
 
-    expect(prompt).toContain('7');
+    expect(prompt).toContain('- Ready at first review: 50% (2 of 4 judged reviews)');
+    expect(prompt).toContain('- Grades: A 1, B 1, C 1, D 0, E 1');
+    expect(prompt).not.toMatch(/score/i);
+  });
+
+  it('should include the team ready rate', () => {
+    const reviews: ReviewStats[] = [
+      ReviewStatsFactory.create({ id: 'r1', assignedBy: 'alice', verdict: 'ready', grade: 'A' }),
+      ReviewStatsFactory.create({ id: 'r2', assignedBy: 'bob', verdict: 'changes', grade: 'D' }),
+      ReviewStatsFactory.create({ id: 'r3', assignedBy: 'bob', verdict: 'changes', grade: 'C' }),
+    ];
+
+    const prompt = buildAiInsightsPrompt({
+      reviews,
+      reviewContents: new Map(),
+      trackedMrs: [],
+      language: 'en',
+    });
+
+    expect(prompt).toContain('- Team ready at first review: 33%');
+  });
+
+  it('should ask the summary to mention the ready rate, never a score out of 10', () => {
+    const prompt = buildAiInsightsPrompt({
+      reviews: [ReviewStatsFactory.create({ assignedBy: 'alice', verdict: 'ready', grade: 'A' })],
+      reviewContents: new Map(),
+      trackedMrs: [],
+      language: 'en',
+    });
+
+    expect(prompt).toContain(
+      `"summary" must mention the developer's ready-at-first-review rate and key characteristic`,
+    );
+    expect(prompt).not.toContain('/10');
   });
 
   it('should include review content for recent reviews', () => {
@@ -207,7 +242,7 @@ describe('buildAiInsightsPrompt', () => {
     expect(prompt.length).toBeLessThan(200000);
   });
 
-  it('should report N/A score when every review score is null', () => {
+  it('should report N/A readiness when no review is judged', () => {
     const reviews: ReviewStats[] = [
       ReviewStatsFactory.create({ id: 'r1', assignedBy: 'alice', mrNumber: 1, score: null }),
       ReviewStatsFactory.create({ id: 'r2', assignedBy: 'alice', mrNumber: 2, score: null }),
@@ -220,8 +255,8 @@ describe('buildAiInsightsPrompt', () => {
       language: 'en',
     });
 
-    expect(prompt).toContain('Average score: N/A/10');
-    expect(prompt).toContain('First-pass quality rate: N/A');
+    expect(prompt).toContain('- Ready at first review: N/A (0 of 0 judged reviews)');
+    expect(prompt).toContain('- Team ready at first review: N/A');
   });
 
   it('should format review duration in hours when at least 60 minutes', () => {
@@ -385,9 +420,9 @@ describe('buildAiInsightsPrompt', () => {
     expect(prompt).toContain('Total additions: 0, deletions: 0');
   });
 
-  it('should report 0% first-pass rate when scored reviews are all below 7', () => {
+  it('should report a 0% ready rate for legacy reviews that all had findings', () => {
     const reviews: ReviewStats[] = [
-      ReviewStatsFactory.create({ id: 'r1', assignedBy: 'alice', mrNumber: 1, score: 5 }),
+      ReviewStatsFactory.create({ id: 'r1', assignedBy: 'alice', mrNumber: 1, score: 9 }),
       ReviewStatsFactory.create({ id: 'r2', assignedBy: 'alice', mrNumber: 2, score: 6 }),
     ];
 
@@ -398,10 +433,10 @@ describe('buildAiInsightsPrompt', () => {
       language: 'en',
     });
 
-    expect(prompt).toContain('First-pass quality rate: 0%');
+    expect(prompt).toContain('- Ready at first review: 0% (0 of 2 judged reviews)');
   });
 
-  it('should label the excerpt MR score as N/A when the review score is null', () => {
+  it('should label the excerpt MR verdict and grade as N/A when the review is not judged', () => {
     const reviews: ReviewStats[] = [
       ReviewStatsFactory.create({ id: 'r1', assignedBy: 'alice', mrNumber: 13, score: null }),
     ];
@@ -416,7 +451,30 @@ describe('buildAiInsightsPrompt', () => {
       language: 'en',
     });
 
-    expect(prompt).toContain('--- MR 13 (score: N/A) ---');
+    expect(prompt).toContain('--- MR 13 (verdict: N/A, grade: N/A) ---');
+  });
+
+  it('should label the excerpt MR with its verdict and grade', () => {
+    const reviews: ReviewStats[] = [
+      ReviewStatsFactory.create({
+        assignedBy: 'alice',
+        mrNumber: 42,
+        verdict: 'changes',
+        grade: 'C',
+      }),
+    ];
+    const reviewContents = new Map<string, string>();
+    reviewContents.set('42', createReviewContent(42, 8));
+
+    const prompt = buildAiInsightsPrompt({
+      reviews,
+      reviewContents,
+      trackedMrs: [],
+      language: 'en',
+    });
+
+    expect(prompt).toContain('--- MR 42 (verdict: changes, grade: C) ---');
+    expect(prompt).not.toContain('Score Global');
   });
 
   it('should ignore a blocking-corrections section that has no numbered titles', () => {

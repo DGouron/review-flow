@@ -43,6 +43,8 @@ export class AddReviewStatsUseCase implements UseCase<AddReviewStatsInput, Revie
       assignedBy: input.assignedBy,
       diffStats: input.diffStats ?? null,
       categoryBreakdown: input.parsed.categoryBreakdown,
+      verdict: input.parsed.verdict,
+      grade: input.parsed.grade,
     };
 
     initializeCumulativeCounters(stats);
@@ -77,11 +79,7 @@ function initializeCumulativeCounters(stats: ProjectStats): void {
     stats.categoryBreakdown = aggregate;
   }
 
-  if (stats.totalScoreSum !== undefined) return;
-
-  const reviewsWithScore = stats.reviews.filter((review) => review.score !== null);
-  stats.totalScoreSum = reviewsWithScore.reduce((sum, review) => sum + (review.score ?? 0), 0);
-  stats.scoredReviewCount = reviewsWithScore.length;
+  if (stats.diffStatsReviewCount !== undefined) return;
 
   const reviewsWithDiffStats = stats.reviews.filter((review) => review.diffStats != null);
   stats.diffStatsReviewCount = reviewsWithDiffStats.length;
@@ -93,15 +91,6 @@ function updateAggregatesForNewReview(stats: ProjectStats, review: ReviewStats):
   stats.averageDuration = stats.totalDuration / stats.totalReviews;
   stats.totalBlocking += review.blocking;
   stats.totalWarnings += review.warnings;
-
-  if (review.score !== null) {
-    stats.totalScoreSum = (stats.totalScoreSum ?? 0) + review.score;
-    stats.scoredReviewCount = (stats.scoredReviewCount ?? 0) + 1;
-  }
-
-  if (stats.scoredReviewCount && stats.scoredReviewCount > 0) {
-    stats.averageScore = (stats.totalScoreSum ?? 0) / stats.scoredReviewCount;
-  }
 
   if (review.diffStats) {
     stats.totalAdditions += review.diffStats.additions;

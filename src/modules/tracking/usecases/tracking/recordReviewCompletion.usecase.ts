@@ -68,11 +68,6 @@ export class RecordReviewCompletionUseCase implements UseCase<
     const openThreads = Math.max(0, afterEvent.openThreads + threadsOpened - threadsClosed);
     const totalThreads = afterEvent.totalThreads + threadsOpened;
 
-    let latestScore = afterEvent.latestScore;
-    if (reviewData.score !== null) {
-      latestScore = reviewData.score;
-    }
-
     const hasBlockingIssues = reviewData.blocking > 0 || openThreads > 0;
     const threshold = input.qualityThreshold ?? null;
     const gateResult = evaluateQualityGate({
@@ -86,7 +81,6 @@ export class RecordReviewCompletionUseCase implements UseCase<
     this.trackingGateway.update(projectPath, mrId, {
       openThreads,
       totalThreads,
-      latestScore,
       state: nextState,
       bypass: null,
     });
