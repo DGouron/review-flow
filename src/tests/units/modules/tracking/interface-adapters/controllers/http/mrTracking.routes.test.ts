@@ -1,10 +1,12 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { describe, it, expect, beforeEach } from 'vitest';
 
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import type { ReviewEvent } from '@/modules/tracking/entities/tracking/reviewEvent.js';
 import { mrTrackingRoutes } from '@/modules/tracking/interface-adapters/controllers/http/mrTracking.routes.js';
 import type { RemoveResult } from '@/modules/worktree-management/entities/worktree/worktree.schema.js';
 import { ProjectStatsFactory, ReviewStatsFactory } from '@/tests/factories/projectStats.factory.js';
+import { ReviewEventFactory } from '@/tests/factories/reviewEvent.factory.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
 import { createCapturingLogger } from '@/tests/stubs/capturingLogger.stub.js';
 import { StubReviewContextGateway } from '@/tests/stubs/reviewContextGateway.stub.js';
@@ -13,7 +15,7 @@ import { InMemoryStatsGateway } from '@/tests/stubs/stats.stub.js';
 
 interface BuildAppOptions {
   gateway: InMemoryReviewRequestTrackingGateway;
-  qualityThreshold: number | null;
+  qualityThreshold: QualityGrade | null;
   statsGateway?: InMemoryStatsGateway;
 }
 
@@ -57,12 +59,16 @@ describe('mrTrackingRoutes — POST /api/mr-tracking/approve quality gate', () =
     gateway = new InMemoryReviewRequestTrackingGateway();
   });
 
-  it('returns 200 when the gate passes (score above threshold, no blockers)', async () => {
+  it('returns 200 when the gate passes (ready review within the threshold, no blockers)', async () => {
     gateway.create(
       projectPath,
-      TrackedMrFactory.create({ id: 'mr-1', latestScore: 8, openThreads: 0 }),
+      TrackedMrFactory.create({
+        id: 'mr-1',
+        reviews: [ReviewEventFactory.create({ verdict: 'ready', grade: 'B' })],
+        openThreads: 0,
+      }),
     );
-    const app = await buildApp({ gateway, qualityThreshold: 7 });
+    const app = await buildApp({ gateway, qualityThreshold: 'B' });
 
     const response = await app.inject({
       method: 'POST',
@@ -76,12 +82,16 @@ describe('mrTrackingRoutes — POST /api/mr-tracking/approve quality gate', () =
     expect(gateway.getById(projectPath, 'mr-1')?.state).toBe('approved');
   });
 
-  it('returns 409 with French message when score is below threshold', async () => {
+  it('returns 409 with French message when the grade is below threshold', async () => {
     gateway.create(
       projectPath,
-      TrackedMrFactory.create({ id: 'mr-1', latestScore: 6, openThreads: 0 }),
+      TrackedMrFactory.create({
+        id: 'mr-1',
+        reviews: [ReviewEventFactory.create({ verdict: 'ready', grade: 'B' })],
+        openThreads: 0,
+      }),
     );
-    const app = await buildApp({ gateway, qualityThreshold: 7 });
+    const app = await buildApp({ gateway, qualityThreshold: 'A' });
 
     const response = await app.inject({
       method: 'POST',
@@ -92,16 +102,20 @@ describe('mrTrackingRoutes — POST /api/mr-tracking/approve quality gate', () =
     expect(response.statusCode).toBe(409);
     const body = response.json() as { success: boolean; error: string };
     expect(body.success).toBe(false);
-    expect(body.error).toBe('Seuil qualité non atteint (6/10 < 7/10)');
+    expect(body.error).toBe('Niveau qualité non atteint (B, seuil A)');
     expect(gateway.getById(projectPath, 'mr-1')?.state).not.toBe('approved');
   });
 
   it('returns 409 with French message when blockers are present', async () => {
     gateway.create(
       projectPath,
-      TrackedMrFactory.create({ id: 'mr-1', latestScore: 9, openThreads: 2 }),
+      TrackedMrFactory.create({
+        id: 'mr-1',
+        reviews: [ReviewEventFactory.create({ verdict: 'ready', grade: 'A' })],
+        openThreads: 2,
+      }),
     );
-    const app = await buildApp({ gateway, qualityThreshold: 7 });
+    const app = await buildApp({ gateway, qualityThreshold: 'B' });
 
     const response = await app.inject({
       method: 'POST',
@@ -115,12 +129,12 @@ describe('mrTrackingRoutes — POST /api/mr-tracking/approve quality gate', () =
     expect(body.error).toBe('Issues bloquantes non résolues');
   });
 
-  it('returns 200 when no review has been completed yet (latestScore=null)', async () => {
+  it('returns 409 when no review verdict exists yet', async () => {
     gateway.create(
       projectPath,
-      TrackedMrFactory.create({ id: 'mr-1', latestScore: null, openThreads: 0 }),
+      TrackedMrFactory.create({ id: 'mr-1', reviews: [], openThreads: 0 }),
     );
-    const app = await buildApp({ gateway, qualityThreshold: 7 });
+    const app = await buildApp({ gateway, qualityThreshold: 'B' });
 
     const response = await app.inject({
       method: 'POST',
@@ -128,14 +142,18 @@ describe('mrTrackingRoutes — POST /api/mr-tracking/approve quality gate', () =
       payload: { mrId: 'mr-1', projectPath },
     });
 
-    expect(response.statusCode).toBe(200);
-    expect(gateway.getById(projectPath, 'mr-1')?.state).toBe('approved');
+    expect(response.statusCode).toBe(409);
+    expect(gateway.getById(projectPath, 'mr-1')?.state).not.toBe('approved');
   });
 
   it('returns 200 when no quality threshold is configured', async () => {
     gateway.create(
       projectPath,
-      TrackedMrFactory.create({ id: 'mr-1', latestScore: 6, openThreads: 0 }),
+      TrackedMrFactory.create({
+        id: 'mr-1',
+        reviews: [ReviewEventFactory.create({ verdict: 'changes', grade: 'C' })],
+        openThreads: 0,
+      }),
     );
     const app = await buildApp({ gateway, qualityThreshold: null });
 
@@ -150,7 +168,7 @@ describe('mrTrackingRoutes — POST /api/mr-tracking/approve quality gate', () =
   });
 
   it('returns 404 when the MR does not exist', async () => {
-    const app = await buildApp({ gateway, qualityThreshold: 7 });
+    const app = await buildApp({ gateway, qualityThreshold: 'B' });
 
     const response = await app.inject({
       method: 'POST',

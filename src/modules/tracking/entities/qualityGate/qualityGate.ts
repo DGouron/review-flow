@@ -1,22 +1,44 @@
+import {
+  isGradeWithin,
+  type QualityGrade,
+  type ReviewVerdict,
+} from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
+
 export interface QualityGateInput {
-  latestScore: number | null;
+  verdict: ReviewVerdict | null;
+  grade: QualityGrade | null;
   blockingIssues: number;
-  threshold: number | null;
+  threshold: QualityGrade | null;
 }
 
-export type QualityGateRejectionReason = 'below-threshold' | 'blockers-present';
+export type QualityGateRejectionReason =
+  | 'verdict-missing'
+  | 'blockers-present'
+  | 'not-ready'
+  | 'below-threshold';
 
 export type QualityGateResult =
   | { allowed: true }
   | { allowed: false; reason: QualityGateRejectionReason; message: string };
+
+const VERDICT_LABELS: Record<ReviewVerdict, string> = {
+  ready: 'prête',
+  changes: 'à reprendre',
+  stopped: 'stoppée',
+  incomplete: 'incomplète',
+};
 
 export function evaluateQualityGate(input: QualityGateInput): QualityGateResult {
   if (input.threshold === null) {
     return { allowed: true };
   }
 
-  if (input.latestScore === null) {
-    return { allowed: true };
+  if (input.verdict === null) {
+    return {
+      allowed: false,
+      reason: 'verdict-missing',
+      message: 'Aucun verdict de review : approbation impossible',
+    };
   }
 
   if (input.blockingIssues > 0) {
@@ -27,11 +49,19 @@ export function evaluateQualityGate(input: QualityGateInput): QualityGateResult 
     };
   }
 
-  if (input.latestScore < input.threshold) {
+  if (input.verdict !== 'ready') {
+    return {
+      allowed: false,
+      reason: 'not-ready',
+      message: `Review ${VERDICT_LABELS[input.verdict]} : approbation impossible`,
+    };
+  }
+
+  if (input.grade !== null && !isGradeWithin(input.grade, input.threshold)) {
     return {
       allowed: false,
       reason: 'below-threshold',
-      message: `Seuil qualité non atteint (${input.latestScore}/10 < ${input.threshold}/10)`,
+      message: `Niveau qualité non atteint (${input.grade}, seuil ${input.threshold})`,
     };
   }
 

@@ -17,6 +17,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { vi } from 'vitest';
 
 import type { RepositoryConfig } from '@/config/loader.js';
+import { ReviewEventFactory } from '@/tests/factories/reviewEvent.factory.js';
 
 const mockRepoConfig: RepositoryConfig = {
   name: 'test-project',
@@ -180,7 +181,7 @@ function buildApproveProcessWebhook(
       checkFollowupNeeded: new CheckFollowupNeededUseCase(tracking),
       removeWorktree: async () => ({ status: 'removed' }),
       handlePlatformApproval: new HandlePlatformApprovalUseCase(tracking),
-      getQualityThreshold: () => 7,
+      getQualityThreshold: () => 'A' as const,
       logger: createStubLogger(),
     });
 }
@@ -216,7 +217,7 @@ function buildGitLabDeps(
     noteCommentPostGateway: noteCommentPost,
     handlePlatformApproval: new HandlePlatformApprovalUseCase(tracking),
     approvalRevocationGateway: approvalRevocation,
-    getQualityThreshold: () => 7,
+    getQualityThreshold: () => 'A' as const,
     guardDiffSize: { execute: () => ({ kind: 'allowed' }) },
     getMaxDiffLines: () => 2000,
     now: () => '2026-05-26T12:00:00.000Z',
@@ -270,7 +271,7 @@ function buildGitHubDeps(
     noteCommentPostGateway: noteCommentPost,
     handlePlatformApproval: new HandlePlatformApprovalUseCase(tracking),
     approvalRevocationGateway: approvalRevocation,
-    getQualityThreshold: () => 7,
+    getQualityThreshold: () => 'A' as const,
     guardDiffSize: { execute: () => ({ kind: 'allowed' }) },
     getMaxDiffLines: () => 2000,
     now: () => '2026-05-26T12:00:00.000Z',
@@ -327,7 +328,7 @@ describe('Acceptance — SPEC-180 Iteration C: Platform approval revoked on non-
           platform: 'gitlab',
           project: 'test-org/test-project',
           state: 'pending-approval',
-          latestScore: 6,
+          reviews: [ReviewEventFactory.create({ verdict: 'ready', grade: 'B' })],
           openThreads: 0,
           bypass: null,
         }),
@@ -351,7 +352,7 @@ describe('Acceptance — SPEC-180 Iteration C: Platform approval revoked on non-
       expect(noteCommentPost.calls[0]).toEqual({
         projectPath: 'test-org/test-project',
         mrNumber: MR_NUMBER,
-        body: 'Approbation annulée : seuil qualité 7/10 non atteint (6/10). Utilisez `/bypass-quality "raison"` pour forcer.',
+        body: 'Approbation annulée : niveau qualité non atteint (B, seuil A). Utilisez `/bypass-quality "raison"` pour forcer.',
       });
 
       const finalMr = tracking.getById(PROJECT_PATH, GITLAB_MR_ID);
@@ -367,7 +368,7 @@ describe('Acceptance — SPEC-180 Iteration C: Platform approval revoked on non-
           platform: 'github',
           project: 'test-org/test-project',
           state: 'pending-approval',
-          latestScore: 6,
+          reviews: [ReviewEventFactory.create({ verdict: 'ready', grade: 'B' })],
           openThreads: 0,
           bypass: null,
         }),
@@ -392,7 +393,7 @@ describe('Acceptance — SPEC-180 Iteration C: Platform approval revoked on non-
       expect(noteCommentPost.calls[0]).toEqual({
         projectPath: 'test-org/test-project',
         mrNumber: MR_NUMBER,
-        body: 'Approbation annulée : seuil qualité 7/10 non atteint (6/10). Utilisez `/bypass-quality "raison"` pour forcer.',
+        body: 'Approbation annulée : niveau qualité non atteint (B, seuil A). Utilisez `/bypass-quality "raison"` pour forcer.',
       });
 
       const finalMr = tracking.getById(PROJECT_PATH, GITHUB_MR_ID);

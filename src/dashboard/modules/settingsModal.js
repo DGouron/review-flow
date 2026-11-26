@@ -26,7 +26,8 @@ const EDITABLE_KEYS = [
 const SUPPORTED_LANGUAGES = ['fr', 'en'];
 const SUPPORTED_MODELS = ['haiku', 'sonnet', 'opus'];
 
-const QUALITY_THRESHOLD_ERROR = 'Le seuil doit être un entier entre 0 et 10';
+const QUALITY_THRESHOLD_ERROR = 'Le seuil doit être une lettre de A à E';
+const QUALITY_GRADES = ['A', 'B', 'C', 'D', 'E'];
 const MAX_DIFF_LINES_ERROR = 'Le budget de lignes doit être un entier positif';
 
 const PROJECT_CAP_REQUIRED_MESSAGE = 'La valeur est obligatoire';
@@ -41,7 +42,7 @@ const DEFAULT_MAX_CONCURRENT_REVIEWS = 2;
  * @property {string} reviewFollowupSkill
  * @property {'en' | 'fr'} language
  * @property {string} [externalLink]
- * @property {number} [qualityThreshold]
+ * @property {'A' | 'B' | 'C' | 'D' | 'E'} [qualityThreshold]
  * @property {number} [maxConcurrentReviews]
  * @property {number} [maxDiffLines]
  * @property {boolean} [github]
@@ -80,8 +81,7 @@ export function buildSettingsViewModel(input) {
     reviewSkill: config.reviewSkill,
     reviewFollowupSkill: config.reviewFollowupSkill,
     externalLink: typeof config.externalLink === 'string' ? config.externalLink : '',
-    qualityThreshold:
-      typeof config.qualityThreshold === 'number' ? String(config.qualityThreshold) : '',
+    qualityThreshold: typeof config.qualityThreshold === 'string' ? config.qualityThreshold : '',
     maxConcurrentReviews:
       typeof config.maxConcurrentReviews === 'number'
         ? String(config.maxConcurrentReviews)
@@ -179,7 +179,14 @@ export function renderSettingsModalHtml(viewModel) {
 
       <label class="settings-modal__field">
         <span class="settings-modal__label">${escapeHtml(t('settings.qualityThreshold'))}</span>
-        <input name="qualityThreshold" type="number" value="${escapeHtml(viewModel.qualityThreshold)}" min="0" max="10" step="1" placeholder="${escapeHtml(t('settings.qualityThresholdPlaceholder'))}" class="settings-modal__input" />
+        <select name="qualityThreshold" class="settings-modal__input">
+          ${['', ...QUALITY_GRADES]
+            .map(
+              (grade) =>
+                `<option value="${grade}"${grade === viewModel.qualityThreshold ? ' selected' : ''}>${escapeHtml(grade === '' ? t('settings.qualityThresholdNone') : grade)}</option>`,
+            )
+            .join('')}
+        </select>
         <span class="settings-modal__hint">${escapeHtml(t('settings.qualityThresholdHint'))}</span>
       </label>
 
@@ -206,22 +213,15 @@ export function renderSettingsModalHtml(viewModel) {
 }
 
 /**
- * Validates qualityThreshold input: empty string means "clear", otherwise must
- * parse as an integer in [0, 10]. Mirrors server-side validation.
+ * Validates qualityThreshold input: empty string means "clear", otherwise a grade
+ * from A to E. Mirrors server-side validation.
  *
  * @param {string} value
  * @returns {{ ok: true } | { ok: false; message: string }}
  */
 export function validateQualityThreshold(value) {
-  if (value === '') return { ok: true };
-  if (!/^-?\d+$/.test(value)) {
-    return { ok: false, message: QUALITY_THRESHOLD_ERROR };
-  }
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 10) {
-    return { ok: false, message: QUALITY_THRESHOLD_ERROR };
-  }
-  return { ok: true };
+  if (value === '' || QUALITY_GRADES.includes(value)) return { ok: true };
+  return { ok: false, message: QUALITY_THRESHOLD_ERROR };
 }
 
 /**

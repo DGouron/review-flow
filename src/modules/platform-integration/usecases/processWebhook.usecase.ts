@@ -2,8 +2,10 @@ import type { Logger } from 'pino';
 
 import type { WebhookEvent } from '@/modules/platform-integration/entities/webhookEvent/webhookEvent.js';
 import type { HandleClose } from '@/modules/review-execution/usecases/handleClose.usecase.js';
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
 import type { QualityGateRejectionReason } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
+import { latestReviewOutcomeOf } from '@/modules/tracking/entities/tracking/latestReviewOutcome.js';
 import type { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import type { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
 import type { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
@@ -32,7 +34,7 @@ export interface ProcessWebhookDependencies {
   checkFollowupNeeded: Pick<CheckFollowupNeededUseCase, 'execute'>;
   removeWorktree: RemoveWorktreeAction;
   handlePlatformApproval: Pick<HandlePlatformApprovalUseCase, 'execute'>;
-  getQualityThreshold: (projectPath: string) => number | null;
+  getQualityThreshold: (projectPath: string) => QualityGrade | null;
   logger: Logger;
 }
 
@@ -161,7 +163,7 @@ function routeApprove(event: ApproveEvent, deps: ProcessWebhookDependencies): Pr
     targetState: 'approved',
     qualityCheck: (mr) =>
       evaluateQualityGate({
-        latestScore: mr.latestScore,
+        ...latestReviewOutcomeOf(mr),
         blockingIssues: mr.openThreads,
         threshold,
       }),

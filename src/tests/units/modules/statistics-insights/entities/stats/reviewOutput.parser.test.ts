@@ -14,6 +14,9 @@ describe('parseReviewOutput structured stats line', () => {
       warnings: 2,
       suggestions: 3,
       categoryBreakdown: null,
+      verdict: 'changes',
+      grade: 'D',
+      levels: null,
     });
   });
 
@@ -26,6 +29,9 @@ describe('parseReviewOutput structured stats line', () => {
       warnings: 0,
       suggestions: 0,
       categoryBreakdown: null,
+      verdict: 'changes',
+      grade: 'D',
+      levels: null,
     });
   });
 });
@@ -47,6 +53,9 @@ describe('parseReviewOutput summary format', () => {
       warnings: 3,
       suggestions: 4,
       categoryBreakdown: null,
+      verdict: 'changes',
+      grade: 'D',
+      levels: null,
     });
   });
 
@@ -77,6 +86,9 @@ describe('parseReviewOutput inline markers fallback', () => {
       warnings: 1,
       suggestions: 1,
       categoryBreakdown: null,
+      verdict: null,
+      grade: null,
+      levels: null,
     });
   });
 
@@ -111,6 +123,9 @@ describe('parseReviewOutput empty / no match', () => {
       warnings: 0,
       suggestions: 0,
       categoryBreakdown: null,
+      verdict: null,
+      grade: null,
+      levels: null,
     });
   });
 
@@ -123,6 +138,9 @@ describe('parseReviewOutput empty / no match', () => {
       warnings: 0,
       suggestions: 0,
       categoryBreakdown: null,
+      verdict: null,
+      grade: null,
+      levels: null,
     });
   });
 });
@@ -161,5 +179,57 @@ describe('parseReviewOutput category segment', () => {
     const parsed = parseReviewOutput('[REVIEW_STATS:blocking=1:warnings=2:suggestions=3:score=7]');
 
     expect(parsed.categoryBreakdown).toBeNull();
+  });
+});
+
+describe('parseReviewOutput verdict and levels', () => {
+  it('reads the verdict, the grade and the levels of the stats line', () => {
+    const parsed = parseReviewOutput(
+      '[REVIEW_STATS:blocking=0:warnings=4:suggestions=3:preexisting=1:verdict=changes:grade=C:levels=fiabilite=C,securite=A,tests=B]',
+    );
+
+    expect(parsed.verdict).toBe('changes');
+    expect(parsed.grade).toBe('C');
+    expect(parsed.levels).toEqual({ fiabilite: 'C', securite: 'A', tests: 'B' });
+  });
+
+  it('keeps a stopped verdict even without any finding', () => {
+    const parsed = parseReviewOutput(
+      '[REVIEW_STATS:blocking=0:warnings=0:suggestions=0:verdict=stopped]',
+    );
+
+    expect(parsed.verdict).toBe('stopped');
+  });
+
+  it('takes the worst level as the grade when the line gives none', () => {
+    const parsed = parseReviewOutput(
+      '[REVIEW_STATS:blocking=0:warnings=0:suggestions=1:verdict=ready:levels=fiabilite=A,sante=B]',
+    );
+
+    expect(parsed.grade).toBe('B');
+  });
+
+  it('rebuilds the verdict and the grade of a review written before verdicts', () => {
+    const parsed = parseReviewOutput('[REVIEW_STATS:blocking=0:warnings=0:suggestions=2:score=9]');
+
+    expect(parsed.verdict).toBe('ready');
+    expect(parsed.grade).toBe('B');
+    expect(parsed.levels).toBeNull();
+  });
+
+  it('rebuilds the verdict when the line carries an unknown one', () => {
+    const parsed = parseReviewOutput(
+      '[REVIEW_STATS:blocking=0:warnings=1:suggestions=0:verdict=maybe]',
+    );
+
+    expect(parsed.verdict).toBe('changes');
+  });
+
+  it('drops a level outside the scale', () => {
+    const parsed = parseReviewOutput(
+      '[REVIEW_STATS:blocking=0:warnings=0:suggestions=0:verdict=ready:levels=fiabilite=Z,tests=A]',
+    );
+
+    expect(parsed.levels).toEqual({ tests: 'A' });
   });
 });

@@ -19,6 +19,10 @@ import {
   reviewSkillForFocus,
 } from '@/modules/review-execution/entities/progress/reviewFocus.type.js';
 import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
+import {
+  type QualityGrade,
+  qualityThresholdOf,
+} from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 
 export interface ProjectConfig {
   github: boolean;
@@ -34,7 +38,7 @@ export interface ProjectConfig {
   audits?: string[];
   routingPolicy?: RoutingPolicy;
   externalLink?: string;
-  qualityThreshold?: number;
+  qualityThreshold?: QualityGrade;
   maxConcurrentReviews?: number;
   maxDiffLines?: number;
 }
@@ -60,14 +64,15 @@ function parseRetentionDays(value: unknown): number {
   return DEFAULT_RETENTION_DAYS;
 }
 
-function parseQualityThreshold(value: unknown): number | undefined {
+function parseQualityThreshold(value: unknown): QualityGrade | undefined {
   if (value === undefined || value === null) {
     return undefined;
   }
-  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 10) {
-    throw new Error('Invalid qualityThreshold: must be an integer between 0 and 10');
+  const threshold = qualityThresholdOf(value);
+  if (threshold === null) {
+    throw new Error('Invalid qualityThreshold: must be a grade from A to E');
   }
-  return value;
+  return threshold;
 }
 
 function parseMaxDiffLines(value: unknown): number | undefined {

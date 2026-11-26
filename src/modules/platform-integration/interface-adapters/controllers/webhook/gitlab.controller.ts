@@ -50,6 +50,7 @@ import type { GateClaudeInvocationUseCase } from '@/modules/review-execution/use
 import type { HandleClose } from '@/modules/review-execution/usecases/handleClose.usecase.js';
 import type { ResolveAuditScopeUseCase } from '@/modules/review-execution/usecases/resolveAuditScope.usecase.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import type { EnforceBudgetUseCase } from '@/modules/token-accounting/usecases/enforceBudget/enforceBudget.usecase.js';
 import { createTrackedMrId } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import type { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
@@ -127,7 +128,7 @@ export interface GitLabWebhookDependencies {
   handlePlatformApproval: HandlePlatformApprovalUseCase;
   approvalRevocationGateway: ApprovalRevocationGateway;
   idempotencyStore?: IdempotencyStore;
-  getQualityThreshold: (projectPath: string) => number | null;
+  getQualityThreshold: (projectPath: string) => QualityGrade | null;
   guardDiffSize: GuardDiffSizeUseCase;
   getMaxDiffLines: (localPath: string) => number;
   now: () => string;

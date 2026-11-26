@@ -12,11 +12,13 @@ import {
 } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import type { GateClaudeInvocationProcessor } from '@/modules/review-execution/usecases/gateClaudeInvocation.usecase.js';
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import type { BudgetStatus } from '@/modules/token-accounting/entities/budget/budgetStatus.js';
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import { HandlePlatformApprovalUseCase } from '@/modules/tracking/usecases/tracking/handlePlatformApproval.usecase.js';
 import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
+import { ReviewEventFactory } from '@/tests/factories/reviewEvent.factory.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { InMemoryReviewRequestTrackingGateway } from '@/tests/stubs/reviewRequestTracking.stub.js';
@@ -36,7 +38,7 @@ function buildApproveEvent(): WebhookEvent {
 
 function buildDeps(
   tracked: TrackedMr | null,
-  threshold: number | null,
+  threshold: QualityGrade | null,
 ): ProcessWebhookDependencies {
   const trackingGateway = new InMemoryReviewRequestTrackingGateway();
   if (tracked) {
@@ -64,12 +66,12 @@ describe('SPEC-073 Stage 4b — approve verdict via processWebhook (acceptance)'
     it('approved: a tracked MR clearing the quality gate transitions to approved', async () => {
       const tracked = TrackedMrFactory.create({
         id: 'gitlab-group/project-42',
-        latestScore: 9,
+        reviews: [ReviewEventFactory.create({ verdict: 'ready', grade: 'A' })],
         openThreads: 0,
         bypass: null,
       });
 
-      const result = await processWebhook(buildApproveEvent(), buildDeps(tracked, 8));
+      const result = await processWebhook(buildApproveEvent(), buildDeps(tracked, 'B'));
 
       expect(result).toEqual({ type: 'approved', mergeRequestNumber: 42 });
     });
@@ -77,12 +79,12 @@ describe('SPEC-073 Stage 4b — approve verdict via processWebhook (acceptance)'
     it('approval-revoked: a sub-threshold tracked MR is reverted with a revoke message', async () => {
       const tracked = TrackedMrFactory.create({
         id: 'gitlab-group/project-42',
-        latestScore: 4,
+        reviews: [ReviewEventFactory.create({ verdict: 'ready', grade: 'C' })],
         openThreads: 0,
         bypass: null,
       });
 
-      const result = await processWebhook(buildApproveEvent(), buildDeps(tracked, 8));
+      const result = await processWebhook(buildApproveEvent(), buildDeps(tracked, 'B'));
 
       expect(result.type).toBe('approval-revoked');
       if (result.type !== 'approval-revoked') throw new Error('expected approval-revoked');
@@ -94,12 +96,12 @@ describe('SPEC-073 Stage 4b — approve verdict via processWebhook (acceptance)'
     it('approval-revoked: blocking issues revert the approval with the blockers reason', async () => {
       const tracked = TrackedMrFactory.create({
         id: 'gitlab-group/project-42',
-        latestScore: 9,
+        reviews: [ReviewEventFactory.create({ verdict: 'ready', grade: 'A' })],
         openThreads: 2,
         bypass: null,
       });
 
-      const result = await processWebhook(buildApproveEvent(), buildDeps(tracked, 8));
+      const result = await processWebhook(buildApproveEvent(), buildDeps(tracked, 'B'));
 
       expect(result.type).toBe('approval-revoked');
       if (result.type !== 'approval-revoked') throw new Error('expected approval-revoked');
@@ -107,7 +109,7 @@ describe('SPEC-073 Stage 4b — approve verdict via processWebhook (acceptance)'
     });
 
     it('approval-ignored: an untracked MR yields a not-found ignore', async () => {
-      const result = await processWebhook(buildApproveEvent(), buildDeps(null, 8));
+      const result = await processWebhook(buildApproveEvent(), buildDeps(null, 'B'));
 
       expect(result).toEqual({
         type: 'approval-ignored',
@@ -119,12 +121,12 @@ describe('SPEC-073 Stage 4b — approve verdict via processWebhook (acceptance)'
     it('approved: a bypassed MR below threshold passes the gate via the bypass', async () => {
       const tracked = TrackedMrFactory.create({
         id: 'gitlab-group/project-42',
-        latestScore: 4,
+        reviews: [ReviewEventFactory.create({ verdict: 'ready', grade: 'C' })],
         openThreads: 0,
         bypass: { reason: 'urgent', author: 'alice', recordedAt: '2026-01-01T00:00:00Z' },
       });
 
-      const result = await processWebhook(buildApproveEvent(), buildDeps(tracked, 8));
+      const result = await processWebhook(buildApproveEvent(), buildDeps(tracked, 'B'));
 
       expect(result).toEqual({ type: 'approved', mergeRequestNumber: 42 });
     });

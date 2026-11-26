@@ -67,7 +67,7 @@ vi.mock('@/main/websocket.js', () => ({
 }));
 
 vi.mock('@/config/projectConfig.js', () => ({
-  loadProjectConfig: vi.fn(() => ({ qualityThreshold: 7 })),
+  loadProjectConfig: vi.fn(() => ({ qualityThreshold: 'B' })),
   getProjectAgents: vi.fn(() => null),
   getProjectAgentsOrFocusDefaults: vi.fn(() => null),
   getFollowupAgents: vi.fn(() => null),
@@ -79,6 +79,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { handleGitLabWebhook } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
 import type { GitLabWebhookDependencies } from '@/modules/platform-integration/interface-adapters/controllers/webhook/gitlab.controller.js';
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
+import { latestReviewOutcomeOf } from '@/modules/tracking/entities/tracking/latestReviewOutcome.js';
 import { CheckFollowupNeededUseCase } from '@/modules/tracking/usecases/tracking/checkFollowupNeeded.usecase.js';
 import { RecordBypassUseCase } from '@/modules/tracking/usecases/tracking/recordBypass.usecase.js';
 import { RecordPushUseCase } from '@/modules/tracking/usecases/tracking/recordPush.usecase.js';
@@ -86,6 +87,7 @@ import { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/track
 import { SyncThreadsUseCase } from '@/modules/tracking/usecases/tracking/syncThreads.usecase.js';
 import { TrackAssignmentUseCase } from '@/modules/tracking/usecases/tracking/trackAssignment.usecase.js';
 import { TransitionStateUseCase } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
+import { ReviewEventFactory } from '@/tests/factories/reviewEvent.factory.js';
 import { TrackedMrFactory } from '@/tests/factories/trackedMr.factory.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { StubNoteCommentPostGateway } from '@/tests/stubs/noteCommentPost.stub.js';
@@ -207,7 +209,7 @@ describe('Acceptance — SPEC-180 Iteration B: Comment-based bypass', () => {
           platform: 'gitlab',
           project: 'test-org/test-project',
           state: 'pending-approval',
-          latestScore: 5,
+          reviews: [ReviewEventFactory.create({ verdict: 'changes', grade: 'D' })],
           openThreads: 1,
         }),
       );
@@ -233,9 +235,9 @@ describe('Acceptance — SPEC-180 Iteration B: Comment-based bypass', () => {
         targetState: 'approved',
         qualityCheck: (mr) =>
           evaluateQualityGate({
-            latestScore: mr.latestScore,
+            ...latestReviewOutcomeOf(mr),
             blockingIssues: mr.openThreads,
-            threshold: 7,
+            threshold: 'B',
           }),
       });
       expect(transitionResult.ok).toBe(true);
@@ -255,7 +257,7 @@ describe('Acceptance — SPEC-180 Iteration B: Comment-based bypass', () => {
           platform: 'gitlab',
           project: 'test-org/test-project',
           state: 'pending-approval',
-          latestScore: 5,
+          reviews: [ReviewEventFactory.create({ verdict: 'changes', grade: 'C' })],
           openThreads: 0,
         }),
       );
@@ -289,7 +291,7 @@ describe('Acceptance — SPEC-180 Iteration B: Comment-based bypass', () => {
           platform: 'gitlab',
           project: 'test-org/test-project',
           state: 'pending-approval',
-          latestScore: 5,
+          reviews: [ReviewEventFactory.create({ verdict: 'changes', grade: 'C' })],
           openThreads: 0,
           bypass: {
             author: 'alice',
@@ -312,8 +314,10 @@ describe('Acceptance — SPEC-180 Iteration B: Comment-based bypass', () => {
           suggestions: 0,
           threadsOpened: 0,
           threadsClosed: 0,
+          verdict: 'ready',
+          grade: 'A',
         },
-        qualityThreshold: 7,
+        qualityThreshold: 'B',
       });
 
       expect(result?.bypass).toBeNull();
@@ -331,7 +335,7 @@ describe('Acceptance — SPEC-180 Iteration B: Comment-based bypass', () => {
           platform: 'gitlab',
           project: 'test-org/test-project',
           state: 'pending-approval',
-          latestScore: 9,
+          reviews: [ReviewEventFactory.create({ verdict: 'ready', grade: 'A' })],
           openThreads: 0,
         }),
       );

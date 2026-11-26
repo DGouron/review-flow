@@ -94,7 +94,7 @@ describe('loadProjectConfig', () => {
     expect(config?.qualityThreshold).toBeUndefined();
   });
 
-  it('should accept integer qualityThreshold between 0 and 10', () => {
+  it('should convert a legacy qualityThreshold out of 10 to its grade', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue(
       JSON.stringify({
@@ -109,7 +109,7 @@ describe('loadProjectConfig', () => {
 
     const config = loadProjectConfig('/fake/path');
 
-    expect(config?.qualityThreshold).toBe(7);
+    expect(config?.qualityThreshold).toBe('C');
   });
 
   it('should reject qualityThreshold outside 0-10 range', () => {
@@ -144,7 +144,7 @@ describe('loadProjectConfig', () => {
     expect(() => loadProjectConfig('/fake/path')).toThrow(/qualityThreshold/);
   });
 
-  it('should accept qualityThreshold of 0 (lowest allowed)', () => {
+  it('should convert a legacy qualityThreshold of 0 to the lowest grade', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue(
       JSON.stringify({
@@ -159,7 +159,41 @@ describe('loadProjectConfig', () => {
 
     const config = loadProjectConfig('/fake/path');
 
-    expect(config?.qualityThreshold).toBe(0);
+    expect(config?.qualityThreshold).toBe('E');
+  });
+
+  it('should accept a grade letter as qualityThreshold', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        github: true,
+        gitlab: false,
+        defaultModel: 'sonnet',
+        reviewSkill: 'review-front',
+        reviewFollowupSkill: 'review-followup',
+        qualityThreshold: 'B',
+      }),
+    );
+
+    const config = loadProjectConfig('/fake/path');
+
+    expect(config?.qualityThreshold).toBe('B');
+  });
+
+  it('should reject a qualityThreshold letter outside the grades', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        github: true,
+        gitlab: false,
+        defaultModel: 'sonnet',
+        reviewSkill: 'review-front',
+        reviewFollowupSkill: 'review-followup',
+        qualityThreshold: 'F',
+      }),
+    );
+
+    expect(() => loadProjectConfig('/fake/path')).toThrow(/qualityThreshold/);
   });
 
   it('should leave maxDiffLines undefined when not specified', () => {

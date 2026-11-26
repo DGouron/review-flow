@@ -508,7 +508,7 @@ describe('projectConfigRoutes — PATCH /api/project-config', () => {
     await app.close();
   });
 
-  it('accepts a numeric qualityThreshold in the patch body', async () => {
+  it('converts a numeric qualityThreshold in the patch body to its grade', async () => {
     const gateway = new StubProjectConfigGateway();
     gateway.set('/repo/A', baseConfig());
     const app = await buildAppWithPatch(gateway);
@@ -520,7 +520,23 @@ describe('projectConfigRoutes — PATCH /api/project-config', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json().config.qualityThreshold).toBe(7);
+    expect(response.json().config.qualityThreshold).toBe('C');
+    await app.close();
+  });
+
+  it('accepts a grade letter as qualityThreshold in the patch body', async () => {
+    const gateway = new StubProjectConfigGateway();
+    gateway.set('/repo/A', baseConfig());
+    const app = await buildAppWithPatch(gateway);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/api/project-config?path=' + encodeURIComponent('/repo/A'),
+      payload: { qualityThreshold: 'A' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().config.qualityThreshold).toBe('A');
     await app.close();
   });
 
@@ -542,7 +558,7 @@ describe('projectConfigRoutes — PATCH /api/project-config', () => {
 
   it('clears qualityThreshold from the persisted config when patch sends null', async () => {
     const gateway = new StubProjectConfigGateway();
-    gateway.set('/repo/A', baseConfig({ qualityThreshold: 7 }));
+    gateway.set('/repo/A', baseConfig({ qualityThreshold: 'C' }));
     const app = await buildAppWithPatch(gateway);
 
     const response = await app.inject({
@@ -718,7 +734,7 @@ describe('projectConfigRoutes — PATCH /api/project-config', () => {
 
   it('treats an empty-string qualityThreshold as a clear request', async () => {
     const gateway = new StubProjectConfigGateway();
-    gateway.set('/repo/A', baseConfig({ qualityThreshold: 7 }));
+    gateway.set('/repo/A', baseConfig({ qualityThreshold: 'C' }));
     const app = await buildAppWithPatch(gateway);
 
     const response = await app.inject({

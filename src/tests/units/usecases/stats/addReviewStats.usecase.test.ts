@@ -23,7 +23,16 @@ describe('AddReviewStatsUseCase', () => {
       projectPath: PROJECT,
       mrNumber: 42,
       duration: 60000,
-      parsed: { score: 8, blocking: 1, warnings: 2, suggestions: 3, categoryBreakdown: null },
+      parsed: {
+        score: 8,
+        blocking: 1,
+        warnings: 2,
+        suggestions: 3,
+        categoryBreakdown: null,
+        verdict: null,
+        grade: null,
+        levels: null,
+      },
     });
 
     expect(review.mrNumber).toBe(42);
@@ -83,7 +92,16 @@ describe('AddReviewStatsUseCase', () => {
       projectPath: PROJECT,
       mrNumber: 3,
       duration: 60000,
-      parsed: { score: null, blocking: 0, warnings: 0, suggestions: 0, categoryBreakdown: null },
+      parsed: {
+        score: null,
+        blocking: 0,
+        warnings: 0,
+        suggestions: 0,
+        categoryBreakdown: null,
+        verdict: null,
+        grade: null,
+        levels: null,
+      },
     });
 
     const stats = statsGateway.loadProjectStats(PROJECT);
@@ -96,7 +114,16 @@ describe('AddReviewStatsUseCase', () => {
       projectPath: PROJECT,
       mrNumber: 1,
       duration: 60000,
-      parsed: { score: null, blocking: 0, warnings: 0, suggestions: 0, categoryBreakdown: null },
+      parsed: {
+        score: null,
+        blocking: 0,
+        warnings: 0,
+        suggestions: 0,
+        categoryBreakdown: null,
+        verdict: null,
+        grade: null,
+        levels: null,
+      },
     });
 
     expect(review.score).toBeNull();
@@ -112,7 +139,16 @@ describe('AddReviewStatsUseCase', () => {
       projectPath: PROJECT,
       mrNumber: 9,
       duration: 60000,
-      parsed: { score: 9, blocking: 0, warnings: 0, suggestions: 0, categoryBreakdown: null },
+      parsed: {
+        score: 9,
+        blocking: 0,
+        warnings: 0,
+        suggestions: 0,
+        categoryBreakdown: null,
+        verdict: null,
+        grade: null,
+        levels: null,
+      },
       assignedBy: 'reviewer',
       diffStats: DiffStatsFactory.create({ additions: 80, deletions: 12 }),
     });
@@ -279,7 +315,16 @@ describe('AddReviewStatsUseCase', () => {
       projectPath: PROJECT,
       mrNumber: 7,
       duration: 60000,
-      parsed: { score: null, blocking: 0, warnings: 0, suggestions: 0, categoryBreakdown: null },
+      parsed: {
+        score: null,
+        blocking: 0,
+        warnings: 0,
+        suggestions: 0,
+        categoryBreakdown: null,
+        verdict: null,
+        grade: null,
+        levels: null,
+      },
     });
 
     expect(review.score).toBeNull();
@@ -294,7 +339,16 @@ describe('AddReviewStatsUseCase', () => {
       projectPath: PROJECT,
       mrNumber: 12,
       duration: 60000,
-      parsed: { score: null, blocking: 0, warnings: 0, suggestions: 0, categoryBreakdown: null },
+      parsed: {
+        score: null,
+        blocking: 0,
+        warnings: 0,
+        suggestions: 0,
+        categoryBreakdown: null,
+        verdict: null,
+        grade: null,
+        levels: null,
+      },
     });
 
     expect(review.assignedBy).toBeUndefined();
@@ -305,7 +359,16 @@ describe('AddReviewStatsUseCase', () => {
       projectPath: PROJECT,
       mrNumber: 11,
       duration: 60000,
-      parsed: { score: null, blocking: 0, warnings: 0, suggestions: 0, categoryBreakdown: null },
+      parsed: {
+        score: null,
+        blocking: 0,
+        warnings: 0,
+        suggestions: 0,
+        categoryBreakdown: null,
+        verdict: null,
+        grade: null,
+        levels: null,
+      },
     });
 
     const stats = statsGateway.loadProjectStats(PROJECT);

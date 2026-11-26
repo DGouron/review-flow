@@ -3,8 +3,10 @@ import type { Logger } from 'pino';
 
 import { logInfo, logError } from '@/frameworks/logging/logBuffer.js';
 import type { ReviewContextGateway } from '@/modules/review-execution/entities/reviewContext/reviewContext.gateway.js';
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import type { StatsGateway } from '@/modules/statistics-insights/entities/stats/stats.gateway.js';
 import { evaluateQualityGate } from '@/modules/tracking/entities/qualityGate/qualityGate.js';
+import { latestReviewOutcomeOf } from '@/modules/tracking/entities/tracking/latestReviewOutcome.js';
 import type {
   Platform,
   ReviewRequestTrackingGateway,
@@ -16,7 +18,7 @@ import type { RemoveWorktreeAction } from '@/modules/worktree-management/entitie
 
 interface MrTrackingRoutesOptions {
   reviewRequestTrackingGateway: ReviewRequestTrackingGateway;
-  getQualityThreshold?: (projectPath: string) => number | null;
+  getQualityThreshold?: (projectPath: string) => QualityGrade | null;
   statsGateway?: StatsGateway;
   reviewContextGateway: ReviewContextGateway;
   cancelJob: (jobId: string) => boolean;
@@ -111,7 +113,7 @@ export const mrTrackingRoutes: FastifyPluginAsync<MrTrackingRoutesOptions> = asy
         targetState: 'approved',
         qualityCheck: (mr) =>
           evaluateQualityGate({
-            latestScore: mr.latestScore,
+            ...latestReviewOutcomeOf(mr),
             blockingIssues: mr.openThreads,
             threshold,
           }),

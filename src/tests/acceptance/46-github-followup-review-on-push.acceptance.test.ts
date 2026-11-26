@@ -70,6 +70,7 @@ import {
   processWebhook,
   type ProcessWebhookResult,
 } from '@/modules/platform-integration/usecases/processWebhook.usecase.js';
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import type { TrackedMr } from '@/modules/tracking/entities/tracking/trackedMr.js';
 import type { TransitionStateResult } from '@/modules/tracking/usecases/tracking/transitionState.usecase.js';
 import { GitHubEventFactory } from '@/tests/factories/gitHubEvent.factory.js';
@@ -177,7 +178,7 @@ function createDefaultDeps(
         checkFollowupNeeded: { execute: checkFollowupNeededExecute },
         removeWorktree: async () => ({ status: 'removed' }),
         handlePlatformApproval: { execute: vi.fn(() => ({ kind: 'allowed' as const })) },
-        getQualityThreshold: (): number | null => null,
+        getQualityThreshold: (): QualityGrade | null => null,
         logger: createStubLogger(),
       }),
     enforceBudget: { execute: enforceBudgetExecute },

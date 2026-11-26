@@ -2,6 +2,10 @@ import type { ProjectConfig } from '@/config/projectConfig.js';
 import { validateProjectConcurrencyCap } from '@/modules/cli-configuration/entities/projectConcurrencyCap/projectConcurrencyCap.valueObject.js';
 import type { ProjectConfigGateway } from '@/modules/cli-configuration/entities/projectConfig/projectConfig.gateway.js';
 import type { Language } from '@/modules/shared-kernel/entities/language/language.schema.js';
+import {
+  type QualityGrade,
+  qualityThresholdOf,
+} from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
 export const EDITABLE_PROJECT_CONFIG_KEYS = [
@@ -17,7 +21,7 @@ export const EDITABLE_PROJECT_CONFIG_KEYS = [
 
 export const EXTERNAL_LINK_PATTERN = /^https:\/\/.+/;
 const FORBIDDEN_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
-const QUALITY_THRESHOLD_INVALID_MESSAGE = 'qualityThreshold must be an integer between 0 and 10';
+const QUALITY_THRESHOLD_INVALID_MESSAGE = 'qualityThreshold must be a grade from A to E';
 const MAX_DIFF_LINES_INVALID_MESSAGE = 'maxDiffLines must be a positive integer';
 
 const SUPPORTED_LANGUAGES: readonly Language[] = ['en', 'fr'];
@@ -29,7 +33,7 @@ export type ProjectConfigPatch = Partial<
     'language' | 'defaultModel' | 'reviewSkill' | 'reviewFollowupSkill' | 'externalLink'
   >
 > & {
-  qualityThreshold?: number | null;
+  qualityThreshold?: QualityGrade | number | string | null;
   maxConcurrentReviews?: number | null;
   maxDiffLines?: number | null;
 };
@@ -56,13 +60,6 @@ function validateExternalLink(value: string): { ok: true } | { ok: false; reason
   }
   if (!EXTERNAL_LINK_PATTERN.test(value)) {
     return { ok: false, reason: 'URL invalide' };
-  }
-  return { ok: true };
-}
-
-function validateQualityThreshold(value: number): { ok: true } | { ok: false; reason: string } {
-  if (!Number.isInteger(value) || value < 0 || value > 10) {
-    return { ok: false, reason: QUALITY_THRESHOLD_INVALID_MESSAGE };
   }
   return { ok: true };
 }
@@ -125,7 +122,8 @@ function mergeConfig(current: ProjectConfig, patch: ProjectConfigPatch): Project
       const { qualityThreshold: _omitted, ...withoutThreshold } = merged;
       merged = withoutThreshold;
     } else {
-      merged.qualityThreshold = patch.qualityThreshold;
+      const threshold = qualityThresholdOf(patch.qualityThreshold);
+      if (threshold !== null) merged.qualityThreshold = threshold;
     }
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'maxConcurrentReviews')) {
@@ -166,11 +164,13 @@ export class UpdateProjectConfigUseCase implements UseCase<
       }
     }
 
-    if (typeof sanitized.qualityThreshold === 'number') {
-      const thresholdValidation = validateQualityThreshold(sanitized.qualityThreshold);
-      if (!thresholdValidation.ok) {
-        return { status: 'invalid', reason: thresholdValidation.reason };
-      }
+    const rawThreshold = sanitized.qualityThreshold;
+    if (
+      rawThreshold !== undefined &&
+      rawThreshold !== null &&
+      qualityThresholdOf(rawThreshold) === null
+    ) {
+      return { status: 'invalid', reason: QUALITY_THRESHOLD_INVALID_MESSAGE };
     }
 
     if (Object.prototype.hasOwnProperty.call(sanitized, 'maxConcurrentReviews')) {

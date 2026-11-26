@@ -91,6 +91,8 @@ function extractPatch(body: Record<string, unknown>): ProjectConfigPatch {
       patch.qualityThreshold = raw;
     } else if (typeof raw === 'string' && raw.trim() === '') {
       patch.qualityThreshold = null;
+    } else if (typeof raw === 'string') {
+      patch.qualityThreshold = raw;
     }
   }
   if ('maxConcurrentReviews' in body) {

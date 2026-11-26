@@ -193,7 +193,7 @@ describe('settingsModal — extractFormPayload', () => {
       ['reviewSkill', 'review-front'],
       ['reviewFollowupSkill', 'review-followup'],
       ['externalLink', 'https://notion.so/x'],
-      ['qualityThreshold', '7'],
+      ['qualityThreshold', 'B'],
       ['agents', '[{"name":"evil"}]'],
       ['retentionDays', '999'],
     ]);
@@ -210,7 +210,7 @@ describe('settingsModal — extractFormPayload', () => {
     ]);
     expect(payload.language).toBe('en');
     expect(payload.externalLink).toBe('https://notion.so/x');
-    expect(payload.qualityThreshold).toBe('7');
+    expect(payload.qualityThreshold).toBe('B');
   });
 });
 
@@ -225,12 +225,12 @@ describe('settingsModal — buildSettingsViewModel with qualityThreshold', () =>
         reviewFollowupSkill: 'review-followup',
         language: 'fr',
         retentionDays: 14,
-        qualityThreshold: 7,
+        qualityThreshold: 'B',
       },
       projectName: 'A',
     });
 
-    expect(viewModel.qualityThreshold).toBe('7');
+    expect(viewModel.qualityThreshold).toBe('B');
   });
 
   it('exposes an empty qualityThreshold when the config has none', () => {
@@ -251,40 +251,34 @@ describe('settingsModal — buildSettingsViewModel with qualityThreshold', () =>
   });
 });
 
-describe('settingsModal — renderSettingsModalHtml renders qualityThreshold input', () => {
-  it('renders a number input for qualityThreshold pre-filled with the current value', () => {
-    const html = renderSettingsModalHtml({
-      language: 'fr',
-      defaultModel: 'sonnet',
-      reviewSkill: 'review-front',
-      reviewFollowupSkill: 'review-followup',
-      externalLink: '',
-      qualityThreshold: '7',
-      maxConcurrentReviews: '2',
-      maxDiffLines: '',
-      projectName: 'A',
-    });
-
-    expect(html).toMatch(/<input[^>]+name="qualityThreshold"[^>]+type="number"/);
-    expect(html).toMatch(/<input[^>]+name="qualityThreshold"[^>]+min="0"/);
-    expect(html).toMatch(/<input[^>]+name="qualityThreshold"[^>]+max="10"/);
-    expect(html).toMatch(/<input[^>]+name="qualityThreshold"[^>]+value="7"/);
+describe('settingsModal — renderSettingsModalHtml renders qualityThreshold select', () => {
+  const viewModelWith = (qualityThreshold: string) => ({
+    language: 'fr' as const,
+    defaultModel: 'sonnet' as const,
+    reviewSkill: 'review-front',
+    reviewFollowupSkill: 'review-followup',
+    externalLink: '',
+    qualityThreshold,
+    maxConcurrentReviews: '2',
+    maxDiffLines: '',
+    projectName: 'A',
   });
 
-  it('renders an empty value when no threshold is set', () => {
-    const html = renderSettingsModalHtml({
-      language: 'fr',
-      defaultModel: 'sonnet',
-      reviewSkill: 'review-front',
-      reviewFollowupSkill: 'review-followup',
-      externalLink: '',
-      qualityThreshold: '',
-      maxConcurrentReviews: '2',
-      maxDiffLines: '',
-      projectName: 'A',
-    });
+  it('offers no threshold and every grade from A to E', () => {
+    const html = renderSettingsModalHtml(viewModelWith(''));
 
-    expect(html).toMatch(/<input[^>]+name="qualityThreshold"[^>]+value=""/);
+    expect(html).toMatch(/<select[^>]+name="qualityThreshold"/);
+    for (const grade of ['A', 'B', 'C', 'D', 'E']) {
+      expect(html).toContain(`<option value="${grade}"`);
+    }
+    expect(html).toMatch(/<option value="" selected>/);
+  });
+
+  it('selects the current grade', () => {
+    const html = renderSettingsModalHtml(viewModelWith('B'));
+
+    expect(html).toMatch(/<option value="B" selected>/);
+    expect(html).not.toMatch(/<option value="" selected>/);
   });
 });
 
@@ -293,37 +287,16 @@ describe('settingsModal — validateQualityThreshold', () => {
     expect(validateQualityThreshold('')).toEqual({ ok: true });
   });
 
-  it('accepts integer values 0 through 10', () => {
-    for (const value of ['0', '1', '5', '7', '10']) {
+  it('accepts every grade from A to E', () => {
+    for (const value of ['A', 'B', 'C', 'D', 'E']) {
       expect(validateQualityThreshold(value)).toEqual({ ok: true });
     }
   });
 
-  it('rejects values above 10', () => {
-    expect(validateQualityThreshold('11')).toEqual({
+  it.each(['F', '7', 'b+'])('rejects %s', (value) => {
+    expect(validateQualityThreshold(value)).toEqual({
       ok: false,
-      message: 'Le seuil doit être un entier entre 0 et 10',
-    });
-  });
-
-  it('rejects negative values', () => {
-    expect(validateQualityThreshold('-1')).toEqual({
-      ok: false,
-      message: 'Le seuil doit être un entier entre 0 et 10',
-    });
-  });
-
-  it('rejects non-integer values', () => {
-    expect(validateQualityThreshold('7.5')).toEqual({
-      ok: false,
-      message: 'Le seuil doit être un entier entre 0 et 10',
-    });
-  });
-
-  it('rejects non-numeric strings', () => {
-    expect(validateQualityThreshold('abc')).toEqual({
-      ok: false,
-      message: 'Le seuil doit être un entier entre 0 et 10',
+      message: 'Le seuil doit être une lettre de A à E',
     });
   });
 });

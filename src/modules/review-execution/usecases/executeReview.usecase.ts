@@ -20,6 +20,7 @@ import type {
 import { ReviewContextResultFactory } from '@/modules/review-execution/entities/reviewContext/reviewContextResult.factory.js';
 import type { DiffStats } from '@/modules/shared-kernel/entities/diffStats/diffStats.js';
 import type { DiffStatsFetchGateway } from '@/modules/shared-kernel/entities/diffStats/diffStatsFetch.gateway.js';
+import type { QualityGrade } from '@/modules/shared-kernel/entities/reviewVerdict/reviewVerdict.js';
 import { parseReviewOutput } from '@/modules/statistics-insights/entities/stats/reviewOutput.parser.js';
 import type { Platform } from '@/modules/tracking/entities/tracking/reviewRequestTracking.gateway.js';
 import type { RecordReviewCompletionUseCase } from '@/modules/tracking/usecases/tracking/recordReviewCompletion.usecase.js';
@@ -73,7 +74,7 @@ export interface ExecuteReviewInput {
   agents: AgentDefinition[];
   baseUrl: string | null;
   notificationPrefix: 'MR !' | 'PR #';
-  qualityThreshold: number | null;
+  qualityThreshold: QualityGrade | null;
 }
 
 export interface ExecuteReviewDependencies {
@@ -301,6 +302,8 @@ async function runReviewPipeline(
       threadsOpened,
       threadsClosed,
       diffStats,
+      verdict: parsed.verdict,
+      grade: parsed.grade,
     },
     qualityThreshold: input.qualityThreshold,
   });
