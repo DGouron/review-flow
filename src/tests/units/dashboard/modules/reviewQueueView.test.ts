@@ -138,6 +138,17 @@ describe('renderReviewQueueHtml', () => {
     expect(html).toContain('data-action="sync-threads"');
   });
 
+  it('puts an Explain button on every row, busy while the brief is being written', () => {
+    const model = modelFor({ pendingApproval: [trackedMr()] });
+
+    expect(renderReviewQueueHtml(model, t)).toContain(
+      'data-action="explain" data-mr-id="github-org/app-21" aria-label="Explain pull request #21"',
+    );
+    expect(
+      renderReviewQueueHtml(model, t, { briefStatusById: { 'github-org/app-21': 'loading' } }),
+    ).toContain('aria-busy="true"');
+  });
+
   it('marks the selected row', () => {
     const html = renderReviewQueueHtml(modelFor({ pendingApproval: [trackedMr()] }), t, {
       selectedId: 'github-org/app-21',
