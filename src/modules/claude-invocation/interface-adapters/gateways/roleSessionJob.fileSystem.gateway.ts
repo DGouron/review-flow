@@ -1,4 +1,4 @@
-import { readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { z } from 'zod';
@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { roleSessionRecordSchema } from '@/modules/claude-invocation/entities/roleSession/roleSession.schema.js';
 import type { RoleSessionRecord } from '@/modules/claude-invocation/entities/roleSession/roleSession.schema.js';
 import type {
+  RecordedRoleSession,
   RoleSessionJobGateway,
   RoleSessionJobLookup,
   RoleSessionRecordResult,
@@ -26,8 +27,21 @@ const jobFileSchema = z.object({
 
 const jsonObjectSchema = z.record(z.string(), z.unknown());
 
+const recordingJobFileSchema = z.object({
+  jobId: z.string().min(1),
+  roleSessions: z.array(z.unknown()).default([]),
+});
+
 function errorMessageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function readJsonOrNull(path: string): unknown {
+  try {
+    return JSON.parse(readFileSync(path, 'utf-8'));
+  } catch {
+    return null;
+  }
 }
 
 export class RoleSessionJobFileSystemGateway implements RoleSessionJobGateway {
@@ -75,6 +89,20 @@ export class RoleSessionJobFileSystemGateway implements RoleSessionJobGateway {
     }
   }
 
+  listRecordedRoleSessions(): RecordedRoleSession[] {
+    return this.jobFileNames().flatMap((fileName) => {
+      const parsed = recordingJobFileSchema.safeParse(
+        readJsonOrNull(join(this.jobsDirectory, fileName)),
+      );
+      if (!parsed.success) return [];
+      const { jobId, roleSessions } = parsed.data;
+      return roleSessions.flatMap((candidate) => {
+        const record = roleSessionRecordSchema.safeParse(candidate);
+        return record.success ? [{ jobId, record: record.data }] : [];
+      });
+    });
+  }
+
   async withExclusiveAccess<Result>(jobId: string, work: () => Promise<Result>): Promise<Result> {
     const lockPath = join(this.jobsDirectory, `${sanitizeJobId(jobId)}.lock`);
     return withExclusiveFileLock(lockPath, work, { waitLimitMs: this.lockWaitLimitMs });
@@ -99,6 +127,14 @@ export class RoleSessionJobFileSystemGateway implements RoleSessionJobGateway {
         status: 'unusable',
         reason: `job ${jobId} file is unreadable: ${errorMessageOf(error)}`,
       };
+    }
+  }
+
+  private jobFileNames(): string[] {
+    try {
+      return readdirSync(this.jobsDirectory).filter((fileName) => fileName.endsWith('.json'));
+    } catch {
+      return [];
     }
   }
 

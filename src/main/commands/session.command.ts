@@ -3,10 +3,21 @@ import { resolve } from 'node:path';
 
 import { loadReviewOrchestrationSettings } from '@/config/projectConfig.js';
 import { defaultProcessRunner } from '@/frameworks/claude/claudeInvoker.js';
+import { getReviewTimeoutMs, loadSettingsFromDisk } from '@/frameworks/settings/runtimeSettings.js';
 import { ClaudeSessionCliGateway } from '@/modules/claude-invocation/interface-adapters/gateways/claudeSession.cli.gateway.js';
 import { RoleSessionClaudeCliGateway } from '@/modules/claude-invocation/interface-adapters/gateways/roleSession.claude.cli.gateway.js';
 import { RoleSessionJobFileSystemGateway } from '@/modules/claude-invocation/interface-adapters/gateways/roleSessionJob.fileSystem.gateway.js';
+import {
+  EndRoleSessionUseCase,
+  type RoleSessionCleanupDependencies,
+} from '@/modules/claude-invocation/usecases/endRoleSession.usecase.js';
 import { LaunchRoleSessionUseCase } from '@/modules/claude-invocation/usecases/launchRoleSession.usecase.js';
+import {
+  SweepRoleSessionsUseCase,
+  type SweepAction,
+  type SweepOutcome,
+} from '@/modules/claude-invocation/usecases/sweepRoleSessions.usecase.js';
+import { WORKTREE_BASE_DIR } from '@/shared/services/daemonPaths.js';
 import { jobContextDirectory } from '@/shared/services/mcpJobContext.js';
 
 const LAUNCH_USAGE = 'reviewflow session launch --role <role> --brief <file> --job <jobId>';
@@ -70,6 +81,61 @@ export async function executeSessionLaunch(
   dependencies.exit(0);
 }
 
+export interface SessionCleanupDependencies {
+  endRoleSession: EndRoleSessionUseCase;
+  sweepRoleSessions: SweepRoleSessionsUseCase;
+  print: (line: string) => void;
+  exit: (code: number) => void;
+}
+
+const SWEEP_ACTION_LABELS: Record<SweepAction, string> = {
+  removed: 'REMOVED',
+  'would-remove': 'WOULD-REMOVE',
+  kept: 'KEPT',
+  failed: 'FAILED',
+};
+
+function sweepLineOf(outcome: SweepOutcome): string {
+  const words = [SWEEP_ACTION_LABELS[outcome.action], outcome.sessionId, outcome.name];
+  return `${words.filter((word) => word !== null).join(' ')} (${oneLine(outcome.reason)})`;
+}
+
+export async function executeSessionEnd(
+  options: { sessionId: string | null },
+  dependencies: SessionCleanupDependencies,
+): Promise<void> {
+  const { print, exit } = dependencies;
+  if (options.sessionId === null) {
+    print('ERROR missing session id (usage: reviewflow session end <id>)');
+    exit(1);
+    return;
+  }
+  const result = await dependencies.endRoleSession.execute({ sessionId: options.sessionId });
+  if (result.status === 'failed') {
+    print(`ERROR ${oneLine(result.reason)}`);
+    exit(1);
+    return;
+  }
+  print(
+    result.status === 'removed' ? `REMOVED ${result.name}` : `ALREADY-GONE ${options.sessionId}`,
+  );
+  exit(0);
+}
+
+export async function executeSessionSweep(
+  options: { dryRun: boolean },
+  dependencies: SessionCleanupDependencies,
+): Promise<void> {
+  const result = await dependencies.sweepRoleSessions.execute({ dryRun: options.dryRun });
+  if (result.status === 'failed') {
+    dependencies.print(`ERROR ${oneLine(result.reason)}`);
+    dependencies.exit(1);
+    return;
+  }
+  result.outcomes.forEach((outcome) => dependencies.print(sweepLineOf(outcome)));
+  dependencies.exit(result.outcomes.some((outcome) => outcome.action === 'failed') ? 1 : 0);
+}
+
 function readFileOrNull(path: string): string | null {
   try {
     return readFileSync(path, 'utf-8');
@@ -78,17 +144,39 @@ function readFileOrNull(path: string): string | null {
   }
 }
 
-export function createSessionLaunchDependencies(): SessionLaunchDependencies {
+function createRoleSessionGateways(): RoleSessionCleanupDependencies {
   const runner = defaultProcessRunner();
   return {
+    roleSessionGateway: new RoleSessionClaudeCliGateway(runner),
+    roleSessionJobGateway: new RoleSessionJobFileSystemGateway(jobContextDirectory()),
+    sessionGateway: new ClaudeSessionCliGateway(runner),
+    worktreeRoot: WORKTREE_BASE_DIR,
+    now: () => new Date(),
+  };
+}
+
+export function createSessionLaunchDependencies(): SessionLaunchDependencies {
+  return {
     launchRoleSession: new LaunchRoleSessionUseCase({
-      roleSessionGateway: new RoleSessionClaudeCliGateway(runner),
-      roleSessionJobGateway: new RoleSessionJobFileSystemGateway(jobContextDirectory()),
-      sessionGateway: new ClaudeSessionCliGateway(runner),
+      ...createRoleSessionGateways(),
       reviewSettingsOf: loadReviewOrchestrationSettings,
-      now: () => new Date(),
     }),
     readBrief: (path) => readFileOrNull(resolve(path)),
+    print: console.log,
+    exit: process.exit,
+  };
+}
+
+/** Loads the runtime settings first: the sweep lets a role session live as long as a review. */
+export async function createSessionCleanupDependencies(): Promise<SessionCleanupDependencies> {
+  await loadSettingsFromDisk();
+  const gateways = createRoleSessionGateways();
+  return {
+    endRoleSession: new EndRoleSessionUseCase(gateways),
+    sweepRoleSessions: new SweepRoleSessionsUseCase({
+      ...gateways,
+      reviewTimeoutMs: getReviewTimeoutMs,
+    }),
     print: console.log,
     exit: process.exit,
   };

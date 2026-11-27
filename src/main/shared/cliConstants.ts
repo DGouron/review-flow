@@ -28,12 +28,17 @@ Commands:
   discover                 Scan and add repositories to existing config
   followup-importants      Trigger followups for pending-approval MRs with Important issues
   session launch           Launch a read-only role session of an orchestrated review
+  session end <id>         Stop then remove one role session
+  session sweep            Remove orphan role sessions and those older than 2 hours
 
 Session launch options:
   --role <role>            greffe, lot:bugs, lot:securite, lot:architecture, lot:lisibilite,
                            contradiction or arbitre
   --brief <file>           File whose content is the role's prompt
   --job <jobId>            Running review job the role session belongs to
+
+Session sweep options:
+  --dry-run                Print what would be removed and why, remove nothing
 
 Discover options:
   --scan-path <path>       Custom scan path (repeatable)

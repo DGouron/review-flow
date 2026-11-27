@@ -1,6 +1,7 @@
 import fastifyWebsocket from '@fastify/websocket';
 import Fastify, { type FastifyInstance } from 'fastify';
 
+import { defaultProcessRunner } from '@/frameworks/claude/claudeInvoker.js';
 import { startClaudeInvocationTimers } from '@/frameworks/claude/timers/claudeInvocationTimers.js';
 import { startPlatformSyncScheduler } from '@/frameworks/scheduler/platformSyncScheduler.js';
 import { startSupervisorScheduler } from '@/frameworks/scheduler/supervisorScheduler.js';
@@ -8,10 +9,14 @@ import {
   configureSettingsLogger,
   configureSettingsPath,
   getDefaultSettingsPath,
+  getReviewTimeoutMs,
   loadSettingsFromDisk,
 } from '@/frameworks/settings/runtimeSettings.js';
 import { startGitHubWebhookAllowlist } from '@/main/githubWebhookAllowlist.js';
+import { RoleSessionClaudeCliGateway } from '@/modules/claude-invocation/interface-adapters/gateways/roleSession.claude.cli.gateway.js';
+import { RoleSessionJobFileSystemGateway } from '@/modules/claude-invocation/interface-adapters/gateways/roleSessionJob.fileSystem.gateway.js';
 import { InMemorySupervisorHealthGateway } from '@/modules/claude-invocation/interface-adapters/gateways/supervisorHealth.memory.gateway.js';
+import { SweepRoleSessionsUseCase } from '@/modules/claude-invocation/usecases/sweepRoleSessions.usecase.js';
 import { defaultEgressScanConfig } from '@/modules/platform-integration/entities/egressScan/egressScan.defaults.js';
 import { createEgressScanner } from '@/modules/platform-integration/entities/egressScan/egressScan.scanner.js';
 import type { EgressTraceGateway } from '@/modules/platform-integration/entities/egressScan/egressTrace.gateway.js';
@@ -49,6 +54,8 @@ import {
 } from '@/modules/supervisor-management/interface-adapters/gateways/supervisorLock.fileSystem.gateway.js';
 import { transportTrustProxyValue } from '@/security/transportGuardConfig.js';
 import type { CommandExecutor } from '@/shared/foundation/executionGateway.base.js';
+import { WORKTREE_BASE_DIR } from '@/shared/services/daemonPaths.js';
+import { jobContextDirectory } from '@/shared/services/mcpJobContext.js';
 
 import { loadConfig, type Config } from '../config/loader.js';
 import {
@@ -244,12 +251,22 @@ export async function startServer(options: ServerOptions = {}): Promise<FastifyI
     logger: deps.logger,
   });
 
+  const roleSessionSweep = new SweepRoleSessionsUseCase({
+    roleSessionGateway: new RoleSessionClaudeCliGateway(defaultProcessRunner()),
+    roleSessionJobGateway: new RoleSessionJobFileSystemGateway(jobContextDirectory()),
+    sessionGateway: deps.claudeInvocationDeps.sessionGateway,
+    worktreeRoot: WORKTREE_BASE_DIR,
+    reviewTimeoutMs: getReviewTimeoutMs,
+    now: () => new Date(),
+  });
+
   const worktreeSweepScheduler = startWorktreeSweepScheduler({
     worktreeGateway: deps.worktreeGateway,
     trackingGateway: deps.reviewRequestTrackingGateway,
     getRepositories: () => config.repositories,
     logger: deps.logger,
     now: () => new Date(),
+    sweepRoleSessions: () => roleSessionSweep.execute({ dryRun: false }),
   });
 
   const githubWebhookAllowlist = await startGitHubWebhookAllowlist(deps.logger);

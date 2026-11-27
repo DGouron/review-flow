@@ -165,6 +165,57 @@ describe('worktreeSweepScheduler', () => {
     scheduler.stop();
   });
 
+  describe('SPEC-235 role sessions', () => {
+    it('sweeps role sessions before the worktrees on every run', async () => {
+      const stub = createStubWorktreeGateway([]);
+      const order: string[] = [];
+      const originalList = stub.gateway.list;
+      stub.gateway.list = async () => {
+        order.push('worktrees');
+        return originalList();
+      };
+
+      const scheduler = startWorktreeSweepScheduler({
+        worktreeGateway: stub.gateway,
+        trackingGateway: createStubTrackingGateway(),
+        getRepositories: () => [],
+        logger: createStubLogger(),
+        now: () => new Date('2026-05-23T12:00:00Z'),
+        sweepRoleSessions: async () => {
+          order.push('role sessions');
+          return { status: 'swept', outcomes: [] };
+        },
+      });
+
+      await vi.advanceTimersByTimeAsync(10);
+      await vi.advanceTimersByTimeAsync(TWENTY_FOUR_HOURS_MS);
+
+      expect(order).toEqual(['role sessions', 'worktrees', 'role sessions', 'worktrees']);
+      scheduler.stop();
+    });
+
+    it('still sweeps the worktrees when the role-session sweep throws', async () => {
+      const stub = createStubWorktreeGateway([]);
+
+      const scheduler = startWorktreeSweepScheduler({
+        worktreeGateway: stub.gateway,
+        trackingGateway: createStubTrackingGateway(),
+        getRepositories: () => [],
+        logger: createStubLogger(),
+        now: () => new Date('2026-05-23T12:00:00Z'),
+        sweepRoleSessions: async () => {
+          throw new Error('claude missing');
+        },
+      });
+
+      await vi.advanceTimersByTimeAsync(10);
+
+      expect(stub.listCalls).toBe(1);
+      expect(scheduler.getLastSweep()).not.toBeNull();
+      scheduler.stop();
+    });
+  });
+
   describe('SPEC-173 extensions', () => {
     it('returns null from getLastSweep when no sweep has run yet', () => {
       const stub = createStubWorktreeGateway([]);

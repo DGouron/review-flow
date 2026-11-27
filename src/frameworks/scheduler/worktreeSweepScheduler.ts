@@ -1,5 +1,6 @@
 import type { Logger } from 'pino';
 
+import type { SweepRoleSessionsResult } from '@/modules/claude-invocation/usecases/sweepRoleSessions.usecase.js';
 import type { LastSweepSummary } from '@/modules/worktree-management/entities/sweep/lastSweepSummary.schema.js';
 import type { RunSweepNowResult } from '@/modules/worktree-management/entities/sweep/runSweepResult.js';
 import type { WorktreeGateway } from '@/modules/worktree-management/entities/worktree/worktree.gateway.js';
@@ -17,6 +18,7 @@ export interface WorktreeSweepSchedulerDependencies {
   getRepositories: () => SweepRepository[];
   logger: Logger;
   now: () => Date;
+  sweepRoleSessions?: () => Promise<SweepRoleSessionsResult>;
 }
 
 export interface WorktreeSweepSchedulerHandle {
@@ -35,10 +37,26 @@ export function startWorktreeSweepScheduler(
   let runningSince: Date | null = null;
   const startedAt: Date = now();
 
+  async function sweepRoleSessionsSafely(): Promise<void> {
+    if (!dependencies.sweepRoleSessions) return;
+    try {
+      const result = await dependencies.sweepRoleSessions();
+      if (result.status === 'failed') {
+        logger.warn({ reason: result.reason }, 'Role session sweep failed');
+        return;
+      }
+      const touched = result.outcomes.filter((outcome) => outcome.action !== 'kept');
+      if (touched.length > 0) logger.info({ outcomes: touched }, 'Role session sweep completed');
+    } catch (error) {
+      logger.error({ error }, 'Role session sweep failed');
+    }
+  }
+
   async function runSweepInternal(): Promise<LastSweepSummary> {
     const ranAt = now();
     runningSince = ranAt;
     try {
+      await sweepRoleSessionsSafely();
       const summary = await sweepStaleWorktrees({
         listEntries: () => worktreeGateway.list(),
         removeWorktree: async (identity) => {

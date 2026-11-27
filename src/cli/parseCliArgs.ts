@@ -78,7 +78,23 @@ interface UnknownSessionArgs {
   action: null;
 }
 
-export type SessionArgs = SessionLaunchArgs | UnknownSessionArgs;
+export interface SessionEndArgs {
+  command: 'session';
+  action: 'end';
+  sessionId: string | null;
+}
+
+export interface SessionSweepArgs {
+  command: 'session';
+  action: 'sweep';
+  dryRun: boolean;
+}
+
+export type SessionArgs =
+  | SessionLaunchArgs
+  | SessionEndArgs
+  | SessionSweepArgs
+  | UnknownSessionArgs;
 
 export type CliArgs =
   | StartArgs
@@ -232,7 +248,19 @@ function parseSetupArgs(args: string[]): SetupArgs {
 }
 
 function parseSessionArgs(args: string[]): SessionArgs {
-  const action = args[args.indexOf('session') + 1];
+  const actionIndex = args.indexOf('session') + 1;
+  const action = args[actionIndex];
+  if (action === 'end') {
+    const sessionId = args[actionIndex + 1];
+    return {
+      command: 'session',
+      action,
+      sessionId: sessionId?.startsWith('-') ? null : (sessionId ?? null),
+    };
+  }
+  if (action === 'sweep') {
+    return { command: 'session', action, dryRun: hasFlag(args, '--dry-run') };
+  }
   if (action !== 'launch') {
     return { command: 'session', action: null };
   }

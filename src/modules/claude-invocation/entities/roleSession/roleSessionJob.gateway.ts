@@ -15,10 +15,14 @@ export type RoleSessionJobLookup =
 
 export type RoleSessionRecordResult = { recorded: true } | { recorded: false; reason: string };
 
+export type RecordedRoleSession = { jobId: string; record: RoleSessionRecord };
+
 /** The per-job file the server writes while a review runs; role sessions are recorded in it. */
 export interface RoleSessionJobGateway {
   find(jobId: string): RoleSessionJobLookup;
   recordRoleSession(jobId: string, record: RoleSessionRecord): RoleSessionRecordResult;
+  /** Role sessions recorded by the job files still present, i.e. by the active jobs. */
+  listRecordedRoleSessions(): RecordedRoleSession[];
   /** Runs `work` while no other process launches a role session for the same job. */
   withExclusiveAccess<Result>(jobId: string, work: () => Promise<Result>): Promise<Result>;
 }
