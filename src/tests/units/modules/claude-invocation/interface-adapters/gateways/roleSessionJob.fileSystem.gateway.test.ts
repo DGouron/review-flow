@@ -1,0 +1,157 @@
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
+import { RoleSessionJobFileSystemGateway } from '@/modules/claude-invocation/interface-adapters/gateways/roleSessionJob.fileSystem.gateway.js';
+import { RoleSessionJobFileFactory } from '@/tests/factories/roleSessionJobFile.factory.js';
+
+const jobId = 'github:acme/app:2111';
+const jobFileName = 'github-acme-app-2111.json';
+
+describe('RoleSessionJobFileSystemGateway', () => {
+  let jobsDirectory: string;
+  let gateway: RoleSessionJobFileSystemGateway;
+
+  beforeEach(() => {
+    jobsDirectory = mkdtempSync(join(tmpdir(), 'role-session-job-'));
+    gateway = new RoleSessionJobFileSystemGateway(jobsDirectory);
+  });
+
+  afterEach(() => {
+    rmSync(jobsDirectory, { recursive: true, force: true });
+  });
+
+  function writeJobFile(content: unknown): void {
+    writeFileSync(join(jobsDirectory, jobFileName), JSON.stringify(content));
+  }
+
+  function readJobFile(): Record<string, unknown> {
+    return JSON.parse(readFileSync(join(jobsDirectory, jobFileName), 'utf-8'));
+  }
+
+  describe('find', () => {
+    it('reads the job subject, worktree and recorded role sessions', () => {
+      writeJobFile(
+        RoleSessionJobFileFactory.create({
+          jobType: 'followup',
+          mrNumber: 2111,
+          worktreePath: '/wt/github-acme-app-2111',
+          roleSessions: [
+            { sessionId: 'a1b2c3d4', role: 'greffe', launchedAt: '2026-11-27T09:00:00.000Z' },
+          ],
+        }),
+      );
+
+      expect(gateway.find(jobId)).toEqual({
+        status: 'found',
+        job: {
+          jobId,
+          jobType: 'followup',
+          mergeRequestNumber: 2111,
+          localPath: '/home/ai/projects/acme-app',
+          worktreePath: '/wt/github-acme-app-2111',
+          roleSessions: [
+            { sessionId: 'a1b2c3d4', role: 'greffe', launchedAt: '2026-11-27T09:00:00.000Z' },
+          ],
+        },
+      });
+    });
+
+    it('reads a job file without role sessions as an empty list', () => {
+      writeJobFile(RoleSessionJobFileFactory.create());
+
+      const lookup = gateway.find(jobId);
+
+      expect(lookup.status === 'found' && lookup.job.roleSessions).toEqual([]);
+    });
+
+    it('reports a missing job file as not found', () => {
+      expect(gateway.find(jobId)).toEqual({ status: 'not-found' });
+    });
+
+    it('reports a job file without worktree as unusable', () => {
+      const { worktreePath: _omitted, ...withoutWorktree } = RoleSessionJobFileFactory.create();
+      writeJobFile(withoutWorktree);
+
+      expect(gateway.find(jobId)).toEqual({
+        status: 'unusable',
+        reason: `job ${jobId} has no worktree yet`,
+      });
+    });
+
+    it('reports an unreadable job file as unusable', () => {
+      writeFileSync(join(jobsDirectory, jobFileName), '{not json');
+
+      expect(gateway.find(jobId).status).toBe('unusable');
+    });
+  });
+
+  describe('recordRoleSession', () => {
+    it('appends the record and keeps every other key of the job file', () => {
+      writeJobFile(
+        RoleSessionJobFileFactory.create({
+          roleSessions: [
+            { sessionId: 'first001', role: 'lot:bugs', launchedAt: '2026-11-27T09:00:00.000Z' },
+          ],
+        }),
+      );
+
+      const result = gateway.recordRoleSession(jobId, {
+        sessionId: parseSessionId('second02'),
+        role: 'lot:bugs',
+        launchedAt: '2026-11-27T09:05:00.000Z',
+      });
+
+      expect(result).toEqual({ recorded: true });
+      const jobFile = readJobFile();
+      expect(jobFile.roleSessions).toEqual([
+        { sessionId: 'first001', role: 'lot:bugs', launchedAt: '2026-11-27T09:00:00.000Z' },
+        { sessionId: 'second02', role: 'lot:bugs', launchedAt: '2026-11-27T09:05:00.000Z' },
+      ]);
+      expect(jobFile.mergeRequestId).toBe('github-acme/app-2111');
+    });
+
+    it('refuses to record into a job file that no longer exists', () => {
+      const result = gateway.recordRoleSession(jobId, {
+        sessionId: parseSessionId('a1b2c3d4'),
+        role: 'greffe',
+        launchedAt: '2026-11-27T09:00:00.000Z',
+      });
+
+      expect(result.recorded).toBe(false);
+    });
+  });
+
+  describe('withExclusiveAccess', () => {
+    it('never runs two works of the same job at once', async () => {
+      const events: string[] = [];
+      const work = (label: string) => async () => {
+        events.push(`${label}:start`);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        events.push(`${label}:end`);
+        return label;
+      };
+
+      const results = await Promise.all([
+        gateway.withExclusiveAccess(jobId, work('first')),
+        gateway.withExclusiveAccess(jobId, work('second')),
+      ]);
+
+      expect(results).toEqual(['first', 'second']);
+      expect(events).toEqual(['first:start', 'first:end', 'second:start', 'second:end']);
+    });
+
+    it('releases the lock when the work throws', async () => {
+      await expect(
+        gateway.withExclusiveAccess(jobId, async () => {
+          throw new Error('boom');
+        }),
+      ).rejects.toThrow('boom');
+
+      expect(existsSync(join(jobsDirectory, 'github-acme-app-2111.lock'))).toBe(false);
+    });
+  });
+});

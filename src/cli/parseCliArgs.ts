@@ -65,6 +65,21 @@ interface HelpArgs {
   command: 'help';
 }
 
+export interface SessionLaunchArgs {
+  command: 'session';
+  action: 'launch';
+  role: string | null;
+  brief: string | null;
+  job: string | null;
+}
+
+interface UnknownSessionArgs {
+  command: 'session';
+  action: null;
+}
+
+export type SessionArgs = SessionLaunchArgs | UnknownSessionArgs;
+
 export type CliArgs =
   | StartArgs
   | StopArgs
@@ -75,6 +90,7 @@ export type CliArgs =
   | ValidateArgs
   | FollowupImportantsArgs
   | SetupArgs
+  | SessionArgs
   | VersionArgs
   | HelpArgs;
 
@@ -88,6 +104,7 @@ const KNOWN_COMMANDS = [
   'validate',
   'followup-importants',
   'setup',
+  'session',
 ] as const;
 type KnownCommand = (typeof KNOWN_COMMANDS)[number];
 
@@ -214,6 +231,33 @@ function parseSetupArgs(args: string[]): SetupArgs {
   };
 }
 
+function parseSessionArgs(args: string[]): SessionArgs {
+  const action = args[args.indexOf('session') + 1];
+  if (action !== 'launch') {
+    return { command: 'session', action: null };
+  }
+  return {
+    command: 'session',
+    action,
+    role: getFlagValue(args, '--role') ?? null,
+    brief: getFlagValue(args, '--brief') ?? null,
+    job: getFlagValue(args, '--job') ?? null,
+  };
+}
+
+const COMMAND_PARSERS: Record<KnownCommand, (args: string[]) => CliArgs> = {
+  start: parseStartArgs,
+  stop: parseStopArgs,
+  status: parseStatusArgs,
+  logs: parseLogsArgs,
+  init: parseInitArgs,
+  discover: parseDiscoverArgs,
+  validate: parseValidateArgs,
+  'followup-importants': parseFollowupImportantsArgs,
+  setup: parseSetupArgs,
+  session: parseSessionArgs,
+};
+
 export function parseCliArgs(args: string[]): CliArgs {
   if (hasFlag(args, '--version', '-v')) {
     return { command: 'version' };
@@ -223,26 +267,5 @@ export function parseCliArgs(args: string[]): CliArgs {
     return { command: 'help' };
   }
 
-  const command = extractCommand(args);
-
-  switch (command) {
-    case 'start':
-      return parseStartArgs(args);
-    case 'stop':
-      return parseStopArgs(args);
-    case 'status':
-      return parseStatusArgs(args);
-    case 'logs':
-      return parseLogsArgs(args);
-    case 'init':
-      return parseInitArgs(args);
-    case 'discover':
-      return parseDiscoverArgs(args);
-    case 'validate':
-      return parseValidateArgs(args);
-    case 'followup-importants':
-      return parseFollowupImportantsArgs(args);
-    case 'setup':
-      return parseSetupArgs(args);
-  }
+  return COMMAND_PARSERS[extractCommand(args)](args);
 }

@@ -5,7 +5,10 @@ export function sanitizeJobId(jobId: string): string {
   return jobId.replace(/[:/\\]/g, '-');
 }
 
+export function jobContextDirectory(): string {
+  return join(homedir(), '.claude-review', 'jobs');
+}
+
 export function getJobContextFilePath(jobId: string): string {
-  const jobsDir = join(homedir(), '.claude-review', 'jobs');
-  return join(jobsDir, `${sanitizeJobId(jobId)}.json`);
+  return join(jobContextDirectory(), `${sanitizeJobId(jobId)}.json`);
 }

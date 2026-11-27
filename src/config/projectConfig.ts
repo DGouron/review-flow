@@ -5,6 +5,10 @@ import { z } from 'zod';
 
 import { logWarn } from '@/frameworks/logging/logBuffer.js';
 import {
+  parseReviewOrchestrationSettings,
+  type ReviewOrchestrationSettings,
+} from '@/modules/claude-invocation/entities/roleSession/reviewOrchestration.js';
+import {
   MAX_PROJECT_CONCURRENCY_CAP,
   MIN_PROJECT_CONCURRENCY_CAP,
 } from '@/modules/cli-configuration/entities/projectConcurrencyCap/projectConcurrencyCap.valueObject.js';
@@ -41,6 +45,7 @@ export interface ProjectConfig {
   qualityThreshold?: QualityGrade;
   maxConcurrentReviews?: number;
   maxDiffLines?: number;
+  review?: ReviewOrchestrationSettings;
 }
 
 const projectConfigFileSchema = z.record(z.string(), z.unknown());
@@ -286,12 +291,30 @@ export function parseProjectConfig(parsed: Record<string, unknown>): ProjectConf
     config.maxDiffLines = maxDiffLines;
   }
 
+  if (parsed.review !== undefined && parsed.review !== null) {
+    config.review = parseReviewOrchestrationSettings(parsed.review);
+  }
+
   const audits = parsePrincipleAudits(parsed.audits);
   if (audits !== undefined) {
     config.audits = audits;
   }
 
   return config;
+}
+
+/**
+ * Review orchestration settings of a project, or `null` when the project has none or its config
+ * cannot be read (the role defaults then apply).
+ */
+export function loadReviewOrchestrationSettings(
+  localPath: string,
+): ReviewOrchestrationSettings | null {
+  try {
+    return loadProjectConfig(localPath)?.review ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**

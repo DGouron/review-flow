@@ -693,3 +693,37 @@ describe('parseProjectConfig — audits', () => {
     expect(() => parseProjectConfig({ ...baseConfig, audits: 'solid' })).toThrow(/audits/);
   });
 });
+
+describe('parseProjectConfig — review orchestration', () => {
+  const baseConfig = {
+    github: true,
+    gitlab: false,
+    defaultModel: 'sonnet',
+    reviewSkill: 'review-back',
+    reviewFollowupSkill: 'review-followup',
+  };
+
+  it('keeps an older config without review valid and without review settings', () => {
+    const config = parseProjectConfig({ ...baseConfig });
+
+    expect(config.review).toBeUndefined();
+  });
+
+  it('parses the review mode and the role models', () => {
+    const config = parseProjectConfig({
+      ...baseConfig,
+      review: { mode: 'orchestrated', roles: { arbitre: { model: 'sonnet' } } },
+    });
+
+    expect(config.review).toEqual({
+      mode: 'orchestrated',
+      roles: { arbitre: { model: 'sonnet' } },
+    });
+  });
+
+  it('throws on an unknown role', () => {
+    expect(() =>
+      parseProjectConfig({ ...baseConfig, review: { roles: { 'lot:perf': { model: 'opus' } } } }),
+    ).toThrow(/review\.roles/);
+  });
+});

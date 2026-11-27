@@ -22,7 +22,7 @@ describe('MCP Context file management', () => {
     it('should write per-job context file with correct content', () => {
       const job = ReviewJobFactory.create({ id: 'job-123' });
 
-      writeMcpContext(job);
+      writeMcpContext(job, '/wt/review');
 
       expect(fs.mkdirSync).toHaveBeenCalledWith('/home/testuser/.claude-review/jobs', {
         recursive: true,
@@ -36,7 +36,7 @@ describe('MCP Context file management', () => {
     it('should sanitize job ID with special characters in file path', () => {
       const job = ReviewJobFactory.create({ id: 'gitlab:org/repo:mr-5' });
 
-      writeMcpContext(job);
+      writeMcpContext(job, '/wt/review');
 
       expect(fs.writeFileSync).toHaveBeenCalledWith(
         '/home/testuser/.claude-review/jobs/gitlab-org-repo-mr-5.json',
@@ -54,7 +54,7 @@ describe('MCP Context file management', () => {
         jobType: 'followup',
       });
 
-      writeMcpContext(job);
+      writeMcpContext(job, '/wt/review');
 
       const written = vi.mocked(fs.writeFileSync).mock.calls[0][1] as string;
       const parsed = JSON.parse(written);
@@ -65,12 +65,22 @@ describe('MCP Context file management', () => {
       expect(parsed.timestamp).toBeDefined();
     });
 
+    it('records the pull request number and the worktree role sessions run in', () => {
+      const job = ReviewJobFactory.create({ id: 'job-789', mrNumber: 2111 });
+
+      writeMcpContext(job, '/home/testuser/.reviewflow/worktrees/gitlab-org-repo-2111');
+
+      const parsed = JSON.parse(String(vi.mocked(fs.writeFileSync).mock.calls[0][1]));
+      expect(parsed.mrNumber).toBe(2111);
+      expect(parsed.worktreePath).toBe('/home/testuser/.reviewflow/worktrees/gitlab-org-repo-2111');
+    });
+
     it('should write two separate files for concurrent jobs', () => {
       const jobA = ReviewJobFactory.create({ id: 'job-a' });
       const jobB = ReviewJobFactory.createFollowup({ id: 'job-b' });
 
-      writeMcpContext(jobA);
-      writeMcpContext(jobB);
+      writeMcpContext(jobA, '/wt/review');
+      writeMcpContext(jobB, '/wt/review');
 
       const calls = vi.mocked(fs.writeFileSync).mock.calls;
       const paths = calls.map(([path]) => path);
@@ -84,7 +94,7 @@ describe('MCP Context file management', () => {
       });
       const job = ReviewJobFactory.create();
 
-      expect(() => writeMcpContext(job)).not.toThrow();
+      expect(() => writeMcpContext(job, '/wt/review')).not.toThrow();
     });
   });
 
