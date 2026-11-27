@@ -130,6 +130,7 @@ describe('executeSessionEnd and executeSessionSweep', () => {
         name,
         cwd: `${worktreeRoot}/github-acme-app-2042`,
         startedAt: null,
+        state: 'working',
       },
     ]);
   }

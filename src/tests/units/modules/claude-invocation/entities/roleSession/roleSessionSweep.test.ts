@@ -20,6 +20,7 @@ function session(overrides: Partial<BackgroundSession>): BackgroundSession {
     name: 'Revue #2111 · lot bugs',
     cwd: `${worktreeRoot}/github-acme-app-2111`,
     startedAt: minutesAgo(5),
+    state: 'working',
     ...overrides,
   };
 }

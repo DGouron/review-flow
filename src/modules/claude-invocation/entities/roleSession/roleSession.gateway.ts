@@ -14,6 +14,8 @@ export type BackgroundSession = {
   name: string | null;
   cwd: string | null;
   startedAt: Date | null;
+  /** As `claude agents` reports it: working, idle, blocked, done, stopped, failed… */
+  state: string | null;
 };
 
 export type BackgroundSessionListing =

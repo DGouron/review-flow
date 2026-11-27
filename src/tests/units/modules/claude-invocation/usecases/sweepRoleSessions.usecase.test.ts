@@ -22,6 +22,7 @@ function roleSession(id: string, startedAt: Date | null): BackgroundSession {
     name: 'Revue #2111 · lot bugs',
     cwd: `${worktreeRoot}/github-acme-app-2111`,
     startedAt,
+    state: 'working',
   };
 }
 

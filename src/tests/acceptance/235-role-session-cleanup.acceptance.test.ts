@@ -35,7 +35,7 @@ function minutesAgo(minutes: number): Date {
 }
 
 function roleSession(id: string, name: string, startedAt: Date): BackgroundSession {
-  return { sessionId: parseSessionId(id), name, cwd: worktree, startedAt };
+  return { sessionId: parseSessionId(id), name, cwd: worktree, startedAt, state: 'working' };
 }
 
 describe('SPEC-235 lot B — end and sweep role sessions', () => {
@@ -122,12 +122,14 @@ describe('SPEC-235 lot B — end and sweep role sessions', () => {
         name: null,
         cwd: worktree,
         startedAt: minutesAgo(5),
+        state: 'working',
       },
       {
         sessionId: parseSessionId('human001'),
         name: 'Revue #9 · arbitre',
         cwd: '/home/ai/projects/app',
         startedAt: minutesAgo(300),
+        state: 'working',
       },
     ]);
 

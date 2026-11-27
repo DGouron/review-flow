@@ -20,6 +20,13 @@ export type ReviewOrchestrationSettings = z.infer<typeof reviewOrchestrationSett
 /** Two reviews run at once, so at most ten role sessions live on the machine. */
 export const MAX_LIVE_ROLE_SESSIONS_PER_JOB = 5;
 
+const FINISHED_SESSION_STATES: ReadonlySet<string> = new Set(['done', 'stopped', 'failed']);
+
+/** A session counts against the cap until it is finished; an unknown state still counts. */
+export function occupiesRoleSessionSlot(state: string | null): boolean {
+  return state === null || !FINISHED_SESSION_STATES.has(state);
+}
+
 const DEFAULT_ROLE_MODELS: Record<ReviewRole, RoleModel> = {
   greffe: 'sonnet',
   'lot:bugs': 'opus',

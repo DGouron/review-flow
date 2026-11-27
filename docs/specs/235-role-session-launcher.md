@@ -32,9 +32,10 @@ ends its role sessions and accounts their tokens).
 - `reviewflow session launch --role <role> --brief <file> --job <jobId>` starts one `claude --bg`
   session with the role's model, the brief as its prompt and the job's worktree as its working
   directory
-- a role session can only read: built-in tools are limited to Read, Glob, Grep and Bash, every
-  tool call outside Read, Glob, Grep and read-only git/ls commands is denied, and no MCP server is
-  loaded
+- a role session can only read: its only tools are Read, Glob and Grep (no Bash: even `git log`
+  writes files through `--output=<file>`), every other tool call is denied, no MCP server is loaded,
+  and only the user's own settings apply — the project and local settings a reviewed pull request
+  may ship are ignored; the diff reaches the role through its brief or a file it reads
 - the session is named `<subject> · <role in words>`: subject `Revue #<n>` for a review,
   `Suivi #<n>` for a follow-up; role in words `greffe`, `lot bugs`, `lot sécurité`,
   `lot architecture`, `lot lisibilité`, `contradiction`, `arbitre`; no internal id
@@ -43,11 +44,13 @@ ends its role sessions and accounts their tokens).
 - success prints `LAUNCHED <sessionId> <name>` and exits 0
 - refusals print one line `ERROR <reason>` and exit 1: unknown role, missing or empty brief,
   unknown job, job without a worktree yet, five live role sessions already for that job (a job's
-  role session is live while `claude agents` still lists it), Claude sessions cannot be listed,
-  dispatch failure
+  role session is live while `claude agents` lists it in a state other than done, stopped or
+  failed), Claude sessions cannot be listed, dispatch failure
+- an entry of the `claude agents` listing that cannot be read is skipped, the others are kept
 - if the session was dispatched but cannot be recorded, it is stopped and removed at once and the
   launch is refused
-- two launches for the same job never interleave (the job file is locked while one launches)
+- two launches for the same job never interleave (the job file is locked while one launches); a
+  launch only ever removes its own lock, and a lock older than 2 minutes is taken over
 
 ### Ending and sweeping (lot B)
 

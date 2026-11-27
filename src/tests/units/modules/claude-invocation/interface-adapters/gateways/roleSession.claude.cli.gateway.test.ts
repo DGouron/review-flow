@@ -67,20 +67,26 @@ describe('RoleSessionClaudeCliGateway.launch', () => {
     const args = calls[0]?.args ?? [];
     const valueOf = (flag: string): string | undefined => args[args.indexOf(flag) + 1];
     expect(valueOf('--permission-mode')).toBe('dontAsk');
-    expect(valueOf('--tools')).toBe('Read,Glob,Grep,Bash');
-    expect(valueOf('--allowedTools')?.split(',')).toEqual([
-      'Read',
-      'Glob',
-      'Grep',
-      'Bash(git diff:*)',
-      'Bash(git log:*)',
-      'Bash(git show:*)',
-      'Bash(git blame:*)',
-      'Bash(git status:*)',
-      'Bash(ls:*)',
-    ]);
+    expect(valueOf('--tools')).toBe('Read,Glob,Grep');
+    expect(valueOf('--allowedTools')).toBe('Read,Glob,Grep');
+    expect(args.join(' ')).not.toContain('Bash');
     expect(valueOf('--mcp-config')).toBe('{"mcpServers":{}}');
     expect(args).toContain('--strict-mcp-config');
+  });
+
+  it('ignores the project and local settings the reviewed pull request may ship', async () => {
+    const { runner, calls } = scriptedRunner({
+      stdout: 'backgrounded · ab12',
+      stderr: '',
+      exitCode: 0,
+    });
+
+    await new RoleSessionClaudeCliGateway(runner).launch(launch);
+
+    const args = calls[0]?.args ?? [];
+    const valueOf = (flag: string): string | undefined => args[args.indexOf(flag) + 1];
+    expect(valueOf('--setting-sources')).toBe('user');
+    expect(valueOf('--settings')).toBe('{"worktree":{"bgIsolation":"none"}}');
   });
 
   it('reports a failed dispatch with its stderr', async () => {
@@ -127,8 +133,30 @@ describe('RoleSessionClaudeCliGateway.listBackgroundSessions', () => {
           name: 'Revue #2111 · lot bugs',
           cwd: '/wt/github-acme-app-2111',
           startedAt: new Date(1795768337383),
+          state: 'done',
         },
-        { sessionId: 'abc12345', name: null, cwd: null, startedAt: null },
+        { sessionId: 'abc12345', name: null, cwd: null, startedAt: null, state: null },
+      ],
+    });
+  });
+
+  it('skips an entry it cannot read and keeps the others', async () => {
+    const { runner } = scriptedRunner({
+      stdout: JSON.stringify([
+        { id: 'weird001', startedAt: '2026-11-27T09:00:00Z', name: 42 },
+        null,
+        { id: 'fine0001', state: 'working' },
+      ]),
+      stderr: '',
+      exitCode: 0,
+    });
+
+    const listing = await new RoleSessionClaudeCliGateway(runner).listBackgroundSessions();
+
+    expect(listing).toEqual({
+      status: 'listed',
+      sessions: [
+        { sessionId: 'fine0001', name: null, cwd: null, startedAt: null, state: 'working' },
       ],
     });
   });
