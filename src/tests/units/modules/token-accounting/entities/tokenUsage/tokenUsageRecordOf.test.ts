@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 
 import { tokenUsageRecordSchema } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
-import { tokenUsageRecordOf } from '@/modules/token-accounting/entities/tokenUsage/tokenUsageRecordOf.js';
+import {
+  roleTokenUsageRecordOf,
+  tokenUsageRecordOf,
+} from '@/modules/token-accounting/entities/tokenUsage/tokenUsageRecordOf.js';
 import {
   TokenUsageFactory,
   TokenUsageRecordFactory,
@@ -41,6 +44,26 @@ describe('tokenUsageRecordOf', () => {
       model: 'claude-opus-5-5',
     });
     expect(tokenUsageRecordSchema.safeParse(record).success).toBe(true);
+  });
+
+  it('records the role of a role session, without a duration it cannot know', () => {
+    const record = roleTokenUsageRecordOf({
+      job,
+      jobType: 'review',
+      session,
+      role: 'lot:securite',
+      recordedAt: '2026-11-27T12:00:00.000Z',
+    });
+
+    expect(record).toMatchObject({ jobId: job.id, role: 'lot:securite', turns: 21 });
+    expect(record.durationMs).toBeUndefined();
+    expect(tokenUsageRecordSchema.parse(record).role).toBe('lot:securite');
+  });
+
+  it('rejects a record whose role is unknown', () => {
+    const record = { ...TokenUsageRecordFactory.create(), role: 'lot:perf' };
+
+    expect(tokenUsageRecordSchema.safeParse(record).success).toBe(false);
   });
 
   it('still reads a record written before sessions were recorded', () => {

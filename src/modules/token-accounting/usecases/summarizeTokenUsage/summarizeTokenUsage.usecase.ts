@@ -1,5 +1,6 @@
 import { medianMergeRequestCostUsd } from '@/modules/token-accounting/entities/tokenUsage/medianMergeRequestCost.js';
 import type { TokenUsageGateway } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.gateway.js';
+import type { TokenUsageRecord } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
 
 export type TokenUsageSummary = {
   totalInputTokens: number;
@@ -18,6 +19,11 @@ export type SummarizeInput = {
   since?: string;
 };
 
+/** A role session works for a review already counted: it adds cost, not a session to count. */
+function isReviewSession(record: TokenUsageRecord): boolean {
+  return record.role === undefined;
+}
+
 export class SummarizeTokenUsageUseCase {
   constructor(private readonly gateway: TokenUsageGateway) {}
 
@@ -32,7 +38,7 @@ export class SummarizeTokenUsageUseCase {
       totalCacheRead: 0,
       totalCacheCreation: 0,
       totalCostUsd: 0,
-      recordCount: records.length,
+      recordCount: records.filter(isReviewSession).length,
       byModel: {},
       byJobType: { review: { count: 0, costUsd: 0 }, followup: { count: 0, costUsd: 0 } },
       medianMergeRequestCostUsd: medianMergeRequestCostUsd(records),
@@ -46,7 +52,7 @@ export class SummarizeTokenUsageUseCase {
       summary.totalCostUsd += record.usage.costUsd;
 
       const jobTypeEntry = summary.byJobType[record.jobType ?? 'review'];
-      jobTypeEntry.count += 1;
+      if (isReviewSession(record)) jobTypeEntry.count += 1;
       jobTypeEntry.costUsd += record.usage.costUsd;
 
       const modelEntry = summary.byModel[record.model];

@@ -76,6 +76,9 @@ export class LaunchRoleSessionUseCase implements UseCase<
     const lookup = this.dependencies.roleSessionJobGateway.find(launch.jobId);
     if (lookup.status === 'not-found') return refused(`unknown job ${launch.jobId}`);
     if (lookup.status === 'unusable') return refused(lookup.reason);
+    if (lookup.job.roleSessionsClosed) {
+      return refused(`job ${launch.jobId} is ending: no new role session`);
+    }
     const capRefusal = await this.capRefusalOf(lookup.job);
     if (capRefusal !== null) return refused(capRefusal);
     return this.dispatchAndRecord(lookup.job, launch);

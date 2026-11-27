@@ -56,6 +56,7 @@ describe('RoleSessionJobFileSystemGateway', () => {
           roleSessions: [
             { sessionId: 'a1b2c3d4', role: 'greffe', launchedAt: '2026-11-27T09:00:00.000Z' },
           ],
+          roleSessionsClosed: false,
         },
       });
     });
@@ -122,6 +123,32 @@ describe('RoleSessionJobFileSystemGateway', () => {
       });
 
       expect(result.recorded).toBe(false);
+    });
+  });
+
+  describe('closeRoleSessions', () => {
+    it('marks the job closed to new role sessions and returns the ones it recorded', () => {
+      writeJobFile(
+        RoleSessionJobFileFactory.create({
+          roleSessions: [
+            { sessionId: 'a1b2c3d4', role: 'greffe', launchedAt: '2026-11-27T09:00:00.000Z' },
+          ],
+        }),
+      );
+
+      const recorded = gateway.closeRoleSessions(jobId);
+
+      expect(recorded).toEqual([
+        { sessionId: 'a1b2c3d4', role: 'greffe', launchedAt: '2026-11-27T09:00:00.000Z' },
+      ]);
+      expect(readJobFile().roleSessionsClosed).toBe(true);
+      expect(readJobFile().mergeRequestId).toBe('github-acme/app-2111');
+      const lookup = gateway.find(jobId);
+      expect(lookup.status === 'found' && lookup.job.roleSessionsClosed).toBe(true);
+    });
+
+    it('returns nothing for a job without a job file', () => {
+      expect(gateway.closeRoleSessions(jobId)).toEqual([]);
     });
   });
 

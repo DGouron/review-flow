@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { reviewRoleSchema } from '@/modules/claude-invocation/entities/roleSession/reviewRole.js';
+
 export const tokenUsageSchema = z.object({
   inputTokens: z.number(),
   outputTokens: z.number(),
@@ -21,6 +23,7 @@ export const tokenUsageRecordSchema = z.object({
   jobType: z.enum(['review', 'followup']).optional(),
   durationMs: z.number().optional(),
   turns: z.number().optional(),
+  role: reviewRoleSchema.optional(),
 });
 
 export type TokenUsage = z.infer<typeof tokenUsageSchema>;

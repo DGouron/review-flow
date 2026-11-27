@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { readFileSync, existsSync, rmSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -285,19 +285,33 @@ export class ClaudeSessionCliGateway implements ClaudeSessionGateway {
     const jobState = readBackgroundJobState(
       join(this.homeDir, '.claude', 'jobs', sessionId, 'state.json'),
     );
-    const transcriptName = jobState?.sessionId ?? sessionId;
-    const sessionCwd = jobState?.cwd ?? cwd;
+    const projectFolder = join(
+      this.homeDir,
+      '.claude',
+      'projects',
+      claudeProjectFolderOf(jobState?.cwd ?? cwd),
+    );
+    const transcriptName =
+      jobState?.sessionId ?? fullSessionIdOf(sessionId, projectFolder) ?? sessionId;
     return {
       sessionId: transcriptName,
-      path: join(
-        this.homeDir,
-        '.claude',
-        'projects',
-        claudeProjectFolderOf(sessionCwd),
-        `${transcriptName}.jsonl`,
-      ),
+      path: join(projectFolder, `${transcriptName}.jsonl`),
     };
   }
+}
+
+/** A removed session keeps its transcript, named by the full session id the short id starts. */
+function fullSessionIdOf(shortId: string, projectFolder: string): string | null {
+  let fileNames: string[];
+  try {
+    fileNames = readdirSync(projectFolder);
+  } catch {
+    return null;
+  }
+  const matches = fileNames.filter(
+    (fileName) => fileName.startsWith(`${shortId}-`) && fileName.endsWith('.jsonl'),
+  );
+  return matches.length === 1 ? matches[0].slice(0, -'.jsonl'.length) : null;
 }
 
 const backgroundJobStateSchema = z.object({ sessionId: z.string().min(1), cwd: z.string().min(1) });
