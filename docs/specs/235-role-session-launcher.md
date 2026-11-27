@@ -1,6 +1,6 @@
 # Launch, count and clean up the role sessions of an orchestrated review
 
-## Status: implementing
+## Status: implemented
 
 ## Context
 

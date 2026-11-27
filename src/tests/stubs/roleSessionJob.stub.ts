@@ -1,3 +1,4 @@
+import type { ClaudeSessionGateway } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
 import type { RoleSessionRecord } from '@/modules/claude-invocation/entities/roleSession/roleSession.schema.js';
 import type {
   RecordedRoleSession,
@@ -6,6 +7,18 @@ import type {
   RoleSessionJobLookup,
   RoleSessionRecordResult,
 } from '@/modules/claude-invocation/entities/roleSession/roleSessionJob.gateway.js';
+import { EndJobRoleSessionsUseCase } from '@/modules/claude-invocation/usecases/endJobRoleSessions.usecase.js';
+
+/** Ends the role sessions of a job that never launched any. */
+export function endJobWithoutRoleSessions(
+  sessionGateway: ClaudeSessionGateway,
+): EndJobRoleSessionsUseCase {
+  return new EndJobRoleSessionsUseCase({
+    roleSessionJobGateway: new InMemoryRoleSessionJobGateway(),
+    sessionGateway,
+    recordRoleSessionUsage: async () => {},
+  });
+}
 
 export class InMemoryRoleSessionJobGateway implements RoleSessionJobGateway {
   private readonly jobs = new Map<string, RoleSessionJob>();

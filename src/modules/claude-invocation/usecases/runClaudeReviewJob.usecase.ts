@@ -13,6 +13,7 @@ import type { SessionCompletion } from '@/modules/claude-invocation/entities/ses
 import { awaitSessionCompletion } from '@/modules/claude-invocation/usecases/awaitSessionCompletion.usecase.js';
 import { cleanupClaudeSession } from '@/modules/claude-invocation/usecases/cleanupClaudeSession.usecase.js';
 import { dispatchClaudeSession } from '@/modules/claude-invocation/usecases/dispatchClaudeSession.usecase.js';
+import type { EndJobRoleSessionsUseCase } from '@/modules/claude-invocation/usecases/endJobRoleSessions.usecase.js';
 import { retrieveReviewReport } from '@/modules/claude-invocation/usecases/retrieveReviewReport.usecase.js';
 
 export interface RunClaudeReviewJobInput {
@@ -37,6 +38,7 @@ export interface RunClaudeReviewJobDependencies {
   now: () => Date;
   timeoutMs: number;
   pollIntervalMs: number;
+  endJobRoleSessions: EndJobRoleSessionsUseCase;
 }
 
 export type RunClaudeReviewJobResult =
@@ -50,6 +52,28 @@ export type RunClaudeReviewJobResult =
   | { status: 'retry'; delayMs: number; attempt: number };
 
 export async function runClaudeReviewJob(
+  input: RunClaudeReviewJobInput,
+  deps: RunClaudeReviewJobDependencies,
+): Promise<RunClaudeReviewJobResult> {
+  try {
+    return await runReviewSession(input, deps);
+  } finally {
+    await endRoleSessionsWithoutThrowing(input, deps);
+  }
+}
+
+async function endRoleSessionsWithoutThrowing(
+  input: RunClaudeReviewJobInput,
+  deps: RunClaudeReviewJobDependencies,
+): Promise<void> {
+  try {
+    await deps.endJobRoleSessions.execute({ jobId: input.jobId, cwd: input.localPath });
+  } catch {
+    return;
+  }
+}
+
+async function runReviewSession(
   input: RunClaudeReviewJobInput,
   deps: RunClaudeReviewJobDependencies,
 ): Promise<RunClaudeReviewJobResult> {

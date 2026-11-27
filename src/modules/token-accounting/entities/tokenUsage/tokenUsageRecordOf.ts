@@ -1,3 +1,4 @@
+import type { ReviewRole } from '@/modules/claude-invocation/entities/roleSession/reviewRole.js';
 import type {
   TokenUsage,
   TokenUsageRecord,
@@ -16,6 +17,31 @@ interface RecordedSession {
   model: string;
   turns: number;
   usage: TokenUsage;
+}
+
+/** Usage of one role session of an orchestrated review; its duration is not measured. */
+export function roleTokenUsageRecordOf(input: {
+  job: RecordedJob;
+  jobType: 'review' | 'followup';
+  session: RecordedSession;
+  role: ReviewRole;
+  recordedAt: string;
+}): TokenUsageRecord {
+  const { job, jobType, session, role, recordedAt } = input;
+  return {
+    jobId: job.id,
+    mrNumber: job.mrNumber,
+    platform: job.platform,
+    projectPath: job.projectPath,
+    localPath: job.localPath,
+    model: session.model,
+    recordedAt,
+    usage: session.usage,
+    sessionId: session.sessionId,
+    jobType,
+    turns: session.turns,
+    role,
+  };
 }
 
 export function tokenUsageRecordOf(input: {

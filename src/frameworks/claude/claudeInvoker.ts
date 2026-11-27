@@ -13,11 +13,13 @@ import {
   resolveTerminalNotifier,
 } from '@/frameworks/claude/desktopNotification.js';
 import { buildLanguageDirective } from '@/frameworks/claude/languageDirective.js';
+import { createRoleSessionUsageRecorder } from '@/frameworks/claude/roleSessionUsageRecorder.js';
 import { logInfo, logWarn, logError } from '@/frameworks/logging/logBuffer.js';
 import { getModel, getReviewTimeoutMs } from '@/frameworks/settings/runtimeSettings.js';
 import type { BillingStateGateway } from '@/modules/claude-invocation/entities/billingState/billingState.gateway.js';
 import type { EnvironmentGateway } from '@/modules/claude-invocation/entities/billingState/environment.gateway.js';
 import type { ClaudeSessionGateway } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
+import type { RoleSessionJobGateway } from '@/modules/claude-invocation/entities/roleSession/roleSessionJob.gateway.js';
 import type { McpCompletionBridge } from '@/modules/claude-invocation/entities/sessionCompletion/mcpCompletion.gateway.js';
 import type { ReviewReportGateway } from '@/modules/claude-invocation/entities/sessionCompletion/reviewReport.gateway.js';
 import { InMemoryBillingStateGateway } from '@/modules/claude-invocation/interface-adapters/gateways/billingState.memory.gateway.js';
@@ -28,6 +30,8 @@ import {
 import { ProcessEnvironmentGateway } from '@/modules/claude-invocation/interface-adapters/gateways/environment.process.gateway.js';
 import { FileSystemMcpCompletionBridge } from '@/modules/claude-invocation/interface-adapters/gateways/mcpCompletion.fileSystem.gateway.js';
 import { ReviewReportFileSystemGateway } from '@/modules/claude-invocation/interface-adapters/gateways/reviewReport.fileSystem.gateway.js';
+import { RoleSessionJobFileSystemGateway } from '@/modules/claude-invocation/interface-adapters/gateways/roleSessionJob.fileSystem.gateway.js';
+import { EndJobRoleSessionsUseCase } from '@/modules/claude-invocation/usecases/endJobRoleSessions.usecase.js';
 import { runClaudeReviewJob } from '@/modules/claude-invocation/usecases/runClaudeReviewJob.usecase.js';
 import { defaultGitHubExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.github.gateway.js';
 import { defaultGitLabExecutor } from '@/modules/platform-integration/interface-adapters/gateways/threadFetch.gitlab.gateway.js';
@@ -66,7 +70,7 @@ import { GitCommandCliGateway } from '@/modules/worktree-management/interface-ad
 import { WorktreeFileSystemGateway } from '@/modules/worktree-management/interface-adapters/gateways/worktree.fileSystem.gateway.js';
 import { resolveClaudeCwd } from '@/modules/worktree-management/services/claudeCwd.js';
 import { resolveClaudePath } from '@/shared/services/claudePathResolver.js';
-import { getJobContextFilePath } from '@/shared/services/mcpJobContext.js';
+import { getJobContextFilePath, jobContextDirectory } from '@/shared/services/mcpJobContext.js';
 
 /**
  * Bundle of gateways needed by runClaudeReviewJob. Built in the composition
@@ -79,6 +83,7 @@ export interface ClaudeInvocationDeps {
   reportGateway: ReviewReportGateway;
   billingState: BillingStateGateway;
   environment: EnvironmentGateway;
+  roleSessionJobGateway: RoleSessionJobGateway;
   timeoutMs: number;
   pollIntervalMs: number;
 }
@@ -178,6 +183,7 @@ export function createDefaultClaudeInvocationDeps(): ClaudeInvocationDeps {
     reportGateway: new ReviewReportFileSystemGateway(),
     billingState: new InMemoryBillingStateGateway(),
     environment: new ProcessEnvironmentGateway(),
+    roleSessionJobGateway: new RoleSessionJobFileSystemGateway(jobContextDirectory()),
     timeoutMs: getReviewTimeoutMs(),
     pollIntervalMs: 30 * 1000,
   };
@@ -693,6 +699,16 @@ async function invokeViaBackgroundSession(
         now: () => new Date(),
         timeoutMs: invocation.timeoutMs,
         pollIntervalMs: invocation.pollIntervalMs,
+        endJobRoleSessions: new EndJobRoleSessionsUseCase({
+          roleSessionJobGateway: invocation.roleSessionJobGateway,
+          sessionGateway: invocation.sessionGateway,
+          recordRoleSessionUsage: createRoleSessionUsageRecorder({
+            job,
+            jobType,
+            trackTokenUsage: deps.trackTokenUsage,
+            now: () => new Date(),
+          }),
+        }),
       },
     );
   } catch (error) {

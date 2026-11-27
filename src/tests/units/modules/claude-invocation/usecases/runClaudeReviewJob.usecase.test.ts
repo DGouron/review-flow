@@ -1,12 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
+import { EndJobRoleSessionsUseCase } from '@/modules/claude-invocation/usecases/endJobRoleSessions.usecase.js';
 import { runClaudeReviewJob } from '@/modules/claude-invocation/usecases/runClaudeReviewJob.usecase.js';
+import { RoleSessionJobFactory } from '@/tests/factories/roleSessionJob.factory.js';
 import { StubBillingStateGateway } from '@/tests/stubs/billingState.stub.js';
 import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
 import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
 import { StubMcpCompletionBridge } from '@/tests/stubs/mcpCompletion.stub.js';
 import { StubReviewReportGateway } from '@/tests/stubs/reviewReport.stub.js';
+import { InMemoryRoleSessionJobGateway } from '@/tests/stubs/roleSessionJob.stub.js';
 
 function buildInput(
   overrides: Partial<Parameters<typeof runClaudeReviewJob>[0]> = {},
@@ -37,12 +40,14 @@ function buildDeps() {
   const reportGateway = new StubReviewReportGateway();
   const billingState = new StubBillingStateGateway();
   const environment = new StubEnvironmentGateway();
+  const roleSessionJobGateway = new InMemoryRoleSessionJobGateway();
   return {
     sessionGateway,
     completionBridge,
     reportGateway,
     billingState,
     environment,
+    roleSessionJobGateway,
     deps: {
       sessionGateway,
       completionBridge,
@@ -52,9 +57,97 @@ function buildDeps() {
       now: () => new Date('2026-05-22T10:00:00Z'),
       timeoutMs: 15 * 60_000,
       pollIntervalMs: 30_000,
+      endJobRoleSessions: new EndJobRoleSessionsUseCase({
+        roleSessionJobGateway,
+        sessionGateway,
+        recordRoleSessionUsage: async () => {},
+      }),
     },
   };
 }
+
+function recordRoleSessions(ctx: ReturnType<typeof buildDeps>, sessionIds: string[]): void {
+  ctx.roleSessionJobGateway.save(
+    RoleSessionJobFactory.create({
+      jobId: 'gitlab:owner/repo:42',
+      roleSessions: sessionIds.map((sessionId) => ({
+        sessionId: parseSessionId(sessionId),
+        role: 'lot:bugs',
+        launchedAt: '2026-05-22T09:50:00Z',
+      })),
+    }),
+  );
+}
+
+describe('runClaudeReviewJob — role sessions of the job', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-22T10:00:00Z'));
+  });
+
+  it('ends every recorded role session once the review completed', async () => {
+    const ctx = buildDeps();
+    recordRoleSessions(ctx, ['lot00001', 'lot00002']);
+    ctx.sessionGateway.setDispatchResult({
+      status: 'dispatched',
+      sessionId: parseSessionId('main0001'),
+    });
+    ctx.completionBridge.scheduleCompletion('gitlab:owner/repo:42', {
+      source: 'mcp',
+      outcome: 'completed',
+      reason: null,
+    });
+
+    const runPromise = runClaudeReviewJob(buildInput(), ctx.deps);
+    await vi.runAllTimersAsync();
+    const result = await runPromise;
+
+    expect(result.status).toBe('completed');
+    expect(ctx.sessionGateway.removeCalls).toEqual(['main0001', 'lot00001', 'lot00002']);
+  });
+
+  it('ends the recorded role sessions when the job stops before dispatching', async () => {
+    const ctx = buildDeps();
+    recordRoleSessions(ctx, ['lot00001']);
+    ctx.environment.setHasAnthropicApiKey(true);
+
+    const result = await runClaudeReviewJob(buildInput(), ctx.deps);
+
+    expect(result.status).toBe('failed');
+    expect(ctx.sessionGateway.removeCalls).toEqual(['lot00001']);
+  });
+
+  it('ends the recorded role sessions when the review session throws, and lets the error through', async () => {
+    const ctx = buildDeps();
+    recordRoleSessions(ctx, ['lot00001']);
+    vi.spyOn(ctx.billingState, 'read').mockImplementation(() => {
+      throw new Error('billing state corrupted');
+    });
+
+    await expect(runClaudeReviewJob(buildInput(), ctx.deps)).rejects.toThrow(
+      'billing state corrupted',
+    );
+    expect(ctx.sessionGateway.removeCalls).toEqual(['lot00001']);
+  });
+
+  it('keeps the review result when ending the role sessions throws', async () => {
+    const ctx = buildDeps();
+    ctx.environment.setHasAnthropicApiKey(true);
+    const deps = {
+      ...ctx.deps,
+      endJobRoleSessions: new EndJobRoleSessionsUseCase({
+        roleSessionJobGateway: ctx.roleSessionJobGateway,
+        sessionGateway: ctx.sessionGateway,
+        recordRoleSessionUsage: async () => {},
+      }),
+    };
+    vi.spyOn(deps.endJobRoleSessions, 'execute').mockRejectedValue(new Error('unexpected'));
+
+    const result = await runClaudeReviewJob(buildInput(), deps);
+
+    expect(result).toEqual({ status: 'failed', reason: 'billing-regression-prevented' });
+  });
+});
 
 describe('runClaudeReviewJob orchestrator', () => {
   beforeEach(() => {

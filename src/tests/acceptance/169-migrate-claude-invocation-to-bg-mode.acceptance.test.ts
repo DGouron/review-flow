@@ -10,6 +10,7 @@ import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
 import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
 import { StubMcpCompletionBridge } from '@/tests/stubs/mcpCompletion.stub.js';
 import { StubReviewReportGateway } from '@/tests/stubs/reviewReport.stub.js';
+import { endJobWithoutRoleSessions } from '@/tests/stubs/roleSessionJob.stub.js';
 import { StubSupervisorHealthGateway } from '@/tests/stubs/supervisorHealth.stub.js';
 
 interface AcceptanceContext {
@@ -38,6 +39,7 @@ function createContext(): AcceptanceContext {
     now: () => new Date('2026-05-22T10:00:00Z'),
     timeoutMs: 15 * 60 * 1000,
     pollIntervalMs: 30_000,
+    endJobRoleSessions: endJobWithoutRoleSessions(sessionGateway),
   };
   return {
     sessionGateway,

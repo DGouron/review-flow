@@ -35,6 +35,8 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
   private usageValue: UsageReport = { usesApiPool: false, raw: 'subscription pool' };
   private scheduledAgentStatuses: ScheduledAgentStatus[] = [];
   private sessionUsageResult: SessionUsageSnapshot | null = null;
+  private readonly sessionUsageBySession = new Map<string, SessionUsageSnapshot | null>();
+  private readonly sessionUsageErrors = new Map<string, unknown>();
   private stopResult: CleanupResult = { success: true, warning: null };
   private removeResult: CleanupResult = { success: true, warning: null };
   private dispatchError: unknown = null;
@@ -128,8 +130,18 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
     return this.usageValue;
   }
 
+  setSessionUsageFor(sessionIdValue: string, value: SessionUsageSnapshot | null): void {
+    this.sessionUsageBySession.set(sessionIdValue, value);
+  }
+
+  setSessionUsageError(sessionIdValue: string, error: unknown): void {
+    this.sessionUsageErrors.set(sessionIdValue, error);
+  }
+
   async getSessionUsage(sessionId: SessionId, cwd: string): Promise<SessionUsageSnapshot | null> {
     this.getSessionUsageCalls.push({ sessionId, cwd });
-    return this.sessionUsageResult;
+    if (this.sessionUsageErrors.has(sessionId)) throw this.sessionUsageErrors.get(sessionId);
+    const perSession = this.sessionUsageBySession.get(sessionId);
+    return perSession === undefined ? this.sessionUsageResult : perSession;
   }
 }
