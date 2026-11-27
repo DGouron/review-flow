@@ -9,6 +9,7 @@ import {
   configureSettingsLogger,
   configureSettingsPath,
   getDefaultSettingsPath,
+  getReviewTimeoutMs,
   loadSettingsFromDisk,
 } from '@/frameworks/settings/runtimeSettings.js';
 import { startGitHubWebhookAllowlist } from '@/main/githubWebhookAllowlist.js';
@@ -255,6 +256,7 @@ export async function startServer(options: ServerOptions = {}): Promise<FastifyI
     roleSessionJobGateway: new RoleSessionJobFileSystemGateway(jobContextDirectory()),
     sessionGateway: deps.claudeInvocationDeps.sessionGateway,
     worktreeRoot: WORKTREE_BASE_DIR,
+    reviewTimeoutMs: getReviewTimeoutMs,
     now: () => new Date(),
   });
 

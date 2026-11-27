@@ -120,9 +120,9 @@ if (isDirectlyExecuted) {
       if (args.action === 'launch') {
         void executeSessionLaunch(args, createSessionLaunchDependencies());
       } else if (args.action === 'end') {
-        void executeSessionEnd(args, createSessionCleanupDependencies());
+        void executeSessionEnd(args, await createSessionCleanupDependencies());
       } else if (args.action === 'sweep') {
-        void executeSessionSweep(args, createSessionCleanupDependencies());
+        void executeSessionSweep(args, await createSessionCleanupDependencies());
       } else {
         console.log('ERROR unknown session action (expected launch, end or sweep)');
         process.exit(1);

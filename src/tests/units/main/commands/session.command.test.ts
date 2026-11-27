@@ -114,6 +114,7 @@ describe('executeSessionEnd and executeSessionSweep', () => {
       sessionGateway,
       worktreeRoot,
       now: () => new Date('2026-11-27T12:00:00.000Z'),
+      reviewTimeoutMs: () => 15 * 60_000,
     };
     dependencies = {
       endRoleSession: new EndRoleSessionUseCase(cleanupDependencies),
@@ -130,6 +131,7 @@ describe('executeSessionEnd and executeSessionSweep', () => {
         name,
         cwd: `${worktreeRoot}/github-acme-app-2042`,
         startedAt: null,
+        state: 'working',
       },
     ]);
   }

@@ -22,6 +22,7 @@ function roleSession(id: string, startedAt: Date | null): BackgroundSession {
     name: 'Revue #2111 · lot bugs',
     cwd: `${worktreeRoot}/github-acme-app-2111`,
     startedAt,
+    state: 'working',
   };
 }
 
@@ -41,7 +42,30 @@ describe('SweepRoleSessionsUseCase', () => {
       sessionGateway,
       worktreeRoot,
       now: () => now,
+      reviewTimeoutMs: () => reviewTimeoutMs,
     });
+  });
+
+  let reviewTimeoutMs = 15 * 60_000;
+
+  it('lets a role session of an active job live as long as the review timeout', async () => {
+    reviewTimeoutMs = 480 * 60_000;
+    recordForActiveJob('longrev1', minutesAgo(300));
+    roleSessionGateway.listBackground([roleSession('longrev1', minutesAgo(300))]);
+
+    const result = await useCase.execute({ dryRun: false });
+
+    expect(result.status === 'swept' && result.outcomes[0]?.action).toBe('kept');
+    reviewTimeoutMs = 15 * 60_000;
+  });
+
+  it('keeps a role session launched a moment ago that is not recorded yet', async () => {
+    roleSessionGateway.listBackground([roleSession('justnow1', minutesAgo(1))]);
+
+    const result = await useCase.execute({ dryRun: false });
+
+    expect(result.status === 'swept' && result.outcomes[0]?.action).toBe('kept');
+    expect(sessionGateway.removeCalls).toEqual([]);
   });
 
   function recordForActiveJob(sessionId: string, launchedAt: Date): void {

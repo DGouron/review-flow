@@ -1,13 +1,4 @@
-import {
-  closeSync,
-  openSync,
-  readdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
+import { readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { z } from 'zod';
@@ -20,11 +11,10 @@ import type {
   RoleSessionJobLookup,
   RoleSessionRecordResult,
 } from '@/modules/claude-invocation/entities/roleSession/roleSessionJob.gateway.js';
+import { withExclusiveFileLock } from '@/modules/claude-invocation/interface-adapters/gateways/exclusiveFileLock.js';
 import { sanitizeJobId } from '@/shared/services/mcpJobContext.js';
 
-const LOCK_RETRY_DELAY_MS = 50;
-const LOCK_WAIT_LIMIT_MS = 60_000;
-const STALE_LOCK_AGE_MS = 120_000;
+const DEFAULT_LOCK_WAIT_LIMIT_MS = 60_000;
 
 const jobFileSchema = z.object({
   jobId: z.string().min(1),
@@ -54,12 +44,15 @@ function readJsonOrNull(path: string): unknown {
   }
 }
 
-function delay(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
 export class RoleSessionJobFileSystemGateway implements RoleSessionJobGateway {
-  constructor(private readonly jobsDirectory: string) {}
+  private readonly lockWaitLimitMs: number;
+
+  constructor(
+    private readonly jobsDirectory: string,
+    options: { lockWaitLimitMs?: number } = {},
+  ) {
+    this.lockWaitLimitMs = options.lockWaitLimitMs ?? DEFAULT_LOCK_WAIT_LIMIT_MS;
+  }
 
   find(jobId: string): RoleSessionJobLookup {
     const raw = this.readRaw(jobId);
@@ -112,42 +105,7 @@ export class RoleSessionJobFileSystemGateway implements RoleSessionJobGateway {
 
   async withExclusiveAccess<Result>(jobId: string, work: () => Promise<Result>): Promise<Result> {
     const lockPath = join(this.jobsDirectory, `${sanitizeJobId(jobId)}.lock`);
-    await this.acquire(lockPath);
-    try {
-      return await work();
-    } finally {
-      rmSync(lockPath, { force: true });
-    }
-  }
-
-  private async acquire(lockPath: string): Promise<void> {
-    const deadline = Date.now() + LOCK_WAIT_LIMIT_MS;
-    while (!this.tryCreateLock(lockPath)) {
-      if (Date.now() > deadline) {
-        throw new Error(`another launch holds ${lockPath}`);
-      }
-      await delay(LOCK_RETRY_DELAY_MS);
-    }
-  }
-
-  private tryCreateLock(lockPath: string): boolean {
-    try {
-      closeSync(openSync(lockPath, 'wx'));
-      return true;
-    } catch {
-      this.removeStaleLock(lockPath);
-      return false;
-    }
-  }
-
-  private removeStaleLock(lockPath: string): void {
-    try {
-      if (Date.now() - statSync(lockPath).mtimeMs > STALE_LOCK_AGE_MS) {
-        rmSync(lockPath, { force: true });
-      }
-    } catch {
-      return;
-    }
+    return withExclusiveFileLock(lockPath, work, { waitLimitMs: this.lockWaitLimitMs });
   }
 
   private readRaw(

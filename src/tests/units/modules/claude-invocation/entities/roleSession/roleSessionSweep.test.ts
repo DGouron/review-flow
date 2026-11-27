@@ -4,6 +4,7 @@ import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSessi
 import type { BackgroundSession } from '@/modules/claude-invocation/entities/roleSession/roleSession.gateway.js';
 import {
   isRoleSession,
+  roleSessionAgeLimitMs,
   sweepVerdictOf,
 } from '@/modules/claude-invocation/entities/roleSession/roleSessionSweep.js';
 
@@ -20,6 +21,7 @@ function session(overrides: Partial<BackgroundSession>): BackgroundSession {
     name: 'Revue #2111 · lot bugs',
     cwd: `${worktreeRoot}/github-acme-app-2111`,
     startedAt: minutesAgo(5),
+    state: 'working',
     ...overrides,
   };
 }
@@ -58,27 +60,73 @@ describe('isRoleSession', () => {
   });
 });
 
+describe('roleSessionAgeLimitMs', () => {
+  it('is 2 hours while reviews time out sooner', () => {
+    expect(roleSessionAgeLimitMs(15 * 60_000)).toBe(120 * 60_000);
+  });
+
+  it('follows the review timeout when it is longer than 2 hours', () => {
+    expect(roleSessionAgeLimitMs(480 * 60_000)).toBe(480 * 60_000);
+  });
+});
+
 describe('sweepVerdictOf', () => {
+  const twoHours = 120 * 60_000;
+
   it('removes a role session whose job is no longer active', () => {
-    expect(sweepVerdictOf({ activeJobId: null, startedAt: minutesAgo(5), now })).toEqual({
-      remove: true,
-      reason: 'job no longer active',
-    });
+    expect(
+      sweepVerdictOf({ activeJobId: null, startedAt: minutesAgo(6), now, maxAgeMs: twoHours }),
+    ).toEqual({ remove: true, reason: 'job no longer active' });
+  });
+
+  it('keeps an unrecorded role session started less than 5 minutes ago, still being recorded', () => {
+    expect(
+      sweepVerdictOf({ activeJobId: null, startedAt: minutesAgo(4), now, maxAgeMs: twoHours }),
+    ).toEqual({ remove: false, reason: 'launched less than 5 minutes ago, not recorded yet' });
+  });
+
+  it('removes an unrecorded role session whose start is unknown', () => {
+    expect(
+      sweepVerdictOf({ activeJobId: null, startedAt: null, now, maxAgeMs: twoHours }).remove,
+    ).toBe(true);
   });
 
   it('removes a role session of an active job started more than 2 hours ago', () => {
     expect(
-      sweepVerdictOf({ activeJobId: 'github:acme/app:2111', startedAt: minutesAgo(121), now }),
+      sweepVerdictOf({
+        activeJobId: 'github:acme/app:2111',
+        startedAt: minutesAgo(121),
+        now,
+        maxAgeMs: twoHours,
+      }),
     ).toEqual({ remove: true, reason: 'started more than 2 hours ago' });
   });
 
-  it('keeps a recent role session of an active job', () => {
+  it('keeps a role session of an active job within a longer review timeout', () => {
     expect(
-      sweepVerdictOf({ activeJobId: 'github:acme/app:2111', startedAt: minutesAgo(119), now }),
+      sweepVerdictOf({
+        activeJobId: 'github:acme/app:2111',
+        startedAt: minutesAgo(300),
+        now,
+        maxAgeMs: 480 * 60_000,
+      }),
     ).toEqual({ remove: false, reason: 'job github:acme/app:2111 active' });
   });
 
+  it('says the limit in minutes when it is not a whole number of hours', () => {
+    expect(
+      sweepVerdictOf({
+        activeJobId: 'job-1',
+        startedAt: minutesAgo(200),
+        now,
+        maxAgeMs: 150 * 60_000,
+      }).reason,
+    ).toBe('started more than 150 minutes ago');
+  });
+
   it('keeps a role session of an active job whose start is unknown', () => {
-    expect(sweepVerdictOf({ activeJobId: 'job-1', startedAt: null, now }).remove).toBe(false);
+    expect(
+      sweepVerdictOf({ activeJobId: 'job-1', startedAt: null, now, maxAgeMs: twoHours }).remove,
+    ).toBe(false);
   });
 });

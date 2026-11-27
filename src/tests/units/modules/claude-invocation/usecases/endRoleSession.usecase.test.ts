@@ -29,6 +29,7 @@ describe('EndRoleSessionUseCase', () => {
         name: 'Revue #2111 · lot bugs',
         cwd: `${worktreeRoot}/github-acme-app-2111`,
         startedAt: null,
+        state: 'working',
       },
     ]);
   });
@@ -51,7 +52,13 @@ describe('EndRoleSessionUseCase', () => {
 
   it('refuses to end a session that is not a role session', async () => {
     roleSessionGateway.listBackground([
-      { sessionId: parseSessionId('human001'), name: 'Notes', cwd: '/home/ai', startedAt: null },
+      {
+        sessionId: parseSessionId('human001'),
+        name: 'Notes',
+        cwd: '/home/ai',
+        startedAt: null,
+        state: 'working',
+      },
     ]);
 
     const result = await useCase.execute({ sessionId: 'human001' });

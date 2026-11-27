@@ -13,25 +13,18 @@ import {
   type ClaudeProcessRunner,
 } from '@/modules/claude-invocation/interface-adapters/gateways/claudeSession.cli.gateway.js';
 
-const READ_ONLY_BUILT_IN_TOOLS = 'Read,Glob,Grep,Bash';
-const READ_ONLY_ALLOWED_TOOLS = [
-  'Read',
-  'Glob',
-  'Grep',
-  'Bash(git diff:*)',
-  'Bash(git log:*)',
-  'Bash(git show:*)',
-  'Bash(git blame:*)',
-  'Bash(git status:*)',
-  'Bash(ls:*)',
-].join(',');
+/** No Bash: even `git log` writes files through `--output=<file>`. */
+const READ_ONLY_TOOLS = 'Read,Glob,Grep';
 const NO_MCP_SERVER = '{"mcpServers":{}}';
+const TRUSTED_SETTING_SOURCES = 'user';
+const SESSION_IN_PLACE_SETTINGS = '{"worktree":{"bgIsolation":"none"}}';
 
 const backgroundSessionEntrySchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).optional(),
   cwd: z.string().min(1).optional(),
   startedAt: z.number().optional(),
+  state: z.string().min(1).optional(),
 });
 
 function errorMessageOf(error: unknown): string {
@@ -48,9 +41,13 @@ function roleSessionArgs(launch: RoleSessionLaunch): string[] {
     '--permission-mode',
     'dontAsk',
     '--tools',
-    READ_ONLY_BUILT_IN_TOOLS,
+    READ_ONLY_TOOLS,
     '--allowedTools',
-    READ_ONLY_ALLOWED_TOOLS,
+    READ_ONLY_TOOLS,
+    '--setting-sources',
+    TRUSTED_SETTING_SOURCES,
+    '--settings',
+    SESSION_IN_PLACE_SETTINGS,
     '--mcp-config',
     NO_MCP_SERVER,
     '--strict-mcp-config',
@@ -66,13 +63,21 @@ function toBackgroundSession(
     name: entry.name ?? null,
     cwd: entry.cwd ?? null,
     startedAt: entry.startedAt === undefined ? null : new Date(entry.startedAt),
+    state: entry.state ?? null,
   };
+}
+
+function readableSessionsOf(candidates: unknown[]): BackgroundSession[] {
+  return candidates.flatMap((candidate) => {
+    const entry = backgroundSessionEntrySchema.safeParse(candidate);
+    return entry.success ? [toBackgroundSession(entry.data)] : [];
+  });
 }
 
 function parseListing(stdout: string): BackgroundSessionListing {
   try {
-    const entries = z.array(backgroundSessionEntrySchema).parse(JSON.parse(stdout));
-    return { status: 'listed', sessions: entries.map(toBackgroundSession) };
+    const candidates = z.array(z.unknown()).parse(JSON.parse(stdout));
+    return { status: 'listed', sessions: readableSessionsOf(candidates) };
   } catch (error) {
     return {
       status: 'failed',

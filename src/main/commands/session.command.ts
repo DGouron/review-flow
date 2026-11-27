@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 import { loadReviewOrchestrationSettings } from '@/config/projectConfig.js';
 import { defaultProcessRunner } from '@/frameworks/claude/claudeInvoker.js';
+import { getReviewTimeoutMs, loadSettingsFromDisk } from '@/frameworks/settings/runtimeSettings.js';
 import { ClaudeSessionCliGateway } from '@/modules/claude-invocation/interface-adapters/gateways/claudeSession.cli.gateway.js';
 import { RoleSessionClaudeCliGateway } from '@/modules/claude-invocation/interface-adapters/gateways/roleSession.claude.cli.gateway.js';
 import { RoleSessionJobFileSystemGateway } from '@/modules/claude-invocation/interface-adapters/gateways/roleSessionJob.fileSystem.gateway.js';
@@ -166,11 +167,16 @@ export function createSessionLaunchDependencies(): SessionLaunchDependencies {
   };
 }
 
-export function createSessionCleanupDependencies(): SessionCleanupDependencies {
+/** Loads the runtime settings first: the sweep lets a role session live as long as a review. */
+export async function createSessionCleanupDependencies(): Promise<SessionCleanupDependencies> {
+  await loadSettingsFromDisk();
   const gateways = createRoleSessionGateways();
   return {
     endRoleSession: new EndRoleSessionUseCase(gateways),
-    sweepRoleSessions: new SweepRoleSessionsUseCase(gateways),
+    sweepRoleSessions: new SweepRoleSessionsUseCase({
+      ...gateways,
+      reviewTimeoutMs: getReviewTimeoutMs,
+    }),
     print: console.log,
     exit: process.exit,
   };
