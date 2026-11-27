@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.60.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.59.0...reviewflow-v3.60.0) (2026-11-27)
+
+
+### Added
+
+* **review:** implement spec-236 orchestrated review mode ([#471](https://github.com/DGouron/review-flow/issues/471)) ([18aee91](https://github.com/DGouron/review-flow/commit/18aee9134604a450b357d1691e7afab1bef28df8))
+
 ## [3.59.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.58.0...reviewflow-v3.59.0) (2026-11-27)
 
 
