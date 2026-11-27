@@ -102,7 +102,7 @@ function backgroundSessionArgs(flags: ClaudeDispatchFlags, systemPromptPath: str
   ];
 }
 
-function classifyDispatchOutput(result: ClaudeProcessRunResult): DispatchResult {
+export function classifyDispatchOutput(result: ClaudeProcessRunResult): DispatchResult {
   if (
     RATE_LIMIT_DETECTION_REGEX.test(result.stderr) ||
     RATE_LIMIT_DETECTION_REGEX.test(result.stdout)

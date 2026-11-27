@@ -27,6 +27,13 @@ Commands:
   validate                 Validate configuration
   discover                 Scan and add repositories to existing config
   followup-importants      Trigger followups for pending-approval MRs with Important issues
+  session launch           Launch a read-only role session of an orchestrated review
+
+Session launch options:
+  --role <role>            greffe, lot:bugs, lot:securite, lot:architecture, lot:lisibilite,
+                           contradiction or arbitre
+  --brief <file>           File whose content is the role's prompt
+  --job <jobId>            Running review job the role session belongs to
 
 Discover options:
   --scan-path <path>       Custom scan path (repeatable)

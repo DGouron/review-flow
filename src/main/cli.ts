@@ -12,6 +12,10 @@ import {
 } from '@/main/commands/followupImportants.command.js';
 import { executeInit, createInitDependencies } from '@/main/commands/init.command.js';
 import { executeLogs, createLogsDependencies } from '@/main/commands/logs.command.js';
+import {
+  executeSessionLaunch,
+  createSessionLaunchDependencies,
+} from '@/main/commands/session.command.js';
 import { executeSetup, createSetupDependencies } from '@/main/commands/setup.command.js';
 import { executeStart, createStartDependencies } from '@/main/commands/start.command.js';
 import { executeStatus, createStatusDependencies } from '@/main/commands/status.command.js';
@@ -107,6 +111,15 @@ if (isDirectlyExecuted) {
         },
         createSetupDependencies(),
       );
+      break;
+
+    case 'session':
+      if (args.action === 'launch') {
+        void executeSessionLaunch(args, createSessionLaunchDependencies());
+      } else {
+        console.log('ERROR unknown session action (usage: reviewflow session launch ...)');
+        process.exit(1);
+      }
       break;
   }
 }

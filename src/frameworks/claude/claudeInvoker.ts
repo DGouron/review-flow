@@ -223,7 +223,7 @@ export function resolveMcpServerPath(): string {
   );
 }
 
-export function writeMcpContext(job: ReviewJob): void {
+export function writeMcpContext(job: ReviewJob, worktreePath: string): void {
   try {
     const filePath = getJobContextFilePath(job.id);
     const dir = dirname(filePath);
@@ -241,6 +241,8 @@ export function writeMcpContext(job: ReviewJob): void {
       sourceBranch: job.sourceBranch,
       targetBranch: job.targetBranch,
       timestamp: new Date().toISOString(),
+      mrNumber: job.mrNumber,
+      worktreePath,
     };
     writeFileSync(filePath, JSON.stringify(context, null, 2));
   } catch {
@@ -516,9 +518,6 @@ export async function invokeClaudeReview(
     prompt,
   ];
 
-  // Setup MCP job context file (used by MCP server to identify the review)
-  writeMcpContext(job);
-
   logger.info(
     {
       cwd: job.localPath,
@@ -654,6 +653,7 @@ async function invokeViaBackgroundSession(
       'Claude cwd points to a sub-path of the worktree (monorepo source checkout)',
     );
   }
+  writeMcpContext(job, claudeCwd);
   // attempt counter is reserved for the queue layer to re-enqueue with backoff
   // when status === 'retry' is returned. Until that wiring exists, every
   // invocation is treated as attempt 0 and a single retry signal surfaces back

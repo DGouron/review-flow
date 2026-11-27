@@ -80,6 +80,24 @@ describe('ProjectConfigFileSystemGateway', () => {
       expect(parsed.language).toBe('en');
     });
 
+    it('keeps the review orchestration settings through a read and a write', () => {
+      const configDirectory = join(workDirectory, '.claude', 'reviews');
+      mkdirSync(configDirectory, { recursive: true });
+      const review = { mode: 'orchestrated', roles: { 'lot:bugs': { model: 'sonnet' } } };
+      writeFileSync(
+        join(configDirectory, 'config.json'),
+        JSON.stringify({ ...baseConfig(), review }),
+      );
+      const gateway = new ProjectConfigFileSystemGateway();
+
+      const readResult = gateway.read(workDirectory);
+      if (readResult.status !== 'ok') throw new Error('config should be readable');
+      gateway.write(workDirectory, readResult.config);
+
+      const parsed = JSON.parse(readFileSync(join(configDirectory, 'config.json'), 'utf-8'));
+      expect(parsed.review).toEqual(review);
+    });
+
     it('does not leave a half-written .tmp file when write succeeds', () => {
       mkdirSync(join(workDirectory, '.claude', 'reviews'), { recursive: true });
       const gateway = new ProjectConfigFileSystemGateway();
