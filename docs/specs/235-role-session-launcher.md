@@ -17,12 +17,12 @@ ends its role sessions and accounts their tokens).
 
 ### Roles and project configuration (lot A)
 
-- the roles are `greffe`, `lot:bugs`, `lot:securite`, `lot:architecture`, `lot:lisibilite`,
-  `contradiction`, `arbitre`
+- the roles are `greffe`, `lot:bugs`, `lot:architecture`, `lot:lisibilite`, `lot:tests`,
+  `contradiction`, `arbitre` (spec 236 retired `lot:securite`: the bugs lot audits security)
 - the project config accepts an optional `review` object: `review.mode` is `single` (default) or
   `orchestrated`; `review.roles.<role>.model` is `haiku`, `sonnet` or `opus`
-- default models: `greffe` sonnet, `lot:bugs` opus, `lot:securite` opus, `lot:architecture`
-  sonnet, `lot:lisibilite` sonnet, `contradiction` opus, `arbitre` opus
+- default models: `greffe` sonnet, `lot:bugs` opus, `lot:architecture` opus, `lot:lisibilite`
+  sonnet, `lot:tests` sonnet, `contradiction` opus, `arbitre` opus
 - a config without `review` stays valid and uses the defaults; an unknown mode, an unknown role or
   an unknown model makes the config invalid
 - saving the project settings keeps the `review` object as written
@@ -32,13 +32,14 @@ ends its role sessions and accounts their tokens).
 - `reviewflow session launch --role <role> --brief <file> --job <jobId>` starts one `claude --bg`
   session with the role's model, the brief as its prompt and the job's worktree as its working
   directory
-- a role session can only read: its only tools are Read, Glob and Grep (no Bash: even `git log`
-  writes files through `--output=<file>`), every other tool call is denied, no MCP server is loaded,
+- a role session is read-only on files: its only tools are Read, Glob, Grep and SendMessage, which
+  reports its findings to the clerk (no Bash: even `git log` writes files through
+  `--output=<file>`), every other tool call is denied, no MCP server is loaded,
   and only the user's own settings apply — the project and local settings a reviewed pull request
   may ship are ignored; the diff reaches the role through its brief or a file it reads
 - the session is named `<subject> · <role in words>`: subject `Revue #<n>` for a review,
-  `Suivi #<n>` for a follow-up; role in words `greffe`, `lot bugs`, `lot sécurité`,
-  `lot architecture`, `lot lisibilité`, `contradiction`, `arbitre`; no internal id
+  `Suivi #<n>` for a follow-up; role in words `greffe`, `lot bugs`, `lot architecture`,
+  `lot lisibilité`, `lot tests`, `contradiction`, `arbitre`; no internal id
 - the launch appends `{ sessionId, role, launchedAt }` to `roleSessions` in the job file; a
   relaunch of the same role appends a new entry and keeps the old one
 - success prints `LAUNCHED <sessionId> <name>` and exits 0
@@ -58,8 +59,8 @@ ends its role sessions and accounts their tokens).
   `REMOVED <name>` and exits 0; on a session that no longer exists it prints `ALREADY-GONE <id>`
   and exits 0; a failed stop or remove prints `ERROR <reason>` and exits 1
 - a role session is a Claude background session whose working directory is inside the ReviewFlow
-  worktree root and whose name ends with ` · <role in words>`, or whose id is recorded in a job
-  file
+  worktree root and whose name ends with ` · <role in words>` (any role but `greffe`, which in an
+  orchestrated review is the review session itself), or whose id is recorded in a job file
 - `reviewflow session sweep` removes a role session when its job is no longer active (no job file
   records its id, and it was started at least 5 minutes ago — a launch may not have recorded it
   yet) or when it was started longer ago than the age limit: the review timeout, and at least

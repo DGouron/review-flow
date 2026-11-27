@@ -25,6 +25,7 @@ function buildInput(
       allowedTools: 'Read,Bash',
       disallowedTools: 'EnterPlanMode',
       permissionMode: 'auto',
+      sessionName: null,
     },
     localPath: '/tmp/project',
     mergeRequestId: 'gitlab-owner/repo-42',

@@ -55,7 +55,7 @@ describe('RoleSessionClaudeCliGateway.launch', () => {
     expect(args.at(-1)).toBe('--');
   });
 
-  it('keeps the session read-only and without any MCP server', async () => {
+  it('keeps the session read-only on files, able only to message the clerk, without any MCP server', async () => {
     const { runner, calls } = scriptedRunner({
       stdout: 'backgrounded · ab12',
       stderr: '',
@@ -67,8 +67,8 @@ describe('RoleSessionClaudeCliGateway.launch', () => {
     const args = calls[0]?.args ?? [];
     const valueOf = (flag: string): string | undefined => args[args.indexOf(flag) + 1];
     expect(valueOf('--permission-mode')).toBe('dontAsk');
-    expect(valueOf('--tools')).toBe('Read,Glob,Grep');
-    expect(valueOf('--allowedTools')).toBe('Read,Glob,Grep');
+    expect(valueOf('--tools')).toBe('Read,Glob,Grep,SendMessage');
+    expect(valueOf('--allowedTools')).toBe('Read,Glob,Grep,SendMessage');
     expect(args.join(' ')).not.toContain('Bash');
     expect(valueOf('--mcp-config')).toBe('{"mcpServers":{}}');
     expect(args).toContain('--strict-mcp-config');

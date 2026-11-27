@@ -13,6 +13,7 @@ export interface ProjectConfigOverrides {
   followupAgents?: AgentDefinition[];
   routingPolicy?: { haikuMaxLines: number; sonnetMaxLines: number };
   qualityThreshold?: number;
+  review?: Record<string, unknown>;
 }
 
 function buildPayload(overrides: ProjectConfigOverrides): Record<string, unknown> {
@@ -54,6 +55,9 @@ function buildPayload(overrides: ProjectConfigOverrides): Record<string, unknown
   }
   if (overrides.qualityThreshold !== undefined) {
     payload.qualityThreshold = overrides.qualityThreshold;
+  }
+  if (overrides.review !== undefined) {
+    payload.review = overrides.review;
   }
 
   return payload;

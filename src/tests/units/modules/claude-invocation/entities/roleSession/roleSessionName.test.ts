@@ -7,7 +7,7 @@ import {
 } from '@/modules/claude-invocation/entities/roleSession/roleSessionName.js';
 
 describe('isRoleSessionName', () => {
-  it.each(['Revue #2111 · lot bugs', 'Suivi #7 · arbitre', 'Revue #1 · lot sécurité'])(
+  it.each(['Revue #2111 · lot bugs', 'Suivi #7 · arbitre', 'Revue #1 · lot tests'])(
     'recognizes %s',
     (name) => {
       expect(isRoleSessionName(name)).toBe(true);
@@ -24,6 +24,10 @@ describe('isRoleSessionName', () => {
   ])('does not recognize %j', (name) => {
     expect(isRoleSessionName(name)).toBe(false);
   });
+
+  it('does not recognize the clerk by its name: in an orchestrated review it is the review session itself', () => {
+    expect(isRoleSessionName('Revue #2111 · greffe')).toBe(false);
+  });
 });
 
 describe('roleSessionNameOf', () => {
@@ -39,10 +43,10 @@ describe('roleSessionNameOf', () => {
     );
   });
 
-  it('writes the accented lots in words', () => {
+  it('writes the lots in words', () => {
     const subject: RoleSessionSubject = { jobType: 'review', mergeRequestNumber: 1 };
 
-    expect(roleSessionNameOf(subject, 'lot:securite')).toBe('Revue #1 · lot sécurité');
+    expect(roleSessionNameOf(subject, 'lot:tests')).toBe('Revue #1 · lot tests');
     expect(roleSessionNameOf(subject, 'lot:lisibilite')).toBe('Revue #1 · lot lisibilité');
   });
 

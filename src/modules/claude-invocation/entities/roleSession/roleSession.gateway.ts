@@ -23,7 +23,7 @@ export type BackgroundSessionListing =
   | { status: 'failed'; reason: string };
 
 export interface RoleSessionGateway {
-  /** Starts a read-only background session without any MCP server. */
+  /** Starts a background session read-only on files, without any MCP server. */
   launch(launch: RoleSessionLaunch): Promise<DispatchResult>;
   /** Every background session Claude still knows, finished ones included. */
   listBackgroundSessions(): Promise<BackgroundSessionListing>;

@@ -717,6 +717,8 @@ describe('parseProjectConfig — review orchestration', () => {
 
     expect(config.review).toEqual({
       mode: 'orchestrated',
+      orchestratedTimeoutMinutes: null,
+      roleTimeoutMinutes: null,
       roles: { arbitre: { model: 'sonnet' } },
     });
   });

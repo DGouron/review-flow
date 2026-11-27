@@ -51,6 +51,7 @@ export class AiInsightsSessionClaudeGateway implements AiInsightsSessionGateway 
       flags: {
         model: this.options.model,
         permissionMode: 'auto',
+        sessionName: null,
         systemPrompt: '',
         mcpConfigJson: '{"mcpServers":{}}',
         allowedTools: 'Read,Glob,Grep',

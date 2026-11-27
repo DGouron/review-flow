@@ -102,6 +102,7 @@ export class EmberAnswerRunner {
         flags: {
           model: 'sonnet',
           permissionMode: 'auto',
+          sessionName: null,
           systemPrompt: options.systemPrompt,
           mcpConfigJson: session.mcpConfigJson,
           allowedTools: session.toolPolicy.allowedTools,

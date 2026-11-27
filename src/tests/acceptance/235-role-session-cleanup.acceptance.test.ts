@@ -117,7 +117,7 @@ describe('SPEC-235 lot B — end and sweep role sessions', () => {
     roleSessions.listBackground([
       roleSession('active01', 'Revue #2111 · lot bugs', minutesAgo(10)),
       roleSession('oldrole1', 'Revue #2111 · arbitre', minutesAgo(180)),
-      roleSession('orphan01', 'Revue #2042 · lot sécurité', minutesAgo(30)),
+      roleSession('orphan01', 'Revue #2042 · lot tests', minutesAgo(30)),
       {
         sessionId: parseSessionId('review01'),
         name: null,
@@ -139,7 +139,7 @@ describe('SPEC-235 lot B — end and sweep role sessions', () => {
     expect(printed).toEqual([
       'KEPT active01 Revue #2111 · lot bugs (job github:acme/app:2111 active)',
       'REMOVED oldrole1 Revue #2111 · arbitre (started more than 2 hours ago)',
-      'REMOVED orphan01 Revue #2042 · lot sécurité (job no longer active)',
+      'REMOVED orphan01 Revue #2042 · lot tests (job no longer active)',
     ]);
     expect(exitCodes).toEqual([0]);
     expect(claudeSessions.removeCalls).toEqual(['oldrole1', 'orphan01']);

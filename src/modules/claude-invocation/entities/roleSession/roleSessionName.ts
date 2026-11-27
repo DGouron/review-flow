@@ -17,11 +17,14 @@ const SUBJECT_IN_WORDS: Record<RoleSessionSubject['jobType'], string> = {
 export const ROLE_SESSION_NAME_SEPARATOR = ' · ';
 
 const ROLE_SESSION_NAME_PATTERN = /^(?:Revue|Suivi) #\d+ · (.+)$/;
-const ROLES_IN_WORDS = new Set(REVIEW_ROLES.map(roleInWords));
+/** The clerk is the review session itself: the review job ends it, never the sweep. */
+const SWEEPABLE_ROLES_IN_WORDS = new Set(
+  REVIEW_ROLES.filter((role) => role !== 'greffe').map(roleInWords),
+);
 
 export function isRoleSessionName(name: string | null): boolean {
   const roleInName = name?.match(ROLE_SESSION_NAME_PATTERN)?.[1];
-  return roleInName !== undefined && ROLES_IN_WORDS.has(roleInName);
+  return roleInName !== undefined && SWEEPABLE_ROLES_IN_WORDS.has(roleInName);
 }
 
 export function roleSessionNameOf(subject: RoleSessionSubject, role: ReviewRole): string {

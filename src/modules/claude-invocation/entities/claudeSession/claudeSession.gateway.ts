@@ -11,6 +11,8 @@ export interface ClaudeDispatchFlags {
   allowedTools: string;
   disallowedTools: string;
   permissionMode: 'auto' | 'plan';
+  /** The name other sessions address it by (`SendMessage`); null leaves it unnamed. */
+  sessionName: string | null;
 }
 
 export interface DispatchInput {

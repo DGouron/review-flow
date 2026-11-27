@@ -65,6 +65,23 @@ describe('parseCliArgs — session', () => {
     });
   });
 
+  it('parses session await with its job and its maximum wait in seconds, as written', () => {
+    expect(
+      parseCliArgs(['session', 'await', '--job', 'github:acme/app:2111', '--max-wait', '540']),
+    ).toEqual({
+      command: 'session',
+      action: 'await',
+      job: 'github:acme/app:2111',
+      maxWait: '540',
+    });
+    expect(parseCliArgs(['session', 'await'])).toEqual({
+      command: 'session',
+      action: 'await',
+      job: null,
+      maxWait: null,
+    });
+  });
+
   it('reports an unknown session action as null', () => {
     const result = parseCliArgs(['session', 'explode']);
 

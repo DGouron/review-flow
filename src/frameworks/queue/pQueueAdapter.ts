@@ -1,9 +1,14 @@
 import PQueue from 'p-queue';
 import type { Logger } from 'pino';
 
+import { loadReviewOrchestrationSettings } from '@/config/projectConfig.js';
 import { loadConfig } from '@/frameworks/config/configLoader.js';
 import { ProjectSemaphore } from '@/frameworks/queue/projectSemaphore.js';
 import { getReviewTimeoutMs } from '@/frameworks/settings/runtimeSettings.js';
+import {
+  isOrchestratedReview,
+  orchestratedReviewTimeoutMs,
+} from '@/modules/claude-invocation/entities/roleSession/reviewOrchestration.js';
 import type { JobStatus, ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
 import type {
   ReviewProgress,
@@ -103,6 +108,14 @@ const JOB_TIMEOUT_GRACE_MS = 5 * 60 * 1000;
  */
 export function computeJobTimeoutMs(reviewTimeoutMs: number): number {
   return reviewTimeoutMs + JOB_TIMEOUT_GRACE_MS;
+}
+
+/** An orchestrated review outlives the queue-wide timeout, which a single review session sets. */
+function queueTimeoutOptionsOf(job: ReviewJob): { timeout?: number } {
+  const settings = loadReviewOrchestrationSettings(job.localPath);
+  const jobType = job.jobType === 'followup' ? 'followup' : 'review';
+  if (!isOrchestratedReview(settings, jobType)) return {};
+  return { timeout: computeJobTimeoutMs(orchestratedReviewTimeoutMs(settings)) };
 }
 
 export function setJobTimeoutMs(value: number): void {
@@ -306,7 +319,7 @@ export async function enqueueReview(
         // Notify state change (job completed/failed)
         stateChangeCallback?.();
       }
-    });
+    }, queueTimeoutOptionsOf(job));
   })();
 
   mrChains.set(mrKey, newTail);

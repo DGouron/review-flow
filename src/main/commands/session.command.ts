@@ -35,7 +35,7 @@ export interface SessionLaunchDependencies {
   exit: (code: number) => void;
 }
 
-function oneLine(text: string): string {
+export function oneLine(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
 }
 
@@ -144,7 +144,7 @@ function readFileOrNull(path: string): string | null {
   }
 }
 
-function createRoleSessionGateways(): RoleSessionCleanupDependencies {
+export function createRoleSessionGateways(): RoleSessionCleanupDependencies {
   const runner = defaultProcessRunner();
   return {
     roleSessionGateway: new RoleSessionClaudeCliGateway(runner),
