@@ -51,13 +51,19 @@ describe('tokenUsageRecordOf', () => {
       job,
       jobType: 'review',
       session,
-      role: 'lot:securite',
+      role: 'lot:tests',
       recordedAt: '2026-11-27T12:00:00.000Z',
     });
 
-    expect(record).toMatchObject({ jobId: job.id, role: 'lot:securite', turns: 21 });
+    expect(record).toMatchObject({ jobId: job.id, role: 'lot:tests', turns: 21 });
     expect(record.durationMs).toBeUndefined();
-    expect(tokenUsageRecordSchema.parse(record).role).toBe('lot:securite');
+    expect(tokenUsageRecordSchema.parse(record).role).toBe('lot:tests');
+  });
+
+  it('reads a record of the retired security lot as the bugs lot, which absorbed it', () => {
+    const record = { ...TokenUsageRecordFactory.create(), role: 'lot:securite' };
+
+    expect(tokenUsageRecordSchema.parse(record).role).toBe('lot:bugs');
   });
 
   it('rejects a record whose role is unknown', () => {

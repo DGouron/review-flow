@@ -17,6 +17,15 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+/** A review setting left null was absent from the file: writing it back keeps it absent. */
+function fileContentOf(config: ProjectConfig): ProjectConfig | Record<string, unknown> {
+  if (config.review === undefined) return config;
+  const writtenReview = Object.fromEntries(
+    Object.entries(config.review).filter(([, value]) => value !== null),
+  );
+  return { ...config, review: writtenReview };
+}
+
 export class ProjectConfigFileSystemGateway implements ProjectConfigGateway {
   read(projectPath: string): ProjectConfigReadResult {
     const configPath = resolveConfigPath(projectPath);
@@ -44,7 +53,7 @@ export class ProjectConfigFileSystemGateway implements ProjectConfigGateway {
     const configPath = resolveConfigPath(projectPath);
     const tempPath = configPath + '.tmp';
     try {
-      writeFileSync(tempPath, JSON.stringify(config, null, 2), 'utf-8');
+      writeFileSync(tempPath, JSON.stringify(fileContentOf(config), null, 2), 'utf-8');
       renameSync(tempPath, configPath);
       return { ok: true };
     } catch (error) {

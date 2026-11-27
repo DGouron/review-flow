@@ -63,6 +63,7 @@ const baseInput = {
     allowedTools: 'Read,Bash',
     disallowedTools: 'EnterPlanMode',
     permissionMode: 'auto' as const,
+    sessionName: null,
   },
   localPath: '/tmp/project',
   mergeRequestId: 'gitlab-owner/repo-42',

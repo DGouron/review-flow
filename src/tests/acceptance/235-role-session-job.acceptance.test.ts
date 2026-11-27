@@ -56,6 +56,7 @@ const REVIEW_INPUT: RunClaudeReviewJobInput = {
     allowedTools: 'Read',
     disallowedTools: 'EnterPlanMode',
     permissionMode: 'auto',
+    sessionName: null,
   },
   localPath: worktreePath,
   mergeRequestId: 'github-acme/app-2111',

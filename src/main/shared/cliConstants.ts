@@ -30,15 +30,21 @@ Commands:
   session launch           Launch a read-only role session of an orchestrated review
   session end <id>         Stop then remove one role session
   session sweep            Remove orphan role sessions and those older than 2 hours
+  session await            Wait for the role sessions of a job to finish or time out
 
 Session launch options:
-  --role <role>            greffe, lot:bugs, lot:securite, lot:architecture, lot:lisibilite,
+  --role <role>            greffe, lot:bugs, lot:architecture, lot:lisibilite, lot:tests,
                            contradiction or arbitre
   --brief <file>           File whose content is the role's prompt
   --job <jobId>            Running review job the role session belongs to
 
 Session sweep options:
   --dry-run                Print what would be removed and why, remove nothing
+
+Session await options:
+  --job <jobId>            Running review job whose role sessions to wait for
+  --max-wait <seconds>     Return after this long, with the role sessions finished so far
+                           Prints DONE, FAILED or TIMEOUT <role> <session id> per role session
 
 Discover options:
   --scan-path <path>       Custom scan path (repeatable)

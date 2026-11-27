@@ -83,7 +83,11 @@ describe('ProjectConfigFileSystemGateway', () => {
     it('keeps the review orchestration settings through a read and a write', () => {
       const configDirectory = join(workDirectory, '.claude', 'reviews');
       mkdirSync(configDirectory, { recursive: true });
-      const review = { mode: 'orchestrated', roles: { 'lot:bugs': { model: 'sonnet' } } };
+      const review = {
+        mode: 'orchestrated',
+        orchestratedTimeoutMinutes: 60,
+        roles: { 'lot:bugs': { model: 'sonnet' } },
+      };
       writeFileSync(
         join(configDirectory, 'config.json'),
         JSON.stringify({ ...baseConfig(), review }),

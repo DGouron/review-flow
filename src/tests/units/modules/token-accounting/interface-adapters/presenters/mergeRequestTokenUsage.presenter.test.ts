@@ -24,13 +24,13 @@ describe('MergeRequestTokenUsagePresenter', () => {
   it('names the role of a role session in words and leaves it empty for a single review', () => {
     const viewModel = presenter.present({
       sessions: [
-        TokenUsageRecordFactory.create({ role: 'lot:securite' }),
+        TokenUsageRecordFactory.create({ role: 'lot:tests' }),
         TokenUsageRecordFactory.create(),
       ],
       projectMedianCostUsd: null,
     });
 
-    expect(viewModel.sessions.map((row) => row.role)).toEqual(['lot sécurité', null]);
+    expect(viewModel.sessions.map((row) => row.role)).toEqual(['lot tests', null]);
     expect(viewModel.showsRoles).toBe(true);
   });
 

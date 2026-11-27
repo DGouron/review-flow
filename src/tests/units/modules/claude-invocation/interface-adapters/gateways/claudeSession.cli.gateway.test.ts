@@ -47,6 +47,7 @@ const baseDispatchInput = {
     allowedTools: 'Read,Bash',
     disallowedTools: 'EnterPlanMode',
     permissionMode: 'auto' as const,
+    sessionName: null,
   },
   localPath: '/tmp/project',
   jobId: 'gitlab:owner/repo:42',
@@ -131,6 +132,25 @@ describe('ClaudeSessionCliGateway.dispatch', () => {
     if (result.status === 'failed') {
       expect(result.rawStderr).toBe('boom');
     }
+  });
+
+  it('names the session so other sessions can address it, and leaves an unnamed one unnamed', async () => {
+    const { runner, calls } = createRunner([
+      { stdout: 'backgrounded · 7c5dcf5d', stderr: '', exitCode: 0 },
+      { stdout: 'backgrounded · 8d6edf6e', stderr: '', exitCode: 0 },
+    ]);
+    const gateway = new ClaudeSessionCliGateway(runner);
+
+    await gateway.dispatch({
+      ...baseDispatchInput,
+      flags: { ...baseDispatchInput.flags, sessionName: 'Revue #42 · greffe' },
+    });
+    await gateway.dispatch(baseDispatchInput);
+
+    const namedArgs = calls[0]?.args ?? [];
+    expect(namedArgs[namedArgs.indexOf('--name') + 1]).toBe('Revue #42 · greffe');
+    expect(namedArgs.indexOf('--name')).toBeLessThan(namedArgs.indexOf('--'));
+    expect(calls[1]?.args).not.toContain('--name');
   });
 
   it('sends the prompt through stdin so a prompt larger than the argv limit never reaches argv', async () => {

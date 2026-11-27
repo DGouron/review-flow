@@ -50,11 +50,11 @@ describe('executeSessionLaunch', () => {
     roleSessionGateway.willLaunch('a1b2c3d4');
 
     await executeSessionLaunch(
-      { role: 'lot:securite', brief: '/tmp/brief.md', job: jobId },
+      { role: 'lot:tests', brief: '/tmp/brief.md', job: jobId },
       dependencies,
     );
 
-    expect(printed).toEqual(['LAUNCHED a1b2c3d4 Revue #2111 · lot sécurité']);
+    expect(printed).toEqual(['LAUNCHED a1b2c3d4 Revue #2111 · lot tests']);
     expect(exitCodes).toEqual([0]);
   });
 
@@ -144,12 +144,12 @@ describe('executeSessionEnd and executeSessionSweep', () => {
   });
 
   it('prints the failure of session end and exits 1', async () => {
-    listOrphan('Revue #2042 · greffe');
+    listOrphan('Revue #2042 · lot bugs');
     sessionGateway.setRemoveResult({ success: false, warning: 'busy' });
 
     await executeSessionEnd({ sessionId: 'orphan01' }, dependencies);
 
-    expect(printed).toEqual(['ERROR Revue #2042 · greffe not removed: remove: busy']);
+    expect(printed).toEqual(['ERROR Revue #2042 · lot bugs not removed: remove: busy']);
     expect(exitCodes).toEqual([1]);
   });
 
@@ -163,13 +163,13 @@ describe('executeSessionEnd and executeSessionSweep', () => {
   });
 
   it('exits 1 when a sweep could not remove a session', async () => {
-    listOrphan('Revue #2042 · greffe');
+    listOrphan('Revue #2042 · lot bugs');
     sessionGateway.setRemoveResult({ success: false, warning: 'busy' });
 
     await executeSessionSweep({ dryRun: false }, dependencies);
 
     expect(printed).toEqual([
-      'FAILED orphan01 Revue #2042 · greffe (job no longer active; remove: busy)',
+      'FAILED orphan01 Revue #2042 · lot bugs (job no longer active; remove: busy)',
     ]);
     expect(exitCodes).toEqual([1]);
   });

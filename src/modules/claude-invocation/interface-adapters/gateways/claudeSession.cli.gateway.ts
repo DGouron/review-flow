@@ -85,6 +85,7 @@ function classifyAgentStatus(raw: string | undefined): AgentStatusValue {
 function backgroundSessionArgs(flags: ClaudeDispatchFlags, systemPromptPath: string): string[] {
   return [
     '--bg',
+    ...(flags.sessionName === null ? [] : ['--name', flags.sessionName]),
     '--model',
     flags.model,
     '--permission-mode',

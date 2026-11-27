@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
-import type { ReviewOrchestrationSettings } from '@/modules/claude-invocation/entities/roleSession/reviewOrchestration.js';
+import {
+  parseReviewOrchestrationSettings,
+  type ReviewOrchestrationSettings,
+} from '@/modules/claude-invocation/entities/roleSession/reviewOrchestration.js';
 import { LaunchRoleSessionUseCase } from '@/modules/claude-invocation/usecases/launchRoleSession.usecase.js';
 import { RoleSessionJobFactory } from '@/tests/factories/roleSessionJob.factory.js';
 import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
@@ -59,7 +62,10 @@ describe('LaunchRoleSessionUseCase', () => {
   });
 
   it('uses the model the project configures for the role', async () => {
-    reviewSettings = { mode: 'orchestrated', roles: { 'lot:lisibilite': { model: 'opus' } } };
+    reviewSettings = parseReviewOrchestrationSettings({
+      mode: 'orchestrated',
+      roles: { 'lot:lisibilite': { model: 'opus' } },
+    });
 
     await useCase.execute({ role: 'lot:lisibilite', brief: 'Lis.', jobId });
 
@@ -72,7 +78,7 @@ describe('LaunchRoleSessionUseCase', () => {
     expect(result).toEqual({
       status: 'refused',
       reason:
-        'unknown role "lot:perf" (expected greffe, lot:bugs, lot:securite, lot:architecture, lot:lisibilite, contradiction, arbitre)',
+        'unknown role "lot:perf" (expected greffe, lot:bugs, lot:architecture, lot:lisibilite, lot:tests, contradiction, arbitre)',
     });
     expect(roleSessionGateway.launches).toEqual([]);
   });

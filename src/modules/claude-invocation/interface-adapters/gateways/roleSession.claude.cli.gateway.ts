@@ -13,8 +13,8 @@ import {
   type ClaudeProcessRunner,
 } from '@/modules/claude-invocation/interface-adapters/gateways/claudeSession.cli.gateway.js';
 
-/** No Bash: even `git log` writes files through `--output=<file>`. */
-const READ_ONLY_TOOLS = 'Read,Glob,Grep';
+/** No Bash: even `git log` writes files through `--output=<file>`. SendMessage reports to the clerk. */
+const ROLE_TOOLS = 'Read,Glob,Grep,SendMessage';
 const NO_MCP_SERVER = '{"mcpServers":{}}';
 const TRUSTED_SETTING_SOURCES = 'user';
 const SESSION_IN_PLACE_SETTINGS = '{"worktree":{"bgIsolation":"none"}}';
@@ -41,9 +41,9 @@ function roleSessionArgs(launch: RoleSessionLaunch): string[] {
     '--permission-mode',
     'dontAsk',
     '--tools',
-    READ_ONLY_TOOLS,
+    ROLE_TOOLS,
     '--allowedTools',
-    READ_ONLY_TOOLS,
+    ROLE_TOOLS,
     '--setting-sources',
     TRUSTED_SETTING_SOURCES,
     '--settings',

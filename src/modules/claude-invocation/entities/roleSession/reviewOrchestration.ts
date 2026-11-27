@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  RETIRED_ROLE_SUCCESSORS,
   reviewRoleSchema,
   type ReviewRole,
 } from '@/modules/claude-invocation/entities/roleSession/reviewRole.js';
@@ -8,9 +9,28 @@ import {
 const reviewModeSchema = z.enum(['single', 'orchestrated']);
 const roleModelSchema = z.enum(['haiku', 'sonnet', 'opus']);
 
+/** A config may still name a retired role: its model is ignored, the successor keeps its own. */
+function withoutRetiredRoles(roles: unknown): unknown {
+  if (typeof roles !== 'object' || roles === null) return roles;
+  return Object.fromEntries(
+    Object.entries(roles).filter(([role]) => !(role in RETIRED_ROLE_SUCCESSORS)),
+  );
+}
+
+const MINUTE_MS = 60_000;
+const DEFAULT_ORCHESTRATED_TIMEOUT_MINUTES = 45;
+const DEFAULT_ROLE_TIMEOUT_MINUTES = 15;
+
 const reviewOrchestrationSettingsSchema = z.object({
   mode: reviewModeSchema.nullable().default(null),
-  roles: z.partialRecord(reviewRoleSchema, z.object({ model: roleModelSchema })).default({}),
+  orchestratedTimeoutMinutes: z.number().int().min(5).max(480).nullable().default(null),
+  roleTimeoutMinutes: z.number().int().min(1).max(480).nullable().default(null),
+  roles: z
+    .preprocess(
+      withoutRetiredRoles,
+      z.partialRecord(reviewRoleSchema, z.object({ model: roleModelSchema })),
+    )
+    .default({}),
 });
 
 export type ReviewMode = z.infer<typeof reviewModeSchema>;
@@ -30,9 +50,9 @@ export function occupiesRoleSessionSlot(state: string | null): boolean {
 const DEFAULT_ROLE_MODELS: Record<ReviewRole, RoleModel> = {
   greffe: 'sonnet',
   'lot:bugs': 'opus',
-  'lot:securite': 'opus',
-  'lot:architecture': 'sonnet',
+  'lot:architecture': 'opus',
   'lot:lisibilite': 'sonnet',
+  'lot:tests': 'sonnet',
   contradiction: 'opus',
   arbitre: 'opus',
 };
@@ -51,6 +71,23 @@ export function parseReviewOrchestrationSettings(value: unknown): ReviewOrchestr
 
 export function reviewModeOf(settings: ReviewOrchestrationSettings | null): ReviewMode {
   return settings?.mode ?? 'single';
+}
+
+/** Only a review is orchestrated: a follow-up stays a single session. */
+export function isOrchestratedReview(
+  settings: ReviewOrchestrationSettings | null,
+  jobType: 'review' | 'followup',
+): boolean {
+  return jobType === 'review' && reviewModeOf(settings) === 'orchestrated';
+}
+
+export function orchestratedReviewTimeoutMs(settings: ReviewOrchestrationSettings | null): number {
+  return (settings?.orchestratedTimeoutMinutes ?? DEFAULT_ORCHESTRATED_TIMEOUT_MINUTES) * MINUTE_MS;
+}
+
+/** How long a role session may run, from its launch, before it counts as silent. */
+export function roleSessionTimeoutMs(settings: ReviewOrchestrationSettings | null): number {
+  return (settings?.roleTimeoutMinutes ?? DEFAULT_ROLE_TIMEOUT_MINUTES) * MINUTE_MS;
 }
 
 export function modelForRole(

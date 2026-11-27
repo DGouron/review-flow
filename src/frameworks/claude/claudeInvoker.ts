@@ -5,7 +5,12 @@ import { fileURLToPath } from 'node:url';
 
 import type { Logger } from 'pino';
 
-import { getProjectAgents, getFollowupAgents, loadProjectConfig } from '@/config/projectConfig.js';
+import {
+  getProjectAgents,
+  getFollowupAgents,
+  loadProjectConfig,
+  loadReviewOrchestrationSettings,
+} from '@/config/projectConfig.js';
 import { buildAuditScopeDirective } from '@/frameworks/claude/auditScopeDirective.js';
 import { broadcastBudgetAfterUsage } from '@/frameworks/claude/broadcastBudgetAfterUsage.js';
 import {
@@ -13,12 +18,26 @@ import {
   resolveTerminalNotifier,
 } from '@/frameworks/claude/desktopNotification.js';
 import { buildLanguageDirective } from '@/frameworks/claude/languageDirective.js';
+import {
+  buildOrchestratedReviewDirective,
+  resolveReviewflowCliPath,
+  shellCommandOf,
+} from '@/frameworks/claude/orchestratedReviewDirective.js';
 import { createRoleSessionUsageRecorder } from '@/frameworks/claude/roleSessionUsageRecorder.js';
 import { logInfo, logWarn, logError } from '@/frameworks/logging/logBuffer.js';
 import { getModel, getReviewTimeoutMs } from '@/frameworks/settings/runtimeSettings.js';
 import type { BillingStateGateway } from '@/modules/claude-invocation/entities/billingState/billingState.gateway.js';
 import type { EnvironmentGateway } from '@/modules/claude-invocation/entities/billingState/environment.gateway.js';
 import type { ClaudeSessionGateway } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.gateway.js';
+import {
+  modelForRole,
+  roleSessionTimeoutMs,
+  type ReviewOrchestrationSettings,
+} from '@/modules/claude-invocation/entities/roleSession/reviewOrchestration.js';
+import {
+  reviewSessionPlanOf,
+  type OrchestratedReviewSessionPlan,
+} from '@/modules/claude-invocation/entities/roleSession/reviewSessionPlan.js';
 import type { RoleSessionJobGateway } from '@/modules/claude-invocation/entities/roleSession/roleSessionJob.gateway.js';
 import type { McpCompletionBridge } from '@/modules/claude-invocation/entities/sessionCompletion/mcpCompletion.gateway.js';
 import type { ReviewReportGateway } from '@/modules/claude-invocation/entities/sessionCompletion/reviewReport.gateway.js';
@@ -274,6 +293,27 @@ export function buildMcpConfigJson(): string {
   });
 }
 
+const MINUTE_MS = 60_000;
+
+function orchestratedSystemPrompt(
+  job: ReviewJob,
+  plan: OrchestratedReviewSessionPlan,
+  settings: ReviewOrchestrationSettings | null,
+): string {
+  const cliPath = resolveReviewflowCliPath({
+    moduleDirectory: currentDir,
+    workingDirectory: process.cwd(),
+    fileExists: existsSync,
+  });
+  return buildOrchestratedReviewDirective({
+    jobId: job.id,
+    clerkSessionName: plan.sessionName,
+    cliCommand: shellCommandOf([process.execPath, cliPath]),
+    reviewTimeoutMinutes: Math.round(plan.timeoutMs / MINUTE_MS),
+    roleTimeoutMinutes: Math.round(roleSessionTimeoutMs(settings) / MINUTE_MS),
+  });
+}
+
 export function cleanupMcpContext(jobId: string): void {
   try {
     const filePath = getJobContextFilePath(jobId);
@@ -487,17 +527,28 @@ export async function invokeClaudeReview(
 ): Promise<InvocationResult> {
   const startTime = Date.now();
 
-  // Build the prompt
-  const prompt = `/${job.skill} ${job.mrNumber}`;
+  const reviewSettings = loadReviewOrchestrationSettings(job.localPath);
+  const plan = reviewSessionPlanOf({
+    skill: job.skill,
+    mergeRequestNumber: job.mrNumber,
+    jobType: job.jobType === 'followup' ? 'followup' : 'review',
+    settings: reviewSettings,
+    singleTimeoutMs: deps.invocation.timeoutMs,
+  });
+  const prompt = plan.prompt;
 
   // Fetch diff stats once: reused for both model routing and end-of-review stats
   const diffStats = fetchDiffStatsForJob(job, deps, logger);
 
-  // Select model: explicit job override > routing policy + diff stats > project default > runtime default
-  const model = await resolveModel(job, diffStats, deps, logger);
+  // Select model: explicit job override > clerk model (orchestrated) > routing policy + diff stats > project default > runtime default
+  const model =
+    plan.orchestrated && !job.model
+      ? modelForRole(reviewSettings, 'greffe')
+      : await resolveModel(job, diffStats, deps, logger);
 
-  // Build MCP system prompt injection
-  const mcpSystemPrompt = buildMcpSystemPrompt(job);
+  const mcpSystemPrompt = plan.orchestrated
+    ? `${buildMcpSystemPrompt(job)}\n\n${orchestratedSystemPrompt(job, plan, reviewSettings)}`
+    : buildMcpSystemPrompt(job);
 
   // Build MCP config: isolated from project .mcp.json to avoid
   // third-party MCP servers (e.g. gitnexus) causing initialization timeouts
@@ -529,6 +580,8 @@ export async function invokeClaudeReview(
       cwd: job.localPath,
       prompt,
       args,
+      sessionName: plan.sessionName,
+      timeoutMs: plan.timeoutMs,
     },
     'Invocation Claude CLI',
   );
@@ -573,6 +626,8 @@ export async function invokeClaudeReview(
       diffStats,
       startTime,
       signal,
+      sessionName: plan.sessionName,
+      timeoutMs: plan.timeoutMs,
     },
     logger,
     onProgress,
@@ -589,6 +644,8 @@ interface BackgroundDispatchContext {
   diffStats: DiffStats | null;
   startTime: number;
   signal?: AbortSignal;
+  sessionName: string | null;
+  timeoutMs: number;
 }
 
 function deriveMrSourceFromJob(job: ReviewJob): MrSource {
@@ -606,6 +663,7 @@ async function invokeViaBackgroundSession(
 ): Promise<InvocationResult> {
   const { job, prompt, model, mcpSystemPrompt, mcpConfigJson, diffStats, startTime, signal } =
     context;
+  const { sessionName, timeoutMs } = context;
   const invocation = deps.invocation;
   const mergeRequestId = `${job.platform}-${job.projectPath}-${job.mrNumber}`;
   const jobType = job.jobType === 'followup' ? 'followup' : 'review';
@@ -673,6 +731,7 @@ async function invokeViaBackgroundSession(
     allowedTools: 'Read,Glob,Grep,Bash,Edit,Task,Skill,Write,LSP,mcp__review-progress__*',
     disallowedTools: 'EnterPlanMode,AskUserQuestion',
     permissionMode: 'auto' as const,
+    sessionName,
   };
 
   let result: Awaited<ReturnType<typeof runClaudeReviewJob>>;
@@ -697,7 +756,7 @@ async function invokeViaBackgroundSession(
         billingState: invocation.billingState,
         environment: invocation.environment,
         now: () => new Date(),
-        timeoutMs: invocation.timeoutMs,
+        timeoutMs,
         pollIntervalMs: invocation.pollIntervalMs,
         endJobRoleSessions: new EndJobRoleSessionsUseCase({
           roleSessionJobGateway: invocation.roleSessionJobGateway,

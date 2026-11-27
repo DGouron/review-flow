@@ -19,6 +19,10 @@ import {
   createSessionCleanupDependencies,
   createSessionLaunchDependencies,
 } from '@/main/commands/session.command.js';
+import {
+  createSessionAwaitDependencies,
+  executeSessionAwait,
+} from '@/main/commands/sessionAwait.command.js';
 import { executeSetup, createSetupDependencies } from '@/main/commands/setup.command.js';
 import { executeStart, createStartDependencies } from '@/main/commands/start.command.js';
 import { executeStatus, createStatusDependencies } from '@/main/commands/status.command.js';
@@ -123,8 +127,10 @@ if (isDirectlyExecuted) {
         void executeSessionEnd(args, await createSessionCleanupDependencies());
       } else if (args.action === 'sweep') {
         void executeSessionSweep(args, await createSessionCleanupDependencies());
+      } else if (args.action === 'await') {
+        void executeSessionAwait(args, createSessionAwaitDependencies());
       } else {
-        console.log('ERROR unknown session action (expected launch, end or sweep)');
+        console.log('ERROR unknown session action (expected launch, end, sweep or await)');
         process.exit(1);
       }
       break;

@@ -9,15 +9,21 @@ vi.mock('@/frameworks/config/configLoader.js', () => ({
   })),
 }));
 
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import {
   computeJobTimeoutMs,
   enqueueReview,
+  getJobStatus,
   initQueue,
   setJobTimeoutMs,
 } from '@/frameworks/queue/pQueueAdapter.js';
 import type { ReviewJob } from '@/modules/review-execution/entities/job/reviewJob.js';
+import { ProjectConfigFactory } from '@/tests/factories/projectConfig.factory.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 
 function createJob(overrides: Partial<ReviewJob>): ReviewJob {
@@ -319,5 +325,58 @@ describe('pQueueAdapter - job timeout', () => {
     setJobTimeoutMs(90 * 60 * 1000);
 
     expect(queue.timeout).toBe(90 * 60 * 1000);
+  });
+});
+
+function projectWithReviewMode(mode: 'single' | 'orchestrated'): string {
+  const localPath = mkdtempSync(join(tmpdir(), 'queue-review-mode-'));
+  mkdirSync(join(localPath, '.claude', 'reviews'), { recursive: true });
+  writeFileSync(
+    join(localPath, '.claude', 'reviews', 'config.json'),
+    JSON.stringify(ProjectConfigFactory.create({ review: { mode } })),
+  );
+  return localPath;
+}
+
+async function settledStatusOf(jobId: string): Promise<string | null> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const status = getJobStatus(jobId);
+    if (status === 'completed' || status === 'failed') return status;
+    await new Promise<void>((resolve) => setTimeout(resolve, 5));
+  }
+  return getJobStatus(jobId);
+}
+
+const runLongerThanTheQueueTimeout = (): Promise<void> =>
+  new Promise<void>((resolve) => setTimeout(resolve, 60));
+
+describe('pQueueAdapter - orchestrated review timeout', () => {
+  beforeEach(() => {
+    initQueue(createStubLogger());
+    setJobTimeoutMs(20);
+  });
+
+  it('keeps an orchestrated review in its queue slot past the single timeout, the follow-up behind it', async () => {
+    const localPath = projectWithReviewMode('orchestrated');
+    const review = createJob({ id: 'github:acme/app:701', mrNumber: 701, localPath });
+    const followup = createJob({
+      id: 'github-followup:acme/app:701',
+      mrNumber: 701,
+      jobType: 'followup',
+      localPath,
+    });
+    const events: string[] = [];
+
+    await enqueueReview(review, async () => {
+      events.push('review:start');
+      await runLongerThanTheQueueTimeout();
+      events.push('review:end');
+    });
+    await enqueueReview(followup, async () => {
+      events.push('followup:start');
+    });
+
+    expect(await settledStatusOf(followup.id)).toBe('completed');
+    expect(events).toEqual(['review:start', 'review:end', 'followup:start']);
   });
 });

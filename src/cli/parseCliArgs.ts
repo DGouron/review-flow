@@ -90,10 +90,18 @@ export interface SessionSweepArgs {
   dryRun: boolean;
 }
 
+export interface SessionAwaitArgs {
+  command: 'session';
+  action: 'await';
+  job: string | null;
+  maxWait: string | null;
+}
+
 export type SessionArgs =
   | SessionLaunchArgs
   | SessionEndArgs
   | SessionSweepArgs
+  | SessionAwaitArgs
   | UnknownSessionArgs;
 
 export type CliArgs =
@@ -247,6 +255,25 @@ function parseSetupArgs(args: string[]): SetupArgs {
   };
 }
 
+function parseSessionLaunchArgs(args: string[]): SessionLaunchArgs {
+  return {
+    command: 'session',
+    action: 'launch',
+    role: getFlagValue(args, '--role') ?? null,
+    brief: getFlagValue(args, '--brief') ?? null,
+    job: getFlagValue(args, '--job') ?? null,
+  };
+}
+
+function parseSessionAwaitArgs(args: string[]): SessionAwaitArgs {
+  return {
+    command: 'session',
+    action: 'await',
+    job: getFlagValue(args, '--job') ?? null,
+    maxWait: getFlagValue(args, '--max-wait') ?? null,
+  };
+}
+
 function parseSessionArgs(args: string[]): SessionArgs {
   const actionIndex = args.indexOf('session') + 1;
   const action = args[actionIndex];
@@ -261,16 +288,9 @@ function parseSessionArgs(args: string[]): SessionArgs {
   if (action === 'sweep') {
     return { command: 'session', action, dryRun: hasFlag(args, '--dry-run') };
   }
-  if (action !== 'launch') {
-    return { command: 'session', action: null };
-  }
-  return {
-    command: 'session',
-    action,
-    role: getFlagValue(args, '--role') ?? null,
-    brief: getFlagValue(args, '--brief') ?? null,
-    job: getFlagValue(args, '--job') ?? null,
-  };
+  if (action === 'await') return parseSessionAwaitArgs(args);
+  if (action === 'launch') return parseSessionLaunchArgs(args);
+  return { command: 'session', action: null };
 }
 
 const COMMAND_PARSERS: Record<KnownCommand, (args: string[]) => CliArgs> = {
