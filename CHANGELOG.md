@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.59.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.58.0...reviewflow-v3.59.0) (2026-11-27)
+
+
+### Added
+
+* **cli:** launch read-only role sessions for orchestrated reviews ([#463](https://github.com/DGouron/review-flow/issues/463)) ([baa833a](https://github.com/DGouron/review-flow/commit/baa833a97a9eecaf9fe11fd724d3460f40d66d10))
+* **review:** land the role-session cleanup and job accounting ([#467](https://github.com/DGouron/review-flow/issues/467)) ([be928eb](https://github.com/DGouron/review-flow/commit/be928eb71d52691f70da8e3217877328163087b5))
+
 ## [3.58.0](https://github.com/DGouron/review-flow/compare/reviewflow-v3.57.1...reviewflow-v3.58.0) (2026-11-26)
 
 
