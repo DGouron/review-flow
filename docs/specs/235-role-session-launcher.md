@@ -1,6 +1,6 @@
 # Launch, count and clean up the role sessions of an orchestrated review
 
-## Status: implementing
+## Status: implemented
 
 ## Context
 
@@ -61,7 +61,9 @@ ends its role sessions and accounts their tokens).
   worktree root and whose name ends with ` · <role in words>`, or whose id is recorded in a job
   file
 - `reviewflow session sweep` removes a role session when its job is no longer active (no job file
-  records its id) or when it was started more than 2 hours ago, and prints one line per role
+  records its id, and it was started at least 5 minutes ago — a launch may not have recorded it
+  yet) or when it was started longer ago than the age limit: the review timeout, and at least
+  2 hours; it prints one line per role
   session: `REMOVED <id> <name> (<reason>)`, `KEPT <id> <name> (job <jobId> active)` or
   `FAILED <id> <name> (<reason>)`
 - `--dry-run` removes nothing and prints `WOULD-REMOVE <id> <name> (<reason>)` instead of
@@ -70,12 +72,16 @@ ends its role sessions and accounts their tokens).
 
 ### The review job (lot C)
 
-- when a review job ends, whatever its outcome, the role sessions recorded in its job file are
-  read before the job file is deleted, and each one is ended; a failure to end one never fails the
-  job
-- each role session yields one token usage record, carrying its `role`, before it is ended
+- when a review job ends, whatever its outcome, it takes the job lock, marks the job closed to new
+  role sessions (a launch for a closed job is refused) and reads the role sessions its job file
+  records, before the job file is deleted
+- each role session is stopped, then measured, then removed: the measure includes every token
+  spent until the stop
+- a failure to end one never fails the job; the warnings of the cleanup are logged
+- each measured role session yields one token usage record carrying its `role`
 - the budget guard counts those records like any other
-- the consumption views show the role of a record when it has one
+- the consumption views show the role of a record when it has one; the monthly summary adds the
+  cost of role sessions but does not count them as sessions or reviews
 
 ## Scenarios
 
@@ -93,6 +99,9 @@ ends its role sessions and accounts their tokens).
 - sweep orphan: {role session whose id no job file records} → removed (job no longer active)
 - sweep old: {role session of an active job started 3 hours ago} → removed (older than 2 hours)
 - sweep active: {role session of an active job started 10 minutes ago} → kept
+- sweep long review: {review timeout 480 min, role session of an active job started 5 hours ago} →
+  kept
+- sweep just launched: {unrecorded role session started 1 minute ago} → kept
 - sweep dry-run: {orphan role session} → `WOULD-REMOVE` + nothing removed
 - job cleanup: {job with three recorded role sessions, stop of one fails} → all three are ended,
   the job result is unchanged

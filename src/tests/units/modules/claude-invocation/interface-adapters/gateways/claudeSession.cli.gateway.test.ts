@@ -569,6 +569,29 @@ describe('ClaudeSessionCliGateway.getSessionUsage for a --bg session', () => {
       rmSync(tempHome, { recursive: true, force: true });
     }
   });
+
+  it('still finds the transcript of a removed session, named after its short id, in the cwd folder', async () => {
+    const tempHome = mkdtempSync(join(tmpdir(), 'rf-session-usage-'));
+    writeBackgroundSession(tempHome, {
+      shortId: 'df887045',
+      sessionId: 'df887045-c93e-4180-8109-64873e3df78e',
+      cwd: '/Users/me/.reviewflow/worktrees/github-org-repo-12',
+      transcript: [assistantLine('msg_1', { input_tokens: 3, output_tokens: 70 })],
+    });
+    rmSync(join(tempHome, '.claude', 'jobs', 'df887045'), { recursive: true, force: true });
+
+    try {
+      const gateway = new ClaudeSessionCliGateway(noopRunner(), { homeDir: tempHome });
+      const snapshot = await gateway.getSessionUsage(
+        parseSessionId('df887045'),
+        '/Users/me/.reviewflow/worktrees/github-org-repo-12',
+      );
+      expect(snapshot?.sessionId).toBe('df887045-c93e-4180-8109-64873e3df78e');
+      expect(snapshot?.usage.outputTokens).toBe(70);
+    } finally {
+      rmSync(tempHome, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('ClaudeSessionCliGateway when the claude process cannot be spawned (#459)', () => {

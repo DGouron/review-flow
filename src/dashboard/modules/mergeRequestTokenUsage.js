@@ -8,11 +8,16 @@ import { formatTokenCount } from './tokenUsage.js';
 
 const minutesCell = (minutes) => (minutes === null ? '—' : `${minutes} min`);
 
-function renderRow(row, kindLabel, modelLabel) {
+/**
+ * @param {{ durationMinutes: number | null, cacheReadTokens: number, costUsd: string }} row
+ * @param {{ kind: string, model: string, role: string | null }} labels  role null: no role column
+ */
+function renderRow(row, labels) {
+  const roleCell = labels.role === null ? '' : `\n      <td>${escapeHtml(labels.role)}</td>`;
   return `
     <tr>
-      <td>${escapeHtml(kindLabel)}</td>
-      <td>${escapeHtml(modelLabel)}</td>
+      <td>${escapeHtml(labels.kind)}</td>${roleCell}
+      <td>${escapeHtml(labels.model)}</td>
       <td>${minutesCell(row.durationMinutes)}</td>
       <td>${formatTokenCount(row.cacheReadTokens)}</td>
       <td>${escapeHtml(row.costUsd)}</td>
@@ -41,22 +46,40 @@ export function renderMergeRequestTokenUsage(viewModel, t) {
     return `<div class="empty-state" style="font-size: 0.8rem;">${escapeHtml(t('tokenUsage.mergeRequest.empty'))}</div>`;
   }
 
-  const headers = ['kind', 'model', 'duration', 'cacheRead', 'cost']
-    .map((column) => `<th>${escapeHtml(t(`tokenUsage.column.${column}`))}</th>`)
-    .join('');
-  const rows = viewModel.sessions
-    .map((row) => renderRow(row, t(`tokenUsage.jobType.${row.jobType}`), row.model))
-    .join('');
-
   return `
     <div class="token-usage-table-wrap">
       <table class="sheet-history-table token-usage-table">
-        <thead><tr>${headers}</tr></thead>
-        <tbody>${rows}</tbody>
-        <tfoot>${renderRow(viewModel.total, t('tokenUsage.total'), '')}</tfoot>
+        ${renderTableContent(viewModel, t)}
       </table>
     </div>
     ${renderSignals(viewModel, t)}`;
+}
+
+function renderTableContent(viewModel, t) {
+  const columns = viewModel.showsRoles
+    ? ['kind', 'role', 'model', 'duration', 'cacheRead', 'cost']
+    : ['kind', 'model', 'duration', 'cacheRead', 'cost'];
+  const headers = columns
+    .map((column) => `<th>${escapeHtml(t(`tokenUsage.column.${column}`))}</th>`)
+    .join('');
+  const roleLabelOf = (role) => (viewModel.showsRoles ? (role ?? '—') : null);
+  const rows = viewModel.sessions
+    .map((row) =>
+      renderRow(row, {
+        kind: t(`tokenUsage.jobType.${row.jobType}`),
+        model: row.model,
+        role: roleLabelOf(row.role),
+      }),
+    )
+    .join('');
+  const totalRow = renderRow(viewModel.total, {
+    kind: t('tokenUsage.total'),
+    model: '',
+    role: viewModel.showsRoles ? '' : null,
+  });
+  return `<thead><tr>${headers}</tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot>${totalRow}</tfoot>`;
 }
 
 /**

@@ -138,6 +138,18 @@ describe('LaunchRoleSessionUseCase', () => {
     expect(result).toEqual({ status: 'refused', reason: 'another launch holds the job lock' });
   });
 
+  it('refuses to launch a role for a job that is ending its role sessions', async () => {
+    roleSessionJobGateway.save(RoleSessionJobFactory.create({ jobId, roleSessionsClosed: true }));
+
+    const result = await useCase.execute({ role: 'arbitre', brief: 'Tranche.', jobId });
+
+    expect(result).toEqual({
+      status: 'refused',
+      reason: `job ${jobId} is ending: no new role session`,
+    });
+    expect(roleSessionGateway.launches).toEqual([]);
+  });
+
   describe('cap of live role sessions per job', () => {
     function recordSessions(sessionIds: string[]): void {
       roleSessionJobGateway.save(

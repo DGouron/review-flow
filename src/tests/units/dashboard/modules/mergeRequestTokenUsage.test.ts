@@ -15,6 +15,7 @@ const t = (key: string, params?: Record<string, string | number>) =>
 const session = {
   sessionId: '3334f6a3',
   jobType: 'followup' as const,
+  role: null,
   model: 'claude-opus-5-5',
   recordedAt: '2026-11-25T13:48:20.000Z',
   durationMinutes: 4,
@@ -28,6 +29,7 @@ const session = {
 
 const viewModel = {
   isEmpty: false,
+  showsRoles: false,
   sessions: [session],
   total: { ...session, costUsd: '$1.55' },
   cacheReadSharePercent: 96,
@@ -43,6 +45,26 @@ describe('renderMergeRequestTokenUsage', () => {
     expect(html).toContain('4 min');
     expect(html).toContain('2.5m');
     expect(html).toContain('$1.55');
+  });
+
+  it('shows the role column only when a session of the pull request had a role', () => {
+    const withRoles = renderMergeRequestTokenUsage(
+      {
+        ...viewModel,
+        showsRoles: true,
+        sessions: [
+          { ...session, role: 'lot bugs' },
+          { ...session, role: null },
+        ],
+      },
+      t,
+    );
+    const withoutRoles = renderMergeRequestTokenUsage(viewModel, t);
+
+    expect(withRoles).toContain('tokenUsage.column.role');
+    expect(withRoles).toContain('<td>lot bugs</td>');
+    expect(withRoles).toContain('<td>—</td>');
+    expect(withoutRoles).not.toContain('tokenUsage.column.role');
   });
 
   it('names the signals that say what to change', () => {

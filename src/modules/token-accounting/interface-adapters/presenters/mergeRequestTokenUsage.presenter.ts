@@ -1,3 +1,4 @@
+import { roleInWords } from '@/modules/claude-invocation/entities/roleSession/reviewRole.js';
 import type { TokenUsageRecord } from '@/modules/token-accounting/entities/tokenUsage/tokenUsage.schema.js';
 import type { MergeRequestTokenUsage } from '@/modules/token-accounting/usecases/getMergeRequestTokenUsage/getMergeRequestTokenUsage.usecase.js';
 import type { Presenter } from '@/shared/foundation/presenter.base.js';
@@ -15,12 +16,14 @@ export interface MergeRequestTokenUsageTotals {
 export interface MergeRequestTokenUsageRow extends MergeRequestTokenUsageTotals {
   sessionId: string | null;
   jobType: 'review' | 'followup';
+  role: string | null;
   model: string;
   recordedAt: string;
 }
 
 export interface MergeRequestTokenUsageViewModel {
   isEmpty: boolean;
+  showsRoles: boolean;
   sessions: MergeRequestTokenUsageRow[];
   total: MergeRequestTokenUsageTotals;
   cacheReadSharePercent: number | null;
@@ -45,6 +48,7 @@ function rowOf(session: TokenUsageRecord): MergeRequestTokenUsageRow {
   return {
     sessionId: session.sessionId ?? null,
     jobType: session.jobType ?? 'review',
+    role: session.role === undefined ? null : roleInWords(session.role),
     model: session.model,
     recordedAt: session.recordedAt,
     durationMinutes: minutesOf(session.durationMs),
@@ -81,6 +85,7 @@ export class MergeRequestTokenUsagePresenter implements Presenter<
 
     return {
       isEmpty: rows.length === 0,
+      showsRoles: rows.some((row) => row.role !== null),
       sessions: rows,
       total,
       cacheReadSharePercent:

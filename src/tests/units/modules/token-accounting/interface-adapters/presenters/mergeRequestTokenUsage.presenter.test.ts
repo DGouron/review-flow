@@ -21,6 +21,28 @@ const sessionOf = (
 describe('MergeRequestTokenUsagePresenter', () => {
   const presenter = new MergeRequestTokenUsagePresenter();
 
+  it('names the role of a role session in words and leaves it empty for a single review', () => {
+    const viewModel = presenter.present({
+      sessions: [
+        TokenUsageRecordFactory.create({ role: 'lot:securite' }),
+        TokenUsageRecordFactory.create(),
+      ],
+      projectMedianCostUsd: null,
+    });
+
+    expect(viewModel.sessions.map((row) => row.role)).toEqual(['lot sécurité', null]);
+    expect(viewModel.showsRoles).toBe(true);
+  });
+
+  it('hides the role column when no session had a role', () => {
+    const viewModel = presenter.present({
+      sessions: [TokenUsageRecordFactory.create()],
+      projectMedianCostUsd: null,
+    });
+
+    expect(viewModel.showsRoles).toBe(false);
+  });
+
   it('shows one row per session, with its model, duration, turns, tokens and cost', () => {
     const viewModel = presenter.present({
       sessions: [

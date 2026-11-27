@@ -11,6 +11,7 @@ import { ProcessEnvironmentGateway } from '@/modules/claude-invocation/interface
 import { FileSystemMcpCompletionBridge } from '@/modules/claude-invocation/interface-adapters/gateways/mcpCompletion.fileSystem.gateway.js';
 import { ReviewReportFileSystemGateway } from '@/modules/claude-invocation/interface-adapters/gateways/reviewReport.fileSystem.gateway.js';
 import { runClaudeReviewJob } from '@/modules/claude-invocation/usecases/runClaudeReviewJob.usecase.js';
+import { endJobWithoutRoleSessions } from '@/tests/stubs/roleSessionJob.stub.js';
 
 // Integration scope:
 //
@@ -131,6 +132,7 @@ describe('SPEC-169 — end-to-end integration: production wire-up reaches runCla
         now: () => today,
         timeoutMs: 60_000,
         pollIntervalMs: 5_000,
+        endJobRoleSessions: endJobWithoutRoleSessions(sessionGateway),
       },
     );
 
@@ -193,6 +195,7 @@ describe('SPEC-169 — end-to-end integration: production wire-up reaches runCla
         now: () => new Date(),
         timeoutMs: 60_000,
         pollIntervalMs: 5_000,
+        endJobRoleSessions: endJobWithoutRoleSessions(sessionGateway),
       },
     );
 

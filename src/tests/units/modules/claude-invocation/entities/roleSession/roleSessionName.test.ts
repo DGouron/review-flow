@@ -1,9 +1,30 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  isRoleSessionName,
   roleSessionNameOf,
   type RoleSessionSubject,
 } from '@/modules/claude-invocation/entities/roleSession/roleSessionName.js';
+
+describe('isRoleSessionName', () => {
+  it.each(['Revue #2111 · lot bugs', 'Suivi #7 · arbitre', 'Revue #1 · lot sécurité'])(
+    'recognizes %s',
+    (name) => {
+      expect(isRoleSessionName(name)).toBe(true);
+    },
+  );
+
+  it.each([
+    null,
+    'Revue #2111',
+    'Revue #2111 · lot perf',
+    'Parcours · apprenants lisent la version publiée',
+    'Revue #abc · greffe',
+    'My Revue #12 · greffe',
+  ])('does not recognize %j', (name) => {
+    expect(isRoleSessionName(name)).toBe(false);
+  });
+});
 
 describe('roleSessionNameOf', () => {
   it('names a review role session after the pull request and the role in words', () => {

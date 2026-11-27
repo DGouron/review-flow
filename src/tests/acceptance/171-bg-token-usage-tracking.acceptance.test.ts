@@ -17,6 +17,7 @@ import { StubEnvironmentGateway } from '@/tests/stubs/environment.stub.js';
 import { createStubLogger } from '@/tests/stubs/logger.stub.js';
 import { StubMcpCompletionBridge } from '@/tests/stubs/mcpCompletion.stub.js';
 import { StubReviewReportGateway } from '@/tests/stubs/reviewReport.stub.js';
+import { endJobWithoutRoleSessions } from '@/tests/stubs/roleSessionJob.stub.js';
 import { StubTokenUsageGateway } from '@/tests/stubs/tokenUsage.stub.js';
 
 const REVIEW_INPUT: RunClaudeReviewJobInput = {
@@ -79,6 +80,7 @@ function buildContext() {
       now: () => new Date('2026-05-23T12:00:00Z'),
       timeoutMs: 15 * 60_000,
       pollIntervalMs: 30_000,
+      endJobRoleSessions: endJobWithoutRoleSessions(sessionGateway),
     },
   };
 }

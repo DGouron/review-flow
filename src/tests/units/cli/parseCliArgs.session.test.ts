@@ -36,6 +36,35 @@ describe('parseCliArgs — session', () => {
     });
   });
 
+  it('parses session end with the session id', () => {
+    expect(parseCliArgs(['session', 'end', 'a1b2c3d4'])).toEqual({
+      command: 'session',
+      action: 'end',
+      sessionId: 'a1b2c3d4',
+    });
+  });
+
+  it('leaves the session id of session end null when it is missing', () => {
+    expect(parseCliArgs(['session', 'end'])).toEqual({
+      command: 'session',
+      action: 'end',
+      sessionId: null,
+    });
+  });
+
+  it('parses session sweep with and without --dry-run', () => {
+    expect(parseCliArgs(['session', 'sweep'])).toEqual({
+      command: 'session',
+      action: 'sweep',
+      dryRun: false,
+    });
+    expect(parseCliArgs(['session', 'sweep', '--dry-run'])).toEqual({
+      command: 'session',
+      action: 'sweep',
+      dryRun: true,
+    });
+  });
+
   it('reports an unknown session action as null', () => {
     const result = parseCliArgs(['session', 'explode']);
 

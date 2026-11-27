@@ -6,6 +6,8 @@ export type RoleSessionJob = RoleSessionSubject & {
   localPath: string;
   worktreePath: string;
   roleSessions: RoleSessionRecord[];
+  /** Set once the job ends its role sessions: no role session may be launched any more. */
+  roleSessionsClosed: boolean;
 };
 
 export type RoleSessionJobLookup =
@@ -15,10 +17,16 @@ export type RoleSessionJobLookup =
 
 export type RoleSessionRecordResult = { recorded: true } | { recorded: false; reason: string };
 
+export type RecordedRoleSession = { jobId: string; record: RoleSessionRecord };
+
 /** The per-job file the server writes while a review runs; role sessions are recorded in it. */
 export interface RoleSessionJobGateway {
   find(jobId: string): RoleSessionJobLookup;
   recordRoleSession(jobId: string, record: RoleSessionRecord): RoleSessionRecordResult;
+  /** Closes the job to new role sessions and returns the ones it recorded. */
+  closeRoleSessions(jobId: string): RoleSessionRecord[];
+  /** Role sessions recorded by the job files still present, i.e. by the active jobs. */
+  listRecordedRoleSessions(): RecordedRoleSession[];
   /** Runs `work` while no other process launches a role session for the same job. */
   withExclusiveAccess<Result>(jobId: string, work: () => Promise<Result>): Promise<Result>;
 }

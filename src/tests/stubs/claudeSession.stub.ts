@@ -26,6 +26,7 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
   removeCalls: string[] = [];
   listAgentsCallCount = 0;
   getSessionUsageCalls: Array<{ sessionId: SessionId; cwd: string }> = [];
+  callOrder: string[] = [];
 
   private dispatchResult: DispatchResult = {
     status: 'dispatched',
@@ -35,6 +36,8 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
   private usageValue: UsageReport = { usesApiPool: false, raw: 'subscription pool' };
   private scheduledAgentStatuses: ScheduledAgentStatus[] = [];
   private sessionUsageResult: SessionUsageSnapshot | null = null;
+  private readonly sessionUsageBySession = new Map<string, SessionUsageSnapshot | null>();
+  private readonly sessionUsageErrors = new Map<string, unknown>();
   private stopResult: CleanupResult = { success: true, warning: null };
   private removeResult: CleanupResult = { success: true, warning: null };
   private dispatchError: unknown = null;
@@ -99,6 +102,7 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
 
   async stop(sessionId: SessionId): Promise<CleanupResult> {
     this.stopCalls.push(sessionId);
+    this.callOrder.push(`stop ${sessionId}`);
     if (this.stopError !== null) {
       throw this.stopError;
     }
@@ -107,6 +111,7 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
 
   async remove(sessionId: SessionId): Promise<CleanupResult> {
     this.removeCalls.push(sessionId);
+    this.callOrder.push(`remove ${sessionId}`);
     if (this.removeError !== null) {
       throw this.removeError;
     }
@@ -128,8 +133,19 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
     return this.usageValue;
   }
 
+  setSessionUsageFor(sessionIdValue: string, value: SessionUsageSnapshot | null): void {
+    this.sessionUsageBySession.set(sessionIdValue, value);
+  }
+
+  setSessionUsageError(sessionIdValue: string, error: unknown): void {
+    this.sessionUsageErrors.set(sessionIdValue, error);
+  }
+
   async getSessionUsage(sessionId: SessionId, cwd: string): Promise<SessionUsageSnapshot | null> {
     this.getSessionUsageCalls.push({ sessionId, cwd });
-    return this.sessionUsageResult;
+    this.callOrder.push(`measure ${sessionId}`);
+    if (this.sessionUsageErrors.has(sessionId)) throw this.sessionUsageErrors.get(sessionId);
+    const perSession = this.sessionUsageBySession.get(sessionId);
+    return perSession === undefined ? this.sessionUsageResult : perSession;
   }
 }

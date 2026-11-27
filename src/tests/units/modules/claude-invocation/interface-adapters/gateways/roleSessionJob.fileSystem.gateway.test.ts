@@ -56,6 +56,7 @@ describe('RoleSessionJobFileSystemGateway', () => {
           roleSessions: [
             { sessionId: 'a1b2c3d4', role: 'greffe', launchedAt: '2026-11-27T09:00:00.000Z' },
           ],
+          roleSessionsClosed: false,
         },
       });
     });
@@ -122,6 +123,85 @@ describe('RoleSessionJobFileSystemGateway', () => {
       });
 
       expect(result.recorded).toBe(false);
+    });
+  });
+
+  describe('closeRoleSessions', () => {
+    it('marks the job closed to new role sessions and returns the ones it recorded', () => {
+      writeJobFile(
+        RoleSessionJobFileFactory.create({
+          roleSessions: [
+            { sessionId: 'a1b2c3d4', role: 'greffe', launchedAt: '2026-11-27T09:00:00.000Z' },
+          ],
+        }),
+      );
+
+      const recorded = gateway.closeRoleSessions(jobId);
+
+      expect(recorded).toEqual([
+        { sessionId: 'a1b2c3d4', role: 'greffe', launchedAt: '2026-11-27T09:00:00.000Z' },
+      ]);
+      expect(readJobFile().roleSessionsClosed).toBe(true);
+      expect(readJobFile().mergeRequestId).toBe('github-acme/app-2111');
+      const lookup = gateway.find(jobId);
+      expect(lookup.status === 'found' && lookup.job.roleSessionsClosed).toBe(true);
+    });
+
+    it('returns nothing for a job without a job file', () => {
+      expect(gateway.closeRoleSessions(jobId)).toEqual([]);
+    });
+  });
+
+  describe('listRecordedRoleSessions', () => {
+    it('lists the role sessions every present job file records, with their job', () => {
+      writeJobFile(
+        RoleSessionJobFileFactory.create({
+          roleSessions: [
+            { sessionId: 'a1b2c3d4', role: 'greffe', launchedAt: '2026-11-27T09:00:00.000Z' },
+          ],
+        }),
+      );
+      writeFileSync(
+        join(jobsDirectory, 'gitlab-acme-api-7.json'),
+        JSON.stringify({
+          jobId: 'gitlab:acme/api:7',
+          roleSessions: [
+            { sessionId: 'e5f6a7b8', role: 'arbitre', launchedAt: '2026-11-27T10:00:00.000Z' },
+          ],
+        }),
+      );
+      writeFileSync(join(jobsDirectory, 'broken.json'), '{not json');
+      writeFileSync(join(jobsDirectory, 'github-acme-app-2111.lock'), '');
+
+      const recorded = gateway.listRecordedRoleSessions();
+
+      expect(recorded).toHaveLength(2);
+      expect(recorded).toEqual(
+        expect.arrayContaining([
+          {
+            jobId,
+            record: {
+              sessionId: 'a1b2c3d4',
+              role: 'greffe',
+              launchedAt: '2026-11-27T09:00:00.000Z',
+            },
+          },
+          {
+            jobId: 'gitlab:acme/api:7',
+            record: {
+              sessionId: 'e5f6a7b8',
+              role: 'arbitre',
+              launchedAt: '2026-11-27T10:00:00.000Z',
+            },
+          },
+        ]),
+      );
+    });
+
+    it('lists nothing when the jobs directory does not exist', () => {
+      const missingDirectory = new RoleSessionJobFileSystemGateway(join(jobsDirectory, 'absent'));
+
+      expect(missingDirectory.listRecordedRoleSessions()).toEqual([]);
     });
   });
 
