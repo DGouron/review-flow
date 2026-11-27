@@ -61,6 +61,7 @@ describe('SPEC-235 lot B — end and sweep role sessions', () => {
       sessionGateway: claudeSessions,
       worktreeRoot,
       now: () => now,
+      reviewTimeoutMs: () => 15 * 60_000,
     };
     dependencies = {
       endRoleSession: new EndRoleSessionUseCase(cleanupDependencies),
