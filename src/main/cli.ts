@@ -13,7 +13,10 @@ import {
 import { executeInit, createInitDependencies } from '@/main/commands/init.command.js';
 import { executeLogs, createLogsDependencies } from '@/main/commands/logs.command.js';
 import {
+  executeSessionEnd,
   executeSessionLaunch,
+  executeSessionSweep,
+  createSessionCleanupDependencies,
   createSessionLaunchDependencies,
 } from '@/main/commands/session.command.js';
 import { executeSetup, createSetupDependencies } from '@/main/commands/setup.command.js';
@@ -116,8 +119,12 @@ if (isDirectlyExecuted) {
     case 'session':
       if (args.action === 'launch') {
         void executeSessionLaunch(args, createSessionLaunchDependencies());
+      } else if (args.action === 'end') {
+        void executeSessionEnd(args, createSessionCleanupDependencies());
+      } else if (args.action === 'sweep') {
+        void executeSessionSweep(args, createSessionCleanupDependencies());
       } else {
-        console.log('ERROR unknown session action (usage: reviewflow session launch ...)');
+        console.log('ERROR unknown session action (expected launch, end or sweep)');
         process.exit(1);
       }
       break;

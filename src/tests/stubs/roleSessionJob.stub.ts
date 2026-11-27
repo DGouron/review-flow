@@ -1,5 +1,6 @@
 import type { RoleSessionRecord } from '@/modules/claude-invocation/entities/roleSession/roleSession.schema.js';
 import type {
+  RecordedRoleSession,
   RoleSessionJob,
   RoleSessionJobGateway,
   RoleSessionJobLookup,
@@ -45,6 +46,16 @@ export class InMemoryRoleSessionJobGateway implements RoleSessionJobGateway {
 
   failExclusiveAccess(reason: string): void {
     this.exclusiveAccessFailure = reason;
+  }
+
+  listRecordedRoleSessions(): RecordedRoleSession[] {
+    return [...this.jobs.values()].flatMap((job) =>
+      job.roleSessions.map((record) => ({ jobId: job.jobId, record })),
+    );
+  }
+
+  removeJob(jobId: string): void {
+    this.jobs.delete(jobId);
   }
 
   async withExclusiveAccess<Result>(_jobId: string, work: () => Promise<Result>): Promise<Result> {

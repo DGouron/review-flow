@@ -1,10 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  executeSessionEnd,
   executeSessionLaunch,
+  executeSessionSweep,
+  type SessionCleanupDependencies,
   type SessionLaunchDependencies,
 } from '@/main/commands/session.command.js';
+import { parseSessionId } from '@/modules/claude-invocation/entities/claudeSession/claudeSession.schema.js';
+import { EndRoleSessionUseCase } from '@/modules/claude-invocation/usecases/endRoleSession.usecase.js';
 import { LaunchRoleSessionUseCase } from '@/modules/claude-invocation/usecases/launchRoleSession.usecase.js';
+import { SweepRoleSessionsUseCase } from '@/modules/claude-invocation/usecases/sweepRoleSessions.usecase.js';
 import { RoleSessionJobFactory } from '@/tests/factories/roleSessionJob.factory.js';
 import { StubClaudeSessionGateway } from '@/tests/stubs/claudeSession.stub.js';
 import { StubRoleSessionGateway } from '@/tests/stubs/roleSession.stub.js';
@@ -85,6 +91,93 @@ describe('executeSessionLaunch', () => {
     );
 
     expect(printed).toEqual(['ERROR dispatch failed: line one line two']);
+    expect(exitCodes).toEqual([1]);
+  });
+});
+
+describe('executeSessionEnd and executeSessionSweep', () => {
+  const worktreeRoot = '/home/ai/.reviewflow/worktrees';
+  let printed: string[];
+  let exitCodes: number[];
+  let roleSessionGateway: StubRoleSessionGateway;
+  let sessionGateway: StubClaudeSessionGateway;
+  let dependencies: SessionCleanupDependencies;
+
+  beforeEach(() => {
+    printed = [];
+    exitCodes = [];
+    roleSessionGateway = new StubRoleSessionGateway();
+    sessionGateway = new StubClaudeSessionGateway();
+    const cleanupDependencies = {
+      roleSessionGateway,
+      roleSessionJobGateway: new InMemoryRoleSessionJobGateway(),
+      sessionGateway,
+      worktreeRoot,
+      now: () => new Date('2026-11-27T12:00:00.000Z'),
+    };
+    dependencies = {
+      endRoleSession: new EndRoleSessionUseCase(cleanupDependencies),
+      sweepRoleSessions: new SweepRoleSessionsUseCase(cleanupDependencies),
+      print: (line) => printed.push(line),
+      exit: (code) => exitCodes.push(code),
+    };
+  });
+
+  function listOrphan(name: string | null): void {
+    roleSessionGateway.listBackground([
+      {
+        sessionId: parseSessionId('orphan01'),
+        name,
+        cwd: `${worktreeRoot}/github-acme-app-2042`,
+        startedAt: null,
+      },
+    ]);
+  }
+
+  it('refuses session end without a session id', async () => {
+    await executeSessionEnd({ sessionId: null }, dependencies);
+
+    expect(printed).toEqual(['ERROR missing session id (usage: reviewflow session end <id>)']);
+    expect(exitCodes).toEqual([1]);
+  });
+
+  it('prints the failure of session end and exits 1', async () => {
+    listOrphan('Revue #2042 · greffe');
+    sessionGateway.setRemoveResult({ success: false, warning: 'busy' });
+
+    await executeSessionEnd({ sessionId: 'orphan01' }, dependencies);
+
+    expect(printed).toEqual(['ERROR Revue #2042 · greffe not removed: remove: busy']);
+    expect(exitCodes).toEqual([1]);
+  });
+
+  it('prints nothing and exits 0 when there is no role session to sweep', async () => {
+    roleSessionGateway.listBackground([]);
+
+    await executeSessionSweep({ dryRun: false }, dependencies);
+
+    expect(printed).toEqual([]);
+    expect(exitCodes).toEqual([0]);
+  });
+
+  it('exits 1 when a sweep could not remove a session', async () => {
+    listOrphan('Revue #2042 · greffe');
+    sessionGateway.setRemoveResult({ success: false, warning: 'busy' });
+
+    await executeSessionSweep({ dryRun: false }, dependencies);
+
+    expect(printed).toEqual([
+      'FAILED orphan01 Revue #2042 · greffe (job no longer active; remove: busy)',
+    ]);
+    expect(exitCodes).toEqual([1]);
+  });
+
+  it('exits 1 when the sweep cannot list Claude sessions', async () => {
+    roleSessionGateway.failListing('daemon down');
+
+    await executeSessionSweep({ dryRun: true }, dependencies);
+
+    expect(printed).toEqual(['ERROR cannot list Claude sessions: daemon down']);
     expect(exitCodes).toEqual([1]);
   });
 });
