@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -152,6 +152,44 @@ describe('RoleSessionJobFileSystemGateway', () => {
       ).rejects.toThrow('boom');
 
       expect(existsSync(join(jobsDirectory, 'github-acme-app-2111.lock'))).toBe(false);
+    });
+
+    const lockPath = (): string => join(jobsDirectory, 'github-acme-app-2111.lock');
+
+    it('creates a missing jobs directory instead of waiting for a lock nobody holds', async () => {
+      const missingDirectory = join(jobsDirectory, 'not-yet-created');
+      const fresh = new RoleSessionJobFileSystemGateway(missingDirectory, { lockWaitLimitMs: 200 });
+
+      await expect(fresh.withExclusiveAccess(jobId, async () => 'done')).resolves.toBe('done');
+    });
+
+    it('never removes a lock another launch took over in the meantime', async () => {
+      await gateway.withExclusiveAccess(jobId, async () => {
+        writeFileSync(lockPath(), 'token-of-another-launch');
+      });
+
+      expect(readFileSync(lockPath(), 'utf-8')).toBe('token-of-another-launch');
+    });
+
+    it('waits for a fresh lock held by another launch, then gives up', async () => {
+      writeFileSync(lockPath(), 'token-of-another-launch');
+      const impatient = new RoleSessionJobFileSystemGateway(jobsDirectory, {
+        lockWaitLimitMs: 150,
+      });
+
+      await expect(impatient.withExclusiveAccess(jobId, async () => 'never')).rejects.toThrow(
+        /another launch holds/,
+      );
+      expect(readFileSync(lockPath(), 'utf-8')).toBe('token-of-another-launch');
+    });
+
+    it('takes over a stale lock left by a launch that died', async () => {
+      writeFileSync(lockPath(), 'token-of-a-dead-launch');
+      const threeMinutesAgo = new Date(Date.now() - 180_000);
+      utimesSync(lockPath(), threeMinutesAgo, threeMinutesAgo);
+
+      await expect(gateway.withExclusiveAccess(jobId, async () => 'done')).resolves.toBe('done');
+      expect(existsSync(lockPath())).toBe(false);
     });
   });
 });

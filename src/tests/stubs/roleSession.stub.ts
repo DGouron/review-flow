@@ -30,6 +30,7 @@ export class StubRoleSessionGateway implements RoleSessionGateway {
         name: null,
         cwd: null,
         startedAt: null,
+        state: 'working',
       })),
     );
   }
@@ -51,7 +52,13 @@ export class StubRoleSessionGateway implements RoleSessionGateway {
         status: 'listed',
         sessions: [
           ...alreadyListed,
-          { sessionId: result.sessionId, name: launch.name, cwd: launch.cwd, startedAt: null },
+          {
+            sessionId: result.sessionId,
+            name: launch.name,
+            cwd: launch.cwd,
+            startedAt: null,
+            state: 'working',
+          },
         ],
       };
     }

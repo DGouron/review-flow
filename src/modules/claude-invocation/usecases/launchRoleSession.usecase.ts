@@ -3,6 +3,7 @@ import type { SessionId } from '@/modules/claude-invocation/entities/claudeSessi
 import {
   MAX_LIVE_ROLE_SESSIONS_PER_JOB,
   modelForRole,
+  occupiesRoleSessionSlot,
   type ReviewOrchestrationSettings,
 } from '@/modules/claude-invocation/entities/roleSession/reviewOrchestration.js';
 import {
@@ -83,7 +84,11 @@ export class LaunchRoleSessionUseCase implements UseCase<
   private async capRefusalOf(job: RoleSessionJob): Promise<string | null> {
     const listing = await this.dependencies.roleSessionGateway.listBackgroundSessions();
     if (listing.status === 'failed') return `cannot count live role sessions: ${listing.reason}`;
-    const listedIds = new Set<string>(listing.sessions.map((session) => session.sessionId));
+    const listedIds = new Set<string>(
+      listing.sessions
+        .filter((session) => occupiesRoleSessionSlot(session.state))
+        .map((session) => session.sessionId),
+    );
     const liveCount = job.roleSessions.filter((record) => listedIds.has(record.sessionId)).length;
     if (liveCount < MAX_LIVE_ROLE_SESSIONS_PER_JOB) return null;
     return `job ${job.jobId} already has ${liveCount} live role sessions (cap ${MAX_LIVE_ROLE_SESSIONS_PER_JOB})`;

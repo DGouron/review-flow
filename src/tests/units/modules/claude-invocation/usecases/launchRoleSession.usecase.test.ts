@@ -175,6 +175,42 @@ describe('LaunchRoleSessionUseCase', () => {
       expect(result.status).toBe('launched');
     });
 
+    it('does not count a finished or stopped session Claude still lists', async () => {
+      const ids = ['done0001', 'stop0002', 'fail0003', 'live0004', 'live0005'];
+      recordSessions(ids);
+      roleSessionGateway.listBackground(
+        ids.map((sessionId, index) => ({
+          sessionId: parseSessionId(sessionId),
+          name: null,
+          cwd: null,
+          startedAt: null,
+          state: ['done', 'stopped', 'failed', 'working', 'idle'][index] ?? null,
+        })),
+      );
+
+      const result = await useCase.execute({ role: 'contradiction', brief: 'Conteste.', jobId });
+
+      expect(result.status).toBe('launched');
+    });
+
+    it('counts a waiting session as live', async () => {
+      const ids = ['wait0001', 'live0002', 'live0003', 'live0004', 'live0005'];
+      recordSessions(ids);
+      roleSessionGateway.listBackground(
+        ids.map((sessionId, index) => ({
+          sessionId: parseSessionId(sessionId),
+          name: null,
+          cwd: null,
+          startedAt: null,
+          state: index === 0 ? 'blocked' : 'working',
+        })),
+      );
+
+      const result = await useCase.execute({ role: 'arbitre', brief: 'Tranche.', jobId });
+
+      expect(result.status).toBe('refused');
+    });
+
     it('refuses to launch when the live sessions cannot be counted', async () => {
       roleSessionGateway.failListing('claude agents exited 1');
 
