@@ -9,6 +9,7 @@ export class RoleSessionJobFactory {
       localPath: '/home/ai/projects/acme-app',
       worktreePath: '/home/ai/.reviewflow/worktrees/github-acme-app-2111',
       roleSessions: [],
+      roleSessionsClosed: false,
       ...overrides,
     };
   }

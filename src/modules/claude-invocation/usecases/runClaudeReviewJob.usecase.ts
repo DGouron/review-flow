@@ -58,18 +58,7 @@ export async function runClaudeReviewJob(
   try {
     return await runReviewSession(input, deps);
   } finally {
-    await endRoleSessionsWithoutThrowing(input, deps);
-  }
-}
-
-async function endRoleSessionsWithoutThrowing(
-  input: RunClaudeReviewJobInput,
-  deps: RunClaudeReviewJobDependencies,
-): Promise<void> {
-  try {
     await deps.endJobRoleSessions.execute({ jobId: input.jobId, cwd: input.localPath });
-  } catch {
-    return;
   }
 }
 

@@ -141,6 +141,7 @@ describe('SPEC-235 lot C — the review job ends its role sessions', () => {
           trackTokenUsage: new TrackTokenUsageUseCase(tokenUsageGateway),
           now: () => now,
         }),
+        reportWarnings: () => {},
       }),
     });
     await vi.runAllTimersAsync();

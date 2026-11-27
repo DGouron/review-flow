@@ -72,12 +72,16 @@ ends its role sessions and accounts their tokens).
 
 ### The review job (lot C)
 
-- when a review job ends, whatever its outcome, the role sessions recorded in its job file are
-  read before the job file is deleted, and each one is ended; a failure to end one never fails the
-  job
-- each role session yields one token usage record, carrying its `role`, before it is ended
+- when a review job ends, whatever its outcome, it takes the job lock, marks the job closed to new
+  role sessions (a launch for a closed job is refused) and reads the role sessions its job file
+  records, before the job file is deleted
+- each role session is stopped, then measured, then removed: the measure includes every token
+  spent until the stop
+- a failure to end one never fails the job; the warnings of the cleanup are logged
+- each measured role session yields one token usage record carrying its `role`
 - the budget guard counts those records like any other
-- the consumption views show the role of a record when it has one
+- the consumption views show the role of a record when it has one; the monthly summary adds the
+  cost of role sessions but does not count them as sessions or reviews
 
 ## Scenarios
 

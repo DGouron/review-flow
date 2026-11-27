@@ -3,7 +3,6 @@ import type { SessionUsageSnapshot } from '@/modules/claude-invocation/entities/
 import type { ReviewRole } from '@/modules/claude-invocation/entities/roleSession/reviewRole.js';
 import type { RoleSessionRecord } from '@/modules/claude-invocation/entities/roleSession/roleSession.schema.js';
 import type { RoleSessionJobGateway } from '@/modules/claude-invocation/entities/roleSession/roleSessionJob.gateway.js';
-import { cleanupClaudeSession } from '@/modules/claude-invocation/usecases/cleanupClaudeSession.usecase.js';
 import type { UseCase } from '@/shared/foundation/usecase.base.js';
 
 export type RoleSessionUsage = { role: ReviewRole; snapshot: SessionUsageSnapshot };
@@ -12,6 +11,7 @@ export interface EndJobRoleSessionsDependencies {
   roleSessionJobGateway: RoleSessionJobGateway;
   sessionGateway: ClaudeSessionGateway;
   recordRoleSessionUsage: (usage: RoleSessionUsage) => Promise<void>;
+  reportWarnings: (warnings: string[]) => void;
 }
 
 export interface EndJobRoleSessionsInput {
@@ -25,7 +25,7 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Measures then ends every role session a job recorded. Never throws. */
+/** Stops, measures, then removes every role session a job recorded. Never throws. */
 export class EndJobRoleSessionsUseCase implements UseCase<
   EndJobRoleSessionsInput,
   Promise<EndJobRoleSessionsResult>
@@ -34,22 +34,50 @@ export class EndJobRoleSessionsUseCase implements UseCase<
 
   async execute(input: EndJobRoleSessionsInput): Promise<EndJobRoleSessionsResult> {
     const result: EndJobRoleSessionsResult = { ended: 0, warnings: [] };
-    for (const record of this.recordedSessionsOf(input.jobId, result.warnings)) {
-      const warnings = [
-        ...(await this.measure(record, input.cwd)),
-        ...(await this.end(record, result)),
-      ];
-      result.warnings.push(...warnings.map((warning) => `${record.sessionId}: ${warning}`));
+    try {
+      await this.endAll(input, result);
+    } catch (error) {
+      result.warnings.push(`role sessions not all ended: ${messageOf(error)}`);
     }
+    this.report(result.warnings);
     return result;
   }
 
-  private recordedSessionsOf(jobId: string, warnings: string[]): RoleSessionRecord[] {
+  private async endAll(
+    input: EndJobRoleSessionsInput,
+    result: EndJobRoleSessionsResult,
+  ): Promise<void> {
+    for (const record of await this.closeRoleSessions(input.jobId, result.warnings)) {
+      const warnings = [
+        ...(await this.stop(record)),
+        ...(await this.measure(record, input.cwd)),
+        ...(await this.remove(record, result)),
+      ];
+      result.warnings.push(...warnings.map((warning) => `${record.sessionId}: ${warning}`));
+    }
+  }
+
+  private report(warnings: string[]): void {
+    if (warnings.length === 0) return;
     try {
-      return this.dependencies.roleSessionJobGateway
-        .listRecordedRoleSessions()
-        .filter((recorded) => recorded.jobId === jobId)
-        .map((recorded) => recorded.record);
+      this.dependencies.reportWarnings(warnings);
+    } catch {
+      return;
+    }
+  }
+
+  /** Under the job lock, so no launch can slip a role session in once the job ends. */
+  private async closeRoleSessions(jobId: string, warnings: string[]): Promise<RoleSessionRecord[]> {
+    const { roleSessionJobGateway } = this.dependencies;
+    try {
+      return await roleSessionJobGateway.withExclusiveAccess(jobId, async () =>
+        roleSessionJobGateway.closeRoleSessions(jobId),
+      );
+    } catch (error) {
+      warnings.push(`role sessions closed without the job lock: ${messageOf(error)}`);
+    }
+    try {
+      return roleSessionJobGateway.closeRoleSessions(jobId);
     } catch (error) {
       warnings.push(`role sessions not read: ${messageOf(error)}`);
       return [];
@@ -72,15 +100,25 @@ export class EndJobRoleSessionsUseCase implements UseCase<
     }
   }
 
-  private async end(
+  private async stop(record: RoleSessionRecord): Promise<string[]> {
+    try {
+      const stopped = await this.dependencies.sessionGateway.stop(record.sessionId);
+      return stopped.success || stopped.warning === null ? [] : [`stop: ${stopped.warning}`];
+    } catch (error) {
+      return [`stop failed: ${messageOf(error)}`];
+    }
+  }
+
+  private async remove(
     record: RoleSessionRecord,
     result: EndJobRoleSessionsResult,
   ): Promise<string[]> {
-    const cleanup = await cleanupClaudeSession(
-      { sessionId: record.sessionId },
-      { sessionGateway: this.dependencies.sessionGateway },
-    );
-    if (cleanup.removed) result.ended += 1;
-    return cleanup.warnings;
+    try {
+      const removed = await this.dependencies.sessionGateway.remove(record.sessionId);
+      if (removed.success) result.ended += 1;
+      return removed.success || removed.warning === null ? [] : [`remove: ${removed.warning}`];
+    } catch (error) {
+      return [`remove failed: ${messageOf(error)}`];
+    }
   }
 }

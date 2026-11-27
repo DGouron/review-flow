@@ -186,4 +186,24 @@ describe('SummarizeTokenUsageUseCase', () => {
 
     expect(summary.medianMergeRequestCostUsd).toBe(4);
   });
+  it('counts an orchestrated review once while adding the cost of its role sessions', async () => {
+    const usage = {
+      inputTokens: 10,
+      outputTokens: 5,
+      cacheCreationInputTokens: 0,
+      cacheReadInputTokens: 0,
+      costUsd: 1,
+    };
+    gateway.setRecords([
+      TokenUsageRecordFactory.create({ jobType: 'review', usage }),
+      TokenUsageRecordFactory.create({ jobType: 'review', role: 'greffe', usage }),
+      TokenUsageRecordFactory.create({ jobType: 'review', role: 'lot:bugs', usage }),
+    ]);
+
+    const summary = await useCase.execute({ localPath: '/project' });
+
+    expect(summary.recordCount).toBe(1);
+    expect(summary.byJobType.review).toEqual({ count: 1, costUsd: 3 });
+    expect(summary.totalCostUsd).toBe(3);
+  });
 });

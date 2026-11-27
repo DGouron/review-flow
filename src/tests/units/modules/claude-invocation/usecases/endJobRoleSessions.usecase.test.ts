@@ -22,18 +22,21 @@ describe('EndJobRoleSessionsUseCase', () => {
   let roleSessionJobGateway: InMemoryRoleSessionJobGateway;
   let sessionGateway: StubClaudeSessionGateway;
   let recordedUsages: RoleSessionUsage[];
+  let reportedWarnings: string[][];
   let useCase: EndJobRoleSessionsUseCase;
 
   beforeEach(() => {
     roleSessionJobGateway = new InMemoryRoleSessionJobGateway();
     sessionGateway = new StubClaudeSessionGateway();
     recordedUsages = [];
+    reportedWarnings = [];
     useCase = new EndJobRoleSessionsUseCase({
       roleSessionJobGateway,
       sessionGateway,
       recordRoleSessionUsage: async (usage) => {
         recordedUsages.push(usage);
       },
+      reportWarnings: (warnings) => reportedWarnings.push(warnings),
     });
     roleSessionJobGateway.save(
       RoleSessionJobFactory.create({
@@ -84,6 +87,55 @@ describe('EndJobRoleSessionsUseCase', () => {
     expect(result).toEqual({ ended: 2, warnings: [] });
   });
 
+  it('reports the warnings of the cleanup so they reach the logs', async () => {
+    sessionGateway.setRemoveResult({ success: false, warning: 'busy' });
+
+    await useCase.execute({ jobId, cwd });
+
+    expect(reportedWarnings).toEqual([['greffe01: remove: busy', 'arbitre1: remove: busy']]);
+  });
+
+  it('reports nothing when every role session ended cleanly', async () => {
+    await useCase.execute({ jobId, cwd });
+
+    expect(reportedWarnings).toEqual([]);
+  });
+
+  it('never throws, even when reporting its warnings fails', async () => {
+    sessionGateway.setRemoveResult({ success: false, warning: 'busy' });
+    useCase = new EndJobRoleSessionsUseCase({
+      roleSessionJobGateway,
+      sessionGateway,
+      recordRoleSessionUsage: async () => {},
+      reportWarnings: () => {
+        throw new Error('logger down');
+      },
+    });
+
+    await expect(useCase.execute({ jobId, cwd })).resolves.toMatchObject({ ended: 0 });
+  });
+
+  it('closes the job to new role sessions under the job lock before ending them', async () => {
+    await useCase.execute({ jobId, cwd });
+
+    expect(roleSessionJobGateway.closedUnderLock).toEqual([jobId]);
+    const lookup = roleSessionJobGateway.find(jobId);
+    expect(lookup.status === 'found' && lookup.job.roleSessionsClosed).toBe(true);
+  });
+
+  it('stops a session before measuring it, so no token spent until the stop is missed', async () => {
+    await useCase.execute({ jobId, cwd });
+
+    expect(sessionGateway.callOrder).toEqual([
+      'stop greffe01',
+      'measure greffe01',
+      'remove greffe01',
+      'stop arbitre1',
+      'measure arbitre1',
+      'remove arbitre1',
+    ]);
+  });
+
   it('ends a session whose usage is unknown without recording anything for it', async () => {
     sessionGateway.setSessionUsageFor('greffe01', null);
     sessionGateway.setSessionUsageFor('arbitre1', snapshotOf('arbitre1-full'));
@@ -104,6 +156,7 @@ describe('EndJobRoleSessionsUseCase', () => {
       recordRoleSessionUsage: async () => {
         throw new Error('disk full');
       },
+      reportWarnings: () => {},
     });
 
     const result = await useCase.execute({ jobId, cwd });

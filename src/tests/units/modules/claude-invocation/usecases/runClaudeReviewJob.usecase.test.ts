@@ -61,6 +61,7 @@ function buildDeps() {
         roleSessionJobGateway,
         sessionGateway,
         recordRoleSessionUsage: async () => {},
+        reportWarnings: () => {},
       }),
     },
   };
@@ -128,24 +129,6 @@ describe('runClaudeReviewJob — role sessions of the job', () => {
       'billing state corrupted',
     );
     expect(ctx.sessionGateway.removeCalls).toEqual(['lot00001']);
-  });
-
-  it('keeps the review result when ending the role sessions throws', async () => {
-    const ctx = buildDeps();
-    ctx.environment.setHasAnthropicApiKey(true);
-    const deps = {
-      ...ctx.deps,
-      endJobRoleSessions: new EndJobRoleSessionsUseCase({
-        roleSessionJobGateway: ctx.roleSessionJobGateway,
-        sessionGateway: ctx.sessionGateway,
-        recordRoleSessionUsage: async () => {},
-      }),
-    };
-    vi.spyOn(deps.endJobRoleSessions, 'execute').mockRejectedValue(new Error('unexpected'));
-
-    const result = await runClaudeReviewJob(buildInput(), deps);
-
-    expect(result).toEqual({ status: 'failed', reason: 'billing-regression-prevented' });
   });
 });
 

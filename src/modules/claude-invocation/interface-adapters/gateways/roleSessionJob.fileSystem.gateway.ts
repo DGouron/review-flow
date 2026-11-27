@@ -23,6 +23,7 @@ const jobFileSchema = z.object({
   mrNumber: z.number().int().positive(),
   worktreePath: z.string().min(1),
   roleSessions: z.array(roleSessionRecordSchema).default([]),
+  roleSessionsClosed: z.boolean().default(false),
 });
 
 const jsonObjectSchema = z.record(z.string(), z.unknown());
@@ -34,6 +35,14 @@ const recordingJobFileSchema = z.object({
 
 function errorMessageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function recordsIn(candidates: unknown): RoleSessionRecord[] {
+  if (!Array.isArray(candidates)) return [];
+  return candidates.flatMap((candidate) => {
+    const record = roleSessionRecordSchema.safeParse(candidate);
+    return record.success ? [record.data] : [];
+  });
 }
 
 function readJsonOrNull(path: string): unknown {
@@ -78,15 +87,25 @@ export class RoleSessionJobFileSystemGateway implements RoleSessionJobGateway {
     const recorded: unknown[] = Array.isArray(raw.content.roleSessions)
       ? raw.content.roleSessions
       : [];
-    const updated = { ...raw.content, roleSessions: [...recorded, record] };
-    const path = this.jobFilePath(jobId);
     try {
-      writeFileSync(`${path}.tmp`, JSON.stringify(updated, null, 2));
-      renameSync(`${path}.tmp`, path);
+      this.write(jobId, { ...raw.content, roleSessions: [...recorded, record] });
       return { recorded: true };
     } catch (error) {
       return { recorded: false, reason: errorMessageOf(error) };
     }
+  }
+
+  closeRoleSessions(jobId: string): RoleSessionRecord[] {
+    const raw = this.readRaw(jobId);
+    if (raw.status !== 'read') return [];
+    this.write(jobId, { ...raw.content, roleSessionsClosed: true });
+    return recordsIn(raw.content.roleSessions);
+  }
+
+  private write(jobId: string, content: Record<string, unknown>): void {
+    const path = this.jobFilePath(jobId);
+    writeFileSync(`${path}.tmp`, JSON.stringify(content, null, 2));
+    renameSync(`${path}.tmp`, path);
   }
 
   listRecordedRoleSessions(): RecordedRoleSession[] {
@@ -96,10 +115,7 @@ export class RoleSessionJobFileSystemGateway implements RoleSessionJobGateway {
       );
       if (!parsed.success) return [];
       const { jobId, roleSessions } = parsed.data;
-      return roleSessions.flatMap((candidate) => {
-        const record = roleSessionRecordSchema.safeParse(candidate);
-        return record.success ? [{ jobId, record: record.data }] : [];
-      });
+      return recordsIn(roleSessions).map((record) => ({ jobId, record }));
     });
   }
 

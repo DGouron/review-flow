@@ -708,6 +708,8 @@ async function invokeViaBackgroundSession(
             trackTokenUsage: deps.trackTokenUsage,
             now: () => new Date(),
           }),
+          reportWarnings: (warnings) =>
+            logger.warn({ jobId: job.id, warnings }, 'Role sessions of the job not cleanly ended'),
         }),
       },
     );

@@ -26,6 +26,7 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
   removeCalls: string[] = [];
   listAgentsCallCount = 0;
   getSessionUsageCalls: Array<{ sessionId: SessionId; cwd: string }> = [];
+  callOrder: string[] = [];
 
   private dispatchResult: DispatchResult = {
     status: 'dispatched',
@@ -101,6 +102,7 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
 
   async stop(sessionId: SessionId): Promise<CleanupResult> {
     this.stopCalls.push(sessionId);
+    this.callOrder.push(`stop ${sessionId}`);
     if (this.stopError !== null) {
       throw this.stopError;
     }
@@ -109,6 +111,7 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
 
   async remove(sessionId: SessionId): Promise<CleanupResult> {
     this.removeCalls.push(sessionId);
+    this.callOrder.push(`remove ${sessionId}`);
     if (this.removeError !== null) {
       throw this.removeError;
     }
@@ -140,6 +143,7 @@ export class StubClaudeSessionGateway implements ClaudeSessionGateway {
 
   async getSessionUsage(sessionId: SessionId, cwd: string): Promise<SessionUsageSnapshot | null> {
     this.getSessionUsageCalls.push({ sessionId, cwd });
+    this.callOrder.push(`measure ${sessionId}`);
     if (this.sessionUsageErrors.has(sessionId)) throw this.sessionUsageErrors.get(sessionId);
     const perSession = this.sessionUsageBySession.get(sessionId);
     return perSession === undefined ? this.sessionUsageResult : perSession;
